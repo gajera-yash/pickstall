@@ -1,12 +1,13 @@
 "use client";
 
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Mail } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
+import { IconInput } from "@/components/ui/icon-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -83,7 +84,7 @@ export function LoginForm({ next, notice, googleEnabled }: Props) {
   if (sentTo) {
     return (
       <>
-        <p className="-mt-2 text-mute" aria-live="polite">
+        <p className="-mt-3 text-center text-mute" aria-live="polite">
           We sent a {OTP_LENGTH}-digit code to <strong className="font-semibold break-all text-ink">{sentTo}</strong>.
         </p>
 
@@ -113,7 +114,7 @@ export function LoginForm({ next, notice, googleEnabled }: Props) {
           </Button>
         </form>
 
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1">
           {cooling ? (
             <p className="text-sm text-mute">Resend code in {secondsLeft}s</p>
           ) : (
@@ -129,7 +130,7 @@ export function LoginForm({ next, notice, googleEnabled }: Props) {
           </Button>
         </div>
         {resendState?.ok && (
-          <p role="status" className="flex items-center gap-2 text-sm font-medium text-mint">
+          <p role="status" className="flex items-center justify-center gap-2 text-sm font-medium text-mint">
             <CheckCircle2 aria-hidden="true" className="size-4 shrink-0" />
             We sent a new code.
           </p>
@@ -141,7 +142,7 @@ export function LoginForm({ next, notice, googleEnabled }: Props) {
 
   return (
     <>
-      <p className="-mt-2 text-mute" aria-live="polite">
+      <p className="-mt-3 text-center text-mute" aria-live="polite">
         We&apos;ll email you a {OTP_LENGTH}-digit code. No password.
       </p>
 
@@ -155,7 +156,8 @@ export function LoginForm({ next, notice, googleEnabled }: Props) {
       <form action={sendAction} onSubmit={startCooldown} noValidate className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <Label htmlFor="email">Email</Label>
-          <Input
+          <IconInput
+            icon={Mail}
             id="email"
             name="email"
             type="email"
