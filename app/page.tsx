@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ export default function Home() {
 }
 
 async function SessionStatus() {
+  await connection();
   const user = await getCurrentUser();
 
   if (!user) {
@@ -35,7 +37,7 @@ async function SessionStatus() {
     <div className="flex flex-col gap-2">
       <p>Signed in as {user.email ?? "your account"}.</p>
       <form action={signOut}>
-        <Button type="submit" variant="outline">
+        <Button type="submit" variant="secondary">
           Sign out
         </Button>
       </form>

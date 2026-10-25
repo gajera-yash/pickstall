@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Instrument_Sans } from "next/font/google";
+
 import { APP_NAME } from "@/lib/config";
 
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Self-hosted by next/font, no layout shift. Both are variable fonts, so one file serves
+// every weight. Bricolage keeps its optical-size axis (DESIGN.md 4.1).
+const display = Bricolage_Grotesque({
   subsets: ["latin"],
+  axes: ["opsz"],
+  variable: "--font-bricolage",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const body = Instrument_Sans({
   subsets: ["latin"],
+  variable: "--font-instrument",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -21,10 +27,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${display.variable} ${body.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

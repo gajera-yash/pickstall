@@ -1,0 +1,122 @@
+/*
+ * Design tokens: single source of truth (DESIGN.md sections 3, 6 and 16).
+ * Raw color values live ONLY in this file and in lib/themes.ts. Everything else uses the
+ * Tailwind names mapped in app/globals.css (bg-surface, text-ink, border-border-strong, ...).
+ *
+ * Dark mode follows the OS by default; <html data-theme="light|dark"> overrides it.
+ * The dark values appear twice (media query and data-theme) because plain CSS cannot share
+ * them; tests/unit/tokens.test.ts fails if the two copies ever differ.
+ * Contrast ratios for the pairs below are asserted in tests/unit/tokens.test.ts.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces and text */
+  --bg: #f2f3ff;
+  --surface: #ffffff;
+  --ink: #0b0d2a;
+  --mute: #555a82;
+  --line: #cfd3f5; /* decorative dividers only, never component borders */
+  --border-strong: #0b0d2a;
+
+  /* Primary (actions, links, focus) */
+  --blue: #2f3bff;
+  --on-blue: #ffffff;
+  --blue-hover: #2430d6;
+  --blue-active: #1b26b8;
+  --blue-soft: #e1e4ff;
+
+  /* Highlight (coupons, badges). Text on yellow is always --on-yellow. */
+  --yellow: #ffd84d;
+  --on-yellow: #0b0d2a;
+  --yellow-soft: #fff3bf;
+
+  /* Money and success */
+  --mint: #0a7a53;
+  --mint-soft: #ddf5ea;
+
+  /* Errors and destructive actions. --on-danger is not in DESIGN.md section 3: white fails
+     contrast on the dark-mode danger color, so text on --danger needs its own token. */
+  --danger: #c42020;
+  --on-danger: #ffffff;
+  --danger-soft: #fde3e3;
+
+  --warning: #8a5a00;
+  --warning-soft: #fff1c2;
+
+  /* Shape */
+  --radius-xs: 6px; /* badges, checkboxes */
+  --radius-sm: 10px; /* inputs, small buttons */
+  --radius-md: 14px; /* buttons, list items */
+  --radius-lg: 20px; /* cards */
+  --radius-xl: 28px; /* hero panels, dialogs */
+
+  /* Shadows: hard offset, no blur. Overlays may blur. */
+  --shadow-sm: 3px 3px 0 var(--border-strong);
+  --shadow-md: 6px 6px 0 var(--border-strong);
+  --shadow-lg: 14px 14px 0 var(--blue);
+  --shadow-overlay: 0 12px 32px rgb(11 13 42 / 0.18);
+  --scrim: rgb(11 13 42 / 0.5);
+
+  /* Motion (DESIGN.md section 12) */
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 360ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0c0e24;
+  --surface: #171a3a;
+  --ink: #f1f2ff;
+  --mute: #a3a8d0;
+  --line: #2a2e57;
+  --border-strong: #6b76c4;
+  --blue: #7d88ff;
+  --on-blue: #0c0e24;
+  --blue-hover: #9aa3ff;
+  --blue-active: #b4bbff;
+  --blue-soft: #232857;
+  --yellow-soft: #3a3310;
+  --mint: #4fd6a0;
+  --mint-soft: #12332b;
+  --danger: #ff7a7a;
+  --on-danger: #0c0e24;
+  --danger-soft: #3a1a2a;
+  --warning: #ffd84d;
+  --warning-soft: #3a3310;
+  --shadow-overlay: 0 12px 32px rgb(0 0 0 / 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0c0e24;
+    --surface: #171a3a;
+    --ink: #f1f2ff;
+    --mute: #a3a8d0;
+    --line: #2a2e57;
+    --border-strong: #6b76c4;
+    --blue: #7d88ff;
+    --on-blue: #0c0e24;
+    --blue-hover: #9aa3ff;
+    --blue-active: #b4bbff;
+    --blue-soft: #232857;
+    --yellow-soft: #3a3310;
+    --mint: #4fd6a0;
+    --mint-soft: #12332b;
+    --danger: #ff7a7a;
+    --on-danger: #0c0e24;
+    --danger-soft: #3a1a2a;
+    --warning: #ffd84d;
+    --warning-soft: #3a3310;
+    --shadow-overlay: 0 12px 32px rgb(0 0 0 / 0.5);
+  }
+}

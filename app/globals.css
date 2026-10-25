@@ -1,126 +1,204 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "../styles/tokens.css";
 
-@custom-variant dark (&:is(.dark *));
+/*
+ * Dark mode comes from the tokens (OS preference or <html data-theme>), so components should
+ * use token classes (bg-surface, text-ink, ...) and NOT dark: variants. This variant only
+ * matches an explicit data-theme="dark" (or .dark) override, for the rare exception.
+ */
+@custom-variant dark (&:is([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));
+
+/* No default Tailwind palette: only DESIGN.md tokens exist, so raw colors cannot be used. */
+@theme {
+  --color-*: initial;
+  /* No default soft shadows either: use shadow-hard-* or shadow-overlay (defined below). */
+  --shadow-*: initial;
+}
 
 @theme inline {
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* DESIGN.md tokens (styles/tokens.css) */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-mute: var(--mute);
+  --color-line: var(--line);
+  --color-border-strong: var(--border-strong);
+  --color-blue: var(--blue);
+  --color-on-blue: var(--on-blue);
+  --color-blue-hover: var(--blue-hover);
+  --color-blue-active: var(--blue-active);
+  --color-blue-soft: var(--blue-soft);
+  --color-yellow: var(--yellow);
+  --color-on-yellow: var(--on-yellow);
+  --color-yellow-soft: var(--yellow-soft);
+  --color-mint: var(--mint);
+  --color-mint-soft: var(--mint-soft);
+  --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+
+  /* shadcn names, aliased to the tokens above (DESIGN.md 16.4) */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Fonts (loaded with next/font in app/layout.tsx) */
+  --font-display: var(--font-bricolage), "Trebuchet MS", system-ui, sans-serif;
+  --font-sans: var(--font-instrument), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Type scale (DESIGN.md 4.2). Defaults are raised so nothing is below 13px:
+     text-xs = Caption, text-sm = Body S, text-base = Body. Display styles also need font-display. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.6;
+  --text-body-l: 1.25rem;
+  --text-body-l--line-height: 1.55;
+  --text-button: 1rem;
+  --text-button--line-height: 1;
+  --text-button--font-weight: 600;
+  --text-h4: 1.0625rem;
+  --text-h4--line-height: 1.35;
+  --text-h4--letter-spacing: -0.01em;
+  --text-h4--font-weight: 600;
+  --text-h3: 1.25rem;
+  --text-h3--line-height: 1.3;
+  --text-h3--letter-spacing: -0.015em;
+  --text-h3--font-weight: 600;
+  --text-h2: 1.5rem;
+  --text-h2--line-height: 1.2;
+  --text-h2--letter-spacing: -0.02em;
+  --text-h2--font-weight: 800;
+  --text-h1: clamp(1.75rem, 3vw, 2.25rem);
+  --text-h1--line-height: 1.1;
+  --text-h1--letter-spacing: -0.03em;
+  --text-h1--font-weight: 800;
+  --text-display-l: clamp(2rem, 5vw, 3.4rem);
+  --text-display-l--line-height: 1;
+  --text-display-l--letter-spacing: -0.035em;
+  --text-display-l--font-weight: 800;
+  --text-display-xl: clamp(2.8rem, 7.4vw, 5.6rem);
+  --text-display-xl--line-height: 0.95;
+  --text-display-xl--letter-spacing: -0.045em;
+  --text-display-xl--font-weight: 800;
+  --text-money-m: 1.5rem;
+  --text-money-m--line-height: 1.1;
+  --text-money-m--letter-spacing: -0.03em;
+  --text-money-m--font-weight: 800;
+  --text-money-l: clamp(2rem, 4vw, 3rem);
+  --text-money-l--line-height: 1.05;
+  --text-money-l--letter-spacing: -0.04em;
+  --text-money-l--font-weight: 800;
+
+  /* Shape and shadows (values in styles/tokens.css). These look self-referencing, and that is
+     intended: the real values come from the unlayered :root in tokens.css, which wins over this
+     theme layer. Do not wrap the tokens.css import in a @layer. */
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
 }
 
+/* Hard offset shadows and the overlay shadow (DESIGN.md 6), read straight from the tokens. */
+@utility shadow-hard-sm {
+  box-shadow: var(--shadow-sm);
+}
+@utility shadow-hard-md {
+  box-shadow: var(--shadow-md);
+}
+@utility shadow-hard-lg {
+  box-shadow: var(--shadow-lg);
+}
+@utility shadow-overlay {
+  box-shadow: var(--shadow-overlay);
+}
+
+/* shadcn variable mapping (DESIGN.md 16.4). Values follow the tokens, so dark mode is automatic. */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --radius: var(--radius-md);
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--blue);
+  --primary-foreground: var(--on-blue);
+  --secondary: var(--surface);
+  --secondary-foreground: var(--ink);
+  --muted: var(--blue-soft);
+  --muted-foreground: var(--mute);
+  --accent: var(--yellow);
+  --accent-foreground: var(--on-yellow);
+  --destructive: var(--danger);
+  --border: var(--border-strong);
+  --input: var(--border-strong);
+  --ring: var(--blue);
+  /* Data series order (DESIGN.md 3.4) */
+  --chart-1: var(--blue);
+  --chart-2: var(--mint);
+  --chart-3: var(--yellow);
+  --chart-4: var(--ink);
+  --chart-5: var(--mute);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans text-base;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+  }
+  /* Visible focus on every focusable element (DESIGN.md 6). */
+  :focus-visible {
+    outline: 3px solid var(--blue);
+    outline-offset: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
   }
 }

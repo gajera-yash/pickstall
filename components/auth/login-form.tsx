@@ -122,7 +122,7 @@ export function LoginForm({ next, notice, googleEnabled }: Props) {
       {googleEnabled && (
         <form action={signInWithGoogle}>
           <input type="hidden" name="next" value={next} />
-          <Button type="submit" variant="outline" className="w-full">
+          <Button type="submit" variant="secondary" className="w-full">
             Continue with Google
           </Button>
         </form>
