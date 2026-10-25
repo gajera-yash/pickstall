@@ -4,14 +4,17 @@ import { redirect } from "next/navigation";
 
 import { resolvePostLoginPath } from "@/lib/auth/post-login";
 import { safeNextPath } from "@/lib/auth/redirect";
-import { sendCodeInput, verifyCodeInput } from "@/lib/auth/schemas";
+import { sendCodeInput, signupInput, verifyCodeInput } from "@/lib/auth/schemas";
 import { publicEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { err, ok, type Result } from "@/lib/result";
+import { SLUG_TAKEN_MESSAGE } from "@/lib/slug";
+import { isSlugTaken } from "@/lib/stores/slug-availability";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type SendCodeState = Result<{ email: string }> | null;
 export type VerifyCodeState = Result<never> | null;
+export type SignupState = Result<{ email: string }> | null;
 
 const TOO_MANY = "Too many attempts. Wait a minute, then try again.";
 
@@ -39,6 +42,47 @@ export async function sendEmailCode(_prev: SendCodeState, formData: FormData): P
     return err("Couldn't send the code. Check your connection and try again.");
   }
   return ok({ email: parsed.data.email });
+}
+
+/**
+ * Signup step 1: validates the form, checks the username, then emails a 6-digit code.
+ * The username, name and phone travel in the auth user metadata. That metadata is untrusted
+ * (a client can edit it), so it only pre-fills the next steps; the store step validates again.
+ * Same response whether or not the email already has an account.
+ */
+export async function startSignup(_prev: SignupState, formData: FormData): Promise<SignupState> {
+  const parsed = signupInput.safeParse({
+    username: formData.get("username") ?? "",
+    fullName: formData.get("fullName") ?? "",
+    email: formData.get("email") ?? "",
+    phone: formData.get("phone") ?? "",
+  });
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const field = typeof issue?.path[0] === "string" ? issue.path[0] : undefined;
+    return err(issue?.message ?? "Check the form and try again.", field);
+  }
+  const { username, fullName, email, phone } = parsed.data;
+
+  const taken = await isSlugTaken(username);
+  if (!taken.ok) return taken;
+  if (taken.data) return err(SLUG_TAKEN_MESSAGE, "username");
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: true,
+      data: { full_name: fullName, requested_slug: username, ...(phone ? { phone } : {}) },
+    },
+  });
+
+  if (error) {
+    logger.warn("auth.signup_send_code_failed", { status: error.status, code: error.code });
+    if (error.status === 429) return err(TOO_MANY);
+    return err("Couldn't send the code. Check your connection and try again.");
+  }
+  return ok({ email });
 }
 
 /** Checks the code; on success the session cookie is set and the user is redirected. */

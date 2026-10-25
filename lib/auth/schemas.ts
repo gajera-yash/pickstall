@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import { optionalPhoneSchema } from "@/lib/phone";
+import { slugSchema } from "@/lib/slug";
+
 export const emailSchema = z
   .string()
   .trim()
@@ -14,3 +17,21 @@ export const emailCodeSchema = z
 
 export const sendCodeInput = z.object({ email: emailSchema });
 export const verifyCodeInput = z.object({ email: emailSchema, code: emailCodeSchema, next: z.string().optional() });
+
+/** True if the text has a control character (code below 32, or 127). */
+const hasControlChar = (value: string) => [...value].some((ch) => ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127);
+
+export const fullNameSchema = z
+  .string()
+  .trim()
+  .min(1, { error: "Enter your full name." })
+  .max(80, { error: "Use 80 characters or fewer." })
+  .refine((value) => !hasControlChar(value), { error: "Remove the special characters from your name." });
+
+/** Step 1 of the signup wizard. Field order is the order errors are reported in. */
+export const signupInput = z.object({
+  username: slugSchema,
+  fullName: fullNameSchema,
+  email: emailSchema,
+  phone: optionalPhoneSchema,
+});

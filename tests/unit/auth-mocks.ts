@@ -21,10 +21,12 @@ const hoisted = vi.hoisted(() => {
     from: vi.fn(),
   };
 
-  return { RedirectSignal, supabase };
+  const admin = { from: vi.fn() };
+
+  return { RedirectSignal, supabase, admin };
 });
 
-export const { RedirectSignal, supabase } = hoisted;
+export const { RedirectSignal, supabase, admin } = hoisted;
 
 vi.mock("server-only", () => ({}));
 
@@ -47,6 +49,10 @@ vi.mock("@/lib/logger", () => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock("@/lib/supabase/admin", () => ({
+  createSupabaseAdminClient: vi.fn(() => hoisted.admin),
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(async () => hoisted.supabase),
 }));
@@ -57,6 +63,15 @@ export function mockStoreQuery(result: { data: unknown; error: unknown }) {
   const eq = vi.fn(() => ({ maybeSingle }));
   const select = vi.fn(() => ({ eq }));
   supabase.from.mockReturnValue({ select });
+  return { select, eq, maybeSingle };
+}
+
+/** Mocks the service-role `from("stores").select().eq().maybeSingle()` username lookup. */
+export function mockSlugLookup(result: { data: unknown; error: unknown }) {
+  const maybeSingle = vi.fn(async () => result);
+  const eq = vi.fn(() => ({ maybeSingle }));
+  const select = vi.fn(() => ({ eq }));
+  admin.from.mockReturnValue({ select });
   return { select, eq, maybeSingle };
 }
 

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formData, mockStoreQuery, redirectOf, supabase } from "./auth-mocks";
+import { formData, mockSlugLookup, mockStoreQuery, redirectOf, supabase } from "./auth-mocks";
 
-import { sendEmailCode, signInWithGoogle, verifyEmailCode } from "@/lib/auth/actions";
+import { sendEmailCode, signInWithGoogle, startSignup, verifyEmailCode } from "@/lib/auth/actions";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -108,5 +108,82 @@ describe("signInWithGoogle", () => {
   it("falls back to the login page if Google cannot start", async () => {
     supabase.auth.signInWithOAuth.mockResolvedValue({ data: { url: null }, error: { status: 400, code: "provider_disabled" } });
     expect(await redirectOf(() => signInWithGoogle(formData({})))).toBe("/login?error=google");
+  });
+});
+
+describe("startSignup", () => {
+  const form = (overrides: Record<string, string> = {}) =>
+    formData({
+      username: "Maya-Books",
+      fullName: "Maya Patel",
+      email: "Maya@Example.com",
+      phone: "+1 415 555 0100",
+      ...overrides,
+    });
+
+  it("rejects bad input with the field name, before any lookup or email", async () => {
+    expect(await startSignup(null, form({ username: "ab" }))).toEqual({
+      ok: false,
+      error: "Use 3 to 30 characters.",
+      field: "username",
+    });
+    expect(await startSignup(null, form({ email: "nope" }))).toMatchObject({ ok: false, field: "email" });
+    expect(await startSignup(null, form({ phone: "415" }))).toMatchObject({ ok: false, field: "phone" });
+    expect(supabase.auth.signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("says the username is taken, without sending a code", async () => {
+    mockSlugLookup({ data: { id: "store-1" }, error: null });
+    expect(await startSignup(null, form())).toEqual({
+      ok: false,
+      error: "That username is taken. Try another.",
+      field: "username",
+    });
+    expect(supabase.auth.signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("does not send a code when the username check fails", async () => {
+    mockSlugLookup({ data: null, error: { code: "PGRST000" } });
+    expect(await startSignup(null, form())).toMatchObject({ ok: false, field: "username" });
+    expect(supabase.auth.signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("sends a code and passes the cleaned details as metadata", async () => {
+    const lookup = mockSlugLookup({ data: null, error: null });
+    supabase.auth.signInWithOtp.mockResolvedValue({ data: {}, error: null });
+    expect(await startSignup(null, form())).toEqual({ ok: true, data: { email: "maya@example.com" } });
+    expect(lookup.eq).toHaveBeenCalledWith("slug", "maya-books");
+    expect(supabase.auth.signInWithOtp).toHaveBeenCalledWith({
+      email: "maya@example.com",
+      options: {
+        shouldCreateUser: true,
+        data: { full_name: "Maya Patel", requested_slug: "maya-books", phone: "+14155550100" },
+      },
+    });
+  });
+
+  it("leaves the phone out of the metadata when it is empty", async () => {
+    mockSlugLookup({ data: null, error: null });
+    supabase.auth.signInWithOtp.mockResolvedValue({ data: {}, error: null });
+    await startSignup(null, form({ phone: "" }));
+    const call = supabase.auth.signInWithOtp.mock.calls[0]?.[0] as { options: { data: Record<string, unknown> } };
+    expect(call.options.data).toEqual({ full_name: "Maya Patel", requested_slug: "maya-books" });
+  });
+
+  it("explains rate limits plainly and hides provider details", async () => {
+    mockSlugLookup({ data: null, error: null });
+    supabase.auth.signInWithOtp.mockResolvedValueOnce({
+      data: {},
+      error: { status: 429, code: "over_email_send_rate_limit" },
+    });
+    expect(await startSignup(null, form())).toEqual({
+      ok: false,
+      error: "Too many attempts. Wait a minute, then try again.",
+    });
+    supabase.auth.signInWithOtp.mockResolvedValueOnce({
+      data: {},
+      error: { status: 500, code: "x", message: "db down" },
+    });
+    expect(JSON.stringify(await startSignup(null, form()))).not.toContain("db down");
   });
 });

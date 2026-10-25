@@ -33,7 +33,13 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
       <Suspense fallback={<LoginFormSkeleton />}>
         <LoginFormWithParams searchParams={searchParams} />
       </Suspense>
-      <p className="text-center text-xs font-medium text-mute">
+      <p className="text-center text-sm font-medium text-ink">
+        Don&apos;t have an account?{" "}
+        <Link href="/signup" className={linkClass}>
+          Sign up
+        </Link>
+      </p>
+      <p className="-mt-2 text-center text-xs font-medium text-mute">
         By continuing you agree to the{" "}
         <Link href="/terms" className={linkClass}>
           Terms
