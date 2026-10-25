@@ -1,6 +1,6 @@
 # CLAUDE.md: Project rules for AI coding tools
 
-You are helping a solo founder build **Pickstall**, a Stan Store-style platform for online course creators. The full spec is in `PRD.md`. **Read `PRD.md` before starting any task, and read `DESIGN.md` before building or changing any UI.** If this file and the PRD conflict, ask the founder. `DESIGN.md` is the source of truth for colors, typography, spacing, components and motion.
+You are helping a solo founder build **Pickstall**, a Stan Store-style platform for online course creators. The full spec is in `PRD.md`. **Do not read whole spec files by default (they are long). Use the read map in section 1.1 and read only the sections the current task needs.** If this file and the PRD conflict, ask the founder. `DESIGN.md` is the source of truth for colors, typography, spacing, components and motion.
 
 ## 1. How to work
 
@@ -11,6 +11,21 @@ You are helping a solo founder build **Pickstall**, a Stan Store-style platform 
 5. **Never invent.** If a requirement, API behavior or library detail is unclear, say so and ask, or check the official docs. Do not guess Stripe, Mux, Supabase or Resend API shapes.
 6. After finishing a task, report: what changed, how to run/test it, what was NOT done, and any security-relevant decisions.
 7. Keep answers to the founder in simple English or Hinglish; keep code, comments, commit messages and docs in English.
+
+### 1.1 Read map (save tokens: never read whole spec files by default)
+
+`PRD.md` and `DESIGN.md` are long. Read only the sections below for the current block, using `grep` or section headings to jump to them.
+
+| Block | Read from PRD.md | Read from DESIGN.md | Read from this file |
+|---|---|---|---|
+| A: foundation, schema, auth | section 2, 5.4 (data model), 5.5 (RLS) | none | sections 5, 6, 8 |
+| B: onboarding, dashboard, store | F1, F2, F8, 5.2, 5.8 | sections 0, 3-6, 9 (button, input, card), 10.2, 10.4 | sections 5, 8 |
+| C: digital products | F3b, 5.4 (products, product_files) | section 9, 10.4 | sections 5, 8 |
+| D: Stripe, checkout, webhook, library | section 2, F4, 5.6 (A to C) | section 10.5 | section 7, 8 |
+| E: emails | F7 | none | sections 5, 8 |
+| F: security review, deploy | section 6 | none | section 8 |
+
+Rules: do not paste or re-read whole files into the chat; reference file paths and section names instead. Keep command output short (quiet flags, `| tail -n 40`). Start a fresh session for every block.
 
 ## 2. Tech stack (do not substitute)
 

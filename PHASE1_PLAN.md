@@ -54,7 +54,7 @@ Reserve 20 percent of each block for fixing what Claude Code gets wrong. If a bl
 
 ### Block A: foundation, schema, auth (M0 + M1)
 ```
-Read PRD.md and CLAUDE.md fully. We are doing a 2-day Phase 1 (see PHASE1_PLAN.md section 0 for scope). Do Block A only.
+Read CLAUDE.md, then only the PRD.md and DESIGN.md sections listed for this block in the read map (CLAUDE.md section 1.1). We are doing a 2-day Phase 1 (see PHASE1_PLAN.md section 0 for scope). Do Block A only.
 
 First reply with a short plan (files, approach, risks) and wait for my approval.
 
@@ -165,7 +165,7 @@ Run the full test suite and report.
 
 ## 7. Working tips for Claude Code
 
-- One block per session. Start each with: "Read PRD.md and CLAUDE.md. Do Block X only. Plan first."
+- One block per session. Start each with: "Read CLAUDE.md and the read map for this block only. Do Block X only. Plan first." Use /clear (or a new session) between blocks.
 - Review diffs of auth, RLS and payment files yourself. Do not accept them blindly.
 - If it adds an unrequested dependency or touches files outside the block, stop it.
 - When something breaks, give it the exact error and ask for the root cause before fixes.
