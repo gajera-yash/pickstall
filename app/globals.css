@@ -27,6 +27,7 @@
   --color-ink: var(--ink);
   --color-mute: var(--mute);
   --color-line: var(--line);
+  --color-border-ui: var(--border-ui);
   --color-border-strong: var(--border-strong);
   --color-blue: var(--blue);
   --color-on-blue: var(--on-blue);
@@ -162,8 +163,8 @@
   --accent: var(--yellow);
   --accent-foreground: var(--on-yellow);
   --destructive: var(--danger);
-  --border: var(--border-strong);
-  --input: var(--border-strong);
+  --border: var(--border-ui);
+  --input: var(--border-ui);
   --ring: var(--blue);
   /* Data series order (DESIGN.md 3.4) */
   --chart-1: var(--blue);

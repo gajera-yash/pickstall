@@ -19,7 +19,7 @@
 
 ## 1. Brand and personality
 
-**Concept:** "Pickstall" means the creator's own picks on their own stall: a small, personal storefront where the creator chooses what to sell and the buyer taps to buy. The "0%" promise is the other half: the creator keeps their full cut. The visual language is **receipts, coupons and perforated cut lines**: dashed dividers with a scissors icon, ticket and receipt shapes with scalloped edges (the same scallop doubles as a market-stall awning edge), hard offset shadows, 2px ink outlines. One signature moment per page (the giant "0%" on the landing page; the "You keep" receipt card in the dashboard).
+**Concept:** "Pickstall" means the creator's own picks on their own stall: a small, personal storefront where the creator chooses what to sell and the buyer taps to buy. The "0%" promise is the other half: the creator keeps their full cut. The visual language is **receipts, coupons and perforated cut lines**: dashed dividers with a scissors icon, ticket and receipt shapes with scalloped edges (the same scallop doubles as a market-stall awning edge), hard offset shadows, 2px ink outlines on signature elements (coupons, receipts, marketing mockups). Everyday UI (inputs, cards, secondary buttons) is a clean white page with soft 1px borders. One signature moment per page (the giant "0%" on the landing page; the "You keep" receipt card in the dashboard).
 
 **Personality:** confident, clear, a little playful, trustworthy with money. Premium but not cold. Designed by a designer for creators who live on their phones.
 
@@ -46,12 +46,13 @@ Contrast ratios are measured (WCAG formula). "AA text" needs 4.5:1 (3:1 for larg
 
 | Token | Light | Dark | Role |
 |---|---|---|---|
-| `--bg` | `#F2F3FF` | `#0C0E24` | Page background |
+| `--bg` | `#FFFFFF` | `#0C0E24` | Page background (white theme, D-007) |
 | `--surface` | `#FFFFFF` | `#171A3A` | Cards, inputs, sheets |
 | `--ink` | `#0B0D2A` | `#F1F2FF` | Primary text, strong borders |
 | `--mute` | `#555A82` | `#A3A8D0` | Secondary text, helper text |
 | `--line` | `#CFD3F5` | `#2A2E57` | Decorative dividers only (not for component borders) |
-| `--border-strong` | `#0B0D2A` | `#6B76C4` | Component outlines (2px) |
+| `--border-ui` | `#878CB0` | `#6068A0` | Component outlines: inputs, cards, secondary buttons (1px, 3:1 on bg and surface) |
+| `--border-strong` | `#0B0D2A` | `#6B76C4` | Emphasis outlines (2px): coupons, receipts, highlight button |
 | `--blue` | `#2F3BFF` | `#7D88FF` | Primary actions, links, focus |
 | `--on-blue` | `#FFFFFF` | `#0C0E24` | Text on blue |
 | `--blue-hover` | `#2430D6` | `#9AA3FF` | Primary hover |
@@ -70,19 +71,21 @@ Contrast ratios are measured (WCAG formula). "AA text" needs 4.5:1 (3:1 for larg
 
 | Pair | Ratio | Use |
 |---|---|---|
-| ink on bg (light) | 17.2 | Body text |
-| mute on bg (light) | 6.0 | Secondary text |
+| ink on bg (light) | 19.0 | Body text |
+| mute on bg (light) | 6.6 | Secondary text |
 | white on blue (light) | 6.6 | Primary button |
-| blue on bg (light) | 6.0 | Links |
+| blue on bg (light) | 6.6 | Links |
 | ink on yellow | 13.7 | Badges, coupons |
-| mint `#0A7A53` on white / on bg | 5.4 / 4.9 | Money text |
+| mint `#0A7A53` on white / on bg | 5.4 / 5.4 | Money text |
 | danger on white (light) | 5.9 | Errors |
 | warning text on white (light) | 5.9 | Warnings |
 | ink on bg (dark) | 17.1 | Body text |
 | mute on card (dark) | 7.3 | Secondary text |
 | on-blue on blue (dark) | 6.2 | Primary button (dark) |
 | mint on card (dark) | 9.2 | Money text |
-| border-strong `#6B76C4` on dark bg / card | 4.5 / 4.0 | Component outlines (dark) |
+| border-ui `#878CB0` on white (light) | 3.3 | Component outlines (light) |
+| border-ui `#6068A0` on dark bg / card | 3.6 / 3.2 | Component outlines (dark) |
+| border-strong `#6B76C4` on dark bg / card | 4.5 / 4.0 | Emphasis outlines (dark) |
 
 Note: the old mint `#0C8A5F` failed AA for small text (4.4 on white, 4.0 on bg). Use `#0A7A53`.
 
@@ -189,7 +192,7 @@ Minimum 44x44px for tappable elements on mobile; 40px minimum on desktop. 8px mi
 | `--radius-xl` | 28px | Hero panels, large containers |
 | `--radius-full` | 9999px | Pills, avatars |
 
-**Borders:** component outlines are **2px** `--border-strong`. Decorative dividers are 1px `--line`. Dashed borders (2px dashed `--border-strong`) are reserved for coupons and cut lines.
+**Borders:** component outlines (inputs, cards, secondary buttons, alerts) are **1px** `--border-ui`, which keeps 3:1 contrast. `--border-strong` (2px) is for emphasis only: coupons, receipts, the highlight button. Decorative dividers are 1px `--line`. Dashed borders (2px dashed `--border-strong`) are reserved for coupons and cut lines.
 
 **Shadows (hard offset, no blur):**
 - `--shadow-sm`: `3px 3px 0 var(--border-strong)` (hover lift on small items)
@@ -247,7 +250,7 @@ All built on shadcn/ui primitives, restyled with tokens. States for every intera
 | Variant | Style |
 |---|---|
 | Primary | bg `--blue`, text `--on-blue`, no outline, radius md. Hover `--blue-hover`, active `--blue-active` |
-| Secondary | bg `--surface`, 2px `--border-strong`, text `--ink`. Hover: `--shadow-sm` + translate(-1px,-1px) |
+| Secondary | bg `--surface`, 1px `--border-ui`, text `--ink`. Hover: bg `--blue-soft` |
 | Ghost | no bg or border, text `--ink`. Hover `--blue-soft` |
 | Destructive | bg `--danger`, text white. Only inside confirm dialogs |
 | Highlight | bg `--yellow`, text `#0B0D2A`, 2px `#0B0D2A` outline. Marketing only |
@@ -257,13 +260,13 @@ Sizes: `sm` 36px (desktop only), `md` 44px (default), `lg` 52px (hero/checkout).
 Rule: **one Primary per view**. Checkout "Pay" button is `lg`, full width on mobile, sticky at bottom.
 
 ### 9.2 Input, textarea, select
-Height 48px, radius sm, bg `--surface`, 2px `--border-strong`, text `--ink`, placeholder `--mute`. Label above (Caption weight 600), helper text below (Body S, `--mute`). Focus: blue ring. Error: border `--danger`, message with icon in `--danger`, `aria-invalid` and `aria-describedby`. Never rely on placeholder as label.
+Height 48px, radius sm, bg `--surface`, 1px `--border-ui`, text `--ink`, placeholder `--mute`. Label above (Caption weight 600), helper text below (Body S, `--mute`). Focus: blue ring. Error: border `--danger`, message with icon in `--danger`, `aria-invalid` and `aria-describedby`. Never rely on placeholder as label.
 
 ### 9.3 Checkbox, radio, switch
-20px boxes, radius xs, 2px border; checked = `--blue` fill with white check. Switch 44x24, thumb 18px, on = `--blue`. Label text is part of the click target.
+20px boxes, radius xs, 1px `--border-ui` border; checked = `--blue` fill with white check. Switch 44x24, thumb 18px, on = `--blue`. Label text is part of the click target.
 
 ### 9.4 Card
-bg `--surface`, 2px `--border-strong`, radius lg, padding 20-24px. Hover (only if clickable): `--shadow-sm`, translate(-1px,-1px). No nested cards deeper than 1 level.
+bg `--surface`, 1px `--border-ui`, radius lg, padding 20-24px. Hover (only if clickable): bg `--blue-soft`. No nested cards deeper than 1 level.
 
 ### 9.5 Badge / tag
 Radius full, padding 2px 10px, Caption weight 600. Variants: Live (mint-soft bg, mint text, check icon), Draft (blue-soft, ink), Coming soon (yellow, ink), Refunded (danger-soft, danger), Example (line outline, mute). Always include text.
@@ -272,7 +275,7 @@ Radius full, padding 2px 10px, Caption weight 600. Variants: Live (mint-soft bg,
 Bottom-center on mobile, bottom-right on desktop. Yellow for sale celebration ("New sale: Budgeting 101, $49"), surface for neutral, danger-soft for errors. Auto-dismiss 5s (not for errors), pause on hover/focus, `role="status"` (or `alert` for errors). Max 3 stacked.
 
 ### 9.7 Dialog, sheet, popover
-Dialog: surface, 2px border, radius xl, max width 480px, scrim `rgb(11 13 42 / 0.5)`. Mobile: bottom sheet with 28px top radius. Trap focus, close on Esc, return focus to trigger. Destructive confirms name the object ("Delete Budgeting 101?") and use a Destructive button.
+Dialog: surface, 1px `--border-ui` border, radius xl, max width 480px, scrim `rgb(11 13 42 / 0.5)`. Mobile: bottom sheet with 28px top radius. Trap focus, close on Esc, return focus to trigger. Destructive confirms name the object ("Delete Budgeting 101?") and use a Destructive button.
 
 ### 9.8 Tabs and navigation
 Tabs: underline style, active = 3px `--blue` underline + ink text; inactive `--mute`. Sidebar item: 44px, radius md, icon 20px + label; active = `--blue-soft` bg + ink text + 3px blue left bar. Mobile bottom bar max 5 items.
@@ -284,7 +287,7 @@ Header row Caption weight 600 `--mute`, 1px `--line` row separators, row height 
 Progress bar 10px, radius full, track `--line`, fill `--blue`; always show a text value. Stepper: numbered circles only for true sequences (onboarding). Skeleton: `--line` blocks with a slow shimmer (disabled under reduced motion).
 
 ### 9.11 Alert / banner
-Radius md, 2px border, icon + title + text. Info (blue-soft), Success (mint-soft), Warning (warning-soft), Error (danger-soft). Inline above the affected form, not floating.
+Radius md, 1px border (variant color), icon + title + text. Info (blue-soft), Success (mint-soft), Warning (warning-soft), Error (danger-soft). Inline above the affected form, not floating.
 
 ### 9.12 Empty state
 Centered, 32px icon in a `--blue-soft` circle, H3 title, one sentence, one primary button. Example: "No products yet" / "Add your first course or download to start selling." / [Add product].
@@ -424,7 +427,7 @@ export const body = Instrument_Sans({
 ### 16.2 CSS variables (`app/globals.css`)
 ```css
 :root {
-  --bg:#F2F3FF; --surface:#FFFFFF; --ink:#0B0D2A; --mute:#555A82; --line:#CFD3F5; --border-strong:#0B0D2A;
+  --bg:#FFFFFF; --surface:#FFFFFF; --ink:#0B0D2A; --mute:#555A82; --line:#CFD3F5; --border-ui:#878CB0; --border-strong:#0B0D2A;
   --blue:#2F3BFF; --on-blue:#FFFFFF; --blue-hover:#2430D6; --blue-active:#1B26B8; --blue-soft:#E1E4FF;
   --yellow:#FFD84D; --yellow-soft:#FFF3BF;
   --mint:#0A7A53; --mint-soft:#DDF5EA;
@@ -434,7 +437,7 @@ export const body = Instrument_Sans({
   --dur-fast:120ms; --dur-base:200ms; --dur-slow:360ms; --ease-out:cubic-bezier(.22,1,.36,1);
 }
 .dark, :root[data-theme="dark"] {
-  --bg:#0C0E24; --surface:#171A3A; --ink:#F1F2FF; --mute:#A3A8D0; --line:#2A2E57; --border-strong:#6B76C4;
+  --bg:#0C0E24; --surface:#171A3A; --ink:#F1F2FF; --mute:#A3A8D0; --line:#2A2E57; --border-ui:#6068A0; --border-strong:#6B76C4;
   --blue:#7D88FF; --on-blue:#0C0E24; --blue-hover:#9AA3FF; --blue-active:#B4BBFF; --blue-soft:#232857;
   --yellow-soft:#3A3310; --mint:#4FD6A0; --mint-soft:#12332B;
   --danger:#FF7A7A; --danger-soft:#3A1A2A; --warning:#FFD84D; --warning-soft:#3A3310;
@@ -459,7 +462,7 @@ Implement the dark values once (a single source) and reuse them for both the med
 (Tailwind v3: map the same names in `tailwind.config.ts` under `theme.extend.colors/fontFamily/borderRadius`.) Use classes like `bg-bg text-ink border-2 border-ink rounded-lg`, never raw hex.
 
 ### 16.4 shadcn/ui variable mapping
-`--background`=`--bg`, `--foreground`=`--ink`, `--card`=`--surface`, `--card-foreground`=`--ink`, `--primary`=`--blue`, `--primary-foreground`=`--on-blue`, `--secondary`=`--surface`, `--muted`=`--blue-soft`, `--muted-foreground`=`--mute`, `--accent`=`--yellow`, `--accent-foreground`=`#0B0D2A`, `--destructive`=`--danger`, `--border`=`--border-strong`, `--input`=`--border-strong`, `--ring`=`--blue`, `--radius`=`--radius-md`.
+`--background`=`--bg`, `--foreground`=`--ink`, `--card`=`--surface`, `--card-foreground`=`--ink`, `--primary`=`--blue`, `--primary-foreground`=`--on-blue`, `--secondary`=`--surface`, `--muted`=`--blue-soft`, `--muted-foreground`=`--mute`, `--accent`=`--yellow`, `--accent-foreground`=`#0B0D2A`, `--destructive`=`--danger`, `--border`=`--border-ui`, `--input`=`--border-ui`, `--ring`=`--blue`, `--radius`=`--radius-md`.
 
 ### 16.5 Token source of truth
 Keep tokens in `styles/tokens.css` (imported by `globals.css`) and mirror creator themes in `lib/themes.ts` (typed). A unit test must assert the contrast of every foreground/background token pair in section 3.2 and every theme preset in section 11.
@@ -468,7 +471,7 @@ Keep tokens in `styles/tokens.css` (imported by `globals.css`) and mirror creato
 
 ## 17. Do and don't
 
-**Do:** 2px outlines, hard offset shadows on marketing mockups, big confident type, honest fee labels, mint money text, labelled example data, calm dashboards, one primary action.
+**Do:** soft 1px borders on a white page, 2px ink outlines and hard offset shadows only on signature elements and marketing mockups, big confident type, honest fee labels, mint money text, labelled example data, calm dashboards, one primary action.
 
 **Don't:** gradients, glass, neon, soft blurry card shadows in the dashboard, emoji icons, all-caps eyebrows, identical card grids everywhere, fade-up on every section, tiny text, color-only status, fake testimonials, stock photos, lorem ipsum, more than one blue button per view.
 
@@ -499,4 +502,5 @@ Keep tokens in `styles/tokens.css` (imported by `globals.css`) and mirror creato
 
 ## 20. Change log
 
+- v1.1: white theme (`--bg` #FFFFFF), new `--border-ui` token, soft 1px component borders; `--border-strong` kept for emphasis (decision D-007).
 - v1.0: initial design system (tokens, typography, components, themes, motion, accessibility, implementation).

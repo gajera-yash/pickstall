@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { Loader2 } from "lucide-react"
 import { Slot } from "radix-ui"
 
-// DESIGN.md 9.1. One primary button per view. Focus ring comes from the global :focus-visible rule.
+// DESIGN.md 9.1 (white theme, D-007). One primary button per view. Focus ring comes from the global :focus-visible rule.
 const buttonVariants = cva(
   [
     "inline-flex shrink-0 items-center justify-center gap-2 rounded-md px-5 text-button whitespace-nowrap select-none",
@@ -18,7 +18,7 @@ const buttonVariants = cva(
         default:
           "bg-primary text-primary-foreground not-disabled:hover:bg-blue-hover not-disabled:active:bg-blue-active",
         secondary:
-          "border-2 border-border-strong bg-surface text-ink not-disabled:hover:-translate-x-px not-disabled:hover:-translate-y-px not-disabled:hover:shadow-hard-sm",
+          "border border-border-ui bg-surface text-ink not-disabled:hover:bg-blue-soft",
         ghost: "text-ink not-disabled:hover:bg-blue-soft",
         destructive: "bg-danger text-on-danger not-disabled:hover:opacity-90",
         highlight:

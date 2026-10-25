@@ -39,7 +39,7 @@ const dark = { ...light, ...darkOverrides };
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const COLOR_TOKENS = [
-  "bg", "surface", "ink", "mute", "line", "border-strong",
+  "bg", "surface", "ink", "mute", "line", "border-ui", "border-strong",
   "blue", "on-blue", "blue-hover", "blue-active", "blue-soft",
   "yellow", "on-yellow", "yellow-soft", "mint", "mint-soft",
   "danger", "on-danger", "danger-soft", "warning", "warning-soft",
@@ -62,6 +62,10 @@ describe("tokens.css structure", () => {
     for (const name of Object.keys(darkOverrides)) expect(light, name).toHaveProperty(name);
   });
 
+  it("uses a white page background in light mode (white theme, D-007)", () => {
+    expect(light["bg"]).toBe("#ffffff");
+  });
+
   it("uses the radii from DESIGN.md section 6", () => {
     expect([light["radius-xs"], light["radius-sm"], light["radius-md"], light["radius-lg"], light["radius-xl"]]).toEqual([
       "6px", "10px", "14px", "20px", "28px",
@@ -75,27 +79,29 @@ const modes: Record<Mode, Record<string, string>> = { light, dark };
 /** [foreground token, background token, minimum ratio, documented ratio from DESIGN.md 3.2 or null] */
 const PAIRS: Record<Mode, [string, string, number, number | null][]> = {
   light: [
-    ["ink", "bg", AA_TEXT, 17.2],
+    ["ink", "bg", AA_TEXT, 19.0],
     ["ink", "surface", AA_TEXT, null],
-    ["mute", "bg", AA_TEXT, 6.0],
+    ["mute", "bg", AA_TEXT, 6.6],
     ["mute", "surface", AA_TEXT, null],
     ["on-blue", "blue", AA_TEXT, 6.6],
     ["on-blue", "blue-hover", AA_TEXT, null],
     ["on-blue", "blue-active", AA_TEXT, null],
-    ["blue", "bg", AA_TEXT, 6.0],
+    ["blue", "bg", AA_TEXT, 6.6],
     ["blue", "surface", AA_TEXT, null],
     ["ink", "blue-soft", AA_TEXT, null],
     ["mute", "blue-soft", AA_TEXT, null],
     ["on-yellow", "yellow", AA_TEXT, 13.7],
     ["ink", "yellow-soft", AA_TEXT, null],
     ["mint", "surface", AA_TEXT, 5.4],
-    ["mint", "bg", AA_TEXT, 4.9],
+    ["mint", "bg", AA_TEXT, 5.4],
     ["mint", "mint-soft", AA_TEXT, null],
     ["danger", "surface", AA_TEXT, 5.9],
     ["danger", "danger-soft", AA_TEXT, null],
     ["on-danger", "danger", AA_TEXT, null],
     ["warning", "surface", AA_TEXT, 5.9],
     ["warning", "warning-soft", AA_TEXT, null],
+    ["border-ui", "bg", AA_LARGE_OR_UI, 3.3],
+    ["border-ui", "surface", AA_LARGE_OR_UI, 3.3],
     ["border-strong", "bg", AA_LARGE_OR_UI, null],
     ["border-strong", "surface", AA_LARGE_OR_UI, null],
   ],
@@ -121,6 +127,8 @@ const PAIRS: Record<Mode, [string, string, number, number | null][]> = {
     ["on-danger", "danger", AA_TEXT, null],
     ["warning", "surface", AA_TEXT, null],
     ["warning", "warning-soft", AA_TEXT, null],
+    ["border-ui", "bg", AA_LARGE_OR_UI, 3.6],
+    ["border-ui", "surface", AA_LARGE_OR_UI, 3.2],
     ["border-strong", "bg", AA_LARGE_OR_UI, 4.5],
     ["border-strong", "surface", AA_LARGE_OR_UI, 4.0],
   ],

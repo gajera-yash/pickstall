@@ -13,12 +13,13 @@
   color-scheme: light dark;
 
   /* Surfaces and text */
-  --bg: #f2f3ff;
+  --bg: #ffffff; /* white theme: pure white page (docs/DECISIONS.md D-007) */
   --surface: #ffffff;
   --ink: #0b0d2a;
   --mute: #555a82;
   --line: #cfd3f5; /* decorative dividers only, never component borders */
-  --border-strong: #0b0d2a;
+  --border-ui: #878cb0; /* inputs, cards, secondary buttons: soft 1px border, 3:1 on white */
+  --border-strong: #0b0d2a; /* emphasis outlines only: coupons, receipts, highlight button */
 
   /* Primary (actions, links, focus) */
   --blue: #2f3bff;
@@ -78,6 +79,7 @@
   --ink: #f1f2ff;
   --mute: #a3a8d0;
   --line: #2a2e57;
+  --border-ui: #6068a0;
   --border-strong: #6b76c4;
   --blue: #7d88ff;
   --on-blue: #0c0e24;
@@ -103,6 +105,7 @@
     --ink: #f1f2ff;
     --mute: #a3a8d0;
     --line: #2a2e57;
+    --border-ui: #6068a0;
     --border-strong: #6b76c4;
     --blue: #7d88ff;
     --on-blue: #0c0e24;
