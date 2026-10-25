@@ -14,7 +14,7 @@ beforeEach(() => {
 describe("requireUser", () => {
   it("returns the user from verified claims", async () => {
     supabase.auth.getClaims.mockResolvedValue({ data: { claims }, error: null });
-    await expect(requireUser()).resolves.toEqual({ id: claims.sub, email: claims.email });
+    await expect(requireUser()).resolves.toEqual({ id: claims.sub, email: claims.email, prefill: {} });
   });
 
   it("redirects to /login, keeping a safe next path", async () => {
@@ -33,7 +33,10 @@ describe("requireCreator", () => {
     supabase.auth.getClaims.mockResolvedValue({ data: { claims }, error: null });
     const query = mockStoreQuery({ data: store, error: null });
 
-    await expect(requireCreator()).resolves.toEqual({ user: { id: claims.sub, email: claims.email }, store });
+    await expect(requireCreator()).resolves.toEqual({
+      user: { id: claims.sub, email: claims.email, prefill: {} },
+      store,
+    });
     expect(supabase.from).toHaveBeenCalledWith("stores");
     expect(query.eq).toHaveBeenCalledWith("owner_id", claims.sub);
   });

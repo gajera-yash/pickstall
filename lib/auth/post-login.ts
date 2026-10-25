@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 
 export const DASHBOARD_PATH = "/dashboard";
 export const ONBOARDING_PATH = "/onboarding";
+export const ACTIVATE_PATH = "/onboarding/activate";
 
 // Never send a signed-in user back to the login pages or the auth callback.
 const AUTH_PATH = /^\/(login|auth)(?:[/?#]|$)/;

@@ -4,11 +4,13 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { ONBOARDING_PATH } from "@/lib/auth/post-login";
+import { signupPrefill, type SignupPrefill } from "@/lib/auth/prefill";
 import { loginPath } from "@/lib/auth/redirect";
 import { logger } from "@/lib/logger";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export type AuthUser = { id: string; email: string | null };
+/** `prefill` holds untrusted suggestions from the signup metadata (see signupPrefill). */
+export type AuthUser = { id: string; email: string | null; prefill: SignupPrefill };
 
 export type CreatorStore = { id: string; slug: string; name: string; is_published: boolean };
 
@@ -21,7 +23,7 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data) return null;
-  return { id: data.claims.sub, email: data.claims.email ?? null };
+  return { id: data.claims.sub, email: data.claims.email ?? null, prefill: signupPrefill(data.claims.user_metadata) };
 });
 
 /** Signed-in user, or a redirect to /login (with `next` so they come back here). */

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { optionalPhoneSchema } from "@/lib/phone";
 import { slugSchema } from "@/lib/slug";
+import { hasControlChar } from "@/lib/text";
 
 export const emailSchema = z
   .string()
@@ -17,9 +18,6 @@ export const emailCodeSchema = z
 
 export const sendCodeInput = z.object({ email: emailSchema });
 export const verifyCodeInput = z.object({ email: emailSchema, code: emailCodeSchema, next: z.string().optional() });
-
-/** True if the text has a control character (code below 32, or 127). */
-const hasControlChar = (value: string) => [...value].some((ch) => ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127);
 
 export const fullNameSchema = z
   .string()

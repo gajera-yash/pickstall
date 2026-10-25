@@ -13,6 +13,13 @@ export const OTP_RESEND_COOLDOWN_SECONDS = 30;
 export const CURRENCIES = ["usd", "gbp", "cad"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
+/** Shown in the currency picker. */
+export const CURRENCY_LABELS: Record<Currency, string> = {
+  usd: "USD, US dollar",
+  gbp: "GBP, British pound",
+  cad: "CAD, Canadian dollar",
+};
+
 /**
  * Slugs a creator may not claim, because they clash with app subdomains or routes.
  * Compared lowercase.
