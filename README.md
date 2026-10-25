@@ -14,6 +14,15 @@ Storefront, digital products and courses for online creators. Spec: `PRD.md`. Ru
 4. `pnpm db:push:dry` to preview, then `pnpm db:push` to apply migrations to the dev project.
 5. `pnpm dev`, then open http://localhost:3000
 
+## Supabase Auth settings (dashboard, dev project)
+`supabase/config.toml` only affects a local stack, so set these in the Supabase dashboard:
+1. **Authentication > URL Configuration**: Site URL `http://localhost:3000`; add `http://localhost:3000/**` to Redirect URLs.
+2. **Authentication > Sign In / Providers > Email**: enabled; email OTP length **6**.
+3. **Authentication > Emails > Magic Link** template: show the code with `{{ .Token }}` (we sign in with a 6-digit code, not a link).
+4. Optional, Google: create a Google OAuth client (Web) with redirect URI `https://<project-ref>.supabase.co/auth/v1/callback`, paste its ID and secret into **Providers > Google**, then set `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` in `.env.local`.
+
+The built-in Supabase email sender allows only a few emails per hour. Custom SMTP (Resend) comes in Block E.
+
 ## Scripts
 | Command | What it does |
 |---|---|

@@ -8,6 +8,8 @@ export const publicEnvSchema = z.object({
   NEXT_PUBLIC_ROOT_DOMAIN: z.string().min(1),
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+  // Shows the Google button. Set to "true" only after the provider is enabled in Supabase.
+  NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: z.enum(["true", "false"]).optional(),
 });
 
 export const serverEnvSchema = publicEnvSchema.extend({
