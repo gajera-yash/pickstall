@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import { resolvePostLoginPath } from "@/lib/auth/post-login";
 import { safeNextPath } from "@/lib/auth/redirect";
 import { sendCodeInput, verifyCodeInput } from "@/lib/auth/schemas";
 import { publicEnv } from "@/lib/env";
@@ -33,7 +34,7 @@ export async function sendEmailCode(_prev: SendCodeState, formData: FormData): P
   });
 
   if (error) {
-    logger.warn("auth.send_code_failed", { status: error.status, code: error.code });
+    logger.warn("auth.send_code_failed", { status: error.status, code: error.code, message: error.message });
     if (error.status === 429) return err(TOO_MANY);
     return err("Couldn't send the code. Check your connection and try again.");
   }
@@ -50,7 +51,7 @@ export async function verifyEmailCode(_prev: VerifyCodeState, formData: FormData
   if (!parsed.success) return err(firstIssue(parsed.error));
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.verifyOtp({
+  const { data, error } = await supabase.auth.verifyOtp({
     email: parsed.data.email,
     token: parsed.data.code,
     type: "email",
@@ -62,7 +63,8 @@ export async function verifyEmailCode(_prev: VerifyCodeState, formData: FormData
     return err("That code is wrong or has expired. Check the email or request a new code.");
   }
 
-  redirect(safeNextPath(parsed.data.next));
+  const userId = data.user?.id;
+  redirect(userId ? await resolvePostLoginPath(supabase, userId, parsed.data.next) : "/");
 }
 
 /** Starts Google sign-in. Supabase redirects back to /auth/callback with a one-time code. */

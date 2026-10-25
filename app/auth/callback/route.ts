@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { safeNextPath } from "@/lib/auth/redirect";
+import { resolvePostLoginPath } from "@/lib/auth/post-login";
 import { publicEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -10,12 +10,15 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 // and `next` must be a same-origin path.
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
-  const next = safeNextPath(request.nextUrl.searchParams.get("next"));
+  const next = request.nextUrl.searchParams.get("next");
 
   if (code) {
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(new URL(next, publicEnv.NEXT_PUBLIC_APP_URL));
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      const path = data.user ? await resolvePostLoginPath(supabase, data.user.id, next) : "/";
+      return NextResponse.redirect(new URL(path, publicEnv.NEXT_PUBLIC_APP_URL));
+    }
     logger.warn("auth.callback_exchange_failed", { status: error.status, code: error.code });
   }
 

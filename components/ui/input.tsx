@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 // DESIGN.md 9.2: 48px high, 2px strong border, never use the placeholder as the label.
 // Error state: set aria-invalid and aria-describedby pointing at a <FieldError>.

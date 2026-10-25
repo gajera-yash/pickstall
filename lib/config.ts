@@ -5,6 +5,10 @@ export const APP_NAME = "Pickstall";
 /** Root domain for tenant subdomains (`{slug}.ROOT_DOMAIN`, `app.ROOT_DOMAIN`). */
 export const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
 
+/** Email sign-in code: length, and how long the "Resend code" button waits (docs/DECISIONS.md D-002). */
+export const OTP_LENGTH = 6;
+export const OTP_RESEND_COOLDOWN_SECONDS = 30;
+
 /** Store currencies supported in Phase 1 (lowercase, as stored in the database). */
 export const CURRENCIES = ["usd", "gbp", "cad"] as const;
 export type Currency = (typeof CURRENCIES)[number];

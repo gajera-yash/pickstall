@@ -3,6 +3,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
+import { ONBOARDING_PATH } from "@/lib/auth/post-login";
 import { loginPath } from "@/lib/auth/redirect";
 import { logger } from "@/lib/logger";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -48,6 +49,6 @@ export async function requireCreator(next?: string): Promise<{ user: AuthUser; s
     logger.error("auth.require_creator_store_query_failed", { code: error.code });
     throw new Error("Could not load your store.");
   }
-  if (!data) redirect("/onboarding");
+  if (!data) redirect(ONBOARDING_PATH);
   return { user, store: data };
 }

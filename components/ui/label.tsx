@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import { Label as LabelPrimitive } from "radix-ui"
 
 // DESIGN.md 9.2: label sits above the field, Caption size, weight 600.

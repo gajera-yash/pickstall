@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formData, redirectOf, supabase } from "./auth-mocks";
+import { formData, mockStoreQuery, redirectOf, supabase } from "./auth-mocks";
 
 import { sendEmailCode, signInWithGoogle, verifyEmailCode } from "@/lib/auth/actions";
 
@@ -47,7 +47,7 @@ describe("verifyEmailCode", () => {
   });
 
   it("signs in and redirects to the safe next path", async () => {
-    supabase.auth.verifyOtp.mockResolvedValue({ data: {}, error: null });
+    supabase.auth.verifyOtp.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
     const url = await redirectOf(() =>
       verifyEmailCode(null, formData({ email: "maya@example.com", code: "123 456", next: "/library" })),
     );
@@ -56,11 +56,32 @@ describe("verifyEmailCode", () => {
   });
 
   it("never redirects off-site", async () => {
-    supabase.auth.verifyOtp.mockResolvedValue({ data: {}, error: null });
+    supabase.auth.verifyOtp.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    mockStoreQuery({ data: null, error: null });
     const url = await redirectOf(() =>
       verifyEmailCode(null, formData({ email: "maya@example.com", code: "123456", next: "https://evil.test" })),
     );
-    expect(url).toBe("/");
+    expect(url).toBe("/onboarding");
+  });
+
+  it("sends a creator with a store to the dashboard when there is no next path", async () => {
+    supabase.auth.verifyOtp.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    mockStoreQuery({ data: { id: "store-1" }, error: null });
+    const url = await redirectOf(() => verifyEmailCode(null, formData({ email: "maya@example.com", code: "123456" })));
+    expect(url).toBe("/dashboard");
+  });
+
+  it("sends a user without a store to onboarding when there is no next path", async () => {
+    supabase.auth.verifyOtp.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    mockStoreQuery({ data: null, error: null });
+    const url = await redirectOf(() => verifyEmailCode(null, formData({ email: "maya@example.com", code: "123456" })));
+    expect(url).toBe("/onboarding");
+  });
+
+  it("does not look up a store when the code is wrong", async () => {
+    supabase.auth.verifyOtp.mockResolvedValue({ data: { user: null }, error: { status: 403, code: "otp_expired" } });
+    await verifyEmailCode(null, formData({ email: "maya@example.com", code: "123456" }));
+    expect(supabase.from).not.toHaveBeenCalled();
   });
 
   it("returns a plain error for a wrong or expired code", async () => {
