@@ -30,6 +30,8 @@ const anon = anonClient();
 let a: TestUser;
 let b: TestUser;
 let buyer: TestUser;
+let phoneUser: TestUser;
+let badPhoneUser: TestUser;
 
 let storeA: Row;
 let storeB: Row;
@@ -53,6 +55,8 @@ beforeAll(async () => {
   a = await createTestUser(admin, "creator-a");
   b = await createTestUser(admin, "creator-b");
   buyer = await createTestUser(admin, "buyer");
+  phoneUser = await createTestUser(admin, "phone", { full_name: "Example Phone", phone: "+14155550100" });
+  badPhoneUser = await createTestUser(admin, "badphone", { full_name: "x".repeat(200), phone: "12345; drop table" });
 
   // Creators set up their own data through their own (RLS-limited) clients.
   storeA = must(
@@ -179,7 +183,7 @@ afterAll(async () => {
   if (emailLog) await admin.from("email_log").delete().eq("id", emailLog.id);
   await deleteUsersById(
     admin,
-    [a, b, buyer].filter(Boolean).map((user) => user.id),
+    [a, b, buyer, phoneUser, badPhoneUser].filter(Boolean).map((user) => user.id),
   );
 });
 
@@ -202,6 +206,30 @@ describe("profiles and roles", () => {
     const { data, error } = await a.client.from("profiles").select("id");
     expect(error).toBeNull();
     expect(ids(data)).toEqual([a.id]);
+  });
+
+  it("copies a well-formed phone number from the sign-up metadata", async () => {
+    const { data } = await admin.from("profiles").select("full_name, phone").eq("id", phoneUser.id).single();
+    expect(data).toEqual({ full_name: "Example Phone", phone: "+14155550100" });
+  });
+
+  it("drops a malformed phone number and caps the name length instead of failing sign-in", async () => {
+    const { data } = await admin.from("profiles").select("full_name, phone").eq("id", badPhoneUser.id).single();
+    const profile = data as { full_name: string; phone: string | null };
+    expect(profile.phone).toBeNull();
+    expect(profile.full_name).toHaveLength(80);
+  });
+
+  it("does not let a user set or change their own phone number", async () => {
+    expectDenied(await buyer.client.from("profiles").update({ phone: "+14155550199" }).eq("id", buyer.id));
+    expectDenied(await phoneUser.client.from("profiles").update({ phone: null }).eq("id", phoneUser.id));
+  });
+
+  it("lets a user read their own phone number but not anyone else's", async () => {
+    const own = await phoneUser.client.from("profiles").select("phone").eq("id", phoneUser.id).single();
+    expect((own.data as { phone: string }).phone).toBe("+14155550100");
+    expectNoRows(await buyer.client.from("profiles").select("phone").eq("id", phoneUser.id));
+    expectDenied(await anon.from("profiles").select("phone"));
   });
 
   it("lets a user change their own display name", async () => {

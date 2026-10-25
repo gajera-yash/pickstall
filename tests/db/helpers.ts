@@ -41,10 +41,14 @@ export type TestUser = { id: string; email: string; client: SupabaseClient };
  * Creates a confirmed user and a signed-in client for them, without sending any email
  * and without passwords: the admin API makes a magic-link token, the client verifies it.
  */
-export async function createTestUser(admin: SupabaseClient, label: string): Promise<TestUser> {
+export async function createTestUser(
+  admin: SupabaseClient,
+  label: string,
+  metadata?: Record<string, unknown>,
+): Promise<TestUser> {
   const email = testEmail(label);
 
-  const created = await admin.auth.admin.createUser({ email, email_confirm: true });
+  const created = await admin.auth.admin.createUser({ email, email_confirm: true, user_metadata: metadata });
   if (created.error || !created.data.user) {
     throw new Error(`createUser(${label}) failed: ${created.error?.message ?? "no user"}`);
   }
