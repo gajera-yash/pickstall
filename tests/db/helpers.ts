@@ -102,6 +102,7 @@ export async function sweepLeftoverTestData(admin: SupabaseClient): Promise<void
 
   await admin.from("webhook_events").delete().like("id", "evt_rls_%");
   await admin.from("email_log").delete().like("to_email", "rls-%@example.test");
+  await admin.from("signup_intents").delete().like("email", "rls-%@example.test");
 }
 
 type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
