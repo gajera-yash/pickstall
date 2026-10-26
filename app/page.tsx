@@ -27,15 +27,23 @@ async function SessionStatus() {
 
   if (!user) {
     return (
-      <Button asChild className="self-start">
-        <Link href="/login">Sign in</Link>
-      </Button>
+      <div className="flex flex-wrap gap-3">
+        <Button asChild>
+          <Link href="/signup">Create account</Link>
+        </Button>
+        <Button asChild variant="secondary">
+          <Link href="/login">Sign in</Link>
+        </Button>
+      </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-2">
       <p>Signed in as {user.email ?? "your account"}.</p>
+      <Button asChild className="self-start">
+        <Link href="/dashboard">Go to dashboard</Link>
+      </Button>
       <form action={signOut}>
         <Button type="submit" variant="secondary">
           Sign out

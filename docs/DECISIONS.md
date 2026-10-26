@@ -4,6 +4,15 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-023: Dashboard shell and first-run checklist rules
+- **Date:** 2026-10-26
+- **Decision:**
+  - The dashboard has a 248px sidebar on desktop and a bottom tab bar on mobile with the four sections (My Store, Income, Customers, Settings). The top bar shows the store name with a Draft or Live badge.
+  - Checklist "done" rules: **Store setup** = the store has a photo or a bio; **Add first product** = at least one product; **Connect payments** = `stripe_charges_enabled`; **Publish** = `is_published`.
+  - A step whose screen is not built yet shows a "Coming next" badge instead of a link to an empty page (honest UI, `DESIGN.md` section 15). Flip it in `lib/dashboard/checklist.ts` when the block ships.
+  - Income and Customers show honest empty states until checkout exists (Block D).
+- **Why:** founder answer B4 in the rework plan; D-009 and D-011.
+
 ## D-022: Database commands in CLAUDE.md
 - **Date:** 2026-10-26
 - **Decision:** `CLAUDE.md` section 3 lists `pnpm test:unit`, `pnpm test:db` and `pnpm db:push` instead of `supabase db reset`. `db reset` is only for CI or a local stack, never the hosted project. AI tools run lint, typecheck and unit tests; the founder pushes migrations and runs the DB tests.

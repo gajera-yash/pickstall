@@ -1,0 +1,80 @@
+// First-run checklist on My Store (docs/DECISIONS.md D-009, DESIGN.md 10.8).
+
+export type ChecklistItemId = "store-setup" | "first-product" | "connect-payments" | "publish";
+
+export type ChecklistItem = {
+  id: ChecklistItemId;
+  label: string;
+  description: string;
+  done: boolean;
+  /** False until the screen for this step is built; the UI then says "Coming next" instead of linking. */
+  available: boolean;
+  href: string;
+};
+
+export type ChecklistInput = {
+  bio: string | null;
+  avatarUrl: string | null;
+  chargesEnabled: boolean;
+  isPublished: boolean;
+  productCount: number;
+};
+
+/**
+ * Which screens exist yet. Flip an entry to true when its block ships:
+ * Store setup and products (Block B/C), payments (Block D), publish (needs the public store page).
+ */
+const AVAILABLE: Record<ChecklistItemId, boolean> = {
+  "store-setup": false,
+  "first-product": false,
+  "connect-payments": false,
+  publish: false,
+};
+
+export function buildChecklist(input: ChecklistInput): {
+  items: ChecklistItem[];
+  next: ChecklistItem | null;
+  doneCount: number;
+} {
+  const items: ChecklistItem[] = [
+    {
+      id: "store-setup",
+      label: "Store setup",
+      description: "Add your photo and a short bio, and pick your theme.",
+      // Done once the creator has personalized the store: a photo or a bio.
+      done: Boolean(input.avatarUrl || input.bio?.trim()),
+      available: AVAILABLE["store-setup"],
+      href: "/dashboard/store",
+    },
+    {
+      id: "first-product",
+      label: "Add first product",
+      description: "Sell a digital download or a link.",
+      done: input.productCount > 0,
+      available: AVAILABLE["first-product"],
+      href: "/dashboard/products/new",
+    },
+    {
+      id: "connect-payments",
+      label: "Connect payments",
+      description: "Connect Stripe so buyers can pay you directly.",
+      done: input.chargesEnabled,
+      available: AVAILABLE["connect-payments"],
+      href: "/dashboard/settings",
+    },
+    {
+      id: "publish",
+      label: "Publish",
+      description: "Make your store page public.",
+      done: input.isPublished,
+      available: AVAILABLE.publish,
+      href: "/dashboard",
+    },
+  ];
+
+  return {
+    items,
+    next: items.find((item) => !item.done) ?? null,
+    doneCount: items.filter((item) => item.done).length,
+  };
+}
