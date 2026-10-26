@@ -14,7 +14,7 @@ beforeEach(() => {
 describe("requireUser", () => {
   it("returns the user from verified claims", async () => {
     supabase.auth.getClaims.mockResolvedValue({ data: { claims }, error: null });
-    await expect(requireUser()).resolves.toEqual({ id: claims.sub, email: claims.email, prefill: {} });
+    await expect(requireUser()).resolves.toEqual({ id: claims.sub, email: claims.email });
   });
 
   it("redirects to /login, keeping a safe next path", async () => {
@@ -34,17 +34,17 @@ describe("requireCreator", () => {
     const query = mockStoreQuery({ data: store, error: null });
 
     await expect(requireCreator()).resolves.toEqual({
-      user: { id: claims.sub, email: claims.email, prefill: {} },
+      user: { id: claims.sub, email: claims.email },
       store,
     });
     expect(supabase.from).toHaveBeenCalledWith("stores");
     expect(query.eq).toHaveBeenCalledWith("owner_id", claims.sub);
   });
 
-  it("sends a signed-in user without a store to onboarding", async () => {
+  it("sends a signed-in user without a store to the username step", async () => {
     supabase.auth.getClaims.mockResolvedValue({ data: { claims }, error: null });
     mockStoreQuery({ data: null, error: null });
-    expect(await redirectOf(() => requireCreator())).toBe("/onboarding");
+    expect(await redirectOf(() => requireCreator())).toBe("/signup/username");
   });
 
   it("sends a signed-out visitor to login without querying stores", async () => {

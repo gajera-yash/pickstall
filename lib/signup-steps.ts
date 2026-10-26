@@ -1,8 +1,8 @@
 /**
- * Order of the account wizard (docs/DECISIONS.md D-007). The progress bar is driven by this list.
- * Phase 3 inserts "plan" and "payment" before "activate" (platform billing); nothing else needs to change.
+ * Signup is two steps (docs/DECISIONS.md D-008): details, then the email code. The username step
+ * (Google users, taken usernames) counts as the second step. The progress bar is driven by this list.
  */
-export const SIGNUP_STEPS = ["account", "verify", "store", "activate"] as const;
+export const SIGNUP_STEPS = ["details", "code"] as const;
 
 export type SignupStep = (typeof SIGNUP_STEPS)[number];
 

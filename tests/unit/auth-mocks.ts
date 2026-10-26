@@ -23,10 +23,21 @@ const hoisted = vi.hoisted(() => {
 
   const admin = { from: vi.fn() };
 
-  return { RedirectSignal, supabase, admin };
+  // In-memory cookie jar for next/headers cookies().
+  const cookieJar = new Map<string, string>();
+  const cookieStore = {
+    get: vi.fn((name: string) => (cookieJar.has(name) ? { name, value: cookieJar.get(name) as string } : undefined)),
+    set: vi.fn((name: string, value: string) => void cookieJar.set(name, value)),
+    delete: vi.fn((name: string) => void cookieJar.delete(name)),
+  };
+
+  const intents = { saveSignupIntent: vi.fn(), takeSignupIntent: vi.fn() };
+  const draftStore = { createDraftStore: vi.fn() };
+
+  return { RedirectSignal, supabase, admin, cookieJar, cookieStore, intents, draftStore };
 });
 
-export const { RedirectSignal, supabase, admin } = hoisted;
+export const { RedirectSignal, supabase, admin, cookieJar, cookieStore, intents, draftStore } = hoisted;
 
 vi.mock("server-only", () => ({}));
 
@@ -47,6 +58,25 @@ vi.mock("@/lib/env", () => ({
 
 vi.mock("@/lib/logger", () => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => hoisted.cookieStore),
+  headers: vi.fn(async () => new Headers()),
+}));
+
+vi.mock("@/lib/request-ip", () => ({
+  getClientIpHash: vi.fn(async () => null),
+}));
+
+vi.mock("@/lib/auth/signup-intents", () => ({
+  TOO_MANY_SIGNUPS: "Too many sign-up attempts. Wait 15 minutes, then try again.",
+  saveSignupIntent: hoisted.intents.saveSignupIntent,
+  takeSignupIntent: hoisted.intents.takeSignupIntent,
+}));
+
+vi.mock("@/lib/stores/create-draft-store", () => ({
+  createDraftStore: hoisted.draftStore.createDraftStore,
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({

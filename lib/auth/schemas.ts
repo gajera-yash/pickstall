@@ -33,3 +33,10 @@ export const signupInput = z.object({
   email: emailSchema,
   phone: optionalPhoneSchema,
 });
+
+/** Username step (Google users, taken usernames). The full name is only sent when the profile has none. */
+export const claimUsernameInput = z.object({
+  username: slugSchema,
+  fullName: fullNameSchema.optional(),
+  phone: optionalPhoneSchema,
+});

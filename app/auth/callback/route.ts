@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { resolvePostLoginPath } from "@/lib/auth/post-login";
+import { completeSignup } from "@/lib/auth/complete-signup";
 import { publicEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      const path = data.user ? await resolvePostLoginPath(supabase, data.user.id, next) : "/";
+      const path = data.user ? await completeSignup(supabase, data.user, next) : "/";
       return NextResponse.redirect(new URL(path, publicEnv.NEXT_PUBLIC_APP_URL));
     }
     logger.warn("auth.callback_exchange_failed", { status: error.status, code: error.code });

@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formData, mockSlugLookup, mockStoreQuery, redirectOf, supabase } from "./auth-mocks";
+import { cookieJar, formData, intents, mockSlugLookup, mockStoreQuery, redirectOf, supabase } from "./auth-mocks";
 
 import { sendEmailCode, signInWithGoogle, startSignup, verifyEmailCode } from "@/lib/auth/actions";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  cookieJar.clear();
 });
 
 describe("sendEmailCode", () => {
@@ -61,7 +62,7 @@ describe("verifyEmailCode", () => {
     const url = await redirectOf(() =>
       verifyEmailCode(null, formData({ email: "maya@example.com", code: "123456", next: "https://evil.test" })),
     );
-    expect(url).toBe("/onboarding");
+    expect(url).toBe("/signup/username");
   });
 
   it("sends a creator with a store to the dashboard when there is no next path", async () => {
@@ -71,11 +72,11 @@ describe("verifyEmailCode", () => {
     expect(url).toBe("/dashboard");
   });
 
-  it("sends a user without a store to onboarding when there is no next path", async () => {
+  it("sends a user without a store to the username step when there is no next path", async () => {
     supabase.auth.verifyOtp.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
     mockStoreQuery({ data: null, error: null });
     const url = await redirectOf(() => verifyEmailCode(null, formData({ email: "maya@example.com", code: "123456" })));
-    expect(url).toBe("/onboarding");
+    expect(url).toBe("/signup/username");
   });
 
   it("does not look up a store when the code is wrong", async () => {
@@ -120,8 +121,9 @@ describe("startSignup", () => {
       phone: "+1 415 555 0100",
       ...overrides,
     });
+  const cookie = "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
-  it("rejects bad input with the field name, before any lookup or email", async () => {
+  it("rejects bad input with the field name, before any lookup, intent or email", async () => {
     expect(await startSignup(null, form({ username: "ab" }))).toEqual({
       ok: false,
       error: "Use 3 to 30 characters.",
@@ -129,49 +131,64 @@ describe("startSignup", () => {
     });
     expect(await startSignup(null, form({ email: "nope" }))).toMatchObject({ ok: false, field: "email" });
     expect(await startSignup(null, form({ phone: "415" }))).toMatchObject({ ok: false, field: "phone" });
+    expect(intents.saveSignupIntent).not.toHaveBeenCalled();
     expect(supabase.auth.signInWithOtp).not.toHaveBeenCalled();
   });
 
-  it("says the username is taken, without sending a code", async () => {
+  it("says the username is taken, without saving an intent or sending a code", async () => {
     mockSlugLookup({ data: { id: "store-1" }, error: null });
     expect(await startSignup(null, form())).toEqual({
       ok: false,
       error: "That username is taken. Try another.",
       field: "username",
     });
+    expect(intents.saveSignupIntent).not.toHaveBeenCalled();
     expect(supabase.auth.signInWithOtp).not.toHaveBeenCalled();
   });
 
-  it("does not send a code when the username check fails", async () => {
-    mockSlugLookup({ data: null, error: { code: "PGRST000" } });
-    expect(await startSignup(null, form())).toMatchObject({ ok: false, field: "username" });
-    expect(supabase.auth.signInWithOtp).not.toHaveBeenCalled();
-  });
-
-  it("sends a code and passes the cleaned details as metadata", async () => {
+  it("saves the cleaned details server-side, binds them to this browser and sends a code without metadata", async () => {
     const lookup = mockSlugLookup({ data: null, error: null });
+    intents.saveSignupIntent.mockResolvedValue({ ok: true, data: { cookie } });
     supabase.auth.signInWithOtp.mockResolvedValue({ data: {}, error: null });
+
     expect(await startSignup(null, form())).toEqual({ ok: true, data: { email: "maya@example.com" } });
     expect(lookup.eq).toHaveBeenCalledWith("slug", "maya-books");
+    expect(intents.saveSignupIntent).toHaveBeenCalledWith(
+      { email: "maya@example.com", username: "maya-books", fullName: "Maya Patel", phone: "+14155550100" },
+      null,
+    );
+    expect(cookieJar.get("signup_intent")).toBe(cookie);
     expect(supabase.auth.signInWithOtp).toHaveBeenCalledWith({
       email: "maya@example.com",
-      options: {
-        shouldCreateUser: true,
-        data: { full_name: "Maya Patel", requested_slug: "maya-books", phone: "+14155550100" },
-      },
+      options: { shouldCreateUser: true },
     });
   });
 
-  it("leaves the phone out of the metadata when it is empty", async () => {
+  it("stores no phone when it is empty", async () => {
     mockSlugLookup({ data: null, error: null });
+    intents.saveSignupIntent.mockResolvedValue({ ok: true, data: { cookie } });
     supabase.auth.signInWithOtp.mockResolvedValue({ data: {}, error: null });
     await startSignup(null, form({ phone: "" }));
-    const call = supabase.auth.signInWithOtp.mock.calls[0]?.[0] as { options: { data: Record<string, unknown> } };
-    expect(call.options.data).toEqual({ full_name: "Maya Patel", requested_slug: "maya-books" });
+    expect(intents.saveSignupIntent.mock.calls[0]?.[0]).toMatchObject({ phone: null });
   });
 
-  it("explains rate limits plainly and hides provider details", async () => {
+  it("stops at the rate limit without sending a code", async () => {
     mockSlugLookup({ data: null, error: null });
+    intents.saveSignupIntent.mockResolvedValue({
+      ok: false,
+      error: "Too many sign-up attempts. Wait 15 minutes, then try again.",
+    });
+    expect(await startSignup(null, form())).toEqual({
+      ok: false,
+      error: "Too many sign-up attempts. Wait 15 minutes, then try again.",
+    });
+    expect(supabase.auth.signInWithOtp).not.toHaveBeenCalled();
+    expect(cookieJar.has("signup_intent")).toBe(false);
+  });
+
+  it("explains email rate limits plainly and hides provider details", async () => {
+    mockSlugLookup({ data: null, error: null });
+    intents.saveSignupIntent.mockResolvedValue({ ok: true, data: { cookie } });
     supabase.auth.signInWithOtp.mockResolvedValueOnce({
       data: {},
       error: { status: 429, code: "over_email_send_rate_limit" },
@@ -180,10 +197,7 @@ describe("startSignup", () => {
       ok: false,
       error: "Too many attempts. Wait a minute, then try again.",
     });
-    supabase.auth.signInWithOtp.mockResolvedValueOnce({
-      data: {},
-      error: { status: 500, code: "x", message: "db down" },
-    });
+    supabase.auth.signInWithOtp.mockResolvedValueOnce({ data: {}, error: { status: 500, code: "x", message: "db down" } });
     expect(JSON.stringify(await startSignup(null, form()))).not.toContain("db down");
   });
 });

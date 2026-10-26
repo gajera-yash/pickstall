@@ -14,6 +14,8 @@ export const publicEnvSchema = z.object({
 
 export const serverEnvSchema = publicEnvSchema.extend({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  // Hashes client IPs for signup rate limits (D-019). Optional: without it the per-IP limit is off.
+  IP_HASH_SECRET: z.string().min(16).optional(),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;

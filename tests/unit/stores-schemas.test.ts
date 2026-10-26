@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createStoreInput, storeBioSchema, storeNameSchema } from "@/lib/stores/schemas";
+import { storeBioSchema, storeNameSchema } from "@/lib/stores/schemas";
 import { hasControlChar } from "@/lib/text";
 
 describe("hasControlChar", () => {
@@ -47,24 +47,5 @@ describe("storeBioSchema", () => {
   it("rejects an over-long bio and control characters", () => {
     expect(storeBioSchema.safeParse("x".repeat(201)).success).toBe(false);
     expect(storeBioSchema.safeParse("bad\u0000bio").success).toBe(false);
-  });
-});
-
-describe("createStoreInput", () => {
-  const valid = { name: "Maya", username: "Maya-Books", currency: "usd", bio: "" };
-
-  it("accepts the supported currencies only", () => {
-    for (const currency of ["usd", "gbp", "cad"]) expect(createStoreInput.safeParse({ ...valid, currency }).success).toBe(true);
-    for (const currency of ["eur", "USD", "", undefined]) expect(createStoreInput.safeParse({ ...valid, currency }).success).toBe(false);
-  });
-
-  it("reports problems in form order", () => {
-    const result = createStoreInput.safeParse({ name: "", username: "x", currency: "zzz", bio: "y".repeat(300) });
-    const fields = [...new Set(result.error?.issues.map((issue) => issue.path[0]))];
-    expect(fields).toEqual(["name", "username", "currency", "bio"]);
-  });
-
-  it("cleans the username and bio", () => {
-    expect(createStoreInput.parse(valid)).toEqual({ name: "Maya", username: "maya-books", currency: "usd", bio: undefined });
   });
 });

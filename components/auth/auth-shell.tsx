@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /**
- * Page frame for login, signup and onboarding (DESIGN.md 10, white theme D-007): a white page,
+ * Page frame for login, signup and the username step (DESIGN.md 10, white theme D-007): a white page,
  * one centered column, no card. `top` holds the wizard progress bar when there is one.
  */
 export function AuthShell({ children, top }: { children: ReactNode; top?: ReactNode }) {

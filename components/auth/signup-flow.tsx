@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { IconInput } from "@/components/ui/icon-input";
 import { startSignup, type SignupState } from "@/lib/auth/actions";
-import { OTP_LENGTH, ROOT_DOMAIN } from "@/lib/config";
+import { OTP_LENGTH, storeLink } from "@/lib/config";
 import { PHONE_HINT } from "@/lib/phone";
 import type { SignupStep } from "@/lib/signup-steps";
 import { normalizeSlugInput } from "@/lib/slug";
@@ -25,7 +25,7 @@ type FieldName = "username" | "fullName" | "email" | "phone";
 
 /**
  * Signup steps 1 and 2: details, then the email code (shared CodeStep). After the code the user
- * goes to /onboarding (store basics). Fields are controlled so an error never clears what was typed.
+ * gets a draft store and goes straight to /dashboard. Fields are controlled so an error never clears what was typed.
  */
 export function SignupFlow() {
   const [state, action, pending] = useActionState<SignupState, FormData>(startSignup, null);
@@ -37,7 +37,7 @@ export function SignupFlow() {
   // "Use a different email" remembers which successful send to ignore, so no effect has to sync state.
   const [dismissed, setDismissed] = useState<SignupState>(null);
   const sentTo = state?.ok && state !== dismissed ? state.data.email : null;
-  const step: SignupStep = sentTo ? "verify" : "account";
+  const step: SignupStep = sentTo ? "code" : "details";
 
   const error = state && !state.ok ? state : null;
   const fieldError = (field: FieldName) => (error?.field === field ? error.error : null);
@@ -48,7 +48,7 @@ export function SignupFlow() {
     if (state && !state.ok && state.field) document.getElementById(state.field)?.focus();
   }, [state]);
 
-  const usernameHint = `Your link: ${values.username || "yourname"}.${ROOT_DOMAIN}`;
+  const usernameHint = `Your link: ${storeLink(values.username || "yourname")}`;
 
   return (
     <AuthShell top={<WizardProgress step={step} />}>

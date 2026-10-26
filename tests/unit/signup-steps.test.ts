@@ -2,15 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { SIGNUP_STEPS, stepPosition } from "@/lib/signup-steps";
 
-describe("signup steps", () => {
-  it("lists the steps in order and ends with the activation moment", () => {
-    expect([...SIGNUP_STEPS]).toEqual(["account", "verify", "store", "activate"]);
+describe("signup steps (D-008)", () => {
+  it("has two steps: details, then the email code", () => {
+    expect([...SIGNUP_STEPS]).toEqual(["details", "code"]);
   });
 
-  it("gives each step a 1-based position out of the total", () => {
-    expect(stepPosition("account")).toEqual({ current: 1, total: 4 });
-    expect(stepPosition("verify")).toEqual({ current: 2, total: 4 });
-    expect(stepPosition("store")).toEqual({ current: 3, total: 4 });
-    expect(stepPosition("activate")).toEqual({ current: 4, total: 4 });
+  it("gives each step a 1-based position out of 2", () => {
+    expect(stepPosition("details")).toEqual({ current: 1, total: 2 });
+    expect(stepPosition("code")).toEqual({ current: 2, total: 2 });
   });
 });

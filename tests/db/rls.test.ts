@@ -56,7 +56,7 @@ beforeAll(async () => {
   b = await createTestUser(admin, "creator-b");
   buyer = await createTestUser(admin, "buyer");
   phoneUser = await createTestUser(admin, "phone", { full_name: "Example Phone", phone: "+14155550100" });
-  badPhoneUser = await createTestUser(admin, "badphone", { full_name: "x".repeat(200), phone: "12345; drop table" });
+  badPhoneUser = await createTestUser(admin, "badphone", { full_name: "x".repeat(200), phone: "not-a-phone" });
 
   // Creators set up their own data through their own (RLS-limited) clients.
   storeA = must(

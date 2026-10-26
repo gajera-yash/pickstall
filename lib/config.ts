@@ -2,16 +2,33 @@
 
 export const APP_NAME = "Pickstall";
 
-/** Root domain for tenant subdomains (`{slug}.ROOT_DOMAIN`, `app.ROOT_DOMAIN`). */
+/** The one domain the app runs on. Store links are path-based: `{ROOT_DOMAIN}/@username` (D-010). */
 export const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
+
+/** Public link of a store, for display (D-010). */
+export function storeLink(username: string): string {
+  return `${ROOT_DOMAIN}/@${username}`;
+}
 
 /** Email sign-in code: length, and how long the "Resend code" button waits (docs/DECISIONS.md D-002). */
 export const OTP_LENGTH = 6;
 export const OTP_RESEND_COOLDOWN_SECONDS = 30;
 
+/** Signup details wait server-side this long for the email code (docs/DECISIONS.md D-019). */
+export const SIGNUP_INTENT_TTL_MINUTES = 30;
+
+/** Signup rate limits (D-019): attempts per email, and new signups per IP address. */
+export const SIGNUP_RATE_LIMITS = {
+  perEmail: { max: 5, windowMinutes: 15 },
+  perIp: { max: 10, windowMinutes: 60 },
+} as const;
+
 /** Store currencies supported in Phase 1 (lowercase, as stored in the database). */
 export const CURRENCIES = ["usd", "gbp", "cad"] as const;
 export type Currency = (typeof CURRENCIES)[number];
+
+/** Currency of a new draft store; the creator can change it in Store setup. */
+export const DEFAULT_CURRENCY: Currency = "usd";
 
 /** Shown in the currency picker. */
 export const CURRENCY_LABELS: Record<Currency, string> = {

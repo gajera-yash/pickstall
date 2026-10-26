@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mockStoreQuery, supabase } from "./auth-mocks";
 
-import { DASHBOARD_PATH, ONBOARDING_PATH, resolvePostLoginPath } from "@/lib/auth/post-login";
+import { DASHBOARD_PATH, USERNAME_PATH, resolvePostLoginPath } from "@/lib/auth/post-login";
 
 const client = supabase as unknown as SupabaseClient;
 const userId = "11111111-1111-4111-8111-111111111111";
@@ -20,9 +20,9 @@ describe("resolvePostLoginPath", () => {
     expect(query.eq).toHaveBeenCalledWith("owner_id", userId);
   });
 
-  it("sends a user without a store to onboarding", async () => {
+  it("sends a user without a store to the username step", async () => {
     mockStoreQuery({ data: null, error: null });
-    await expect(resolvePostLoginPath(client, userId, null)).resolves.toBe(ONBOARDING_PATH);
+    await expect(resolvePostLoginPath(client, userId, null)).resolves.toBe(USERNAME_PATH);
   });
 
   it("uses a safe next path and skips the store lookup", async () => {
@@ -41,7 +41,7 @@ describe("resolvePostLoginPath", () => {
     ["the auth callback", "/auth/callback?code=x"],
   ])("ignores %s and picks by store", async (_label, next) => {
     mockStoreQuery({ data: null, error: null });
-    await expect(resolvePostLoginPath(client, userId, next)).resolves.toBe(ONBOARDING_PATH);
+    await expect(resolvePostLoginPath(client, userId, next)).resolves.toBe(USERNAME_PATH);
   });
 
   it("does not treat lookalike paths as auth pages", async () => {
