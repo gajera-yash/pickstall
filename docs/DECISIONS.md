@@ -4,6 +4,98 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-018: Token saving: read map and UI reference images
+- **Date:** 2026-10-26
+- **Decision:** the read map in `CLAUDE.md` section 1.1 now lists the real blocks (login, signup and dashboard, products and store page, payments, emails, security and deploy). UI reference images, when added, live in `docs/ui-reference/` and are named by screen (for example `signup.png`, `my-store.png`). An AI tool reads only the one image for the screen it is building, never the whole folder.
+- **Why:** the spec files and images are large; reading everything on every task wastes tokens.
+
+## D-017: Phase 1 is a 3-day plan
+- **Date:** 2026-10-26
+- **Decision:** Phase 1 becomes 3 days instead of 2.
+  - **Day 1:** signup, Google sign-in, dashboard store setup, My Store with digital product customization, public store page, product page (Buy disabled).
+  - **Day 2:** Stripe Connect (or MockProvider), checkout with creator fields, webhook, orders, Customers panel, buyer library, secure downloads, emails.
+  - **Day 3:** security review, more payment methods, deploy, smoke test.
+- **Why:** customization (D-013) and the Customers panel add real work; a 3-day plan is honest about it.
+- **Consequences:** Phase 2 starts on day 4 (was day 3). `PHASE1_PLAN.md` and `PRD.md` section 8.1 are updated. The go/no-go rules do not change: a public launch with real money still needs the checklist in `PHASE1_PLAN.md` section 5.
+
+## D-016: Payments: MockProvider for development, dynamic payment methods
+- **Date:** 2026-10-26
+- **Decision:**
+  1. Payments stay behind the provider-agnostic `PaymentProvider` interface. The Stripe adapter (Connect Standard, direct charges, no application fee) is the real one.
+  2. A `MockProvider` may be added **for development only** and is **disabled in production** (it must refuse to run when `NODE_ENV` is production). It goes through the same order and fulfilment path as Stripe: no shortcut that grants access without an order.
+  3. Stripe Checkout uses **dynamic payment methods**, so creators in other countries can offer more methods. Exact availability must be verified in the Stripe docs during the payments block (no guessing).
+  4. PayPal is a later adapter, only when the founder asks.
+- **Conflicts with earlier text:** `CLAUDE.md` section 7 and `PHASE1_PLAN.md` Block D said "Stripe adapter only"; both are updated to allow the MockProvider.
+- **Why:** lets Day 2 work continue if Stripe test keys or Connect are not available yet.
+
+## D-015: Planned data model additions (not migrated yet)
+- **Date:** 2026-10-26
+- **Decision:** the customization features (D-013) need these additions. They are **planned only**: nothing is migrated until the founder approves the schema change (`CLAUDE.md` section 1, rule 4).
+  - `products.settings jsonb` (button text, checkout headline, thank-you message, email subject and body, redirect URL, and so on)
+  - `product_checkout_fields` table (up to 5 custom questions per product)
+  - `orders.answers jsonb` (the buyer's answers, stored per order)
+  - `customers` table (`store_id`, `email`, `name`, `phone`)
+  - Each with RLS and tests: a creator can only see their own rows.
+- **Design notes (from existing rules, not new decisions):** public views must expose only a whitelist of `settings` keys, because the confirmation email text and the redirect URL are not public (`CLAUDE.md` section 6). The "external link" delivery in D-012 does not fit `product_files.storage_path` (not null), so the schema work must decide where the link lives.
+
+## D-014: Guardrails for customization
+- **Date:** 2026-10-26
+- **Decision:**
+  - All creator text is sanitized and length-limited. No raw HTML, ever.
+  - Sender identity and the download link are always included in emails, whatever the creator writes.
+  - No sensitive questions at checkout (card numbers, ID numbers). Custom questions are text, long text, dropdown and checkbox only.
+  - After-purchase redirect URLs must be `https`.
+  - Creators are the data controller for their buyers' data. This is stated in the Terms.
+  - CSV exports of customer answers must neutralize spreadsheet formulas (`PRD.md` section 14.4 already requires this for imports and exports).
+
+## D-013: What creators can customize
+- **Date:** 2026-10-26
+- **Decision:**
+  - **Store:** name, photo, bio, links, theme preset, accent color (with the contrast guard in `DESIGN.md` section 11).
+  - **Product:** title, description, cover, fixed or pay-what-you-want price, button text, checkout headline, thank-you message, confirmation email subject and body (variables `{{customer_name}}`, `{{product_title}}`, `{{download_link}}`), download limit.
+  - **Checkout fields:** name and email are always required; an optional phone toggle; up to 5 custom questions (text, long text, dropdown, checkbox, with a required flag).
+  - Answers are stored per order and shown in the Customers panel, with CSV export.
+- **Phase:** Phase 1 (Day 1 and Day 2 of D-017). Needs the schema work in D-015.
+
+## D-012: Product type registry and type picker
+- **Date:** 2026-10-26
+- **Decision:** products are created through a type picker backed by a registry of types.
+  - **Live in Phase 1:** Digital product (a file or an external link).
+  - **Coming soon (shown with a "Coming soon" badge, not selectable):** Course, Coaching call, Membership, Collect emails, Link.
+- **Why:** the picker sets the pattern now; later types plug into the registry without redoing the UI. "Coming soon" follows `DESIGN.md` section 15.
+
+## D-011: Dashboard sections
+- **Date:** 2026-10-26
+- **Decision:** the creator dashboard has four sections: **My Store**, **Income**, **Customers**, **Settings**. Product management lives in My Store; the Customers panel shows orders' buyer details and custom answers (D-013).
+- **Supersedes:** the nav in `PHASE1_PLAN.md` Block B (Overview, Products, Orders, Settings, Stripe) and the F8 section list in `PRD.md` for Phase 1.
+
+## D-010: Path-based public URLs on one domain
+- **Date:** 2026-10-26
+- **Decision:** one domain, no subdomains:
+  - Store: `pickstall.store/@username`; product: `pickstall.store/@username/product-slug`
+  - Buyer library: `/library`; creator app: `/dashboard`
+  - `/@username` is implemented with `next.config` **rewrites** to `/s/:username` (an `app/@...` folder would be a Next.js parallel route, so it cannot be used).
+  - Custom domains (Phase 3) later map a host to a store.
+- **Supersedes:** subdomain routing (`{slug}.ROOT_DOMAIN`, `app.ROOT_DOMAIN`) in `PRD.md` 5.2, section 13 and `PHASE1_PLAN.md` Block B. This also settles the domain part of `PRD.md` open question 1 (domain: `pickstall.store`).
+- **Consequences:** `NEXT_PUBLIC_ROOT_DOMAIN` stays as the site's domain (no subdomain wildcard needed). `RESERVED_SLUGS` still protects names like `admin` and `support` from impersonation, even though `@` keeps stores out of app route names.
+
+## D-009: Store setup lives in the dashboard
+- **Date:** 2026-10-26
+- **Decision:** store setup (name, avatar, bio, currency, theme, accent, link) is not part of signup. It is a first-run checklist in the dashboard: **Store setup, Add first product, Connect payments, Publish**.
+- **Supersedes:** the "Store basics" step and the onboarding wizard in D-007 point 3, and the checklist in `DESIGN.md` 10.2 ("Connect Stripe, Add first product, Publish store").
+
+## D-008: Signup is two steps, then the dashboard
+- **Date:** 2026-10-26
+- **Decision:**
+  1. Signup is **2 steps**: details (username, full name, email, optional phone), then the 6-digit email code, then straight to `/dashboard`. No store setup, no activation page and no billing steps in signup.
+  2. A **draft (unpublished) store is created automatically** at signup, using the username as its slug. The link is reserved and the user becomes a creator.
+  3. **Google sign-in** is supported. New Google users get one extra step to choose a username (and an optional phone number).
+  4. **Buyers never use signup.** They sign in with an email code at checkout or in the library.
+- **Supersedes:** D-007 point 3 (signup steps: Store basics and the activation moment) and the `/signup` to `/onboarding` flow. D-007 points 1, 2 and 4 still stand (white theme, Stan-style layout with email code, billing steps are Phase 3).
+- **Open points (not decided, need the founder):**
+  - The draft store must be created **on the server after the code is verified**, and must not trust the username kept in client-editable auth metadata. What should happen if the username was taken in the meantime? (Sign-in must still succeed.)
+  - The code built before this decision (the `/onboarding` store step, the activation page, the dashboard placeholder) no longer matches this flow and needs a later code task.
+
 ## D-007: White theme and a Stan-style signup flow
 - **Date:** 2026-10-25
 - **Decision:**

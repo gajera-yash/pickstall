@@ -306,7 +306,7 @@ Inline SVG or a light chart library. 2px lines, rounded joins, no 3D, no gradien
 Order: announcement bar, sticky nav, hero (giant 0%), payments strip, fee explainer + calculator, no-code steps, feature bento, benefits, dashboard preview, student experience, who it is for, compare, pricing, founder note, FAQ, final CTA, footer. Cut line between major sections. One orchestrated motion on load.
 
 ### 10.2 App dashboard
-Sidebar + top bar + content. Overview: greeting, 3 KPI cards, revenue chart, recent orders (with mint "$0 platform fee" tag), onboarding checklist. Lists use tables on desktop and cards on mobile.
+Sidebar + top bar + content. Four sections: My Store, Income, Customers, Settings (D-011). My Store opens first and holds the first-run checklist (10.8). The overview (greeting, 3 KPI cards, revenue chart, recent orders with the mint "$0 platform fee" tag) lives in Income. Lists use tables on desktop and cards on mobile.
 
 ### 10.3 Builders (course, store, funnel, email flow)
 Three-panel layout on desktop: structure (left, 280px), editor (center, fluid), settings and preview (right, 340px). On mobile: tabs (Structure, Edit, Settings). Autosave with visible status. Publish is the single Primary button, top right.
@@ -319,6 +319,16 @@ Order summary receipt on top, order bump checkbox, coupon field (collapsed link 
 
 ### 10.6 Student area
 Library grid, then course player: video (16:9), lesson title, tabs (Overview, Notes, Downloads), "Mark complete", sidebar with modules and checkmarks, progress bar. Distraction-free, calm.
+
+### 10.7 Login and signup
+White page, one centered column, no card: wordmark, H1, one short line of help text, fields, one primary button (D-007, D-008). Fields have leading icons (decoration only) and always a visible label. Signup is two steps, details and then the 6-digit email code, with a thin progress bar that always has a text value ("Step 1 of 2"). The Google button is secondary and only shown when Google is set up; new Google users get one extra step to choose a username. Errors are inline under the field (icon + text), focus moves to the first invalid field, typed values are never cleared. The code step auto-submits at 6 digits and offers "Resend code" with a cooldown and "Use a different email". No emoji, no activation page.
+
+### 10.8 Dashboard first-run checklist and product customization
+- **First-run checklist** (My Store): Store setup, Add first product, Connect payments, Publish (D-009). Each item shows done or not done with an icon and text (never color alone); the primary button is the next undone item.
+- **Type picker:** a grid of type cards. The live type (Digital product) is selectable; the others (Course, Coaching call, Membership, Collect emails, Link) carry the "Coming soon" badge (9.5) and are not clickable (D-012).
+- **Customization forms** (D-013): single column (9.13) inside the builder layout (10.3). Length-limited text shows a character counter. Email variables ({{customer_name}}, {{product_title}}, {{download_link}}) appear as chips next to the field; the download link note says it is always included. The accent color picker shows the contrast check result (section 11).
+- **Checkout questions:** a list of up to 5 questions, each with type, required toggle and order controls; the add button is disabled with an explanation at 5. No sensitive questions (D-014).
+- **Customers panel:** a table (email, name, phone, date, answers) that stacks into cards on mobile (9.9); "Export CSV" is a secondary button.
 
 ---
 
@@ -502,5 +512,6 @@ Keep tokens in `styles/tokens.css` (imported by `globals.css`) and mirror creato
 
 ## 20. Change log
 
+- v1.2: documented the login and signup pattern (10.7), the dashboard sections, first-run checklist, type picker and customization patterns (10.2, 10.8). No token changes (D-008 to D-013).
 - v1.1: white theme (`--bg` #FFFFFF), new `--border-ui` token, soft 1px component borders; `--border-strong` kept for emphasis (decision D-007).
 - v1.0: initial design system (tokens, typography, components, themes, motion, accessibility, implementation).

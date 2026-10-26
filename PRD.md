@@ -51,7 +51,7 @@ These come from Stripe's reply to the founder's inquiry (founder is India-based)
    - **Affiliate payouts cannot be automated.** Affiliates are post-MVP and track-only.
    - Creators (connected accounts) are responsible for their own KYC, taxes and negative balances.
 7. If the founder later creates a US entity (Stripe Atlas), these restrictions may lift. Isolate payment logic behind `lib/payments/` so the model can change without rewriting features.
-8. **We are NOT a Merchant of Record (unlike Gumroad, which has been MoR since Jan 2025 and handles global sales tax and chargeback liability).** Creators are the seller of record for their own sales and handle their own tax (VAT/GST/sales tax) and disputes through their Standard Stripe accounts. Never promise tax handling in the product or marketing. Show a clear notice in onboarding and Terms. A third-party MoR option is a P2 consideration.
+8. **We are NOT a Merchant of Record (unlike Gumroad, which has been MoR since Jan 2025 and handles global sales tax and chargeback liability).** Creators are the seller of record for their own sales and handle their own tax (VAT/GST/sales tax) and disputes through their Standard Stripe accounts. Never promise tax handling in the product or marketing. Show a clear notice in the dashboard (Connect payments step) and Terms. A third-party MoR option is a P2 consideration.
 9. Student memberships/subscriptions as direct charges on a creator's connected account are **unverified** for an India-based platform. Confirm with Stripe before building them (P1).
 10. **Payments must be provider-agnostic.** All payment code sits behind a `PaymentProvider` interface (`createCheckout`, `handleWebhook`, `refund`). Build the **Stripe adapter first**. A **PayPal adapter** (PayPal Commerce Platform / multiparty, requires PayPal approval) is a backup only if Stripe's India invite is delayed. Never leak provider-specific types outside `lib/payments/`.
 
@@ -82,16 +82,18 @@ These come from Stripe's reply to the founder's inquiry (founder is India-based)
 
 Priority: **P0** = must ship in MVP, **P1** = fast follow (weeks 7-10), **P2** = later.
 
-### F1. Auth and onboarding (P0)
-- Creator sign-up: email OTP/magic link + Google.
-- Onboarding wizard: store name, slug (unique, `^[a-z0-9-]{3,30}$`), bio, avatar, currency (USD/GBP/CAD), theme preset.
-- Buyer auth: email OTP only, account auto-created after purchase or via "Sign in" on the library page.
-- **Acceptance:** a new creator reaches a published (empty) store page in under 5 minutes; slugs are validated server-side; reserved slugs (`app`, `www`, `api`, `admin`, `login`, `s`, etc.) are rejected.
+### F1. Auth and signup (P0)
+- Creator signup is **2 steps**: details (username, full name, email, optional phone), then a 6-digit email code, then straight to `/dashboard`. The username is the store slug (unique, `^[a-z0-9-]{3,30}$`). No store setup, activation page or billing steps in signup (D-008).
+- A **draft (unpublished) store is created automatically** at signup, using the username as slug. The link is reserved and the user becomes a creator.
+- Google sign-in is supported. New Google users get one extra step to choose a username (and an optional phone number).
+- Store setup (name, avatar, bio, currency, theme, accent, link) is a **first-run checklist in the dashboard**: Store setup, Add first product, Connect payments, Publish (D-009, F8).
+- Buyer auth: email OTP only. Buyers **never use signup**; they sign in with an email code at checkout or on the library page, and the account is created automatically after purchase.
+- **Acceptance:** a new creator reaches the dashboard with a reserved link in under 2 minutes and a published (empty) store page in under 5; usernames are validated server-side; reserved slugs (`app`, `www`, `api`, `admin`, `login`, `s`, etc.) are rejected; the sign-in response is the same whether or not the email has an account.
 
 ### F2. Storefront (P0)
-- Public page at `{slug}.{ROOT_DOMAIN}` (and `/s/{slug}` fallback for local dev).
+- Public page at `{ROOT_DOMAIN}/@username` (production domain `pickstall.store`); product pages at `/@username/product-slug`. Path-based on one domain, no subdomains (D-010). `/@username` is a `next.config` rewrite to `/s/:username`. Custom domains (Phase 3) map a host to a store.
 - Sections: avatar + name + bio, social links, product cards (cover, title, price, CTA), optional email-capture block (P1).
-- 3 theme presets (Clean, Bold, Soft) with an accent color. Mobile-first, passes Lighthouse performance and accessibility >= 90.
+- 3 theme presets (Clean, Bold, Soft) with an accent color that is checked for contrast (`DESIGN.md` section 11). The creator also sets name, photo, bio and links (D-013). Mobile-first, passes Lighthouse performance and accessibility >= 90.
 - SEO: title, description, Open Graph image, canonical URL, sitemap.
 - **Acceptance:** store renders server-side, loads under 2.5s LCP on 4G, and works at 360px width.
 
@@ -104,20 +106,23 @@ Priority: **P0** = must ship in MVP, **P1** = fast follow (weeks 7-10), **P2** =
 - **Acceptance:** a non-enrolled user cannot obtain a playable URL for a paid lesson (verified by test); video upload shows progress and processing state.
 
 ### F3b. Digital products (Gumroad parity, P0)
-- Product type `digital`: creator uploads one or more files (PDF, ZIP, audio, templates) to a **private** Supabase Storage bucket. Default max 500 MB per file (config value).
+- Products are created through a **type picker** (D-012). Live in Phase 1: **Digital product**. Shown as "Coming soon" and not selectable: Course, Coaching call, Membership, Collect emails, Link.
+- Product type `digital`: the creator uploads one or more files (PDF, ZIP, audio, templates) to a **private** Supabase Storage bucket, or provides an external link. Default max 500 MB per file (config value). An external link is delivered like a file: only after the verified payment, in the Library and the receipt email.
 - Delivery: after the verified payment webhook creates the enrollment, files appear in the buyer's Library. Downloads use **short-lived signed URLs (about 60 seconds)** generated server-side after an enrollment check. Optional per-product download limit.
 - Pricing models: **fixed** or **pay-what-you-want** (creator sets a minimum; buyer enters an amount on our product page; server validates `amount >= min_price_cents` and a sane maximum, then passes the amount as inline `price_data`).
 - Digital products can be sold standalone or used as order-bump items.
+- **Customization** (D-013): title, description, cover, fixed or pay-what-you-want price, button text, checkout headline, thank-you message, confirmation email subject and body (variables `{{customer_name}}`, `{{product_title}}`, `{{download_link}}`), download limit. Stored in `products.settings` (planned, see 5.4.1). Guardrails: all creator text is sanitized and length-limited (no raw HTML); the sender identity and the download link are always in the email; after-purchase redirect URLs must be `https` (D-014).
 - **Acceptance:** a non-buyer cannot obtain a file URL; a pay-what-you-want amount below the minimum is rejected server-side; a refund revokes access; files are never reachable through a public bucket path.
 
 ### F4. Product page and checkout (P0)
-- Product page: cover, title, description, curriculum outline, price, buy button.
+- Product page: cover, title, description, curriculum outline (courses, Phase 2), price, buy button. The creator can change the button text, the checkout headline and the thank-you message (F3b).
 - Checkout via **Stripe Checkout Session, direct charge on the creator's connected account** (`stripeAccount` header), **no application fee**.
 - Prices are computed **on the server** from DB values. Never trust client prices.
-- Supports card, Apple Pay, Google Pay (Stripe Checkout handles this). Currency per store.
+- Uses Stripe Checkout **dynamic payment methods** (card, Apple Pay, Google Pay and more where available), so creators in other countries can offer more methods. The exact availability is verified in the Stripe docs during the payments block (D-016). Currency per store.
+- **Checkout fields** (D-013): name and email are always required; an optional phone toggle; up to 5 custom questions per product (text, long text, dropdown, checkbox, each with a required flag). No sensitive questions (card or ID numbers). Answers are validated server-side, stored per order (`orders.answers`, planned) and shown in the Customers panel (F8) with CSV export.
 - After payment: order marked paid, enrollment created, buyer emailed (F7), creator notified.
 - Refunds: creator refunds in their own Stripe dashboard; webhook `charge.refunded` revokes enrollment (configurable, default revoke).
-- **Acceptance:** duplicate webhook deliveries never create duplicate orders or enrollments; a creator without a connected Stripe account cannot publish a paid product.
+- **Acceptance:** duplicate webhook deliveries never create duplicate orders or enrollments; a creator without a connected Stripe account cannot publish a paid product; required questions are enforced on the server and answers can never change the price.
 
 ### F5. Coupons (P0)
 - Creator creates codes: percent or fixed, optional expiry, max redemptions, product restriction.
@@ -132,18 +137,18 @@ Priority: **P0** = must ship in MVP, **P1** = fast follow (weeks 7-10), **P2** =
 ### F7. Transactional email (P0)
 Provider: Resend. Templates built with React Email.
 - Creator welcome.
-- Buyer purchase receipt with "Access your purchase" link (course or downloads).
+- Buyer purchase receipt / confirmation with "Access your purchase" link (course or downloads). The creator can customize the subject and body per product with the variables `{{customer_name}}`, `{{product_title}}` and `{{download_link}}`. The sender identity, the footer and the download link are always included, and the text is sanitized (no raw HTML) (D-014).
 - Creator "You made a sale" notification.
 - Buyer sign-in code (handled by Supabase Auth email, branded).
 - Every email has the sender identity, physical-address footer (CAN-SPAM) and, for marketing email, an unsubscribe link (P1).
 - **Acceptance:** emails are sent from a queue/job (not inline in the webhook), with retry on failure and a row in `email_log`.
 
 ### F8. Creator dashboard (P0)
-- Overview: revenue (today / 7d / 30d), orders count, top products, recent orders.
-- Products: list, create, edit, publish/unpublish, reorder.
-- Students: list with email, course, purchase date, progress.
-- Orders: list with status, amount, coupon, refund state.
-- Coupons, Store settings, Stripe connection status, Billing.
+Four sections (D-011): **My Store**, **Income**, **Customers**, **Settings**. A first-run checklist (D-009) shows until done: Store setup, Add first product, Connect payments, Publish.
+- **My Store:** store setup (name, avatar, bio, currency, theme, accent, link) and products: type picker, list, create, edit, publish/unpublish, reorder, with the customization options of F3b.
+- **Income:** revenue (today / 7d / 30d), orders count, top products, recent orders with status, amount and refund state.
+- **Customers:** buyers with email, name, optional phone, purchase date and their answers to the checkout questions (F4); CSV export (formulas neutralized, D-014).
+- **Settings:** account, Stripe connection status. Billing arrives in Phase 3; coupons and student progress (courses) arrive in Phase 2.
 - **Acceptance:** all dashboard queries are scoped by `store_id` and protected by RLS.
 
 ### F9. Platform billing (Phase 3, must be live before the 6-month founding free period ends)
@@ -167,7 +172,7 @@ Limits and prices are config values, not hardcoded.
 - Platform Terms of Service, Privacy Policy, Refund policy template, cookie banner (GDPR / UK GDPR / CCPA).
 - Each store footer links to platform terms and shows the creator's name. Creators set their own refund policy text.
 - Data export and account deletion request flow (GDPR).
-- Creators are responsible for their own sales tax/VAT/GST (Standard accounts). State this in Terms and in onboarding.
+- Creators are responsible for their own sales tax/VAT/GST (Standard accounts). State this in Terms and in the dashboard's Connect payments step.
 
 ### P1 backlog (weeks 7-10)
 1. Custom domains (Vercel Domains API, auto SSL, CNAME instructions).
@@ -225,13 +230,11 @@ Payment plans/installments, 1:1 booking, pre-orders, a Discover-style marketplac
 | Validation | Zod on every API/server action input |
 | Tests | Vitest (unit), Playwright (e2e happy path) |
 
-### 5.2 Multi-tenant routing
-- Middleware reads the `Host` header:
-  - `ROOT_DOMAIN` / `www`: marketing site.
-  - `app.{ROOT_DOMAIN}`: creator dashboard and auth.
-  - `{slug}.{ROOT_DOMAIN}`: public store of that slug.
-  - Unknown host: look up `stores.custom_domain` (P1).
-- Local dev: `/s/{slug}` path fallback so subdomains are not required.
+### 5.2 Routing (path-based, one domain)
+- One domain (`ROOT_DOMAIN`; production `pickstall.store`) and **no subdomains** (D-010):
+  - `/`: marketing site. `/login`, `/signup`: auth. `/dashboard`: creator app. `/library`: buyer library.
+  - `/@username` and `/@username/product-slug`: public store and product pages. Implemented with `next.config` **rewrites** to `/s/:username` and `/s/:username/:path*`, because an `app/@...` folder would be a Next.js parallel route and cannot be used.
+  - Unknown host: look up `stores.custom_domain` and serve that store at `/` (Phase 3, section 13).
 - Every store-scoped query includes `store_id`. Never infer the store from client input alone.
 
 ### 5.3 Folder structure
@@ -239,7 +242,7 @@ Payment plans/installments, 1:1 booking, pre-orders, a Discover-style marketplac
 /app
   /(marketing)            landing, pricing, legal
   /(dashboard)/dashboard  creator area
-  /(store)/s/[slug]       public store + product + checkout return pages
+  /(store)/s/[slug]       public store + product + checkout return pages (served at /@username by a rewrite)
   /(student)/library      student library + lesson player
   /api/webhooks/stripe-platform/route.ts
   /api/webhooks/stripe-connect/route.ts
@@ -441,6 +444,16 @@ create table events (
 );
 ```
 
+#### 5.4.1 Planned additions (not migrated yet, ask the founder first)
+Needed for creator customization (D-013, D-015). Each gets RLS and tests: a creator can only see their own rows.
+- `products.settings jsonb`: button text, checkout headline, thank-you message, confirmation email subject and body, redirect URL, and so on. Public views expose only a whitelist of keys (the email text and redirect URL are not public).
+- `product_checkout_fields` table: up to 5 custom questions per product (label, type text / long text / dropdown / checkbox, options, required flag, position).
+- `orders.answers jsonb`: the buyer's answers, stored per order.
+- `customers` table: `store_id`, `email`, `name`, `phone`.
+- Open point: an external-link product does not fit `product_files.storage_path` (not null); decide where the link lives when this schema work is planned.
+
+The live schema already differs from the listing above in a few places; those changes are recorded in `docs/DECISIONS.md` (D-003, D-004) and in the `profiles.phone` migration (optional phone, set only by the signup trigger).
+
 ### 5.5 Row Level Security (rules, write as migrations)
 - RLS **enabled on every table**. No table without policies.
 - `profiles`: user reads/updates own row only.
@@ -489,15 +502,15 @@ create table events (
 | Route | Purpose |
 |---|---|
 | `/` , `/pricing`, `/terms`, `/privacy` | Marketing + legal |
-| `app./login`, `/onboarding` | Auth + wizard |
-| `/dashboard` | Overview |
+| `/login`, `/signup` | Auth: 2-step signup, Google, email-code login (no `/onboarding` page, D-008) |
+| `/dashboard` | My Store: first-run checklist, store setup, products |
 | `/dashboard/products`, `/dashboard/products/[id]` | Product + course builder |
-| `/dashboard/orders`, `/dashboard/students` | Orders, students |
+| `/dashboard/income`, `/dashboard/customers` | Income; Customers (answers, CSV export). Student progress arrives in Phase 2 |
 | `/dashboard/coupons` | Coupons |
 | `/dashboard/settings`, `/dashboard/billing`, `/dashboard/stripe` | Store, billing, Stripe connection |
-| `/s/[slug]` | Public store |
-| `/s/[slug]/[productSlug]` | Product page |
-| `/s/[slug]/checkout/success` | Post-payment page |
+| `/@username` (rewrite to `/s/[slug]`) | Public store |
+| `/@username/[productSlug]` | Product page |
+| `/@username/checkout/success` | Post-payment page |
 | `/library`, `/library/[productId]`, `/library/[productId]/[lessonId]` | Student area |
 | `/api/webhooks/*` | Stripe platform, Stripe Connect, Mux |
 
@@ -534,7 +547,7 @@ create table events (
 The founder is a UI/UX designer; design quality is the competitive edge.
 - Clean, modern, generous whitespace, strong typography (one display + one text font), soft shadows, 12-16px radii.
 - Storefront must feel premium on a 360px phone; large tap targets; sticky buy button on product pages.
-- Dashboard: simple left nav, empty states with one clear next action, onboarding checklist ("Connect Stripe", "Add first course", "Publish store").
+- Dashboard: simple left nav, empty states with one clear next action, first-run checklist ("Store setup", "Add first product", "Connect payments", "Publish").
 - Each theme preset is a token set (colors, radius, font pairing) so new themes are data, not code.
 - Dark mode for dashboard (P1).
 
@@ -548,11 +561,11 @@ Each milestone ends with: app runs, tests pass, security checklist from `CLAUDE.
 |---|---|---|
 | M0 | Setup | Repo, Next.js + TS + Tailwind + shadcn, Supabase project, env template, CI (lint, typecheck, test), Sentry, PostHog stub |
 | M1 | Auth + schema | Migrations for all tables, RLS policies + tests, creator/buyer auth (OTP + Google), profile creation trigger |
-| M2 | Store + onboarding | Wizard, slug validation, dashboard shell, public store page, routing middleware, 3 themes |
-| M3 | Products + course builder | Product CRUD (course and digital), modules/lessons, digital file upload + signed downloads, pay-what-you-want, reorder, draft/publish, product page |
+| M2 | Signup + store setup | 2-step signup + Google, slug validation, dashboard shell with first-run checklist, public store page at `/@username` (rewrite), 3 themes |
+| M3 | Products + course builder | Product type picker, product CRUD (course and digital), customization (D-013), modules/lessons, digital file upload + signed downloads, pay-what-you-want, reorder, draft/publish, product page |
 | M4 | Video | Mux direct upload, webhook, signed playback endpoint, student player with progress |
 | M5 | Stripe Connect | OAuth connect, account status webhook, publish guard for paid products |
-| M6 | Checkout + fulfillment | Checkout Session (direct charge, no fee), Connect webhook, orders, enrollments, idempotency tests |
+| M6 | Checkout + fulfillment | Checkout Session (direct charge, no fee), creator checkout fields, Connect webhook, orders, enrollments, Customers panel, idempotency tests |
 | M7 | Coupons + bump | Coupon CRUD and checkout application, order bump, concurrency test on redemption |
 | M8 | Email | Resend templates, Inngest jobs, `email_log`, receipt + creator notification |
 | M9 | Platform billing | Plans, trial, Checkout subscription, portal, webhook, `PLAN_LIMITS` gating |
@@ -560,8 +573,8 @@ Each milestone ends with: app runs, tests pass, security checklist from `CLAUDE.
 | M11 | Beta | 5 founding creators, personal onboarding, feedback loop |
 
 ### 8.1 Phase mapping (supersedes the order above where they differ)
-- **Phase 1 (2-day private alpha, test mode):** M0, M1, M2, M3 (digital products only), M5, M6, M8 (lite), M10 (partial). See `PHASE1_PLAN.md`.
-- **Phase 2 (days 3-7):** M4 (courses + Mux), M7 (coupons + order bumps), legal pages.
+- **Phase 1 (3-day private alpha, test mode, D-017):** M0, M1, M2 (signup, dashboard store setup, public store page), M3 (digital products only, with customization), M5, M6 (checkout with creator fields, Customers panel), M8 (lite), M10 (partial). Day 1 = signup, Google, dashboard store setup, My Store with digital product customization, public store page, product page (Buy disabled). Day 2 = Stripe Connect (or MockProvider), checkout, webhook, orders, Customers panel, buyer library, downloads, emails. Day 3 = security review, more payment methods, deploy, smoke test. See `PHASE1_PLAN.md`.
+- **Phase 2 (days 4-8):** M4 (courses + Mux), M7 (coupons + order bumps), legal pages.
 - **Phase 3 (weeks 2-4):** M9 (platform billing) plus the growth tools in section 12.
 - **Phases 4-5:** see section 12.
 
@@ -586,7 +599,7 @@ Each milestone ends with: app runs, tests pass, security checklist from `CLAUDE.
 ---
 
 ## 10. Open questions (decide before or during build)
-1. **Product name and domain.** Needed before M2 (subdomain routing) and email sender setup.
+1. **Product name and domain.** Domain decided: `pickstall.store`, path-based (D-010). Still open: the email sending domain and sender setup.
 2. **Card required at trial start?** Higher conversion quality vs lower signups. Default: yes, card required.
 3. **Does Stripe provide test-mode keys before the India invite is granted?** Confirm with Stripe. If not, use a temporary test account from a supported country for local development only.
 4. **Video cost model.** Mux charges by storage and delivery; confirm limits (hours per plan) against real Mux pricing before finalizing plan limits.
@@ -637,6 +650,7 @@ Goal: every Stan Store feature (including its $99 Pro tier) on our lower plans, 
 ### Additional open questions
 8. Will PayPal approve the platform application, and on what terms? Submit the platforms/multiparty form alongside the Stripe invite request.
 9. Which provider handles our own subscription billing in Phase 3 (Stripe Billing vs a Merchant of Record)?
+10. Signup creates the draft store on the server right after the code is verified (not from client-editable auth metadata). What happens if the username was taken in the meantime? Sign-in must still succeed (D-008).
 
 ---
 
@@ -648,19 +662,19 @@ Goal: every Stan Store feature (including its $99 Pro tier) on our lower plans, 
 1. Creator enters a domain in Settings > Domain. Recommend a **subdomain** (`shop.` or `learn.`). Apex domains need an A/ALIAS record and are supported but flagged as harder.
 2. Server calls the **Vercel Domains API** to add the domain to the project and reads the required DNS records and verification status. Show those exact records in the UI (CNAME or A, plus a TXT when verification is needed), with short guides for common registrars (GoDaddy, Namecheap, Cloudflare, Google/Squarespace).
 3. Poll status with a "Check again" button: `pending DNS` > `verified` > `SSL issued` > `live`. Do not mark the store live on the custom domain before verification.
-4. `stores.custom_domain` (unique) plus `custom_domain_status`. Middleware resolves `Host` to the store. Redirect `www` <> apex and the old subdomain to the custom domain; set canonical URLs.
-5. On downgrade or removal, remove the domain from Vercel and fall back to the subdomain.
+4. `stores.custom_domain` (unique) plus `custom_domain_status`. Middleware resolves `Host` to the store. Redirect `www` <> apex and the old `/@username` URL to the custom domain; set canonical URLs. On a custom domain the store is served at `/` (D-010).
+5. On downgrade or removal, remove the domain from Vercel and fall back to `/@username`.
 
 **Rules and edge cases**
 - Cloudflare proxy (orange cloud) must be set to DNS only unless configured correctly; show a warning.
 - Reject domains already in use by another store; reject our own root domain and reserved names.
 - Rate limits: Vercel domain adds are limited per hour per team, so queue and throttle.
-- Wildcard `*.ourdomain.com` for creator subdomains requires Vercel nameservers for the root domain.
+- No wildcard `*.ourdomain.com` is needed: creator links are path-based (D-010). Only custom domains need DNS records.
 - Vercel Hobby is limited and non-commercial; use **Pro** for production (verify current terms and limits).
-- Auth cookies are per domain. Keep creator login on the app domain. For buyers, the library stays on the main domain at first (magic-link access from the receipt email); per-domain buyer sessions are a later step.
+- Auth cookies are per domain. Keep creator login on the main domain (`/dashboard`). For buyers, the library stays on the main domain at first (magic-link access from the receipt email); per-domain buyer sessions are a later step.
 - Security: verify ownership before activating, never trust a user-supplied `Host` without a DB match, log every domain change.
 
-**Acceptance:** a test domain goes from added to live with HTTPS in under 30 minutes of DNS propagation; removing it restores the subdomain; two stores cannot claim the same domain.
+**Acceptance:** a test domain goes from added to live with HTTPS in under 30 minutes of DNS propagation; removing it restores the `/@username` URL; two stores cannot claim the same domain.
 
 ## 14. Import and export (Phase 3)
 

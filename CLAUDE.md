@@ -18,12 +18,14 @@ You are helping a solo founder build **Pickstall**, a Stan Store-style platform 
 
 | Block | Read from PRD.md | Read from DESIGN.md | Read from this file |
 |---|---|---|---|
-| A: foundation, schema, auth | section 2, 5.4 (data model), 5.5 (RLS) | none | sections 5, 6, 8 |
-| B: onboarding, dashboard, store | F1, F2, F8, 5.2, 5.8 | sections 0, 3-6, 9 (button, input, card), 10.2, 10.4 | sections 5, 8 |
-| C: digital products | F3b, 5.4 (products, product_files) | section 9, 10.4 | sections 5, 8 |
-| D: Stripe, checkout, webhook, library | section 2, F4, 5.6 (A to C) | section 10.5 | section 7, 8 |
-| E: emails | F7 | none | sections 5, 8 |
-| F: security review, deploy | section 6 | none | section 8 |
+| A: foundation, schema, auth (done) | section 2, 5.4 (data model), 5.5 (RLS) | none | sections 5, 6, 8 |
+| B: login, signup, dashboard | F1, F8, 5.8 (routes) | sections 0, 3-6, 9 (button, input, card), 10.2, 10.7, 10.8, 13, 15 | sections 5, 8 |
+| C: products and store page | F2, F3b, F4 (product page and checkout fields), 5.2 (routing), 5.4 and 5.4.1 (products, files, planned additions) | sections 9, 10.4, 10.8, 11 | sections 5, 6, 8 (customization guardrails) |
+| D: payments | section 2, F4, 5.4.1, 5.6 (A to C) | section 10.5 | sections 7, 8 |
+| E: emails | F7, F3b (email customization) | none | sections 5, 8 |
+| F: security and deploy | section 6 | none | section 8 |
+
+UI reference images, when they exist, live in `docs/ui-reference/` and are named by screen (for example `signup.png`, `my-store.png`). Read the one image for the screen you are building, never the whole folder.
 
 Rules: do not paste or re-read whole files into the chat; reference file paths and section names instead. Keep command output short (quiet flags, `| tail -n 40`). Start a fresh session for every block.
 
@@ -73,6 +75,7 @@ Business logic lives in `/lib`, not inside components or route files. Route hand
 - UI: follow `DESIGN.md` strictly. Mobile-first, accessible (labels, focus states, contrast), loading + empty + error states for every data view. Never hardcode colors, fonts, radii or shadows; use the tokens (CSS variables / Tailwind theme). Run the design QA checklist (`DESIGN.md` section 19) after each screen.
 - Prefer small pure functions with unit tests for: pricing calculation, coupon validation, plan limits, slug validation, drip logic.
 - No `console.log` in committed code; use a logger and Sentry.
+- **Creator customization guardrails** (D-013, D-014): sanitize and length-limit ALL creator text (store name, bio, product text, thank-you message, email subject and body, questions and options); never render raw HTML from a creator or a buyer. Email templates support only the variables `{{customer_name}}`, `{{product_title}}` and `{{download_link}}`. The sender identity and the download link are always included in emails, whatever the creator writes. No sensitive checkout questions (card or ID numbers); custom questions are text, long text, dropdown or checkbox, at most 5 per product. After-purchase redirect URLs must be `https`. CSV exports must neutralize spreadsheet formulas. Creators are the data controller for their buyers' data (stated in the Terms).
 
 ## 6. Database rules
 
@@ -95,7 +98,9 @@ The founder's platform Stripe account is **India-based**. Stripe documented thes
 - Verify webhook signatures. Use **separate secrets** for the platform endpoint and the Connect endpoint.
 - Make webhook handling **idempotent**: insert the event id into `webhook_events` first; if it already exists, return 200 and do nothing.
 - Respond to webhooks fast; do heavy work (emails, enrollments follow-ups) in Inngest jobs.
-- Keep all payment-provider code inside `lib/payments/` behind a `PaymentProvider` interface (`createCheckout`, `handleWebhook`, `refund`). Build the Stripe adapter only. Never import provider SDKs or types outside `lib/payments/`.
+- Use Stripe Checkout **dynamic payment methods** so creators in other countries can offer more methods. Verify the exact availability in the Stripe docs during the payments block; do not guess.
+- A `MockProvider` is allowed **for development only**. It must refuse to run in production, and it must go through the same order and fulfilment path as Stripe: no shortcut that grants access without an order.
+- Keep all payment-provider code inside `lib/payments/` behind a `PaymentProvider` interface (`createCheckout`, `handleWebhook`, `refund`). Build the Stripe adapter; the only other adapter allowed now is the development-only `MockProvider` (next bullet). Never import provider SDKs or types outside `lib/payments/`.
 
 **DON'T**
 - Do **not** set `application_fee_amount` or `application_fee_percent` anywhere.
@@ -105,6 +110,7 @@ The founder's platform Stripe account is **India-based**. Stripe documented thes
 - Do **not** act as Merchant of Record or hold/forward creator funds. Creators are the seller of record for their own sales.
 - Digital product files live in a **private** bucket and are delivered only through signed URLs (about 60 seconds) after an enrollment check.
 - Do **not** grant course access based on the success redirect page; only the verified webhook creates enrollments.
+- Do **not** enable the `MockProvider` in production, and do not let any provider skip the order and fulfilment path.
 
 If a feature request seems to need an application fee or transfers, **stop and tell the founder** instead of working around the restriction.
 
@@ -120,6 +126,8 @@ If a feature request seems to need an application fee or transfers, **stop and t
 - [ ] No raw SQL string concatenation; no `dangerouslySetInnerHTML` with user content (sanitize markdown)
 - [ ] Redirect targets validated (no open redirects); OAuth `state` verified
 - [ ] Error messages do not leak internals or whether an email exists
+- [ ] Creator text sanitized and length-limited (no raw HTML); redirect URLs are https; no sensitive checkout questions; emails always carry the sender identity and the download link; CSV exports neutralize formulas
+- [ ] `MockProvider` cannot run in production
 
 After each milestone, run a self-review using this checklist and list any gaps in your report.
 
