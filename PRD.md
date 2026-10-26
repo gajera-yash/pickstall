@@ -84,7 +84,7 @@ Priority: **P0** = must ship in MVP, **P1** = fast follow (weeks 7-10), **P2** =
 
 ### F1. Auth and signup (P0)
 - Creator signup is **2 steps**: details (username, full name, email, optional phone), then a 6-digit email code, then straight to `/dashboard`. The username is the store slug (unique, `^[a-z0-9-]{3,30}$`). No store setup, activation page or billing steps in signup (D-008).
-- A **draft (unpublished) store is created automatically** at signup, using the username as slug. The link is reserved and the user becomes a creator.
+- A **draft (unpublished) store is created automatically** at signup, using the username as slug. The link is reserved and the user becomes a creator. The signup details wait server-side in `signup_intents` (30 minutes, bound to the browser that started signup) and the store is created with the user's own session right after the code is verified; client-editable auth metadata is never trusted (D-019). If the username was taken in the meantime, the session is kept and the user chooses another username (D-020).
 - Google sign-in is supported. New Google users get one extra step to choose a username (and an optional phone number).
 - Store setup (name, avatar, bio, currency, theme, accent, link) is a **first-run checklist in the dashboard**: Store setup, Add first product, Connect payments, Publish (D-009, F8).
 - Buyer auth: email OTP only. Buyers **never use signup**; they sign in with an email code at checkout or on the library page, and the account is created automatically after purchase.
@@ -450,7 +450,8 @@ Needed for creator customization (D-013, D-015). Each gets RLS and tests: a crea
 - `product_checkout_fields` table: up to 5 custom questions per product (label, type text / long text / dropdown / checkbox, options, required flag, position).
 - `orders.answers jsonb`: the buyer's answers, stored per order.
 - `customers` table: `store_id`, `email`, `name`, `phone`.
-- Open point: an external-link product does not fit `product_files.storage_path` (not null); decide where the link lives when this schema work is planned.
+- Decided (D-021, migration batch 1): `products.external_url` (nullable, https only, never in public views). A digital product can only be published with at least one file or an external URL.
+- Decided (D-019, migration batch 1): `signup_intents` (service role only) keeps signup details for 30 minutes until the email code is verified.
 
 The live schema already differs from the listing above in a few places; those changes are recorded in `docs/DECISIONS.md` (D-003, D-004) and in the `profiles.phone` migration (optional phone, set only by the signup trigger).
 
@@ -650,7 +651,7 @@ Goal: every Stan Store feature (including its $99 Pro tier) on our lower plans, 
 ### Additional open questions
 8. Will PayPal approve the platform application, and on what terms? Submit the platforms/multiparty form alongside the Stripe invite request.
 9. Which provider handles our own subscription billing in Phase 3 (Stripe Billing vs a Merchant of Record)?
-10. Signup creates the draft store on the server right after the code is verified (not from client-editable auth metadata). What happens if the username was taken in the meantime? Sign-in must still succeed (D-008).
+10. Resolved (D-020): if the username was taken between signup and code verification, the verified session is kept and the user chooses another username. The unique constraint on `stores.slug` decides.
 
 ---
 

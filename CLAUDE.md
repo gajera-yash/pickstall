@@ -48,9 +48,12 @@ pnpm lint           # eslint
 pnpm typecheck      # tsc --noEmit
 pnpm test           # vitest
 pnpm test:e2e       # playwright
-supabase db reset   # reapply migrations locally
+pnpm test:unit      # unit tests only (no database)
+pnpm test:db        # RLS tests against the hosted DEV project (guarded; the founder runs it)
+pnpm db:push        # apply new migrations to the linked dev project (the founder runs it)
 ```
-Run `pnpm lint && pnpm typecheck && pnpm test` before declaring a task done.
+There is no local Docker stack (D-001): never run `supabase db reset` against the hosted project; it is only for CI or a local stack. AI tools write migrations but do not push them.
+Run `pnpm lint && pnpm typecheck && pnpm test:unit` before declaring a task done; the founder runs `pnpm test:db` after `pnpm db:push`.
 
 ## 4. Project structure
 

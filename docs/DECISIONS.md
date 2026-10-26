@@ -4,6 +4,39 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-022: Database commands in CLAUDE.md
+- **Date:** 2026-10-26
+- **Decision:** `CLAUDE.md` section 3 lists `pnpm test:unit`, `pnpm test:db` and `pnpm db:push` instead of `supabase db reset`. `db reset` is only for CI or a local stack, never the hosted project. AI tools run lint, typecheck and unit tests; the founder pushes migrations and runs the DB tests.
+- **Why:** `supabase db reset` contradicted D-001 (hosted dev project, no Docker).
+- **Also:** the `landing/index.html` line is removed from `PHASE1_PLAN.md` section 1 (that file does not exist).
+
+## D-021: External link products and the publish rule
+- **Date:** 2026-10-26
+- **Decision:** `products.external_url` (nullable, must start with `https://`, at most 2048 characters). A digital product can only be **published** when it has an `external_url` or at least one `product_files` row; a database trigger enforces this. `external_url` is never in public views: it is delivered only after a verified payment, like a file.
+- **Known gap:** the trigger runs when a product is published or edited. Deleting the last file of a product that is already published is not blocked by the database; the app must guard it (Block C).
+- **Resolves:** the open point in D-015 about where an external link lives.
+
+## D-020: Taken username, Google users and users without a store
+- **Date:** 2026-10-26
+- **Decision:**
+  - Step 1 of signup only **checks** that a username is free; it does not reserve it. The unique constraint on `stores.slug` is the final authority.
+  - If the username is taken when the code is verified, the verified session is kept and the user goes to a **"Choose another username"** step (`/signup/username`).
+  - **Google** users without a store go to the same username step (optional phone), then the same draft-store creation.
+  - A user who signs in by email and has no store and no signup intent also goes to the username step, which offers a "Just buying? Go to your library" link. Buyers coming from checkout or the library keep their `next` path and never see it.
+  - The username step shows "Step 2 of 2".
+- **Resolves:** the D-008 open point and `PRD.md` open question 10.
+
+## D-019: Signup intents (server-side signup details)
+- **Date:** 2026-10-26
+- **Decision:**
+  - Signup step 1 saves the details (email, username, full name, optional phone) in a `signup_intents` table, not in auth metadata. Rows expire after 30 minutes; RLS is on with no policies (service role only); expired rows are deleted on every new signup.
+  - **Bound to the browser:** the intent stores the hash of a random token; the token sits in an httpOnly, Secure, SameSite=Lax cookie. Only that browser can complete the signup. Without this, someone could start a signup with another person's email, and that person's next normal login would apply the attacker's username, name and phone.
+  - **Rate limited:** at most 5 attempts per email in 15 minutes, and at most 10 intents per hour from one IP. The IP is never stored in plain form: only an HMAC-SHA-256 hash with the server secret `IP_HASH_SECRET`. Supabase's own email limits still apply.
+  - When the code is verified, the server takes the intent (and deletes it), updates the profile (full name, phone) and creates the **draft store with the user's own session**, so RLS applies: slug = username, store name = full name (cut to 60 characters), currency USD. The existing trigger makes the user a creator.
+  - Auth metadata is never trusted for the username or store creation. The `/onboarding` store step and the metadata pre-fill are removed.
+  - `profiles.phone` becomes updatable by its owner (column grant), so the profile can be updated with the user's own session.
+- **Supersedes:** the C3 rule that only the trigger may set the phone, and the C5 `/onboarding` flow.
+
 ## D-018: Token saving: read map and UI reference images
 - **Date:** 2026-10-26
 - **Decision:** the read map in `CLAUDE.md` section 1.1 now lists the real blocks (login, signup and dashboard, products and store page, payments, emails, security and deploy). UI reference images, when added, live in `docs/ui-reference/` and are named by screen (for example `signup.png`, `my-store.png`). An AI tool reads only the one image for the screen it is building, never the whole folder.

@@ -37,7 +37,6 @@ So define the 3-day goal as: **"A creator can sign up (email code or Google), ge
 - [ ] PayPal: submit the PayPal platforms/multiparty form as a backup if the Stripe invite is delayed. Build payments behind a `PaymentProvider` interface either way.
 - [ ] Domain: `pickstall.store` (D-010), add to Vercel. **Verify the Resend sending domain now** (DNS propagation can take hours).
 - [ ] Create `.env.local` from the variable names in `CLAUDE.md` section 9
-- [ ] Deploy the existing `landing/index.html` (or the landing build) so the waitlist is already collecting emails while you build
 - [ ] Install Supabase CLI and `pnpm`
 
 ## 2. Schedule
