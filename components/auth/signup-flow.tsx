@@ -1,27 +1,26 @@
 "use client";
 
-import { AtSign, Mail, Phone, User } from "lucide-react";
+import { ArrowRight, Mail, User } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 
 import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
 import { CodeStep } from "@/components/auth/code-step";
+import { PhoneField } from "@/components/auth/phone-field";
 import { useResendCooldown } from "@/components/auth/use-resend-cooldown";
+import { UsernameField } from "@/components/auth/username-field";
 import { WizardProgress } from "@/components/auth/wizard-progress";
-import { Wordmark } from "@/components/brand/wordmark";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { IconInput } from "@/components/ui/icon-input";
 import { startSignup, type SignupState } from "@/lib/auth/actions";
-import { OTP_LENGTH, storeLink } from "@/lib/config";
-import { PHONE_HINT } from "@/lib/phone";
+import { OTP_LENGTH } from "@/lib/config";
 import type { SignupStep } from "@/lib/signup-steps";
-import { normalizeSlugInput } from "@/lib/slug";
 
 const linkClass = "text-blue underline underline-offset-4 hover:text-blue-hover";
 
-type FieldName = "username" | "fullName" | "email" | "phone";
+type FieldName = "username" | "fullName" | "email";
 
 /**
  * Signup steps 1 and 2: details, then the email code (shared CodeStep). After the code the user
@@ -31,7 +30,7 @@ export function SignupFlow() {
   const [state, action, pending] = useActionState<SignupState, FormData>(startSignup, null);
   const cooldown = useResendCooldown();
 
-  const [values, setValues] = useState({ username: "", fullName: "", email: "", phone: "" });
+  const [values, setValues] = useState({ username: "", fullName: "", email: "" });
   const set = (field: FieldName, value: string) => setValues((current) => ({ ...current, [field]: value }));
 
   // "Use a different email" remembers which successful send to ignore, so no effect has to sync state.
@@ -40,7 +39,7 @@ export function SignupFlow() {
   const step: SignupStep = sentTo ? "code" : "details";
 
   const error = state && !state.ok ? state : null;
-  const fieldError = (field: FieldName) => (error?.field === field ? error.error : null);
+  const fieldError = (field: FieldName | "phone") => (error?.field === field ? error.error : null);
   const formError = error && !error.field ? error.error : null;
 
   // Move focus to the field that has the problem, so keyboard and screen reader users land on it.
@@ -48,11 +47,32 @@ export function SignupFlow() {
     if (state && !state.ok && state.field) document.getElementById(state.field)?.focus();
   }, [state]);
 
-  const usernameHint = `Your link: ${storeLink(values.username || "yourname")}`;
-
   return (
-    <AuthShell top={<WizardProgress step={step} />}>
-      <AuthHeading wordmark={<Wordmark />}>Create your account</AuthHeading>
+    <AuthShell
+      top={<WizardProgress step={step} />}
+      footer={
+        <>
+          <p className="text-sm font-medium text-ink">
+            Already have an account?{" "}
+            <Link href="/login" className={linkClass}>
+              Log in
+            </Link>
+          </p>
+          <p className="text-xs font-medium text-mute">
+            By continuing you agree to the{" "}
+            <Link href="/terms" className={linkClass}>
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className={linkClass}>
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        </>
+      }
+    >
+      <AuthHeading>{sentTo ? "Check your email" : "Create your account"}</AuthHeading>
 
       {sentTo ? (
         <CodeStep email={sentTo} next="/" cooldown={cooldown} onChangeEmail={() => setDismissed(state)} />
@@ -69,23 +89,11 @@ export function SignupFlow() {
           )}
 
           <form action={action} onSubmit={cooldown.start} noValidate className="flex flex-col gap-5">
-            <FormField id="username" label="Username" error={fieldError("username")} hint={usernameHint}>
-              <IconInput
-                icon={AtSign}
-                id="username"
-                name="username"
-                autoComplete="off"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="maya"
-                required
-                value={values.username}
-                onChange={(event) => set("username", normalizeSlugInput(event.target.value))}
-                aria-invalid={fieldError("username") ? true : undefined}
-                aria-describedby={describedBy("username", fieldError("username"), usernameHint)}
-              />
-            </FormField>
+            <UsernameField
+              value={values.username}
+              onChange={(username) => set("username", username)}
+              serverError={fieldError("username")}
+            />
 
             <FormField id="fullName" label="Full name" error={fieldError("fullName")}>
               <IconInput
@@ -122,48 +130,15 @@ export function SignupFlow() {
               />
             </FormField>
 
-            <FormField id="phone" label="Phone (optional)" error={fieldError("phone")} hint={PHONE_HINT}>
-              <IconInput
-                icon={Phone}
-                id="phone"
-                name="phone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="+1 415 555 0100"
-                value={values.phone}
-                onChange={(event) => set("phone", event.target.value)}
-                aria-invalid={fieldError("phone") ? true : undefined}
-                aria-describedby={describedBy("phone", fieldError("phone"), PHONE_HINT)}
-              />
-            </FormField>
+            <PhoneField error={fieldError("phone")} />
 
             <Button type="submit" size="lg" className="mt-1 w-full" loading={pending}>
-              Next
+              Send my code
+              <ArrowRight aria-hidden="true" className="size-5" />
             </Button>
           </form>
         </>
       )}
-
-      <div className="flex flex-col gap-3 text-center text-xs font-medium text-mute">
-        <p>
-          By continuing you agree to the{" "}
-          <Link href="/terms" className={linkClass}>
-            Terms
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className={linkClass}>
-            Privacy Policy
-          </Link>
-          .
-        </p>
-        <p className="text-sm">
-          Already have an account?{" "}
-          <Link href="/login" className={linkClass}>
-            Log in
-          </Link>
-        </p>
-      </div>
     </AuthShell>
   );
 }

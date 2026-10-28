@@ -13,6 +13,7 @@ describe("dashboard sections (D-011)", () => {
   it.each([
     ["/dashboard", "/dashboard", true],
     ["/dashboard/products/abc", "/dashboard", true],
+    ["/dashboard/store", "/dashboard", true],
     ["/dashboard/income", "/dashboard", false],
     ["/dashboard/income", "/dashboard/income", true],
     ["/dashboard/customers/123", "/dashboard/customers", true],

@@ -40,3 +40,28 @@ export const slugSchema = z
   // "xx--" in positions 3-4 is reserved for internationalized domain names.
   .refine((slug) => slug.slice(2, 4) !== "--", { error: "Use only letters, numbers and single hyphens." })
   .refine((slug) => !isReservedSlug(slug), { error: SLUG_TAKEN_MESSAGE });
+
+const SUGGESTION_PATTERNS: readonly ((base: string) => string)[] = [
+  (base) => `${base}-official`,
+  (base) => `${base}-store`,
+  (base) => `hey-${base}`,
+  (base) => `${base}-shop`,
+  (base) => `the-${base}`,
+  (base) => `${base}-hq`,
+  (base) => `${base}-studio`,
+  (base) => `${base}-co`,
+];
+
+/**
+ * Other usernames to offer when one is taken, in order of preference. Every candidate passes
+ * slugSchema (length, characters, reserved names); availability is checked on the server.
+ */
+export function usernameCandidates(taken: string): string[] {
+  const base = normalizeSlugInput(taken).replace(/^-+|-+$/g, "");
+  if (!base) return [];
+  const candidates = SUGGESTION_PATTERNS.map((pattern) => {
+    const room = SLUG_MAX_LENGTH - (pattern("").length);
+    return pattern(base.slice(0, room).replace(/-+$/, ""));
+  });
+  return [...new Set(candidates)].filter((candidate) => candidate !== base && slugSchema.safeParse(candidate).success);
+}

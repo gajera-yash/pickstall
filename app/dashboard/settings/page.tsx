@@ -45,8 +45,8 @@ async function SettingsContent() {
           Payments
         </h2>
         <p className="flex flex-wrap items-center gap-2 text-sm text-mute">
-          {store.stripe_charges_enabled ? "Stripe is connected." : "Stripe is not connected yet."}
-          {!store.stripe_charges_enabled && <Badge variant="soon">Connecting is coming next</Badge>}
+          {store.stripeChargesEnabled ? "Stripe is connected." : "Stripe is not connected yet."}
+          {!store.stripeChargesEnabled && <Badge variant="soon">Connecting is coming next</Badge>}
         </p>
       </section>
     </div>

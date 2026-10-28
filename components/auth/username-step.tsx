@@ -1,45 +1,39 @@
 "use client";
 
-import { AtSign, Phone, User } from "lucide-react";
+import { ArrowRight, User } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 
+import { PhoneField } from "@/components/auth/phone-field";
+import { UsernameField } from "@/components/auth/username-field";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { IconInput } from "@/components/ui/icon-input";
 import { claimUsername, type ClaimUsernameState } from "@/lib/auth/actions";
-import { storeLink } from "@/lib/config";
-import { PHONE_HINT } from "@/lib/phone";
-import { normalizeSlugInput } from "@/lib/slug";
-
-type FieldName = "username" | "fullName" | "phone";
 
 const linkClass = "text-blue underline underline-offset-4 hover:text-blue-hover";
 
 /**
- * Choose a username (D-020): new Google users, users without a store, or when the signup username
- * was taken. Creates the draft store, then goes to the dashboard.
+ * Choose a username (D-020, reference docs/ui-reference/username.webp): new Google users, users
+ * without a store, or when the signup username was taken. Creates the draft store, then goes to
+ * the dashboard.
  */
 export function UsernameStep({ needsName, taken }: { needsName: boolean; taken: boolean }) {
   const [state, action, pending] = useActionState<ClaimUsernameState, FormData>(claimUsername, null);
-  const [values, setValues] = useState({ username: "", fullName: "", phone: "" });
-  const set = (field: FieldName, value: string) => setValues((current) => ({ ...current, [field]: value }));
+  const [username, setUsername] = useState("");
+  const [fullName, setFullName] = useState("");
 
   const error = state && !state.ok ? state : null;
-  const fieldError = (field: FieldName) => (error?.field === field ? error.error : null);
+  const fieldError = (field: string) => (error?.field === field ? error.error : null);
   const formError = error && !error.field ? error.error : null;
 
   useEffect(() => {
     if (state && !state.ok && state.field) document.getElementById(state.field)?.focus();
   }, [state]);
 
-  const usernameHint = `Your link: ${storeLink(values.username || "yourname")}`;
-
   return (
     <>
-      <p className="-mt-3 text-center text-mute">This becomes your store link. You can change your store name later.</p>
-
       {taken && (
         <Alert variant="warning">
           <AlertTitle>That username was just taken</AlertTitle>
@@ -53,24 +47,7 @@ export function UsernameStep({ needsName, taken }: { needsName: boolean; taken: 
       )}
 
       <form action={action} noValidate className="flex flex-col gap-5">
-        <FormField id="username" label="Username" error={fieldError("username")} hint={usernameHint}>
-          <IconInput
-            icon={AtSign}
-            id="username"
-            name="username"
-            autoComplete="off"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            placeholder="maya"
-            required
-            autoFocus
-            value={values.username}
-            onChange={(event) => set("username", normalizeSlugInput(event.target.value))}
-            aria-invalid={fieldError("username") ? true : undefined}
-            aria-describedby={describedBy("username", fieldError("username"), usernameHint)}
-          />
-        </FormField>
+        <UsernameField value={username} onChange={setUsername} serverError={fieldError("username")} autoFocus />
 
         {needsName && (
           <FormField id="fullName" label="Full name" error={fieldError("fullName")}>
@@ -81,32 +58,19 @@ export function UsernameStep({ needsName, taken }: { needsName: boolean; taken: 
               autoComplete="name"
               placeholder="Maya Patel"
               required
-              value={values.fullName}
-              onChange={(event) => set("fullName", event.target.value)}
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
               aria-invalid={fieldError("fullName") ? true : undefined}
               aria-describedby={describedBy("fullName", fieldError("fullName"))}
             />
           </FormField>
         )}
 
-        <FormField id="phone" label="Phone (optional)" error={fieldError("phone")} hint={PHONE_HINT}>
-          <IconInput
-            icon={Phone}
-            id="phone"
-            name="phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="+1 415 555 0100"
-            value={values.phone}
-            onChange={(event) => set("phone", event.target.value)}
-            aria-invalid={fieldError("phone") ? true : undefined}
-            aria-describedby={describedBy("phone", fieldError("phone"), PHONE_HINT)}
-          />
-        </FormField>
+        <PhoneField error={fieldError("phone")} />
 
         <Button type="submit" size="lg" className="mt-1 w-full" loading={pending}>
-          Create my store
+          Continue to dashboard
+          <ArrowRight aria-hidden="true" className="size-5" />
         </Button>
       </form>
 

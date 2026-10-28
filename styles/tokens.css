@@ -3,7 +3,8 @@
  * Raw color values live ONLY in this file and in lib/themes.ts. Everything else uses the
  * Tailwind names mapped in app/globals.css (bg-surface, text-ink, border-border-strong, ...).
  *
- * Dark mode follows the OS by default; <html data-theme="light|dark"> overrides it.
+ * The app is light only (docs/DECISIONS.md D-025): app/layout.tsx sets <html data-theme="light">.
+ * The dark values below are kept for a possible later toggle; they are not used now.
  * The dark values appear twice (media query and data-theme) because plain CSS cannot share
  * them; tests/unit/tokens.test.ts fails if the two copies ever differ.
  * Contrast ratios for the pairs below are asserted in tests/unit/tokens.test.ts.
@@ -14,6 +15,7 @@
 
   /* Surfaces and text */
   --bg: #ffffff; /* white theme: pure white page (docs/DECISIONS.md D-007) */
+  --bg-subtle: #f7f9fc; /* behind the auth card only (D-026) */
   --surface: #ffffff;
   --ink: #0b0d2a;
   --mute: #555a82;
@@ -21,17 +23,17 @@
   --border-ui: #878cb0; /* inputs, cards, secondary buttons: soft 1px border, 3:1 on white */
   --border-strong: #0b0d2a; /* emphasis outlines only: coupons, receipts, highlight button */
 
-  /* Primary (actions, links, focus) */
-  --blue: #2f3bff;
+  /* Primary (actions, links, focus): the logo blue (D-026) */
+  --blue: #0056ff;
   --on-blue: #ffffff;
-  --blue-hover: #2430d6;
-  --blue-active: #1b26b8;
-  --blue-soft: #e1e4ff;
+  --blue-hover: #0047d9;
+  --blue-active: #003bb5;
+  --blue-soft: #e6eeff;
 
-  /* Highlight (coupons, badges). Text on yellow is always --on-yellow. */
-  --yellow: #ffd84d;
+  /* Highlight, the logo yellow (D-026): small accents only. Text on yellow is always --on-yellow. */
+  --yellow: #ffc400;
   --on-yellow: #0b0d2a;
-  --yellow-soft: #fff3bf;
+  --yellow-soft: #fff4cc;
 
   /* Money and success */
   --mint: #0a7a53;
@@ -58,6 +60,7 @@
   --shadow-md: 6px 6px 0 var(--border-strong);
   --shadow-lg: 14px 14px 0 var(--blue);
   --shadow-overlay: 0 12px 32px rgb(11 13 42 / 0.18);
+  --shadow-card: 0 1px 2px rgb(11 13 42 / 0.04), 0 8px 24px rgb(11 13 42 / 0.06); /* auth card only */
   --scrim: rgb(11 13 42 / 0.5);
 
   /* Motion (DESIGN.md section 12) */
@@ -75,6 +78,7 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #0c0e24;
+  --bg-subtle: #10132e;
   --surface: #171a3a;
   --ink: #f1f2ff;
   --mute: #a3a8d0;
@@ -101,6 +105,7 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #0c0e24;
+    --bg-subtle: #10132e;
     --surface: #171a3a;
     --ink: #f1f2ff;
     --mute: #a3a8d0;

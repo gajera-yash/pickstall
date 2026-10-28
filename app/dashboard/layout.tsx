@@ -16,13 +16,13 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
   return (
     <div className="flex min-h-dvh flex-1">
       <aside className="hidden w-62 shrink-0 flex-col gap-8 border-r border-line px-4 py-5 md:flex">
-        <Wordmark className="px-3" />
+        <Wordmark className="h-9 px-3" priority />
         <DashboardNav variant="sidebar" />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
         <header className="flex h-16 items-center justify-between gap-3 border-b border-line px-4 md:px-6">
-          <Wordmark className="md:hidden" />
+          <Wordmark className="h-8 md:hidden" />
           {/* The store name is request data, so it streams in behind a boundary. */}
           <Suspense fallback={<Skeleton className="h-5 w-40" />}>
             <StoreStatus />
@@ -43,7 +43,7 @@ async function StoreStatus() {
   return (
     <p className="flex min-w-0 items-center gap-2 md:ml-auto">
       <span className="truncate font-semibold">{store.name}</span>
-      {store.is_published ? <Badge variant="live">Live</Badge> : <Badge variant="draft">Draft</Badge>}
+      {store.isPublished ? <Badge variant="live">Live</Badge> : <Badge variant="draft">Draft</Badge>}
     </p>
   );
 }

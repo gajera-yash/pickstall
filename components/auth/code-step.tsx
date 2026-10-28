@@ -1,15 +1,13 @@
 "use client";
 
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, MailCheck } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 
+import { OtpInput } from "@/components/auth/otp-input";
 import type { ResendCooldown } from "@/components/auth/use-resend-cooldown";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { sendEmailCode, verifyEmailCode, type SendCodeState, type VerifyCodeState } from "@/lib/auth/actions";
-import { normalizeCodeInput } from "@/lib/auth/code";
 import { OTP_LENGTH } from "@/lib/config";
 
 type Props = {
@@ -47,33 +45,39 @@ export function CodeStep({ email, next, cooldown, onChangeEmail }: Props) {
 
   return (
     <>
-      <p className="-mt-3 text-center text-mute" aria-live="polite">
-        We sent a {OTP_LENGTH}-digit code to <strong className="font-semibold break-all text-ink">{email}</strong>.
-      </p>
+      <div className="-mt-2 flex flex-col items-center gap-3 text-center">
+        <span aria-hidden="true" className="flex size-12 items-center justify-center rounded-full bg-blue-soft text-blue">
+          <MailCheck className="size-6" />
+        </span>
+        <p className="text-mute" aria-live="polite">
+          We sent a {OTP_LENGTH}-digit code to <strong className="font-semibold break-all text-ink">{email}</strong>.
+        </p>
+      </div>
 
       <form ref={formRef} action={verifyAction} noValidate className="flex flex-col gap-6">
         <input type="hidden" name="email" value={email} />
         <input type="hidden" name="next" value={next} />
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="code">{OTP_LENGTH}-digit code</Label>
-          <Input
-            id="code"
-            name="code"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="one-time-code"
-            required
-            autoFocus
+        <input type="hidden" name="code" value={code} />
+        <div className="flex flex-col gap-3">
+          <p id="code-label" className="text-center text-sm font-semibold text-ink">
+            Enter the {OTP_LENGTH}-digit code
+          </p>
+          <OtpInput
             value={code}
-            onChange={(event) => setCode(normalizeCodeInput(event.target.value))}
-            className="h-14 text-center text-h3 tracking-[0.3em] tabular-nums"
-            aria-invalid={verifyError ? true : undefined}
-            aria-describedby={verifyError ? "code-error" : undefined}
+            onChange={setCode}
+            labelledBy="code-label"
+            describedBy={verifyError ? "code-error" : undefined}
+            invalid={Boolean(verifyError)}
+            disabled={verifying}
           />
-          {verifyError && <FieldError id="code-error">{verifyError}</FieldError>}
+          {verifyError && (
+            <FieldError id="code-error" className="justify-center">
+              {verifyError}
+            </FieldError>
+          )}
         </div>
-        <Button type="submit" size="lg" className="w-full" loading={verifying}>
-          Sign in
+        <Button type="submit" size="lg" className="w-full" loading={verifying} disabled={code.length < OTP_LENGTH}>
+          Verify and continue
         </Button>
       </form>
 

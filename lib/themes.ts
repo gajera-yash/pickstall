@@ -1,3 +1,5 @@
+import { contrastRatio } from "@/lib/contrast";
+
 // Creator storefront themes (DESIGN.md section 11). Themes are data, not code: adding a preset
 // means adding an entry here. Raw color values are allowed in this file only (and styles/tokens.css).
 // Every pair below is contrast-tested in tests/unit/themes.test.ts.
@@ -28,7 +30,7 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePreset> = {
     background: "#FFFFFF",
     text: "#111322",
     muted: "#5B6078",
-    accent: "#2F3BFF",
+    accent: "#0056FF",
     onAccent: "#FFFFFF",
     card: "#F2F3FF",
     radiusPx: 14,
@@ -68,3 +70,17 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePreset> = {
 
 /** Matches the `stores.theme` column default in the database. */
 export const DEFAULT_THEME = { preset: "clean", accent: THEME_PRESETS.clean.accent } as const;
+
+/** Text colors an accent can carry (DESIGN.md section 11): white or ink, whichever reads better. */
+const ON_ACCENT_WHITE = "#FFFFFF";
+const ON_ACCENT_INK = "#0B0D2A";
+
+/**
+ * The on-accent color for a creator's accent and its contrast ratio. Accents below 4.5:1 with
+ * both choices are rejected by the store setup schema (lib/stores/schemas.ts).
+ */
+export function onAccentFor(accent: string): { color: string; ratio: number } {
+  const white = { color: ON_ACCENT_WHITE, ratio: contrastRatio(ON_ACCENT_WHITE, accent) };
+  const ink = { color: ON_ACCENT_INK, ratio: contrastRatio(ON_ACCENT_INK, accent) };
+  return white.ratio >= ink.ratio ? white : ink;
+}

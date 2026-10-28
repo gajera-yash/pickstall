@@ -44,6 +44,6 @@ describe("storefront theme presets (DESIGN.md section 11)", () => {
   });
 
   it("defaults to the Clean preset with its own accent", () => {
-    expect(DEFAULT_THEME).toEqual({ preset: "clean", accent: "#2F3BFF" });
+    expect(DEFAULT_THEME).toEqual({ preset: "clean", accent: "#0056FF" });
   });
 });

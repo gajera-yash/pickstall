@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
-import { Wordmark } from "@/components/brand/wordmark";
 import { APP_NAME } from "@/lib/config";
 
 /**
@@ -11,7 +10,7 @@ import { APP_NAME } from "@/lib/config";
 export function LegalPlaceholder({ title }: { title: string }) {
   return (
     <AuthShell>
-      <AuthHeading wordmark={<Wordmark />}>{title}</AuthHeading>
+      <AuthHeading>{title}</AuthHeading>
       <p className="text-center text-mute">
         This page isn&apos;t ready yet. {APP_NAME} is in private testing, and the full {title} will be published before
         any real payments are taken.

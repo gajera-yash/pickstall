@@ -1,0 +1,57 @@
+import "server-only";
+
+import { MongoClient, MongoServerError, type Db } from "mongodb";
+
+import { serverEnv } from "@/lib/env.server";
+import { logger } from "@/lib/logger";
+
+// The one MongoDB client for the app (D-024). Only server code imports this file.
+// In development the client is kept on globalThis so hot reloads do not open new connections.
+
+const globalForMongo = globalThis as unknown as { pickstallMongo?: MongoClient; pickstallIndexes?: Promise<void> };
+
+export const mongoClient: MongoClient = globalForMongo.pickstallMongo ?? new MongoClient(serverEnv.MONGODB_URI);
+if (process.env.NODE_ENV !== "production") globalForMongo.pickstallMongo = mongoClient;
+
+/** The app database. The driver connects lazily on the first operation. */
+export const mongoDb: Db = mongoClient.db(serverEnv.MONGODB_DB);
+
+/**
+ * Indexes are the database's guarantees (unique usernames, one store per owner, expiring rows),
+ * so the app relies on them instead of check-then-insert. Created once per process; idempotent.
+ */
+async function ensureIndexes(db: Db): Promise<void> {
+  await Promise.all([
+    db.collection("stores").createIndex({ slug: 1 }, { unique: true, name: "stores_slug_unique" }),
+    db.collection("stores").createIndex({ ownerId: 1 }, { unique: true, name: "stores_owner_unique" }),
+    db.collection("signupIntents").createIndex({ email: 1 }, { unique: true, name: "signup_intents_email_unique" }),
+    db.collection("signupIntents").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "signup_intents_ttl" }),
+    db.collection("signupIntents").createIndex({ ipHash: 1, createdAt: 1 }, { name: "signup_intents_ip" }),
+    db.collection("rateLimits").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "rate_limits_ttl" }),
+    // Better Auth collections (it does not create indexes for MongoDB itself).
+    db.collection("user").createIndex({ email: 1 }, { unique: true, name: "user_email_unique" }),
+    db.collection("session").createIndex({ token: 1 }, { unique: true, name: "session_token_unique" }),
+    db.collection("session").createIndex({ userId: 1 }, { name: "session_user" }),
+    db.collection("account").createIndex({ userId: 1 }, { name: "account_user" }),
+    db.collection("verification").createIndex({ identifier: 1 }, { name: "verification_identifier" }),
+  ]);
+}
+
+/** The app database with its indexes in place. Use this from data-access code. */
+export async function getDb(): Promise<Db> {
+  globalForMongo.pickstallIndexes ??= ensureIndexes(mongoDb).catch((error: unknown) => {
+    globalForMongo.pickstallIndexes = undefined; // retry on the next call
+    logger.error("db.ensure_indexes_failed", { code: error instanceof MongoServerError ? error.code : undefined });
+    throw error;
+  });
+  await globalForMongo.pickstallIndexes;
+  return mongoDb;
+}
+
+/** True for a unique-index violation, optionally only on the given field. */
+export function isDuplicateKeyError(error: unknown, field?: string): boolean {
+  if (!(error instanceof MongoServerError) || error.code !== 11000) return false;
+  if (!field) return true;
+  const pattern: unknown = error.keyPattern;
+  return typeof pattern === "object" && pattern !== null && field in pattern;
+}

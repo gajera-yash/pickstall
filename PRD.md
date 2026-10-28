@@ -107,12 +107,12 @@ Priority: **P0** = must ship in MVP, **P1** = fast follow (weeks 7-10), **P2** =
 
 ### F3b. Digital products (Gumroad parity, P0)
 - Products are created through a **type picker** (D-012). Live in Phase 1: **Digital product**. Shown as "Coming soon" and not selectable: Course, Coaching call, Membership, Collect emails, Link.
-- Product type `digital`: the creator uploads one or more files (PDF, ZIP, audio, templates) to a **private** Supabase Storage bucket, or provides an external link. Default max 500 MB per file (config value). An external link is delivered like a file: only after the verified payment, in the Library and the receipt email.
+- Product type `digital`: the creator uploads one or more files (PDF, ZIP, audio, templates) to **private** object storage (provider not chosen yet, D-024), or provides an external link. Default max 500 MB per file (config value). An external link is delivered like a file: only after the verified payment, in the Library and the receipt email.
 - Delivery: after the verified payment webhook creates the enrollment, files appear in the buyer's Library. Downloads use **short-lived signed URLs (about 60 seconds)** generated server-side after an enrollment check. Optional per-product download limit.
-- Pricing models: **fixed** or **pay-what-you-want** (creator sets a minimum; buyer enters an amount on our product page; server validates `amount >= min_price_cents` and a sane maximum, then passes the amount as inline `price_data`).
+- Pricing models: **fixed** or **pay-what-you-want** (creator sets a minimum; buyer enters an amount on our product page; server validates `amount >= minPriceCents` and a sane maximum, then passes the amount as inline `price_data`).
 - Digital products can be sold standalone or used as order-bump items.
 - **Customization** (D-013): title, description, cover, fixed or pay-what-you-want price, button text, checkout headline, thank-you message, confirmation email subject and body (variables `{{customer_name}}`, `{{product_title}}`, `{{download_link}}`), download limit. Stored in `products.settings` (planned, see 5.4.1). Guardrails: all creator text is sanitized and length-limited (no raw HTML); the sender identity and the download link are always in the email; after-purchase redirect URLs must be `https` (D-014).
-- **Acceptance:** a non-buyer cannot obtain a file URL; a pay-what-you-want amount below the minimum is rejected server-side; a refund revokes access; files are never reachable through a public bucket path.
+- **Acceptance:** a non-buyer cannot obtain a file URL; a pay-what-you-want amount below the minimum is rejected server-side; a refund revokes access; files are never reachable through a public storage path.
 
 ### F4. Product page and checkout (P0)
 - Product page: cover, title, description, curriculum outline (courses, Phase 2), price, buy button. The creator can change the button text, the checkout headline and the thank-you message (F3b).
@@ -139,7 +139,7 @@ Provider: Resend. Templates built with React Email.
 - Creator welcome.
 - Buyer purchase receipt / confirmation with "Access your purchase" link (course or downloads). The creator can customize the subject and body per product with the variables `{{customer_name}}`, `{{product_title}}` and `{{download_link}}`. The sender identity, the footer and the download link are always included, and the text is sanitized (no raw HTML) (D-014).
 - Creator "You made a sale" notification.
-- Buyer sign-in code (handled by Supabase Auth email, branded).
+- Buyer sign-in code (6-digit code from Better Auth, sent with Resend, branded).
 - Every email has the sender identity, physical-address footer (CAN-SPAM) and, for marketing email, an unsubscribe link (P1).
 - **Acceptance:** emails are sent from a queue/job (not inline in the webhook), with retry on failure and a row in `email_log`.
 
@@ -149,7 +149,7 @@ Four sections (D-011): **My Store**, **Income**, **Customers**, **Settings**. A 
 - **Income:** revenue (today / 7d / 30d), orders count, top products, recent orders with status, amount and refund state.
 - **Customers:** buyers with email, name, optional phone, purchase date and their answers to the checkout questions (F4); CSV export (formulas neutralized, D-014).
 - **Settings:** account, Stripe connection status. Billing arrives in Phase 3; coupons and student progress (courses) arrive in Phase 2.
-- **Acceptance:** all dashboard queries are scoped by `store_id` and protected by RLS.
+- **Acceptance:** all dashboard queries are scoped by the creator's own `storeId`, taken from the verified session (section 5.5).
 
 ### F9. Platform billing (Phase 3, must be live before the 6-month founding free period ends)
 - Founding creators (10 spots) get 6 months free, so billing is **not needed for Phase 1 or 2**. Build it in Phase 3. Provider is decided then: Stripe Billing (if the India invite is granted) or a Merchant of Record such as Dodo Payments (India-based, UPI). After the founding period, new creators get a 14-day free trial.
@@ -218,8 +218,10 @@ Payment plans/installments, 1:1 booking, pre-orders, a Discover-style marketplac
 |---|---|
 | App | Next.js (latest stable, App Router), TypeScript strict |
 | UI | Tailwind CSS + shadcn/ui, lucide-react icons |
-| DB / Auth / Storage | Supabase (Postgres, Auth, Storage, RLS) |
-| ORM / types | Supabase generated types (or Drizzle if preferred); migrations as SQL files |
+| Database | MongoDB (Atlas in production), official `mongodb` Node.js driver, no ORM (D-024) |
+| Auth | Better Auth: email 6-digit code (`emailOTP` plugin), Google, database sessions (D-024) |
+| File storage | Not chosen yet (D-024). Must support private files and short-lived signed URLs |
+| Types / schema | TypeScript document types in `lib/db/collections.ts`, indexes in `lib/db/mongo.ts`, Zod at every boundary |
 | Payments | Stripe (Connect Standard + Checkout direct charges; Billing for platform plans) |
 | Video | Mux (direct uploads, signed playback) |
 | Email | Resend + React Email |
@@ -235,7 +237,7 @@ Payment plans/installments, 1:1 booking, pre-orders, a Discover-style marketplac
   - `/`: marketing site. `/login`, `/signup`: auth. `/dashboard`: creator app. `/library`: buyer library.
   - `/@username` and `/@username/product-slug`: public store and product pages. Implemented with `next.config` **rewrites** to `/s/:username` and `/s/:username/:path*`, because an `app/@...` folder would be a Next.js parallel route and cannot be used.
   - Unknown host: look up `stores.custom_domain` and serve that store at `/` (Phase 3, section 13).
-- Every store-scoped query includes `store_id`. Never infer the store from client input alone.
+- Every store-scoped query includes `storeId`, taken from the verified session or the public slug lookup. Never infer the store from client input alone.
 
 ### 5.3 Folder structure
 ```
@@ -251,240 +253,95 @@ Payment plans/installments, 1:1 booking, pre-orders, a Discover-style marketplac
 /lib
   config.ts               APP_NAME, ROOT_DOMAIN, PLAN_LIMITS, RESERVED_SLUGS
   /payments               stripe client, checkout, connect, billing helpers
-  /supabase               server/client/admin clients
+  /db                     MongoDB client, indexes, document types
   /email                  resend client + react-email templates
   /video                  mux helpers (upload url, signed token)
-  /auth                   guards: requireCreator, requireStoreOwner, requireEnrollment
-/supabase/migrations      SQL migrations (source of truth for schema)
+  /auth                   Better Auth config, guards: requireCreator, requireStoreOwner, requireEnrollment
+  /stores, /products ...  data-access functions (the only code that queries collections)
 /tests
 ```
 
-### 5.4 Data model (Postgres)
-```sql
-create extension if not exists pgcrypto;
+### 5.4 Data model (MongoDB)
+MongoDB with the official driver (D-024). Conventions:
+- `_id` is a UUID string (`crypto.randomUUID()`), except in Better Auth's own collections. References store the other document's `_id`.
+- Field names are camelCase. Timestamps are `Date` (UTC). Money is **integer cents** plus a currency code.
+- Uniqueness and one-to-one rules are **unique indexes** (created in `lib/db/mongo.ts`), never check-then-insert.
+- Document types live in `lib/db/collections.ts`; every write is validated with Zod first.
+- Writes that must succeed together (fulfilment: order + enrollments + coupon count) use a MongoDB transaction (needs a replica set; Atlas has one).
 
-create table profiles (
-  id uuid primary key references auth.users on delete cascade,
-  email text not null,
-  full_name text,
-  role text not null default 'buyer' check (role in ('creator','buyer')),
-  created_at timestamptz not null default now()
-);
+**Managed by Better Auth** (app code never writes these directly): `user`, `session`, `account`, `verification`, `rateLimit`.
 
-create table stores (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references profiles(id) on delete cascade,
-  slug text not null unique check (slug ~ '^[a-z0-9-]{3,30}$'),
-  custom_domain text unique,
-  name text not null,
-  bio text,
-  avatar_url text,
-  theme jsonb not null default '{"preset":"clean","accent":"#111827"}',
-  social_links jsonb not null default '[]',
-  currency text not null default 'usd' check (currency in ('usd','gbp','cad')),
-  stripe_account_id text unique,
-  stripe_charges_enabled boolean not null default false,
-  is_published boolean not null default false,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
+**Live now (Phase 1, Block B)**
 
-create table products (
-  id uuid primary key default gen_random_uuid(),
-  store_id uuid not null references stores(id) on delete cascade,
-  type text not null default 'course' check (type in ('course','digital')),
-  title text not null,
-  slug text not null,
-  description text,
-  cover_url text,
-  price_cents integer not null check (price_cents >= 0),
-  compare_at_price_cents integer check (compare_at_price_cents >= 0),
-  pricing_model text not null default 'fixed' check (pricing_model in ('fixed','pwyw')),
-  min_price_cents integer check (min_price_cents >= 0),   -- used when pricing_model = 'pwyw'
-  download_limit integer check (download_limit > 0),      -- optional, digital products
-  status text not null default 'draft' check (status in ('draft','published','archived')),
-  bump_product_id uuid references products(id) on delete set null,
-  bump_price_cents integer check (bump_price_cents >= 0),
-  bump_headline text,
-  sort_order integer not null default 0,
-  created_at timestamptz not null default now(),
-  unique (store_id, slug)
-);
+| Collection | Fields | Indexes |
+|---|---|---|
+| `profiles` | `_id` (= Better Auth user id), `email`, `fullName`, `phone`, `createdAt`, `updatedAt` | `_id` |
+| `stores` | `_id`, `ownerId`, `slug` (`^[a-z0-9-]{3,30}$`), `name`, `bio`, `avatarUrl`, `link`, `theme` (`preset`: clean, bold or soft; `accent`), `currency` (usd, gbp, cad), `stripeAccountId`, `stripeChargesEnabled`, `isPublished`, `createdAt`, `updatedAt` | unique `slug`; unique `ownerId` (one store per user, D-003) |
+| `signupIntents` | `_id`, `email`, `username`, `fullName`, `phone`, `tokenHash`, `attempts`, `windowStartedAt`, `ipHash`, `createdAt`, `expiresAt` (D-019) | unique `email`; TTL on `expiresAt`; `{ ipHash, createdAt }` |
+| `rateLimits` | `_id` (scope + hashed key), `count`, `expiresAt` | TTL on `expiresAt` |
 
-create table product_files (
-  id uuid primary key default gen_random_uuid(),
-  product_id uuid not null references products(id) on delete cascade,
-  storage_path text not null,        -- private bucket path, never exposed publicly
-  file_name text not null,
-  size_bytes bigint not null,
-  mime_type text,
-  position integer not null default 0,
-  created_at timestamptz not null default now()
-);
+**Planned (added by the block that needs them; ask the founder before adding fields)**
 
-create table modules (
-  id uuid primary key default gen_random_uuid(),
-  product_id uuid not null references products(id) on delete cascade,
-  title text not null,
-  position integer not null default 0
-);
+| Collection | Fields | Indexes |
+|---|---|---|
+| `products` | `_id`, `storeId`, `type` (digital, course), `title`, `slug`, `description`, `coverUrl`, `priceCents`, `compareAtPriceCents`, `pricingModel` (fixed, pwyw), `minPriceCents`, `downloadLimit`, `externalUrl` (https only, D-021), `status` (draft, published, archived), `settings` (5.4.1), `checkoutFields` (5.4.1), `bump` (`productId`, `priceCents`, `headline`), `sortOrder`, `createdAt`, `updatedAt` | unique `{ storeId, slug }`; `{ storeId, status, sortOrder }` |
+| `productFiles` | `_id`, `productId`, `storeId`, `storageKey` (private, never public), `fileName`, `sizeBytes`, `mimeType`, `position`, `createdAt` | `{ productId, position }` |
+| `modules` | `_id`, `productId`, `storeId`, `title`, `position` | `{ productId, position }` |
+| `lessons` | `_id`, `moduleId`, `productId`, `storeId`, `title`, `position`, `kind` (video, text), `muxAssetId`, `muxPlaybackId`, `muxStatus`, `durationSeconds`, `contentMd`, `isFreePreview`, `isPublished`, `dripDays` | `{ moduleId, position }` |
+| `coupons` | `_id`, `storeId`, `code`, `codeUpper`, `discountType` (percent, fixed), `discountValue`, `maxRedemptions`, `redeemedCount`, `expiresAt`, `productIds`, `active`, `createdAt` | unique `{ storeId, codeUpper }` |
+| `orders` | `_id`, `storeId`, `buyerUserId`, `buyerEmail`, `buyerName`, `buyerPhone`, `status` (pending, paid, refunded, failed), `items` (each: `productId`, `unitPriceCents`, `isBump`), `subtotalCents`, `discountCents`, `totalCents`, `currency`, `couponId`, `answers`, `stripeCheckoutSessionId`, `stripePaymentIntentId`, `createdAt` | unique `stripeCheckoutSessionId`; `{ storeId, createdAt }` |
+| `enrollments` | `_id`, `userId`, `productId`, `storeId`, `orderId`, `revokedAt`, `createdAt` | unique `{ userId, productId }`; `{ storeId }` |
+| `lessonProgress` | `_id`, `userId`, `lessonId`, `positionSeconds`, `completedAt` | unique `{ userId, lessonId }` |
+| `customers` | `_id`, `storeId`, `email`, `name`, `phone`, `createdAt` | unique `{ storeId, email }` |
+| `platformSubscriptions` | `_id`, `ownerId`, `stripeCustomerId`, `stripeSubscriptionId`, `plan` (trial, starter, pro, business), `status`, `trialEnd`, `currentPeriodEnd`, `updatedAt` | unique `ownerId` |
+| `webhookEvents` | `_id` (= Stripe or Mux event id, the idempotency key), `source` (stripe-platform, stripe-connect, mux), `type`, `payload`, `processedAt`, `createdAt` | `_id` (an insert fails on a replay) |
+| `emailLog` | `_id`, `storeId`, `toEmail`, `template`, `status`, `providerId`, `createdAt` | `{ storeId, createdAt }` |
+| `events` | `_id`, `storeId`, `type` (store_view, product_view, checkout_start, purchase), `path`, `utm`, `sessionId`, `createdAt` | `{ storeId, type, createdAt }` |
 
-create table lessons (
-  id uuid primary key default gen_random_uuid(),
-  module_id uuid not null references modules(id) on delete cascade,
-  title text not null,
-  position integer not null default 0,
-  kind text not null default 'video' check (kind in ('video','text')),
-  mux_asset_id text,
-  mux_playback_id text,
-  mux_status text check (mux_status in ('uploading','processing','ready','errored')),
-  duration_seconds integer,
-  content_md text,
-  is_free_preview boolean not null default false,
-  is_published boolean not null default false,
-  drip_days integer not null default 0
-);
+Order items are embedded in `orders` (they are never read alone). `storeId` is copied onto child documents (files, modules, lessons, enrollments) so every owner check is one filter.
 
-create table coupons (
-  id uuid primary key default gen_random_uuid(),
-  store_id uuid not null references stores(id) on delete cascade,
-  code text not null,
-  discount_type text not null check (discount_type in ('percent','fixed')),
-  discount_value integer not null check (discount_value > 0),
-  max_redemptions integer,
-  redeemed_count integer not null default 0,
-  expires_at timestamptz,
-  product_ids uuid[],
-  active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-create unique index coupons_store_code_idx on coupons (store_id, upper(code));
+Coupon redemption is atomic: one `findOneAndUpdate` that matches only an active coupon whose `redeemedCount` is below `maxRedemptions` and increments `redeemedCount`. No match means the code is exhausted.
 
-create table orders (
-  id uuid primary key default gen_random_uuid(),
-  store_id uuid not null references stores(id) on delete cascade,
-  buyer_user_id uuid references profiles(id) on delete set null,
-  buyer_email text not null,
-  status text not null default 'pending' check (status in ('pending','paid','refunded','failed')),
-  subtotal_cents integer not null,
-  discount_cents integer not null default 0,
-  total_cents integer not null,
-  currency text not null,
-  coupon_id uuid references coupons(id) on delete set null,
-  stripe_checkout_session_id text unique,
-  stripe_payment_intent_id text,
-  created_at timestamptz not null default now()
-);
+#### 5.4.1 Product customization fields (D-013, D-015)
+Each gets an ownership test: a creator can only read and write their own products.
+- `products.settings`: button text, checkout headline, thank-you message, confirmation email subject and body, redirect URL, and so on. Public reads return only a whitelist of keys (the email text and redirect URL are not public).
+- `products.checkoutFields`: up to 5 custom questions (label, type text / long text / dropdown / checkbox, options, required flag, position).
+- `orders.answers`: the buyer's answers, stored per order.
+- `customers`: one document per buyer per store.
+- Publish rule (D-021): a digital product can only be published with at least one file or an `externalUrl`. Enforced in the product data-access code (`lib/products`), including when the last file of a published product is deleted.
 
-create table order_items (
-  id uuid primary key default gen_random_uuid(),
-  order_id uuid not null references orders(id) on delete cascade,
-  product_id uuid not null references products(id),
-  unit_price_cents integer not null,
-  is_bump boolean not null default false
-);
-
-create table enrollments (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references profiles(id) on delete cascade,
-  product_id uuid not null references products(id) on delete cascade,
-  order_id uuid references orders(id) on delete set null,
-  revoked_at timestamptz,
-  created_at timestamptz not null default now(),
-  unique (user_id, product_id)
-);
-
-create table lesson_progress (
-  user_id uuid not null references profiles(id) on delete cascade,
-  lesson_id uuid not null references lessons(id) on delete cascade,
-  position_seconds integer not null default 0,
-  completed_at timestamptz,
-  primary key (user_id, lesson_id)
-);
-
-create table platform_subscriptions (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null unique references profiles(id) on delete cascade,
-  stripe_customer_id text unique,
-  stripe_subscription_id text unique,
-  plan text not null default 'trial' check (plan in ('trial','starter','pro','business')),
-  status text not null default 'trialing',
-  trial_end timestamptz,
-  current_period_end timestamptz,
-  updated_at timestamptz not null default now()
-);
-
-create table webhook_events (
-  id text primary key,              -- Stripe/Mux event id (idempotency key)
-  source text not null,             -- 'stripe-platform' | 'stripe-connect' | 'mux'
-  type text not null,
-  payload jsonb not null,
-  processed_at timestamptz,
-  created_at timestamptz not null default now()
-);
-
-create table email_log (
-  id uuid primary key default gen_random_uuid(),
-  store_id uuid references stores(id) on delete set null,
-  to_email text not null,
-  template text not null,
-  status text not null default 'queued',
-  provider_id text,
-  created_at timestamptz not null default now()
-);
-
-create table events (
-  id uuid primary key default gen_random_uuid(),
-  store_id uuid references stores(id) on delete cascade,
-  type text not null,               -- 'store_view','product_view','checkout_start','purchase'
-  path text,
-  utm jsonb,
-  session_id text,
-  created_at timestamptz not null default now()
-);
-```
-
-#### 5.4.1 Planned additions (not migrated yet, ask the founder first)
-Needed for creator customization (D-013, D-015). Each gets RLS and tests: a creator can only see their own rows.
-- `products.settings jsonb`: button text, checkout headline, thank-you message, confirmation email subject and body, redirect URL, and so on. Public views expose only a whitelist of keys (the email text and redirect URL are not public).
-- `product_checkout_fields` table: up to 5 custom questions per product (label, type text / long text / dropdown / checkbox, options, required flag, position).
-- `orders.answers jsonb`: the buyer's answers, stored per order.
-- `customers` table: `store_id`, `email`, `name`, `phone`.
-- Decided (D-021, migration batch 1): `products.external_url` (nullable, https only, never in public views). A digital product can only be published with at least one file or an external URL.
-- Decided (D-019, migration batch 1): `signup_intents` (service role only) keeps signup details for 30 minutes until the email code is verified.
-
-The live schema already differs from the listing above in a few places; those changes are recorded in `docs/DECISIONS.md` (D-003, D-004) and in the `profiles.phone` migration (optional phone, set only by the signup trigger).
-
-### 5.5 Row Level Security (rules, write as migrations)
-- RLS **enabled on every table**. No table without policies.
-- `profiles`: user reads/updates own row only.
-- `stores`, `products`, `modules`, `coupons`, `orders`, `order_items`, `events`: creator can CRUD rows whose `store_id` belongs to a store they own (use a `owns_store(store_id)` SQL helper).
-- Public read: `stores` where `is_published`, `products` where `status = 'published'` through narrow policies or views exposing only public columns. Never expose `stripe_account_id` publicly.
-- `lessons` content and Mux playback ids: **not publicly readable**. Access goes through a server route that calls `requireEnrollment` (or free-preview check) and then issues a signed Mux token.
-- `enrollments`, `lesson_progress`: user reads own rows; creator reads enrollments of their products.
-- `webhook_events`, `email_log`, `platform_subscriptions` writes: **service role only**; creators read their own subscription.
-- The service-role client is used only in server code (`lib/supabase/admin.ts`), never imported into client components.
+### 5.5 Access control (no row-level security)
+MongoDB has no RLS, so authorization lives in server code (D-024):
+- **All** database access goes through data-access functions in `/lib`. Components, pages and route handlers never query collections directly.
+- The user id always comes from the verified Better Auth session (`requireUser`, `requireCreator`), never from client input. Every creator query filters by that owner: the store by `ownerId`, child documents by that store's `storeId`.
+- `profiles`: a user reads and updates only their own document.
+- Public reads (`/@username` pages) use separate functions that filter `stores.isPublished` and `products.status = "published"` and return only public fields (a projection). Never return `stripeAccountId`, Mux ids, `storageKey`, `externalUrl`, email text or buyer data.
+- Lesson content and Mux playback ids are never public. Access goes through a server route that calls `requireEnrollment` (or the free-preview check) and then issues a signed Mux token.
+- `enrollments`, `lessonProgress`: a user reads their own; a creator reads enrollments of their own products.
+- `webhookEvents`, `emailLog`, `platformSubscriptions`: written only by webhook and job code; creators read their own subscription.
+- `MONGODB_URI` and `BETTER_AUTH_SECRET` are server-only (`lib/db/mongo.ts`, `lib/auth/auth.ts`).
+- Every data-access function has a test that creator A cannot read or change creator B's documents.
 
 ### 5.6 Payment flows
 
 **A. Creator connects Stripe (Standard, OAuth)**
 1. Dashboard "Connect Stripe" starts the OAuth flow with a signed `state` (CSRF-safe, bound to the user).
-2. Callback exchanges the code, stores `stripe_account_id` on the store.
-3. Webhook `account.updated` (Connect endpoint) refreshes `stripe_charges_enabled`.
+2. Callback exchanges the code, stores `stripeAccountId` on the store.
+3. Webhook `account.updated` (Connect endpoint) refreshes `stripeChargesEnabled`.
 4. `account.application.deauthorized` clears the account and unpublishes paid products.
 
 **B. Buyer checkout (direct charge, no application fee)**
 1. `POST /api/checkout` validates input (Zod): `productId`, optional `couponCode`, `bump` boolean, `email`.
 2. Server loads product, store, coupon from DB, and recomputes amounts.
-3. `stripe.checkout.sessions.create({ mode: 'payment', line_items, currency, customer_email, metadata: { order_id, store_id }, success_url, cancel_url }, { stripeAccount: store.stripe_account_id })`. **Do not pass `application_fee_amount`.**
-4. Insert `orders` row as `pending` with the session id.
+3. `stripe.checkout.sessions.create({ mode: 'payment', line_items, currency, customer_email, metadata: { order_id, store_id }, success_url, cancel_url }, { stripeAccount: store.stripeAccountId })`. **Do not pass `application_fee_amount`.**
+4. Insert an `orders` document as `pending` with the session id.
 5. Return the session URL; redirect the buyer.
 
 **C. Fulfillment via Connect webhook**
 1. Verify the signature with the Connect webhook secret. Reject on failure.
-2. Insert the event id into `webhook_events`; if it already exists, return 200 and stop (idempotent).
-3. On `checkout.session.completed`: mark order `paid`, create or find buyer profile by email, create `enrollments`, increment coupon `redeemed_count` atomically, enqueue emails (Inngest).
-4. On `charge.refunded`: mark order `refunded`, set `enrollments.revoked_at`.
+2. Insert the event id as `_id` into `webhookEvents`; on a duplicate-key error, return 200 and stop (idempotent).
+3. On `checkout.session.completed`: in one transaction, mark the order `paid`, create or find the buyer by email, create `enrollments`, increment the coupon `redeemedCount` atomically; then enqueue emails (Inngest).
+4. On `charge.refunded`: mark order `refunded`, set `enrollments.revokedAt`.
 5. Always respond quickly with 200; do heavy work in background jobs.
 
 **D. Platform billing (Stripe Billing, platform account)**
@@ -495,8 +352,8 @@ The live schema already differs from the listing above in a few places; those ch
 
 ### 5.7 Video flow (Mux)
 1. Creator selects a file; server creates a Mux **direct upload** URL (policy: signed playback).
-2. Browser uploads directly to Mux. Lesson row gets `mux_status = 'uploading'`.
-3. Mux webhook `video.asset.ready` stores `mux_asset_id`, `mux_playback_id`, duration; status `ready`.
+2. Browser uploads directly to Mux. The lesson gets `muxStatus = "uploading"`.
+3. Mux webhook `video.asset.ready` stores `muxAssetId`, `muxPlaybackId`, duration; status `ready`.
 4. Player requests `/api/lessons/[id]/playback`; server verifies enrollment/free preview, drip rule and non-revoked status, then returns a short-lived signed token.
 
 ### 5.8 Routes
@@ -525,7 +382,7 @@ The live schema already differs from the listing above in a few places; those ch
 - Zod validation on every input; server-side authorization on every mutation (ownership checks, not just UI hiding).
 - Rate limit: login/OTP, checkout creation, coupon validation, playback token endpoint.
 - File and video access only via signed, expiring URLs/tokens.
-- No raw SQL string building; parameterized queries only.
+- No query objects built from raw client input (NoSQL injection): validate with Zod first, never pass a client object as a filter, never use `$where` or server-side JavaScript.
 - Security headers (CSP, `SameSite`/`HttpOnly`/`Secure` cookies, `X-Frame-Options` except where embedding is intended).
 - Audit log for sensitive actions (Stripe connect/disconnect, plan change, refund-driven revokes).
 
@@ -535,7 +392,7 @@ The live schema already differs from the listing above in a few places; those ch
 
 **Privacy and legal:** GDPR/UK GDPR/CCPA consent and deletion; CAN-SPAM/CASL for any marketing email (consent + unsubscribe + physical address); cookie banner for EU/UK visitors; log only what is needed.
 
-**Reliability:** idempotent webhooks; jobs retry with backoff; Sentry alerts on webhook failures; daily DB backups (Supabase).
+**Reliability:** idempotent webhooks; jobs retry with backoff; Sentry alerts on webhook failures; daily DB backups (MongoDB Atlas backups).
 
 **Observability:** PostHog events: `signup`, `store_published`, `product_published`, `stripe_connected`, `checkout_started`, `purchase_completed`, `lesson_completed`.
 
@@ -560,8 +417,8 @@ Each milestone ends with: app runs, tests pass, security checklist from `CLAUDE.
 
 | # | Milestone | Deliverable and Definition of Done |
 |---|---|---|
-| M0 | Setup | Repo, Next.js + TS + Tailwind + shadcn, Supabase project, env template, CI (lint, typecheck, test), Sentry, PostHog stub |
-| M1 | Auth + schema | Migrations for all tables, RLS policies + tests, creator/buyer auth (OTP + Google), profile creation trigger |
+| M0 | Setup | Repo, Next.js + TS + Tailwind + shadcn, database project (MongoDB since D-024), env template, CI (lint, typecheck, test), Sentry, PostHog stub |
+| M1 | Auth + data model | Collections and indexes, ownership checks + tests, creator/buyer auth (Better Auth: OTP + Google), profiles |
 | M2 | Signup + store setup | 2-step signup + Google, slug validation, dashboard shell with first-run checklist, public store page at `/@username` (rewrite), 3 themes |
 | M3 | Products + course builder | Product type picker, product CRUD (course and digital), customization (D-013), modules/lessons, digital file upload + signed downloads, pay-what-you-want, reorder, draft/publish, product page |
 | M4 | Video | Mux direct upload, webhook, signed playback endpoint, student player with progress |
@@ -582,7 +439,7 @@ Each milestone ends with: app runs, tests pass, security checklist from `CLAUDE.
 **Pre-launch checklist**
 - [ ] Stripe India invite granted; live keys configured; Connect webhook endpoint registered
 - [ ] Real $5 test purchase on a real connected account, then refund
-- [ ] RLS test: creator A cannot read or modify creator B's data
+- [ ] Ownership test: creator A cannot read or modify creator B's data
 - [ ] Non-enrolled user cannot obtain playback token
 - [ ] Duplicate webhook replay is harmless
 - [ ] Legal pages reviewed by a professional
@@ -614,7 +471,7 @@ Each milestone ends with: app runs, tests pass, security checklist from `CLAUDE.
 | Risk | Mitigation |
 |---|---|
 | Stripe India restrictions block planned features | Subscription-only model, direct charges, isolate payments code, plan US entity if demand proves it |
-| Vibe-coded security gaps (RLS, webhooks, IDOR) | Mandatory security checklist in `CLAUDE.md`, review pass at M10, professional review of auth and payments before launch |
+| Vibe-coded security gaps (missing owner filters, webhooks, IDOR) | Mandatory security checklist in `CLAUDE.md`, review pass at M10, professional review of auth and payments before launch |
 | Video costs outgrow plan prices | Hour limits per plan, usage monitoring, per-plan overage rules |
 | Scope creep (clone everything) | Milestone order above; P1/P2 items only after founding-creator feedback |
 | Low creator trust in a new tool | Founding-member offer, personal onboarding, fast bug fixes, visible roadmap |
@@ -707,7 +564,7 @@ Goal: every Stan Store feature (including its $99 Pro tier) on our lower plans, 
 ### 14.4 Security
 - Treat all uploaded files as hostile: size limit, content-type check, CSV formula-injection sanitization on any re-exported cell, no server-side fetching of user-supplied URLs (SSRF).
 - Store Gumroad OAuth tokens **encrypted**, request read-only scopes where possible, and revoke on completion.
-- Rate limit import endpoints; imports run per store with RLS-scoped writes only.
+- Rate limit import endpoints; imports run per store, and every write is scoped to that store's `storeId`.
 
 ### 14.5 Export (data portability)
 "Export everything" in Settings: customers, orders, products, coupons, enrollments as CSV/JSON, delivered by email link that expires. Required for GDPR and a selling point ("no lock-in").

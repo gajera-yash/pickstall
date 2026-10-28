@@ -4,6 +4,34 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-026: Logo colors, auth card and the live username check
+- **Date:** 2026-10-28
+- **Decision:**
+  - The founder's logo (`public/brand/pickstall-logo.webp`) replaces the text wordmark everywhere (`components/brand/wordmark.tsx`).
+  - Brand colors come from the logo: primary blue `#0056FF` (hover `#0047D9`, pressed `#003BB5`, soft `#E6EEFF`), secondary yellow `#FFC400` used very little. Everything else stays white, ink and greys. White on the new blue is 5.6:1 (was 6.6), still AA.
+  - The default store accent (Clean preset) follows the brand blue: `#0056FF`.
+  - Auth pages follow `docs/ui-reference/username.webp`: logo and tagline on a `--bg-subtle` (`#F7F9FC`) page and one white card with a soft `shadow-card`. This supersedes the "no card" rule of D-007.
+  - The username field checks availability while typing (`lib/stores/username-check.ts`, rate-limited per IP) and offers up to three free suggestions. Suggestions use hyphens (`maya-store`), because usernames allow only letters, numbers and hyphens (dots and underscores are not valid in a store link).
+  - The email code is entered in 6 boxes; the phone field has a country-code picker.
+- **Why:** founder request with a reference image and the logo, 2026-10-28.
+
+## D-025: White theme only, no OS dark mode
+- **Date:** 2026-10-28
+- **Decision:** the app always renders the white theme. `app/layout.tsx` sets `<html data-theme="light">`, so a creator whose computer is in dark mode still sees white pages. The dark tokens stay in `styles/tokens.css` (unused) in case a toggle is wanted later.
+- **Why:** the founder saw the dark theme on a dark-mode PC and wants white everywhere (extends D-007).
+- **Supersedes:** the "light and dark mode" rule in `DESIGN.md` sections 0 and 13 (updated).
+
+## D-024: MongoDB and Better Auth replace Supabase
+- **Date:** 2026-10-28
+- **Decision:** the founder moved the database from Supabase (Postgres, Auth, RLS) to **MongoDB** with the official `mongodb` driver, and auth to **Better Auth** (`emailOTP` plugin for the 6-digit code, Google provider, database sessions, `nextCookies()`). Sign-in codes are emailed with Resend; in development without `RESEND_API_KEY` the code is written to the server log (never in production).
+  - Collections: `profiles`, `stores`, `signupIntents` (TTL), `rateLimits` (TTL); Better Auth owns `user`, `session`, `account`, `verification`, `rateLimit`. Indexes are created by the app (`lib/db/mongo.ts`).
+  - Authorization moves from RLS to the app: all data access goes through `/lib` functions that filter by the session user id.
+  - Login code sends are rate-limited per email and per IP in MongoDB (`lib/rate-limit.ts`); Better Auth also limits its public `/api/auth/*` endpoints.
+  - Store setup ships with a photo **link** field (https) instead of an upload until a storage service is chosen.
+- **Supersedes:** D-001 and D-022 (hosted Supabase project, migrations, `db:push`, `test:db`) and the RLS parts of D-004. `PRD.md` (5.1, 5.3 to 5.6 and the related lines), `PHASE1_PLAN.md` and `CLAUDE.md` are updated to MongoDB. The publish rule of D-021 (needs a file or an external link) was a database trigger; it must now be enforced in `/lib` code (Block C).
+- **Open:** file storage for avatars and product files (private, signed URLs); transactions (Better Auth runs without them so a standalone local MongoDB works).
+- **Why:** founder decision, 2026-10-28.
+
 ## D-023: Dashboard shell and first-run checklist rules
 - **Date:** 2026-10-26
 - **Decision:**

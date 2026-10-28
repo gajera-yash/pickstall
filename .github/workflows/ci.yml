@@ -12,11 +12,11 @@ jobs:
   check:
     runs-on: ubuntu-latest
     env:
-      # Dummy public values so the build can run. No real keys in CI.
+      # Dummy values so the build can run. No real keys in CI; nothing connects to MongoDB here.
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NEXT_PUBLIC_ROOT_DOMAIN: localhost:3000
-      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-dummy-key
+      MONGODB_URI: mongodb://127.0.0.1:27017
+      BETTER_AUTH_SECRET: ci-dummy-secret-that-is-at-least-32-chars
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -27,6 +27,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
-      # DB tests run locally against the dev project only (docs/DECISIONS.md D-001).
       - run: pnpm test:unit
       - run: pnpm build

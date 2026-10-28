@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 
-// Shared mocks for unit-testing auth code without Next.js or a real Supabase project.
+// Shared mocks for unit-testing auth code without Next.js, Better Auth or a real MongoDB.
 // Import this file first in a test, before the modules under test.
 
 const hoisted = vi.hoisted(() => {
@@ -10,18 +10,23 @@ const hoisted = vi.hoisted(() => {
     }
   }
 
-  const supabase = {
-    auth: {
-      getClaims: vi.fn(),
-      signInWithOtp: vi.fn(),
-      verifyOtp: vi.fn(),
-      signInWithOAuth: vi.fn(),
-      signOut: vi.fn(),
-    },
-    from: vi.fn(),
-  };
+  /** Stands in for Better Auth's APIError (status code plus an internal message). */
+  class FakeAPIError extends Error {
+    constructor(
+      public readonly statusCode: number,
+      message = "internal detail",
+    ) {
+      super(message);
+    }
+  }
 
-  const admin = { from: vi.fn() };
+  const authApi = {
+    getSession: vi.fn(),
+    sendVerificationOTP: vi.fn(),
+    signInEmailOTP: vi.fn(),
+    signInSocial: vi.fn(),
+    signOut: vi.fn(),
+  };
 
   // In-memory cookie jar for next/headers cookies().
   const cookieJar = new Map<string, string>();
@@ -33,11 +38,39 @@ const hoisted = vi.hoisted(() => {
 
   const intents = { saveSignupIntent: vi.fn(), takeSignupIntent: vi.fn() };
   const draftStore = { createDraftStore: vi.fn() };
+  const storeQueries = { findStoreByOwner: vi.fn(), updateStoreSetup: vi.fn() };
+  const profiles = { getProfile: vi.fn(), saveProfile: vi.fn() };
+  const slugs = { isSlugTaken: vi.fn(), findTakenSlugs: vi.fn() };
+  const rateLimit = { takeRateLimit: vi.fn() };
 
-  return { RedirectSignal, supabase, admin, cookieJar, cookieStore, intents, draftStore };
+  return {
+    RedirectSignal,
+    FakeAPIError,
+    authApi,
+    cookieJar,
+    cookieStore,
+    intents,
+    draftStore,
+    storeQueries,
+    profiles,
+    slugs,
+    rateLimit,
+  };
 });
 
-export const { RedirectSignal, supabase, admin, cookieJar, cookieStore, intents, draftStore } = hoisted;
+export const {
+  RedirectSignal,
+  FakeAPIError,
+  authApi,
+  cookieJar,
+  cookieStore,
+  intents,
+  draftStore,
+  storeQueries,
+  profiles,
+  slugs,
+  rateLimit,
+} = hoisted;
 
 vi.mock("server-only", () => ({}));
 
@@ -45,14 +78,17 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn((url: string) => {
     throw new hoisted.RedirectSignal(url);
   }),
+  unstable_rethrow: vi.fn((error: unknown) => {
+    if (error instanceof hoisted.RedirectSignal) throw error;
+  }),
 }));
+
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 vi.mock("@/lib/env", () => ({
   publicEnv: {
     NEXT_PUBLIC_APP_URL: "http://localhost:3000",
     NEXT_PUBLIC_ROOT_DOMAIN: "localhost:3000",
-    NEXT_PUBLIC_SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co",
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: "example-publishable-key",
   },
 }));
 
@@ -69,6 +105,12 @@ vi.mock("@/lib/request-ip", () => ({
   getClientIpHash: vi.fn(async () => null),
 }));
 
+vi.mock("@/lib/auth/auth", () => ({ auth: { api: hoisted.authApi } }));
+
+vi.mock("better-auth/api", () => ({
+  isAPIError: (error: unknown) => error instanceof hoisted.FakeAPIError,
+}));
+
 vi.mock("@/lib/auth/signup-intents", () => ({
   TOO_MANY_SIGNUPS: "Too many sign-up attempts. Wait 15 minutes, then try again.",
   saveSignupIntent: hoisted.intents.saveSignupIntent,
@@ -79,30 +121,20 @@ vi.mock("@/lib/stores/create-draft-store", () => ({
   createDraftStore: hoisted.draftStore.createDraftStore,
 }));
 
-vi.mock("@/lib/supabase/admin", () => ({
-  createSupabaseAdminClient: vi.fn(() => hoisted.admin),
+vi.mock("@/lib/stores/queries", () => hoisted.storeQueries);
+vi.mock("@/lib/auth/profiles", () => hoisted.profiles);
+vi.mock("@/lib/stores/slug-availability", () => hoisted.slugs);
+
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimitKey: (scope: string, value: string) => `${scope}:${value}`,
+  takeRateLimit: hoisted.rateLimit.takeRateLimit,
 }));
 
-vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: vi.fn(async () => hoisted.supabase),
-}));
+export const userId = "11111111-1111-4111-8111-111111111111";
 
-/** Mocks `from("stores").select().eq().maybeSingle()` to resolve with `result`. */
-export function mockStoreQuery(result: { data: unknown; error: unknown }) {
-  const maybeSingle = vi.fn(async () => result);
-  const eq = vi.fn(() => ({ maybeSingle }));
-  const select = vi.fn(() => ({ eq }));
-  supabase.from.mockReturnValue({ select });
-  return { select, eq, maybeSingle };
-}
-
-/** Mocks the service-role `from("stores").select().eq().maybeSingle()` username lookup. */
-export function mockSlugLookup(result: { data: unknown; error: unknown }) {
-  const maybeSingle = vi.fn(async () => result);
-  const eq = vi.fn(() => ({ maybeSingle }));
-  const select = vi.fn(() => ({ eq }));
-  admin.from.mockReturnValue({ select });
-  return { select, eq, maybeSingle };
+/** Makes getSession return a signed-in user (or nobody, with `null`). */
+export function mockSession(user: { id: string; email: string } | null) {
+  authApi.getSession.mockResolvedValue(user ? { user, session: { id: "session-1" } } : null);
 }
 
 export function formData(values: Record<string, string>): FormData {

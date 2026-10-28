@@ -23,6 +23,7 @@
 
   /* DESIGN.md tokens (styles/tokens.css) */
   --color-bg: var(--bg);
+  --color-bg-subtle: var(--bg-subtle);
   --color-surface: var(--surface);
   --color-ink: var(--ink);
   --color-mute: var(--mute);
@@ -143,6 +144,9 @@
 }
 @utility shadow-overlay {
   box-shadow: var(--shadow-overlay);
+}
+@utility shadow-card {
+  box-shadow: var(--shadow-card);
 }
 
 /* shadcn variable mapping (DESIGN.md 16.4). Values follow the tokens, so dark mode is automatic. */

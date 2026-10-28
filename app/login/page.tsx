@@ -5,7 +5,6 @@ import { Suspense } from "react";
 import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm, type LoginNotice } from "@/components/auth/login-form";
 import { LoginFormSkeleton } from "@/components/auth/login-form-skeleton";
-import { Wordmark } from "@/components/brand/wordmark";
 import { safeNextPath } from "@/lib/auth/redirect";
 import { APP_NAME } from "@/lib/config";
 import { publicEnv } from "@/lib/env";
@@ -27,29 +26,34 @@ const linkClass = "text-blue underline underline-offset-4 hover:text-blue-hover"
 
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
-    <AuthShell>
-      <AuthHeading wordmark={<Wordmark />}>Sign in to {APP_NAME}</AuthHeading>
+    <AuthShell
+      footer={
+        <>
+          <p className="text-sm font-medium text-ink">
+            Don&apos;t have an account?{" "}
+            <Link href="/signup" className={linkClass}>
+              Sign up
+            </Link>
+          </p>
+          <p className="text-xs font-medium text-mute">
+            By continuing you agree to the{" "}
+            <Link href="/terms" className={linkClass}>
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className={linkClass}>
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        </>
+      }
+    >
+      <AuthHeading>Sign in to {APP_NAME}</AuthHeading>
       {/* Query params are request data, so the form renders behind a boundary (Cache Components). */}
       <Suspense fallback={<LoginFormSkeleton />}>
         <LoginFormWithParams searchParams={searchParams} />
       </Suspense>
-      <p className="text-center text-sm font-medium text-ink">
-        Don&apos;t have an account?{" "}
-        <Link href="/signup" className={linkClass}>
-          Sign up
-        </Link>
-      </p>
-      <p className="-mt-2 text-center text-xs font-medium text-mute">
-        By continuing you agree to the{" "}
-        <Link href="/terms" className={linkClass}>
-          Terms
-        </Link>{" "}
-        and{" "}
-        <Link href="/privacy" className={linkClass}>
-          Privacy Policy
-        </Link>
-        .
-      </p>
     </AuthShell>
   );
 }

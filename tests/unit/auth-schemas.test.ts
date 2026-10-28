@@ -50,7 +50,7 @@ describe("signupInput", () => {
     ["name over 80 characters", { fullName: "x".repeat(81) }, "Use 80 characters or fewer."],
     ["name with a control character", { fullName: "Maya\u0007" }, "Remove the special characters from your name."],
     ["reserved username", { username: "admin" }, "That username is taken. Try another."],
-    ["bad phone", { phone: "415" }, "Include the country code, for example +1 415 555 0100."],
+    ["bad phone", { phone: "415" }, "Check the number and the country code."],
   ])("rejects %s", (_label, override, message) => {
     const result = signupInput.safeParse({ ...valid, ...override });
     expect(result.success).toBe(false);

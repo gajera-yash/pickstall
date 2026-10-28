@@ -7,7 +7,7 @@
 Three days is enough for a **working private alpha in Stripe test mode**. It is **not** enough for a public, real-money launch, for three reasons:
 
 1. **Stripe India platform account is invite-only.** Until Stripe grants live access and Connect works, no real payment can happen. Check on day 0 whether test keys and Connect are available to you. If they are not, Day 2 can start with the development-only MockProvider (D-016).
-2. **Payments, auth and RLS are where bugs hurt.** They need testing time and a security pass that does not fit in the same 72 hours as building.
+2. **Payments, auth and access control are where bugs hurt.** They need testing time and a security pass that does not fit in the same 72 hours as building.
 3. **Legal pages** (Terms, Privacy, Refund) and a real $5 end-to-end sale must exist before taking anyone's money.
 
 So define the 3-day goal as: **"A creator can sign up (email code or Google), get a reserved store link, set up the store and customize a digital product in the dashboard, connect Stripe (test mode), and a buyer can open /@username, answer the creator's checkout questions, pay (test card), get the confirmation email and download the file. Deployed on a real URL."** Then invite 3-5 founding creators to try it as a private alpha.
@@ -32,18 +32,18 @@ So define the 3-day goal as: **"A creator can sign up (email code or Google), ge
 
 ## 1. Before you start (60-90 minutes, do today)
 
-- [ ] Accounts: GitHub, Vercel, Supabase, Stripe (platform), Resend, PostHog (optional), Sentry (optional)
+- [ ] Accounts: GitHub, Vercel, MongoDB Atlas, Stripe (platform), Resend, PostHog (optional), Sentry (optional)
 - [ ] Stripe: request the India invite via the sales form. Ask: are test keys and Connect (Standard, OAuth) available now? Install the **Stripe CLI** for local webhook forwarding.
 - [ ] PayPal: submit the PayPal platforms/multiparty form as a backup if the Stripe invite is delayed. Build payments behind a `PaymentProvider` interface either way.
 - [ ] Domain: `pickstall.store` (D-010), add to Vercel. **Verify the Resend sending domain now** (DNS propagation can take hours).
 - [ ] Create `.env.local` from the variable names in `CLAUDE.md` section 9
-- [ ] Install Supabase CLI and `pnpm`
+- [ ] Install `pnpm`
 
 ## 2. Schedule
 
 | Block | Time | Goal |
 |---|---|---|
-| A | Before Day 1 (done) | Repo, schema, RLS, auth foundations |
+| A | Before Day 1 (done; moved to MongoDB + Better Auth on 2026-10-28, D-024) | Repo, data model, access control, auth foundations |
 | B | Day 1, 0-3h | Login, 2-step signup, Google, dashboard shell, first-run checklist, store setup |
 | C | Day 1, 3-8h | My Store products: type picker, digital product and customization; public store page at `/@username`, product page (Buy disabled) |
 | D | Day 2, 0-5h | Stripe Connect (or MockProvider), checkout with creator fields, webhook, orders, Customers panel, buyer library, secure downloads |
@@ -62,10 +62,10 @@ First reply with a short plan (files, approach, risks) and wait for my approval.
 
 Then:
 1. Set up Next.js (App Router, TypeScript strict), Tailwind, shadcn/ui, ESLint, Vitest, pnpm scripts from CLAUDE.md. Add .env.example (names only) and lib/config.ts (APP_NAME, ROOT_DOMAIN, PLAN_LIMITS, RESERVED_SLUGS).
-2. Create Supabase migrations for ONLY these tables from PRD.md section 5.4: profiles, stores, products, product_files, orders, order_items, enrollments, webhook_events, email_log. Include the pricing_model, min_price_cents and download_limit columns. Add an owns_store(store_id) SQL helper.
-3. Enable RLS on every table with explicit policies per PRD section 5.5. Public reads expose only public columns through views. Service-role writes only for webhook_events and email_log.
-4. Auth: email OTP and Google via Supabase Auth, a trigger that creates profiles, and requireCreator and requireUser guards in lib/auth.
-5. Write RLS tests: creator A cannot read or write creator B's stores, products, orders or enrollments; an anonymous user cannot read orders or enrollments.
+2. (Superseded by D-024.) Originally Supabase migrations; the data model is now MongoDB collections in PRD.md section 5.4, created by the block that needs them.
+3. (Superseded by D-024.) Access control is server code per PRD section 5.5: every query filters by the session owner; public reads use projections.
+4. Auth: email OTP and Google via Better Auth, profiles in MongoDB, and requireCreator and requireUser guards in lib/auth.
+5. Ownership tests: creator A cannot read or write creator B's stores, products, orders or enrollments; an anonymous user cannot read orders or enrollments.
 Run lint, typecheck and tests. Report what you did and what is missing.
 ```
 
@@ -85,16 +85,16 @@ Do Block B only. Plan first, wait for approval. If docs/ui-reference/ has an ima
 Do Block C only. Plan first, wait for approval.
 
 1. Product type picker backed by a type registry (D-012): Digital product (file or external link) is live; Course, Coaching call, Membership, Collect emails and Link show a "Coming soon" badge and cannot be selected.
-2. Product CRUD (type = digital) with title, slug, description, cover image, status (draft/published), pricing_model (fixed or pwyw), price_cents or min_price_cents, optional download_limit. Validate with Zod. Ownership check on every mutation.
+2. Product CRUD (type = digital) with title, slug, description, cover image, status (draft/published), pricingModel (fixed or pwyw), priceCents or minPriceCents, optional downloadLimit. Validate with Zod. Ownership check on every mutation.
 3. Customization (D-013): button text, checkout headline, thank-you message, confirmation email subject and body with the variables {{customer_name}}, {{product_title}}, {{download_link}}; checkout fields: name and email always required, an optional phone toggle, up to 5 custom questions (text, long text, dropdown, checkbox, required flag).
-4. The schema additions for step 3 (products.settings jsonb, product_checkout_fields table, orders.answers jsonb, customers table; D-015) need my approval BEFORE you write the migrations. Each gets RLS and a test that creator A cannot see creator B's rows. Public views must expose only whitelisted settings keys.
+4. The data model additions for step 3 (products.settings, products.checkoutFields, orders.answers, the customers collection; D-015, PRD 5.4.1) need my approval BEFORE you write them. Each gets an ownership test (creator A cannot see creator B's documents). Public reads return only whitelisted settings keys.
 5. Guardrails (D-014): sanitize and length-limit all creator text, no raw HTML; the sender identity and the download link are always in emails; no sensitive questions (card or ID numbers); after-purchase redirect URLs must be https.
-6. Private file upload to a PRIVATE Supabase Storage bucket: allowed types and max size from config, store only storage_path in product_files, never a public URL.
+6. Private file upload to PRIVATE object storage (provider decided by the founder first, D-024): allowed types and max size from config, store only storageKey in productFiles, never a public URL.
 7. Public URLs are path-based on one domain (D-010): /@username and /@username/product-slug, implemented with next.config rewrites to /s/:username (NOT an app/@username folder, which would be a parallel route). No subdomain routing.
 8. Public store page: server-rendered, mobile-first at 360px, avatar, name, bio, links, product cards, 3 theme presets stored in stores.theme. Sanitize all creator text (no raw HTML). Do not expose private columns.
 9. Product page at /@username/product-slug: cover, description, price (or a pay-what-you-want input with min), the creator's button text and checkout headline, and a Buy button (disabled until payments are connected for the store).
-10. Guard: a store cannot publish a paid product without stripe_charges_enabled (the development-only MockProvider may report it as connected).
-11. Tests: the rewrite mapping, pwyw minimum validation, slug uniqueness per store, a non-owner cannot edit a product, file paths are never returned to the public, at most 5 custom questions, redirect URLs must be https, only the three allowed email variables are supported, creators only see their own settings and fields (RLS).
+10. Guard: a store cannot publish a paid product without stripeChargesEnabled (the development-only MockProvider may report it as connected).
+11. Tests: the rewrite mapping, pwyw minimum validation, slug uniqueness per store, a non-owner cannot edit a product, file paths are never returned to the public, at most 5 custom questions, redirect URLs must be https, only the three allowed email variables are supported, creators only see their own settings and fields (owner filter).
 Run lint, typecheck, tests.
 ```
 
@@ -104,9 +104,9 @@ Do Block D only. Re-read CLAUDE.md section 7 (payments rules). Plan first, wait 
 
 HARD RULES: Standard connected accounts via OAuth; direct charges with the { stripeAccount } option; NEVER application_fee_amount, transfers, destination charges or payouts. Everything provider-specific lives in lib/payments/ behind a PaymentProvider interface (createCheckout, handleWebhook, refund). The Stripe adapter is the real one. A MockProvider is allowed for development only: it must refuse to run in production and must go through the same order and fulfilment path as Stripe (never a shortcut that grants access without an order). Use Stripe Checkout dynamic payment methods and verify their exact availability in the Stripe docs; do not guess. Do not build a PayPal adapter now.
 
-1. Connect OAuth: signed, user-bound state; callback stores stripe_account_id; handle deauthorization; refresh stripe_charges_enabled from the account.updated webhook.
-2. POST /api/checkout: Zod validate (productId, email, name, optional phone, optional pwyw amount, answers to the product's custom questions). Load the product and its checkout fields from the DB, enforce required questions and types on the server, recompute the price server-side (pwyw: amount >= min and <= a sane max; answers can never change the price), create the orders row (pending) with the answers, create a Checkout Session on the connected account with metadata (order_id, store_id), return the URL. Rate limit this route.
-3. Webhook /api/webhooks/stripe-connect: verify the signature with STRIPE_CONNECT_WEBHOOK_SECRET; insert the event id into webhook_events first and return 200 if it already exists (idempotent); on checkout.session.completed mark the order paid, create or find the buyer profile by email, create the enrollment, upsert the customers row (store_id, email, name, phone), queue emails; on charge.refunded mark refunded and set enrollments.revoked_at.
+1. Connect OAuth: signed, user-bound state; callback stores stripeAccountId; handle deauthorization; refresh stripeChargesEnabled from the account.updated webhook.
+2. POST /api/checkout: Zod validate (productId, email, name, optional phone, optional pwyw amount, answers to the product's custom questions). Load the product and its checkout fields from the DB, enforce required questions and types on the server, recompute the price server-side (pwyw: amount >= min and <= a sane max; answers can never change the price), create the orders document (pending) with the answers, create a Checkout Session on the connected account with metadata (order_id, store_id), return the URL. Rate limit this route.
+3. Webhook /api/webhooks/stripe-connect: verify the signature with STRIPE_CONNECT_WEBHOOK_SECRET; insert the event id as _id into webhookEvents first and return 200 on a duplicate key (idempotent); on checkout.session.completed, in one transaction, mark the order paid, create or find the buyer by email, create the enrollment, upsert the customers document (storeId, email, name, phone); then queue emails; on charge.refunded mark refunded and set enrollments.revokedAt.
 4. Never grant access from the success redirect page, only from the verified webhook.
 5. Buyer library at /library: email-code sign-in (buyers never use signup), list purchases, download route that checks enrollment (not revoked, download_limit respected) and returns a signed URL valid for about 60 seconds.
 6. Customers panel in the dashboard: buyers with email, name, optional phone, purchase date and their answers; CSV export with spreadsheet formulas neutralized.
@@ -127,7 +127,7 @@ Templates (React Email, plain and branded): the buyer confirmation with an acces
 ```
 Do Block F only (Day 3).
 
-1. Review the entire codebase against the checklist in CLAUDE.md section 8. List findings by severity and fix critical and high ones. Specifically check: RLS on every table (including the D-015 tables), IDOR on every route and action, webhook signature and idempotency, open redirects (including the creator's after-purchase redirect URL), XSS in creator text and custom answers, CSV export formula injection, secrets in client bundles, public storage paths, missing rate limits, and that the MockProvider cannot run in production.
+1. Review the entire codebase against the checklist in CLAUDE.md section 8. List findings by severity and fix critical and high ones. Specifically check: an owner filter on every query (including the D-015 collections), NoSQL injection (client objects used as filters), IDOR on every route and action, webhook signature and idempotency, open redirects (including the creator's after-purchase redirect URL), XSS in creator text and custom answers, CSV export formula injection, secrets in client bundles, public storage paths, missing rate limits, and that the MockProvider cannot run in production.
 2. Enable more Stripe payment methods through dynamic payment methods, after verifying availability in the Stripe docs.
 3. Add security headers and a basic CSP in next.config.
 4. Add Sentry error reporting and a minimal PostHog set of events (optional).
@@ -154,7 +154,7 @@ Run the full test suite and report.
 
 **Private alpha (Stripe test mode): go when all of these pass**
 - [ ] Smoke test steps 1-11 pass
-- [ ] RLS and webhook tests green in CI
+- [ ] Ownership and webhook tests green in CI
 - [ ] Deployed on your domain, HTTPS, webhooks registered
 - [ ] You invited 3-5 founding creators and told them honestly it is an early test version with no real payments yet
 
@@ -162,7 +162,7 @@ Run the full test suite and report.
 - [ ] Stripe live access granted, Connect live, live webhook secrets set
 - [ ] One real $5 purchase on a real connected account, then refunded
 - [ ] Terms, Privacy and Refund pages live, cookie banner for EU/UK
-- [ ] Independent review of auth, RLS and payment code by an experienced developer
+- [ ] Independent review of auth, access control and payment code by an experienced developer
 - [ ] Monitoring (Sentry) and a way for creators to reach you quickly
 - [ ] CA consulted on export-of-services income and INR payouts
 
@@ -178,7 +178,7 @@ Run the full test suite and report.
 ## 7. Working tips for Claude Code
 
 - One block per session. Start each with: "Read CLAUDE.md and the read map for this block only. Do Block X only. Plan first." Use /clear (or a new session) between blocks.
-- Review diffs of auth, RLS and payment files yourself. Do not accept them blindly.
+- Review diffs of auth, data-access and payment files yourself. Do not accept them blindly.
 - If it adds an unrequested dependency or touches files outside the block, stop it.
 - When something breaks, give it the exact error and ask for the root cause before fixes.
 - Never paste real secrets into prompts. Keep `.env.local` out of git.

@@ -9,8 +9,8 @@ export const DASHBOARD_SECTIONS = [
 
 export type DashboardSectionId = (typeof DASHBOARD_SECTIONS)[number]["id"];
 
-/** My Store matches only /dashboard itself; the other sections also match their sub-pages. */
+/** My Store matches /dashboard, Store setup and products; the other sections also match their sub-pages. */
 export function isSectionActive(pathname: string, href: string): boolean {
-  if (href === "/dashboard") return pathname === "/dashboard" || pathname.startsWith("/dashboard/products");
+  if (href === "/dashboard") return pathname === "/dashboard" || pathname.startsWith("/dashboard/store") || pathname.startsWith("/dashboard/products");
   return pathname === href || pathname.startsWith(`${href}/`);
 }

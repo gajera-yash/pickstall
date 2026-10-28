@@ -8,7 +8,7 @@ You are helping a solo founder build **Pickstall**, a Stan Store-style platform 
 2. **Plan first.** For any task touching more than 2 files, the database, auth, or payments, write a short plan (files to change, approach, risks) and wait for approval before coding.
 3. **Small, reviewable changes.** Prefer several small commits over one giant change. Commit message format: `feat(scope): summary`, `fix(scope): summary`.
 4. **Ask before**: changing the database schema, adding a new dependency, changing auth or payment logic, or deleting files.
-5. **Never invent.** If a requirement, API behavior or library detail is unclear, say so and ask, or check the official docs. Do not guess Stripe, Mux, Supabase or Resend API shapes.
+5. **Never invent.** If a requirement, API behavior or library detail is unclear, say so and ask, or check the official docs. Do not guess Stripe, Mux, MongoDB, Better Auth or Resend API shapes.
 6. After finishing a task, report: what changed, how to run/test it, what was NOT done, and any security-relevant decisions.
 7. Keep answers to the founder in simple English or Hinglish; keep code, comments, commit messages and docs in English.
 
@@ -18,7 +18,7 @@ You are helping a solo founder build **Pickstall**, a Stan Store-style platform 
 
 | Block | Read from PRD.md | Read from DESIGN.md | Read from this file |
 |---|---|---|---|
-| A: foundation, schema, auth (done) | section 2, 5.4 (data model), 5.5 (RLS) | none | sections 5, 6, 8 |
+| A: foundation, schema, auth (done) | section 2, 5.4 (data model) | none | sections 5, 6, 8 |
 | B: login, signup, dashboard | F1, F8, 5.8 (routes) | sections 0, 3-6, 9 (button, input, card), 10.2, 10.7, 10.8, 13, 15 | sections 5, 8 |
 | C: products and store page | F2, F3b, F4 (product page and checkout fields), 5.2 (routing), 5.4 and 5.4.1 (products, files, planned additions) | sections 9, 10.4, 10.8, 11 | sections 5, 6, 8 (customization guardrails) |
 | D: payments | section 2, F4, 5.4.1, 5.6 (A to C) | section 10.5 | sections 7, 8 |
@@ -33,7 +33,7 @@ Rules: do not paste or re-read whole files into the chat; reference file paths a
 
 - Next.js (latest stable, App Router), **TypeScript strict**, React Server Components by default
 - Tailwind CSS + shadcn/ui + lucide-react
-- Supabase (Postgres, Auth, Storage) with **Row Level Security**
+- MongoDB (official `mongodb` driver, no ORM) + **Better Auth** (email 6-digit code, Google, sessions) (D-024). File storage for avatars and product files is not decided yet; ask the founder before adding one
 - Stripe (Connect **Standard** + Checkout **direct charges**; Billing for platform plans), accessed only through a provider-agnostic `PaymentProvider` interface (a PayPal adapter may be added later, only when the founder asks)
 - Mux (video, signed playback), Resend + React Email, Inngest (background jobs)
 - Zod (validation), Vitest (unit), Playwright (e2e), PostHog, Sentry
@@ -49,19 +49,16 @@ pnpm typecheck      # tsc --noEmit
 pnpm test           # vitest
 pnpm test:e2e       # playwright
 pnpm test:unit      # unit tests only (no database)
-pnpm test:db        # RLS tests against the hosted DEV project (guarded; the founder runs it)
-pnpm db:push        # apply new migrations to the linked dev project (the founder runs it)
 ```
-There is no local Docker stack (D-001): never run `supabase db reset` against the hosted project; it is only for CI or a local stack. AI tools write migrations but do not push them.
-Run `pnpm lint && pnpm typecheck && pnpm test:unit` before declaring a task done; the founder runs `pnpm test:db` after `pnpm db:push`.
+Run `pnpm lint && pnpm typecheck && pnpm test:unit` before declaring a task done. Never drop or clear collections in the founder's MongoDB.
 
 ## 4. Project structure
 
 ```
 /app            routes (marketing, dashboard, store, student, api/webhooks)
 /components     shadcn ui + feature components
-/lib            config, payments, supabase, email, video, auth guards
-/supabase/migrations   SQL migrations = source of truth for schema
+/lib            config, payments, db (MongoDB), email, video, auth guards
+/lib/db         MongoDB client, indexes (lib/db/mongo.ts) and document types (lib/db/collections.ts) = source of truth for the data model
 /tests          unit + e2e
 ```
 Business logic lives in `/lib`, not inside components or route files. Route handlers stay thin: validate, authorize, call a `/lib` function, return.
@@ -82,12 +79,12 @@ Business logic lives in `/lib`, not inside components or route files. Route hand
 
 ## 6. Database rules
 
-- Schema changes only through new files in `/supabase/migrations`. Never edit applied migrations.
-- **Every table has RLS enabled and explicit policies.** A table without policies is a bug.
-- Creator access is scoped by store ownership (`owns_store(store_id)` helper). Buyers see only their own enrollments and progress.
+- Data model changes go in `lib/db/collections.ts` (document types) and `lib/db/mongo.ts` (indexes). Uniqueness is enforced by unique indexes, never by check-then-insert. A change that needs existing documents rewritten needs a written migration script and the founder's approval.
+- **MongoDB has no row-level security.** All database access goes through `/lib` data-access functions (for example `lib/stores/queries.ts`); components and routes never query collections directly. Every query on creator data filters by the owner id taken from the verified session (`requireCreator`), never from client input. Buyers see only their own enrollments and progress.
+- Better Auth owns the `user`, `session`, `account` and `verification` collections; app code never writes to them directly.
 - Public reads expose only public columns (no `stripe_account_id`, no Mux ids, no emails).
-- The Supabase **service-role key is server-only**: used only in `lib/supabase/admin.ts`, never imported by client components, never logged.
-- Add an RLS test for each new table: creator A cannot read or write creator B's rows.
+- `MONGODB_URI` and `BETTER_AUTH_SECRET` are server-only: used only in `lib/db/mongo.ts` and `lib/auth/auth.ts`, never imported by client components, never logged.
+- Add a test for each new data-access function: creator A cannot read or write creator B's documents (the owner filter is applied).
 
 ## 7. Payments rules (CRITICAL)
 
@@ -121,7 +118,7 @@ If a feature request seems to need an application fee or transfers, **stop and t
 
 - [ ] Inputs validated with Zod; outputs minimal
 - [ ] Authorization checked server-side (ownership/enrollment), not only hidden in UI (no IDOR)
-- [ ] RLS policies exist and are tested for new tables
+- [ ] Every new query filters by the session owner id and has an ownership test
 - [ ] No secrets in code, logs, client bundles or git history; `.env.example` lists variable names only
 - [ ] Webhooks: signature verified, idempotent, safe to replay
 - [ ] Rate limiting on login/OTP, checkout creation, coupon validation, playback-token endpoints
@@ -139,9 +136,13 @@ After each milestone, run a self-review using this checklist and list any gaps i
 ```
 NEXT_PUBLIC_APP_URL
 NEXT_PUBLIC_ROOT_DOMAIN
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY            # server only
+MONGODB_URI                          # server only
+MONGODB_DB                           # server only, default "pickstall"
+BETTER_AUTH_SECRET                   # server only
+GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET   # server only
+NEXT_PUBLIC_GOOGLE_AUTH_ENABLED
+EMAIL_FROM                           # server only
+IP_HASH_SECRET                       # server only
 STRIPE_SECRET_KEY                    # server only
 STRIPE_PLATFORM_WEBHOOK_SECRET       # server only
 STRIPE_CONNECT_WEBHOOK_SECRET        # server only
@@ -161,7 +162,7 @@ Use Stripe **test mode** keys until the founder says live mode is approved.
 ## 10. Testing expectations
 
 - Unit tests: pricing + coupon math, plan gating, slug rules, drip rules.
-- Integration tests: webhook idempotency (same event twice = one order, one enrollment), coupon redemption under concurrency, RLS cross-tenant isolation, playback token denied for non-enrolled users.
+- Integration tests: webhook idempotency (same event twice = one order, one enrollment), coupon redemption under concurrency, cross-tenant isolation (owner filter on every query), playback token denied for non-enrolled users.
 - E2E (Playwright): creator signup -> create store -> add course -> (test mode) buy as student -> watch lesson.
 - A task is **not done** until relevant tests exist and pass.
 

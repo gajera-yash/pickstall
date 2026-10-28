@@ -1,4 +1,5 @@
 import { PackageOpen } from "lucide-react";
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { ChecklistCard } from "@/components/dashboard/checklist-card";
@@ -9,8 +10,6 @@ import { requireCreator } from "@/lib/auth/guards";
 import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { storeLink } from "@/lib/config";
 import { buildChecklist } from "@/lib/dashboard/checklist";
-import { logger } from "@/lib/logger";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // My Store (D-011): first-run checklist, the store link, products.
 export default function MyStorePage() {
@@ -27,23 +26,15 @@ export default function MyStorePage() {
 async function MyStoreContent() {
   const { store } = await requireCreator(DASHBOARD_PATH);
 
-  // RLS limits this count to the creator's own products.
-  const supabase = await createSupabaseServerClient();
-  const { count, error } = await supabase
-    .from("products")
-    .select("id", { count: "exact", head: true })
-    .eq("store_id", store.id);
-  if (error) {
-    logger.error("dashboard.product_count_failed", { code: error.code });
-    throw new Error("Could not load your products.");
-  }
+  // Products arrive in Block C; until then a store has none.
+  const count: number = 0;
 
   const checklist = buildChecklist({
     bio: store.bio,
-    avatarUrl: store.avatar_url,
-    chargesEnabled: store.stripe_charges_enabled,
-    isPublished: store.is_published,
-    productCount: count ?? 0,
+    avatarUrl: store.avatarUrl,
+    chargesEnabled: store.stripeChargesEnabled,
+    isPublished: store.isPublished,
+    productCount: count,
   });
 
   return (
@@ -52,8 +43,11 @@ async function MyStoreContent() {
         <p className="text-sm text-mute">Your link</p>
         <p className="flex flex-wrap items-center gap-2 font-semibold break-all">
           {storeLink(store.slug)}
-          {!store.is_published && <Badge variant="draft">Not published yet</Badge>}
+          {!store.isPublished && <Badge variant="draft">Not published yet</Badge>}
         </p>
+        <Link href="/dashboard/store" className="self-start text-sm font-semibold text-blue underline underline-offset-4 hover:text-blue-hover">
+          Edit store setup
+        </Link>
       </div>
 
       {checklist.next && <ChecklistCard {...checklist} />}
@@ -62,7 +56,7 @@ async function MyStoreContent() {
         <h2 id="products-title" className="font-display text-h2">
           Products
         </h2>
-        {(count ?? 0) === 0 ? (
+        {count === 0 ? (
           <EmptyState
             icon={PackageOpen}
             title="No products yet"

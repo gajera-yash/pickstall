@@ -1,31 +1,46 @@
 import "server-only";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 
 import { DEFAULT_CURRENCY } from "@/lib/config";
+import { collections } from "@/lib/db/collections";
+import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { logger } from "@/lib/logger";
 import { STORE_NAME_MAX_LENGTH } from "@/lib/stores/schemas";
+import { DEFAULT_THEME } from "@/lib/themes";
 
 export type DraftStoreResult = "created" | "taken" | "has_store" | "error";
 
 /**
- * Creates the user's draft (unpublished) store with THEIR OWN session, so row-level security
- * applies: only a store they own, no Stripe or domain columns. The database trigger then marks
- * them as a creator. The unique constraints decide taken usernames and one store per user.
+ * Creates the user's draft (unpublished) store. `ownerId` must come from the verified session.
+ * The unique indexes decide taken usernames and one store per user (lib/db/mongo.ts).
  */
-export async function createDraftStore(
-  supabase: SupabaseClient,
-  ownerId: string,
-  username: string,
-  name: string,
-): Promise<DraftStoreResult> {
+export async function createDraftStore(ownerId: string, username: string, name: string): Promise<DraftStoreResult> {
   const storeName = name.trim().slice(0, STORE_NAME_MAX_LENGTH).trim() || username;
-  const { error } = await supabase
-    .from("stores")
-    .insert({ owner_id: ownerId, slug: username, name: storeName, currency: DEFAULT_CURRENCY });
-
-  if (!error) return "created";
-  if (error.code === "23505") return error.message.includes("stores_owner_id_key") ? "has_store" : "taken";
-  logger.error("stores.create_draft_failed", { code: error.code });
-  return "error";
+  const now = new Date();
+  try {
+    const { stores } = await collections();
+    await stores.insertOne({
+      _id: randomUUID(),
+      ownerId,
+      slug: username,
+      name: storeName,
+      bio: null,
+      avatarUrl: null,
+      link: null,
+      theme: { ...DEFAULT_THEME },
+      currency: DEFAULT_CURRENCY,
+      stripeAccountId: null,
+      stripeChargesEnabled: false,
+      isPublished: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return "created";
+  } catch (error) {
+    if (isDuplicateKeyError(error, "ownerId")) return "has_store";
+    if (isDuplicateKeyError(error, "slug")) return "taken";
+    logger.error("stores.create_draft_failed", { name: error instanceof Error ? error.name : undefined });
+    return "error";
+  }
 }

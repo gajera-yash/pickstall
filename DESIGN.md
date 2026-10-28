@@ -8,7 +8,7 @@
 ## 0. Rules for Claude Code
 
 1. **Never hardcode a color, font, radius, shadow or spacing value.** Use the tokens in section 16 (CSS variables and Tailwind theme).
-2. Every screen must work in **light and dark mode**, at **360px** width, with keyboard only, and with `prefers-reduced-motion`.
+2. The app is **white (light) only** (D-025). Every screen must work at **360px** width, with keyboard only, and with `prefers-reduced-motion`.
 3. Reuse components from `components/ui/` (shadcn base, restyled per section 9). Do not create one-off buttons, inputs or cards.
 4. Every data view needs **loading, empty, error and populated** states.
 5. All demo or example data shown in UI must be labelled **"Example"**.
@@ -47,19 +47,20 @@ Contrast ratios are measured (WCAG formula). "AA text" needs 4.5:1 (3:1 for larg
 | Token | Light | Dark | Role |
 |---|---|---|---|
 | `--bg` | `#FFFFFF` | `#0C0E24` | Page background (white theme, D-007) |
+| `--bg-subtle` | `#F7F9FC` | `#10132E` | Page behind the auth card only (D-026) |
 | `--surface` | `#FFFFFF` | `#171A3A` | Cards, inputs, sheets |
 | `--ink` | `#0B0D2A` | `#F1F2FF` | Primary text, strong borders |
 | `--mute` | `#555A82` | `#A3A8D0` | Secondary text, helper text |
 | `--line` | `#CFD3F5` | `#2A2E57` | Decorative dividers only (not for component borders) |
 | `--border-ui` | `#878CB0` | `#6068A0` | Component outlines: inputs, cards, secondary buttons (1px, 3:1 on bg and surface) |
 | `--border-strong` | `#0B0D2A` | `#6B76C4` | Emphasis outlines (2px): coupons, receipts, highlight button |
-| `--blue` | `#2F3BFF` | `#7D88FF` | Primary actions, links, focus |
+| `--blue` | `#0056FF` | `#7D88FF` | Primary actions, links, focus (logo blue, D-026) |
 | `--on-blue` | `#FFFFFF` | `#0C0E24` | Text on blue |
-| `--blue-hover` | `#2430D6` | `#9AA3FF` | Primary hover |
-| `--blue-active` | `#1B26B8` | `#B4BBFF` | Primary pressed |
-| `--blue-soft` | `#E1E4FF` | `#232857` | Selected rows, subtle highlights |
-| `--yellow` | `#FFD84D` | `#FFD84D` | Highlights, coupons, badges (text on it is always `#0B0D2A`) |
-| `--yellow-soft` | `#FFF3BF` | `#3A3310` | Warning-ish emphasis backgrounds |
+| `--blue-hover` | `#0047D9` | `#9AA3FF` | Primary hover |
+| `--blue-active` | `#003BB5` | `#B4BBFF` | Primary pressed |
+| `--blue-soft` | `#E6EEFF` | `#232857` | Selected rows, subtle highlights |
+| `--yellow` | `#FFC400` | `#FFC400` | Logo yellow (D-026). Small highlights only: badges, coupons, the logo spark (text on it is always `#0B0D2A`) |
+| `--yellow-soft` | `#FFF4CC` | `#3A3310` | Warning-ish emphasis backgrounds |
 | `--mint` | `#0A7A53` | `#4FD6A0` | Money, success, "$0 fee" |
 | `--mint-soft` | `#DDF5EA` | `#12332B` | Success backgrounds |
 | `--danger` | `#C42020` | `#FF7A7A` | Errors, destructive actions |
@@ -73,9 +74,9 @@ Contrast ratios are measured (WCAG formula). "AA text" needs 4.5:1 (3:1 for larg
 |---|---|---|
 | ink on bg (light) | 19.0 | Body text |
 | mute on bg (light) | 6.6 | Secondary text |
-| white on blue (light) | 6.6 | Primary button |
-| blue on bg (light) | 6.6 | Links |
-| ink on yellow | 13.7 | Badges, coupons |
+| white on blue (light) | 5.6 | Primary button |
+| blue on bg (light) | 5.6 | Links |
+| ink on yellow | 11.9 | Badges, coupons |
 | mint `#0A7A53` on white / on bg | 5.4 / 5.4 | Money text |
 | danger on white (light) | 5.9 | Errors |
 | warning text on white (light) | 5.9 | Warnings |
@@ -92,7 +93,8 @@ Note: the old mint `#0C8A5F` failed AA for small text (4.4 on white, 4.0 on bg).
 ### 3.3 Usage rules
 
 - **Blue** = the primary action and links only. One blue button per view.
-- **Yellow** = highlight, coupon, "new", the hero accent. Never for body text, never as a button on a light bg without an ink outline.
+- **Brand colors come from the logo** (D-026): blue `#0056FF` is primary, yellow `#FFC400` is secondary and used very little. Everything else is white, ink and greys.
+- **Yellow** = small highlights only (a badge, a coupon, the logo). Never for body text, never a large area, never as a button on a light bg without an ink outline.
 - **Mint** = money and success. Always paired with text or an icon, never color alone.
 - **Danger** = errors and destructive actions only.
 - Never use color alone to convey meaning (add icon or text).
@@ -321,7 +323,7 @@ Order summary receipt on top, order bump checkbox, coupon field (collapsed link 
 Library grid, then course player: video (16:9), lesson title, tabs (Overview, Notes, Downloads), "Mark complete", sidebar with modules and checkmarks, progress bar. Distraction-free, calm.
 
 ### 10.7 Login and signup
-White page, one centered column, no card: wordmark, H1, one short line of help text, fields, one primary button (D-007, D-008). Fields have leading icons (decoration only) and always a visible label. Signup is two steps, details and then the 6-digit email code, with a thin progress bar that always has a text value ("Step 1 of 2"). The Google button is secondary and only shown when Google is set up; new Google users get one extra step to choose a username. Errors are inline under the field (icon + text), focus moves to the first invalid field, typed values are never cleared. The code step auto-submits at 6 digits and offers "Resend code" with a cooldown and "Use a different email". No emoji, no activation page.
+Logo and tagline ("Creator Store Platform") on a `--bg-subtle` page, then one white card (1px `--line` border, `shadow-card`) with the H1, one short line of help text, fields and one primary button (D-026, reference `docs/ui-reference/username.webp`; supersedes the "no card" rule of D-007). Links to switch between login and signup and the terms line sit under the card. Fields have leading icons (decoration only) and always a visible label. Signup is two steps, details and then the 6-digit email code, with a thin progress bar that always has a text value ("Step 1 of 2"). The Google button is secondary and only shown when Google is set up; new Google users get one extra step to choose a username. Errors are inline under the field (icon + text), focus moves to the first invalid field, typed values are never cleared. The username field shows the store link prefix (`pickstall.store/@`) and checks availability while typing: a green check and "Your link" when free, a red border, the error and up to three free suggestions as chips when taken. The phone field has a country-code picker (default from the browser locale). The code step shows **6 separate boxes** (typing advances, Backspace goes back, paste and one-time-code autofill fill all boxes), auto-submits at 6 digits and offers "Resend code" with a cooldown and "Use a different email". No emoji, no activation page.
 
 ### 10.8 Dashboard first-run checklist and product customization
 - **First-run checklist** (My Store): Store setup, Add first product, Connect payments, Publish (D-009). Each item shows done or not done with an icon and text (never color alone); the primary button is the next undone item.
@@ -341,7 +343,7 @@ Creators pick a preset and an accent color. Themes are **data** (token sets), no
 | Background | `#FFFFFF` | `#FFD84D` | `#FFF1EA` |
 | Text | `#111322` | `#0B0D2A` | `#2B1A17` |
 | Muted text | `#5B6078` | `#2B2E55` | `#6B4F47` |
-| Default accent | `#2F3BFF` | `#0B0D2A` | `#C2410C` |
+| Default accent | `#0056FF` | `#0B0D2A` | `#C2410C` |
 | On accent | `#FFFFFF` | `#FFD84D` | `#FFFFFF` |
 | Card | `#F2F3FF` | `#FFFFFF` | `#FFFFFF` |
 | Radius | 14px | 8px | 24px |
@@ -382,7 +384,7 @@ Measured: Bold accent pair (yellow on ink) 13.7; Soft on-accent (white on `#C241
 - Do not convey information by color alone. Icons need names. Decorative mockups use `aria-hidden`.
 - Video lessons: captions field and transcript support in the course builder (P1), keyboard-operable player.
 - Support 200% zoom and text spacing overrides without loss of content.
-- Dark mode follows the OS by default with a user override; both themes must pass contrast checks.
+- The app is light only (D-025): `<html data-theme="light">` ignores the OS dark mode. The dark tokens stay in `styles/tokens.css` for a possible later toggle but are not used.
 
 ---
 
@@ -438,8 +440,8 @@ export const body = Instrument_Sans({
 ```css
 :root {
   --bg:#FFFFFF; --surface:#FFFFFF; --ink:#0B0D2A; --mute:#555A82; --line:#CFD3F5; --border-ui:#878CB0; --border-strong:#0B0D2A;
-  --blue:#2F3BFF; --on-blue:#FFFFFF; --blue-hover:#2430D6; --blue-active:#1B26B8; --blue-soft:#E1E4FF;
-  --yellow:#FFD84D; --yellow-soft:#FFF3BF;
+  --blue:#0056FF; --on-blue:#FFFFFF; --blue-hover:#0047D9; --blue-active:#003BB5; --blue-soft:#E6EEFF;
+  --yellow:#FFC400; --yellow-soft:#FFF4CC;
   --mint:#0A7A53; --mint-soft:#DDF5EA;
   --danger:#C42020; --danger-soft:#FDE3E3; --warning:#8A5A00; --warning-soft:#FFF1C2;
   --radius-xs:6px; --radius-sm:10px; --radius-md:14px; --radius-lg:20px; --radius-xl:28px;

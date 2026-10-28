@@ -25,7 +25,7 @@ export type ChecklistInput = {
  * Store setup and products (Block B/C), payments (Block D), publish (needs the public store page).
  */
 const AVAILABLE: Record<ChecklistItemId, boolean> = {
-  "store-setup": false,
+  "store-setup": true,
   "first-product": false,
   "connect-payments": false,
   publish: false,
