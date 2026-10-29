@@ -106,6 +106,15 @@ export const SOCIAL_LINK_LABELS: Record<SocialLinkKind, string> = {
 };
 export const SOCIAL_LINKS_MAX = 6;
 
+/** Product limits (D-030). */
+export const PRODUCTS_MAX_PER_STORE = 100;
+export const CHECKOUT_QUESTIONS_MAX = 5;
+/** Highest price a buyer may enter or a creator may set, in cents. */
+export const PRICE_MAX_CENTS = 50_000;
+/** Smallest paid price in cents (Stripe's minimum charge is 50 cents; we keep a round 1.00). */
+export const PRICE_MIN_PAID_CENTS = 100;
+export const PRODUCT_RATE_LIMIT = { max: 60, windowMinutes: 10 } as const;
+
 export const PLANS = ["trial", "starter", "pro", "business"] as const;
 export type Plan = (typeof PLANS)[number];
 

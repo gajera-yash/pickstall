@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
+import { createProductAndEdit } from "@/lib/products/actions";
 import { cn } from "@/lib/utils";
 
 type ProductType = { id: string; title: string; description: string; icon: LucideIcon; live: boolean };
@@ -42,23 +43,37 @@ async function TypePicker() {
     <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {TYPES.map(({ id, title, description, icon: Icon, live }) => (
         <li key={id}>
-          <div
-            className={cn(
-              "flex h-full flex-col gap-3 rounded-lg border bg-surface p-5",
-              live ? "border-blue ring-1 ring-blue" : "border-line opacity-80",
-            )}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span aria-hidden="true" className={cn("flex size-12 items-center justify-center rounded-full", live ? "bg-blue text-on-blue" : "bg-bg-subtle text-mute")}>
-                <Icon className="size-6" />
-              </span>
-              <Badge variant="soon">{live ? "Editor arrives next" : "Coming soon"}</Badge>
+          {live ? (
+            <form action={createProductAndEdit} className="h-full">
+              <button
+                type="submit"
+                className="flex h-full w-full cursor-pointer flex-col gap-3 rounded-lg border border-blue bg-surface p-5 text-left ring-1 ring-blue transition-colors duration-(--dur-fast) hover:bg-blue-soft"
+              >
+                <TypeCardBody title={title} description={description} Icon={Icon} live badge="Start" />
+              </button>
+            </form>
+          ) : (
+            <div className="flex h-full flex-col gap-3 rounded-lg border border-line bg-surface p-5 opacity-80">
+              <TypeCardBody title={title} description={description} Icon={Icon} live={false} badge="Coming soon" />
             </div>
-            <h2 className="font-display text-h3">{title}</h2>
-            <p className="text-sm text-mute">{description}</p>
-          </div>
+          )}
         </li>
       ))}
     </ul>
+  );
+}
+
+function TypeCardBody({ title, description, Icon, live, badge }: { title: string; description: string; Icon: LucideIcon; live: boolean; badge: string }) {
+  return (
+    <>
+      <div className="flex items-center justify-between gap-2">
+        <span aria-hidden="true" className={cn("flex size-12 items-center justify-center rounded-full", live ? "bg-blue text-on-blue" : "bg-bg-subtle text-mute")}>
+          <Icon className="size-6" />
+        </span>
+        <Badge variant={live ? "live" : "soon"}>{badge}</Badge>
+      </div>
+      <h2 className="font-display text-h3">{title}</h2>
+      <p className="text-sm text-mute">{description}</p>
+    </>
   );
 }

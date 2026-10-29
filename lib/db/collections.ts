@@ -60,12 +60,48 @@ export type SignupIntentDoc = {
   expiresAt: Date;
 };
 
+export type CheckoutQuestionDoc = {
+  id: string;
+  label: string;
+  kind: "text" | "long_text" | "dropdown" | "checkbox";
+  required: boolean;
+  options: string[];
+};
+
+/** A product (D-030). Phase 1 has one type, `digital`. Every query filters by `storeId` of the session owner. */
+export type ProductDoc = {
+  _id: string;
+  storeId: string;
+  type: "digital";
+  title: string;
+  /** Unique per store (index `products_store_slug_unique`). */
+  slug: string;
+  description: string | null;
+  coverUrl: string | null;
+  pricingModel: "fixed" | "pwyw";
+  /** Fixed price, or the suggested price for pay-what-you-want. Integer cents. */
+  priceCents: number;
+  /** Pay-what-you-want minimum, integer cents. */
+  minPriceCents: number | null;
+  /** Never in public reads: delivered only after a verified payment. */
+  externalUrl: string | null;
+  buttonText: string | null;
+  downloadLimit: number | null;
+  status: "draft" | "published" | "archived";
+  checkout: { headline: string | null; askPhone: boolean; questions: CheckoutQuestionDoc[] };
+  afterPurchase: { thankYou: string | null; redirectUrl: string | null; emailSubject: string | null; emailBody: string | null };
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 /** Fixed-window rate-limit counter. Removed by a TTL index after `expiresAt`. */
 export type RateLimitDoc = { _id: string; count: number; expiresAt: Date };
 
 export async function collections(): Promise<{
   profiles: Collection<ProfileDoc>;
   stores: Collection<StoreDoc>;
+  products: Collection<ProductDoc>;
   signupIntents: Collection<SignupIntentDoc>;
   rateLimits: Collection<RateLimitDoc>;
 }> {
@@ -73,6 +109,7 @@ export async function collections(): Promise<{
   return {
     profiles: db.collection<ProfileDoc>("profiles"),
     stores: db.collection<StoreDoc>("stores"),
+    products: db.collection<ProductDoc>("products"),
     signupIntents: db.collection<SignupIntentDoc>("signupIntents"),
     rateLimits: db.collection<RateLimitDoc>("rateLimits"),
   };

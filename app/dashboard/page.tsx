@@ -16,6 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
+import { listProducts } from "@/lib/products/queries";
+import { ProductList } from "@/components/dashboard/product-list";
 import { SOCIAL_LINK_LABELS, storeLink } from "@/lib/config";
 import { buildChecklist } from "@/lib/dashboard/checklist";
 import { MY_STORE_TABS, type MyStoreTab } from "@/lib/dashboard/nav";
@@ -42,8 +44,9 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
   const tabParam = typeof params.tab === "string" ? params.tab : "";
   const initialTab: MyStoreTab = (MY_STORE_TABS as readonly string[]).includes(tabParam) ? (tabParam as MyStoreTab) : "products";
 
-  // Products arrive in R3 and orders in R5/R6; until then the counts and series are real zeros.
-  const productCount: number = 0;
+  const products = await listProducts(store.id).catch(() => []);
+  const productCount = products.filter((product) => product.status !== "archived").length;
+  // Orders arrive in R5/R6; until then the series are real zeros.
   const series: KpiSeries = { revenueCents: zeros(), orders: zeros(), customers: zeros() };
 
   const checklist = buildChecklist({
@@ -78,7 +81,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
         <MyStoreTabs
           initialTab={initialTab}
           productCount={productCount}
-          products={<ProductsEmpty />}
+          products={products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} />}
           design={<PageDesignForm initial={{ themePreset: store.theme.preset, accent: store.theme.accent }} preview={preview} />}
           links={<LinksTab links={store.socialLinks} />}
           analytics={<AnalyticsTab isPublished={store.isPublished} />}

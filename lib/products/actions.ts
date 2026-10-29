@@ -1,0 +1,124 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+import { requireCreator } from "@/lib/auth/guards";
+import { PRODUCT_RATE_LIMIT } from "@/lib/config";
+import { logger } from "@/lib/logger";
+import { checkPublish } from "@/lib/products/publish";
+import { createDraftProduct, deleteProduct, findProduct, setProductStatus, updateProduct } from "@/lib/products/queries";
+import { productIdInput, productInput, productStatusInput } from "@/lib/products/schemas";
+import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
+import { err, ok, type Result } from "@/lib/result";
+
+export type SaveProductState = Result<{ savedAt: number }> | null;
+export type ProductStatusState = Result<{ status: string }> | null;
+
+const MAX_PAYLOAD_CHARS = 40_000;
+const SAVE_FAILED = "Couldn't save your product. Check your connection and try again.";
+const NOT_FOUND = "We couldn't find that product. Reload the page and try again.";
+
+function errorName(error: unknown): string | undefined {
+  return error instanceof Error ? error.name : undefined;
+}
+
+async function allowed(ownerId: string): Promise<boolean> {
+  const { max, windowMinutes } = PRODUCT_RATE_LIMIT;
+  return takeRateLimit(rateLimitKey("product-write:owner", ownerId), max, windowMinutes);
+}
+
+/** Creates an empty draft digital product and opens its editor. */
+export async function createProductAndEdit(): Promise<void> {
+  const { user, store } = await requireCreator("/dashboard/products/new");
+  if (!(await allowed(user.id))) redirect("/dashboard/products?error=slow");
+  const result = await createDraftProduct(store.id, { buttonText: "Buy now" }).catch((error: unknown) => {
+    logger.error("products.create_failed", { name: errorName(error) });
+    return "error" as const;
+  });
+  if (typeof result === "string") redirect(`/dashboard/products?error=${result}`);
+  revalidatePath("/dashboard", "layout");
+  redirect(`/dashboard/products/${result.id}`);
+}
+
+/**
+ * Saves the product editor. The form arrives as one JSON payload; the product is found with the
+ * session owner's store id, so a creator can only ever change their own products.
+ */
+export async function saveProduct(productId: string, _prev: SaveProductState, formData: FormData): Promise<SaveProductState> {
+  const { user, store } = await requireCreator(`/dashboard/products/${productId}`);
+  if (!productIdInput.safeParse(productId).success) return err(NOT_FOUND);
+
+  const raw = formData.get("payload");
+  if (typeof raw !== "string" || raw.length > MAX_PAYLOAD_CHARS) return err("Check the form and try again.");
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    return err("Check the form and try again.");
+  }
+
+  const parsed = productInput.safeParse(json);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const [first, index] = issue?.path ?? [];
+    const field = first === "questions" && typeof index === "number" ? `question-${index}` : typeof first === "string" ? first : undefined;
+    return err(issue?.message ?? "Check the form and try again.", field);
+  }
+  if (!(await allowed(user.id))) return err("Slow down a little, then try again.");
+
+  try {
+    const result = await updateProduct(store.id, productId, parsed.data);
+    if (result === "not_found") return err(NOT_FOUND);
+  } catch (error) {
+    logger.error("products.save_failed", { name: errorName(error) });
+    return err(SAVE_FAILED);
+  }
+
+  revalidatePath("/dashboard", "layout");
+  return ok({ savedAt: Date.now() });
+}
+
+/** Publish, unpublish (back to draft) or archive. Publishing checks the rules on the saved product. */
+export async function changeProductStatus(productId: string, status: string): Promise<Result<{ status: string }>> {
+  const { user, store } = await requireCreator("/dashboard/products");
+  const id = productIdInput.safeParse(productId);
+  const next = productStatusInput.safeParse(status);
+  if (!id.success || !next.success) return err(NOT_FOUND);
+  if (!(await allowed(user.id))) return err("Slow down a little, then try again.");
+
+  try {
+    const product = await findProduct(store.id, id.data);
+    if (!product) return err(NOT_FOUND);
+
+    if (next.data === "published") {
+      const check = checkPublish(product, store);
+      if (!check.ok) return err(check.problems.join(" "));
+    }
+    if (!(await setProductStatus(store.id, id.data, next.data))) return err(NOT_FOUND);
+  } catch (error) {
+    logger.error("products.status_failed", { name: errorName(error) });
+    return err(SAVE_FAILED);
+  }
+
+  revalidatePath("/dashboard", "layout");
+  return ok({ status: next.data });
+}
+
+/** Deletes a draft or archived product. */
+export async function removeProduct(productId: string): Promise<Result<{ deleted: true }>> {
+  const { user, store } = await requireCreator("/dashboard/products");
+  const id = productIdInput.safeParse(productId);
+  if (!id.success) return err(NOT_FOUND);
+  if (!(await allowed(user.id))) return err("Slow down a little, then try again.");
+
+  try {
+    if (!(await deleteProduct(store.id, id.data))) return err("Only draft or archived products can be deleted. Archive it first.");
+  } catch (error) {
+    logger.error("products.delete_failed", { name: errorName(error) });
+    return err(SAVE_FAILED);
+  }
+
+  revalidatePath("/dashboard", "layout");
+  return ok({ deleted: true });
+}

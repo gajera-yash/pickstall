@@ -26,7 +26,7 @@ export type ChecklistInput = {
  */
 const AVAILABLE: Record<ChecklistItemId, boolean> = {
   "store-setup": true,
-  "first-product": false,
+  "first-product": true,
   "connect-payments": false,
   publish: false,
 };

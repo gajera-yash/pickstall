@@ -4,6 +4,18 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-030: R3 products (digital) and the creator-customization rules
+- **Date:** 2026-10-30
+- **Decision:**
+  - New `products` collection (`lib/db/collections.ts`) with unique `{ storeId, slug }`. One type for now, `digital`. Money is integer cents; a creator types "19.99" and `lib/products/money.ts` converts it.
+  - Editor at `/dashboard/products/[id]` with four tabs (Details, Checkout, After purchase, Settings) and a live preview. The form is sent as one JSON payload and validated again by Zod in `lib/products/schemas.ts`.
+  - Guardrails (D-014): creator text has HTML tags and control characters stripped and is length-limited; emails allow only `{{customer_name}}`, `{{product_title}}`, `{{download_link}}`; up to 5 checkout questions (text, long text, dropdown, checkbox); questions that ask for card, ID, password or bank details are rejected; redirect, cover and delivery links must be https.
+  - Publish rules (`lib/products/publish.ts`): a title, a delivery link (files arrive with R2), and for paid products connected Stripe. In development the MockProvider stands in, so paid products can be published; in production only a connected Stripe account counts.
+  - Access control: every query filters by the `storeId` of the session owner (`requireCreator`). A product id from another creator behaves exactly like a missing one. Writes are rate-limited per owner. Published products cannot be deleted; archive first.
+  - Delivery is an external link until R2 (private file storage) exists. Cover is an https link for the same reason.
+  - Not done yet (planned): drag-to-reorder, duplicate, file upload (R2).
+- **Why:** PRD F3 and F11; founder asked to continue with R3 without approval stops.
+
 ## D-029: Dashboard redesign from the founder's reference
 - **Date:** 2026-10-29
 - **Decision:** the dashboard follows `docs/ui-reference/dashboard.webp`. The founder asked for no more approval stops on design and code choices, so these were decided here:

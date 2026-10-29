@@ -3,14 +3,23 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { PageHeader } from "@/components/dashboard/page-header";
+import { ProductList } from "@/components/dashboard/product-list";
 import { ProductsEmpty } from "@/components/dashboard/products-empty";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
+import { listProducts } from "@/lib/products/queries";
 
-// Products (D-029). The list, editor and publish rules arrive with R3.
-export default function ProductsPage() {
+const ERRORS: Record<string, string> = {
+  limit: "You have reached the product limit for your store.",
+  slow: "Slow down a little, then try again.",
+  error: "Couldn't create the product. Check your connection and try again.",
+};
+
+// Products (D-030): every product of the store with its price and status.
+export default function ProductsPage({ searchParams }: PageProps<"/dashboard/products">) {
   return (
     <>
       <PageHeader
@@ -26,17 +35,25 @@ export default function ProductsPage() {
         }
       />
       <Suspense fallback={<Skeleton className="h-72 w-full rounded-lg" />}>
-        <ProductsContent />
+        <ProductsContent searchParams={searchParams} />
       </Suspense>
     </>
   );
 }
 
-async function ProductsContent() {
-  await requireCreator("/dashboard/products");
+async function ProductsContent({ searchParams }: Pick<PageProps<"/dashboard/products">, "searchParams">) {
+  const [{ store }, params] = await Promise.all([requireCreator("/dashboard/products"), searchParams]);
+  const products = await listProducts(store.id);
+  const error = typeof params.error === "string" ? ERRORS[params.error] : undefined;
+
   return (
-    <Card>
-      <ProductsEmpty />
-    </Card>
+    <>
+      {error && (
+        <Alert variant="error">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      <Card className="p-2 sm:p-3">{products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} />}</Card>
+    </>
   );
 }

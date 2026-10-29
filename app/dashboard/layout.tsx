@@ -21,7 +21,10 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
     <div className="flex min-h-dvh flex-1 bg-bg-subtle">
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-line bg-surface px-3 py-5 md:flex">
         <Wordmark className="h-10 self-start px-3" priority />
-        <DashboardNav variant="sidebar" />
+        {/* usePathname() is request data, so the nav streams in behind a boundary. */}
+        <Suspense fallback={<Skeleton className="h-96 w-full rounded-lg" />}>
+          <DashboardNav variant="sidebar" />
+        </Suspense>
         <Suspense fallback={<Skeleton className="mt-auto h-48 w-full rounded-lg" />}>
           <SidebarFooterWithData />
         </Suspense>
@@ -37,7 +40,9 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
         </main>
       </div>
 
-      <DashboardNav variant="bottom" />
+      <Suspense fallback={null}>
+        <DashboardNav variant="bottom" />
+      </Suspense>
     </div>
   );
 }
