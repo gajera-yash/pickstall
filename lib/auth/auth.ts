@@ -5,7 +5,7 @@ import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins";
 
-import { APP_NAME, OTP_LENGTH, OTP_TTL_SECONDS } from "@/lib/config";
+import { APP_NAME, OTP_LENGTH, OTP_TTL_SECONDS, SESSION_COOKIE_CACHE_SECONDS } from "@/lib/config";
 import { mongoDb } from "@/lib/db/mongo";
 import { sendSignInCode } from "@/lib/email/send-sign-in-code";
 import { publicEnv } from "@/lib/env";
@@ -27,6 +27,11 @@ export const auth = betterAuth({
   database: mongodbAdapter(mongoDb),
   emailAndPassword: { enabled: false },
   socialProviders: google,
+  // Speed (2026-10-29, founder approved): the session is also kept in a signed cookie (HMAC,
+  // Better Auth's "compact" strategy) for a few minutes, so most page loads skip the database
+  // session lookup. Trade-off: a session ended elsewhere (sign out on another device) can keep
+  // working on this device until the cookie expires. Signing out here clears it at once.
+  session: { cookieCache: { enabled: true, maxAge: SESSION_COOKIE_CACHE_SECONDS } },
   // Limits the public /api/auth/* endpoints. Stored in MongoDB so it holds across server instances.
   rateLimit: { enabled: true, storage: "database" },
   plugins: [

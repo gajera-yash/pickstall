@@ -11,6 +11,12 @@ import { logger } from "@/lib/logger";
 import { findStoreByOwner, type CreatorStore } from "@/lib/stores/queries";
 
 export type AuthUser = { id: string; email: string | null };
+
+/**
+ * The owner's store, looked up once per request: the layout (top bar) and the page both need it,
+ * and every lookup is a round trip to the database.
+ */
+const findCreatorStore = cache(findStoreByOwner);
 export type { CreatorStore };
 
 /**
@@ -46,7 +52,7 @@ export async function requireCreator(next?: string): Promise<{ user: AuthUser; s
 
   let store: CreatorStore | null;
   try {
-    store = await findStoreByOwner(user.id);
+    store = await findCreatorStore(user.id);
   } catch (error) {
     unstable_rethrow(error);
     logger.error("auth.require_creator_store_query_failed", { name: error instanceof Error ? error.name : undefined });

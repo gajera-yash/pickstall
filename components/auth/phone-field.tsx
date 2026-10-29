@@ -1,9 +1,9 @@
 "use client";
 
-import * as Flags from "country-flag-icons/react/3x2";
-import { Check, ChevronDown, Globe } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 
+import { CountryFlag } from "@/components/auth/country-flag";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { FieldError, FieldHint } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
@@ -28,19 +28,6 @@ function countryFilter(value: string, search: string): number {
   if (query === "") return 1;
   if (text.startsWith(query)) return 1;
   return text.includes(query) ? 0.5 : 0;
-}
-
-type FlagComponent = (props: { className?: string; title?: string }) => React.JSX.Element;
-const FLAGS = Flags as unknown as Record<string, FlagComponent | undefined>;
-
-/** Country flag (SVG, never emoji: DESIGN.md 0.7). Decorative: the name or dial code is always next to it. */
-function CountryFlag({ country, className }: { country: PhoneCountry; className?: string }) {
-  const Flag = FLAGS[country];
-  return (
-    <span aria-hidden="true" className={cn("flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-bg-subtle", className)}>
-      {Flag ? <Flag className="h-full w-auto max-w-none" /> : <Globe className="size-4 text-mute" />}
-    </span>
-  );
 }
 
 /**
