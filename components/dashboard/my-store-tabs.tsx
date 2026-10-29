@@ -7,8 +7,9 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export const MY_STORE_TABS = ["products", "design", "links", "analytics"] as const;
-export type MyStoreTab = (typeof MY_STORE_TABS)[number];
+import type { MyStoreTab } from "@/lib/dashboard/nav";
+
+export type { MyStoreTab };
 
 type Props = { initialTab: MyStoreTab; products: ReactNode; design: ReactNode; links: ReactNode; analytics: ReactNode; productCount: number };
 

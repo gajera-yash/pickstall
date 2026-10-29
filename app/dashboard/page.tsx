@@ -4,7 +4,7 @@ import { Suspense } from "react";
 
 import { ChecklistCard } from "@/components/dashboard/checklist-card";
 import { KpiSection, type KpiSeries } from "@/components/dashboard/kpi-section";
-import { MY_STORE_TABS, MyStoreTabs, type MyStoreTab } from "@/components/dashboard/my-store-tabs";
+import { MyStoreTabs } from "@/components/dashboard/my-store-tabs";
 import { PageDesignForm } from "@/components/dashboard/page-design-form";
 import { ProductsEmpty } from "@/components/dashboard/products-empty";
 import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
@@ -18,6 +18,7 @@ import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
 import { SOCIAL_LINK_LABELS, storeLink } from "@/lib/config";
 import { buildChecklist } from "@/lib/dashboard/checklist";
+import { MY_STORE_TABS, type MyStoreTab } from "@/lib/dashboard/nav";
 import { firstName } from "@/lib/dashboard/greeting";
 import type { SocialLink } from "@/lib/stores/schemas";
 

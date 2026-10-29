@@ -12,6 +12,10 @@ export const DASHBOARD_SECTIONS = [
   { id: "settings", label: "Settings", href: "/dashboard/settings" },
 ] as const;
 
+/** Tabs on the My Store page. Lives here, not in the client tabs file, so the server can read it. */
+export const MY_STORE_TABS = ["products", "design", "links", "analytics"] as const;
+export type MyStoreTab = (typeof MY_STORE_TABS)[number];
+
 /** How many sections the mobile bottom bar shows before "More". */
 export const BOTTOM_BAR_SECTIONS = 4;
 

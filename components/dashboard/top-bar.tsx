@@ -27,9 +27,7 @@ type Props = { displayName: string; email: string | null; storeUrl: string };
 export function TopBar({ displayName, email, storeUrl }: Props) {
   return (
     <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur md:px-6">
-      <Link href="/dashboard" aria-label="Pickstall, go to My Store" className="shrink-0 rounded-sm md:hidden">
-        <Wordmark className="h-7" />
-      </Link>
+      <Wordmark className="h-7 md:hidden" />
 
       <div className="flex min-w-0 flex-1 justify-end md:justify-start">
         <CommandMenu storeUrl={storeUrl} />

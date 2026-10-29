@@ -87,7 +87,7 @@ export function KpiSection({ currency, series }: Props) {
                 <p className="text-sm font-medium text-mute">{cardLabel}</p>
                 <p className="font-display text-money-l text-ink tabular-nums">{value}</p>
               </div>
-              <Sparkline points={points} className={cn("ml-auto h-10 w-24 shrink-0 lg:w-28", tone.split(" ")[0])} />
+              <Sparkline points={points} className={cn("ml-auto hidden h-10 w-24 shrink-0 min-[1100px]:block xl:w-28", tone.split(" ")[0])} />
             </Card>
           </li>
         ))}
