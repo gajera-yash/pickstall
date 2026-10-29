@@ -1,11 +1,19 @@
-// Dashboard sections (docs/DECISIONS.md D-011). Icons are mapped in the nav component.
+// Dashboard sections (D-029, reference docs/ui-reference/dashboard.webp). Icons are mapped in the
+// nav component. The first four are the mobile bottom bar; the rest sit under "More" there.
 
 export const DASHBOARD_SECTIONS = [
   { id: "store", label: "My Store", href: "/dashboard" },
-  { id: "income", label: "Income", href: "/dashboard/income" },
+  { id: "products", label: "Products", href: "/dashboard/products" },
+  { id: "orders", label: "Orders", href: "/dashboard/orders" },
   { id: "customers", label: "Customers", href: "/dashboard/customers" },
+  { id: "income", label: "Income", href: "/dashboard/income" },
+  { id: "marketing", label: "Marketing", href: "/dashboard/marketing" },
+  { id: "analytics", label: "Analytics", href: "/dashboard/analytics" },
   { id: "settings", label: "Settings", href: "/dashboard/settings" },
 ] as const;
+
+/** How many sections the mobile bottom bar shows before "More". */
+export const BOTTOM_BAR_SECTIONS = 4;
 
 export type DashboardSectionId = (typeof DASHBOARD_SECTIONS)[number]["id"];
 
@@ -18,9 +26,9 @@ export const SETTINGS_SECTIONS = [
 
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]["id"];
 
-/** My Store matches /dashboard and products; the other sections also match their sub-pages. */
+/** My Store matches /dashboard only; the other sections also match their sub-pages. */
 export function isSectionActive(pathname: string, href: string): boolean {
-  if (href === "/dashboard") return pathname === "/dashboard" || pathname.startsWith("/dashboard/products");
+  if (href === "/dashboard") return pathname === "/dashboard";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronRight, ExternalLink, LogOut, UserRound } from "lucide-react";
+import { Bell, BellOff, ExternalLink, LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useRef } from "react";
 
 import { Wordmark } from "@/components/brand/wordmark";
-import { Badge } from "@/components/ui/badge";
+import { CommandMenu } from "@/components/dashboard/command-menu";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,64 +15,60 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { signOut } from "@/lib/auth/actions";
-import { breadcrumbFor } from "@/lib/dashboard/nav";
 
-type Props = { displayName: string; email: string | null; isPublished: boolean };
+type Props = { displayName: string; email: string | null; storeUrl: string };
 
 /**
- * Dashboard top bar (PRD F8, DESIGN.md 5 and 9.8): breadcrumb with the store status, "View my store"
- * (Coming soon until the public store page exists) and the account menu. 56px high.
+ * Dashboard top bar (D-029, reference docs/ui-reference/dashboard.webp): search / command palette,
+ * "View my store", notifications and the account menu. 64px high, sticky, white.
  */
-export function TopBar({ displayName, email, isPublished }: Props) {
-  const pathname = usePathname();
-  const crumbs = breadcrumbFor(pathname);
-
+export function TopBar({ displayName, email, storeUrl }: Props) {
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-line bg-surface px-4 md:px-6">
+    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur md:px-6">
       <Link href="/dashboard" aria-label="Pickstall, go to My Store" className="shrink-0 rounded-sm md:hidden">
         <Wordmark className="h-7" />
       </Link>
 
-      <nav aria-label="Breadcrumb" className="min-w-0">
-        <ol className="flex min-w-0 items-center gap-1.5 text-sm">
-          {crumbs.map((crumb, index) => {
-            const last = index === crumbs.length - 1;
-            return (
-              <li key={crumb.href} className={last ? "flex min-w-0 items-center gap-1.5" : "hidden items-center gap-1.5 sm:flex"}>
-                {last ? (
-                  <span aria-current="page" className="truncate font-semibold text-ink">
-                    {crumb.label}
-                  </span>
-                ) : (
-                  <>
-                    <Link href={crumb.href} className="rounded-sm text-mute hover:text-ink">
-                      {crumb.label}
-                    </Link>
-                    <ChevronRight aria-hidden="true" className="size-4 text-mute" />
-                  </>
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
+      <div className="flex min-w-0 flex-1 justify-end md:justify-start">
+        <CommandMenu storeUrl={storeUrl} />
+      </div>
 
-      {isPublished ? <Badge variant="live">Live</Badge> : <Badge variant="draft">Draft</Badge>}
-
-      <div className="ml-auto flex items-center gap-2">
-        {/* Not a link yet: the public store page arrives in R4. */}
-        <span
-          aria-disabled="true"
-          className="hidden h-9 items-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-mute lg:inline-flex"
-        >
-          <ExternalLink aria-hidden="true" className="size-4" />
-          View my store
-          <Badge variant="soon">Coming soon</Badge>
-        </span>
+      <div className="flex items-center gap-1 sm:gap-2">
+        <Button asChild variant="secondary" size="sm" className="hidden h-10 sm:inline-flex">
+          <Link href="/dashboard?tab=design#store-preview">
+            <ExternalLink aria-hidden="true" className="size-4" />
+            View my store
+          </Link>
+        </Button>
+        <Notifications />
         <AccountMenu displayName={displayName} email={email} />
       </div>
     </header>
+  );
+}
+
+function Notifications() {
+  return (
+    <Popover>
+      <PopoverTrigger
+        aria-label="Notifications"
+        className="flex size-11 cursor-pointer items-center justify-center rounded-full text-ink hover:bg-bg-subtle data-[state=open]:bg-bg-subtle"
+      >
+        <Bell aria-hidden="true" className="size-5" />
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-0">
+        <p className="border-b border-line px-4 py-3 font-display text-h4">Notifications</p>
+        <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
+          <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-full bg-bg-subtle text-mute">
+            <BellOff className="size-5" />
+          </span>
+          <p className="font-semibold">You&apos;re all caught up</p>
+          <p className="text-sm text-mute">New sales, customers and payouts will show up here.</p>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -85,7 +81,7 @@ function AccountMenu({ displayName, email }: { displayName: string; email: strin
         aria-label="Account menu"
         className="flex size-11 cursor-pointer items-center justify-center rounded-full hover:bg-bg-subtle data-[state=open]:bg-bg-subtle"
       >
-        <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-full bg-blue-soft font-display text-base font-semibold text-blue">
+        <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-full bg-blue-soft font-display text-base font-bold text-ink">
           {initial}
         </span>
       </DropdownMenuTrigger>

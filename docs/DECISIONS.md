@@ -4,6 +4,17 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-029: Dashboard redesign from the founder's reference
+- **Date:** 2026-10-29
+- **Decision:** the dashboard follows `docs/ui-reference/dashboard.webp`. The founder asked for no more approval stops on design and code choices, so these were decided here:
+  - Sidebar (256px, white): logo, eight sections (My Store, Products, Orders, Customers, Income, Marketing, Analytics, Settings), a Pro card and the signed-in creator. Mobile keeps the bottom bar: the first four sections plus "More" for the rest.
+  - Top bar (64px): search box that opens a ⌘K / Ctrl+K command palette (pages and quick actions), "View my store" (opens the live preview until the public page exists), notifications popover (empty state), account menu.
+  - My Store: welcome card with a greeting for the viewer's local time and an illustration made of tokens and icons; store link card with Copy, Customize and a draft notice; "Get started" checklist with step icons; "Last 30 days" with a 7/30/90-day picker and three KPI cards with sparklines; tabs Products / Store design / Links / Analytics with product search and "Add product"; right column (from 1280px) with the live store preview and a help card.
+  - Honest data: KPIs and sparklines show real values (zero and a flat line until the first sale), never invented curves. "Upgrade to Pro" says "Coming soon" because paid plans are Phase 3 (PRD F9). Marketing tools are labelled "Coming soon" (Phase 2).
+  - New token pair `--violet` / `--violet-soft` for the third data color (orders), icons and lines only.
+  - `SUPPORT_EMAIL` (`support@pickstall.store`) in `lib/config.ts` for the help card; the founder must confirm the mailbox exists.
+- **Why:** founder request with a full reference image, 2026-10-29.
+
 ## D-028: R1 design decisions: logo colors stay, one-page dashboard home, mobile bottom bar
 - **Date:** 2026-10-29
 - **Decision** (founder answers to `docs/AUDIT_R0.md` C1, C5, C6):

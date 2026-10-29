@@ -39,6 +39,8 @@
   --color-yellow-soft: var(--yellow-soft);
   --color-mint: var(--mint);
   --color-mint-soft: var(--mint-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
   --color-danger: var(--danger);
   --color-on-danger: var(--on-danger);
   --color-danger-soft: var(--danger-soft);

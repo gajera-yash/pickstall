@@ -1,23 +1,29 @@
-import { PackageOpen, ShoppingBag, Users, Wallet, type LucideIcon } from "lucide-react";
+import { BarChart3, Link2, Pencil } from "lucide-react";
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { ChecklistCard } from "@/components/dashboard/checklist-card";
-import { MyStoreTabs, type MyStoreTab } from "@/components/dashboard/my-store-tabs";
+import { KpiSection, type KpiSeries } from "@/components/dashboard/kpi-section";
+import { MY_STORE_TABS, MyStoreTabs, type MyStoreTab } from "@/components/dashboard/my-store-tabs";
 import { PageDesignForm } from "@/components/dashboard/page-design-form";
+import { ProductsEmpty } from "@/components/dashboard/products-empty";
+import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
 import { StoreLinkCard } from "@/components/dashboard/store-link-card";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
+import { HelpCard, StorePreviewCard } from "@/components/dashboard/store-preview-card";
+import { WelcomeHero } from "@/components/dashboard/welcome-hero";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
-import { CURRENCY_LABELS, storeLink, type Currency } from "@/lib/config";
+import { SOCIAL_LINK_LABELS, storeLink } from "@/lib/config";
 import { buildChecklist } from "@/lib/dashboard/checklist";
 import { firstName } from "@/lib/dashboard/greeting";
+import type { SocialLink } from "@/lib/stores/schemas";
 
-// My Store home (D-028, DESIGN.md 10.2): greeting, store link, first-run checklist, example KPI
-// cards, then the Products and Page design tabs. One page, no extra nav item.
+// My Store home (D-029, reference docs/ui-reference/dashboard.webp): welcome card, store link,
+// first-run checklist, last-30-days KPIs and the Products / Store design / Links / Analytics tabs,
+// with a live store preview and help on the right from 1280px up.
 export default function MyStorePage({ searchParams }: PageProps<"/dashboard">) {
   return (
     <Suspense fallback={<MyStoreSkeleton />}>
@@ -26,13 +32,18 @@ export default function MyStorePage({ searchParams }: PageProps<"/dashboard">) {
   );
 }
 
+const DAYS = 90;
+const zeros = () => Array.from({ length: DAYS }, () => 0);
+
 async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dashboard">["searchParams"] }) {
   const [{ user, store }, params] = await Promise.all([requireCreator(DASHBOARD_PATH), searchParams]);
   const profile = await getProfile(user.id).catch(() => null);
-  const initialTab: MyStoreTab = params.tab === "design" ? "design" : "products";
+  const tabParam = typeof params.tab === "string" ? params.tab : "";
+  const initialTab: MyStoreTab = (MY_STORE_TABS as readonly string[]).includes(tabParam) ? (tabParam as MyStoreTab) : "products";
 
-  // Products arrive in R3; until then a store has none.
+  // Products arrive in R3 and orders in R5/R6; until then the counts and series are real zeros.
   const productCount: number = 0;
+  const series: KpiSeries = { revenueCents: zeros(), orders: zeros(), customers: zeros() };
 
   const checklist = buildChecklist({
     bio: store.bio,
@@ -42,106 +53,122 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
     productCount,
   });
   const name = firstName(profile?.fullName) ?? store.name;
+  const link = storeLink(store.slug);
+  const preview = {
+    slug: store.slug,
+    name: store.name,
+    bio: store.bio ?? "",
+    avatarUrl: store.avatarUrl ?? "",
+    socialLinks: store.socialLinks,
+  };
 
   return (
-    <>
-      <div className="flex flex-col gap-1">
-        <h1 className="font-display text-h1 break-words">Welcome, {name}</h1>
-        <p className="text-mute">
-          {checklist.next ? "A few steps and your store is ready to sell." : "Your store is live. Here is how it is doing."}
-        </p>
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="flex min-w-0 flex-col gap-6">
+        <WelcomeHero name={name} storeUrl={`https://${link}`} ready={!checklist.next} />
+
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+          <StoreLinkCard link={link} isPublished={store.isPublished} />
+          <ChecklistCard {...checklist} />
+        </div>
+
+        <KpiSection currency={store.currency} series={series} />
+
+        <MyStoreTabs
+          initialTab={initialTab}
+          productCount={productCount}
+          products={<ProductsEmpty />}
+          design={<PageDesignForm initial={{ themePreset: store.theme.preset, accent: store.theme.accent }} preview={preview} />}
+          links={<LinksTab links={store.socialLinks} />}
+          analytics={<AnalyticsTab isPublished={store.isPublished} />}
+        />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-        <StoreLinkCard link={storeLink(store.slug)} isPublished={store.isPublished} />
-        {checklist.next && <ChecklistCard {...checklist} />}
-      </div>
-
-      <KpiCards currency={store.currency} />
-
-      <MyStoreTabs
-        initialTab={initialTab}
-        products={
-          productCount === 0 ? (
-            <EmptyState icon={PackageOpen} title="No products yet" action={<Badge variant="soon">Adding products is coming next</Badge>}>
-              Add a digital download or a link to start selling.
-            </EmptyState>
-          ) : (
-            <p className="text-mute">
-              You have {productCount} {productCount === 1 ? "product" : "products"}. The product list is coming next.
-            </p>
-          )
-        }
-        design={
-          <PageDesignForm
-            initial={{ themePreset: store.theme.preset, accent: store.theme.accent }}
-            preview={{
-              slug: store.slug,
-              name: store.name,
-              bio: store.bio ?? "",
-              avatarUrl: store.avatarUrl ?? "",
-              socialLinks: store.socialLinks,
-            }}
-          />
-        }
-      />
-    </>
+      <aside aria-label="Store preview and help" className="flex flex-col gap-6 xl:sticky xl:top-22 xl:self-start">
+        <StorePreviewCard data={{ ...preview, themePreset: store.theme.preset, accent: store.theme.accent }} isPublished={store.isPublished} />
+        <HelpCard />
+      </aside>
+    </div>
   );
 }
 
-/** Example KPI cards (DESIGN.md 10.2): labelled until real sales data exists (R6). */
-function KpiCards({ currency }: { currency: Currency }) {
-  const zero = new Intl.NumberFormat("en", { style: "currency", currency: currency.toUpperCase() }).format(0);
-  const cards: { label: string; value: string; icon: LucideIcon }[] = [
-    { label: "Revenue", value: zero, icon: Wallet },
-    { label: "Orders", value: "0", icon: ShoppingBag },
-    { label: "Customers", value: "0", icon: Users },
-  ];
-
+function LinksTab({ links }: { links: SocialLink[] }) {
   return (
-    <section aria-labelledby="kpi-title" className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="kpi-title" className="font-display text-h3">
-          Last 30 days
-        </h2>
-        <Badge variant="example">Example layout</Badge>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h3 className="font-display text-h4">Social links</h3>
+          <p className="text-sm text-mute">Shown as icons under your name on your store page.</p>
+        </div>
+        <Button asChild variant="secondary" size="sm" className="h-10">
+          <Link href="/dashboard/settings">
+            <Pencil aria-hidden="true" className="size-4" />
+            Edit links
+          </Link>
+        </Button>
       </div>
-      <ul className="grid gap-3 sm:grid-cols-3">
-        {cards.map(({ label, value, icon: Icon }) => (
-          <li key={label}>
-            <Card className="gap-3 p-5 sm:p-5">
-              <p className="flex items-center gap-2 text-sm font-medium text-mute">
-                <Icon aria-hidden="true" className="size-4" />
-                {label}
-              </p>
-              <p className="font-display text-money-l text-ink tabular-nums">{value}</p>
-            </Card>
-          </li>
-        ))}
-      </ul>
-      <p className="text-sm text-mute">
-        Real numbers appear after your first sale, in {CURRENCY_LABELS[currency]}. Pickstall takes 0% of your sales; Stripe&apos;s card
-        processing fees still apply.
+      {links.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 rounded-md border border-dashed border-line px-4 py-8 text-center">
+          <Link2 aria-hidden="true" className="size-6 text-mute" />
+          <p className="font-semibold">No links yet</p>
+          <p className="text-sm text-mute">Add Instagram, YouTube, X or your website so buyers can find you.</p>
+        </div>
+      ) : (
+        <ul className="divide-y divide-line rounded-md border border-line">
+          {links.map((item, index) => {
+            const Icon = SOCIAL_ICONS[item.kind];
+            return (
+              <li key={`${item.kind}-${index}`} className="flex items-center gap-3 px-4 py-3">
+                <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-bg-subtle text-ink">
+                  <Icon className="size-4" />
+                </span>
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-sm font-semibold">{SOCIAL_LINK_LABELS[item.kind]}</span>
+                  <span className="truncate text-sm text-mute">{item.url}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function AnalyticsTab({ isPublished }: { isPublished: boolean }) {
+  return (
+    <div className="flex flex-col items-center gap-2 py-6 text-center">
+      <span aria-hidden="true" className="flex size-14 items-center justify-center rounded-full bg-violet-soft text-violet">
+        <BarChart3 className="size-7" />
+      </span>
+      <h3 className="font-display text-h3">No visits yet</h3>
+      <p className="max-w-sm text-mute">
+        {isPublished
+          ? "Store views, clicks and sales show up here as soon as people visit your link."
+          : "Publish your store and share your link. Views, clicks and sales show up here."}
       </p>
-    </section>
+    </div>
   );
 }
 
 function MyStoreSkeleton() {
   return (
-    <div role="status" aria-live="polite" className="flex flex-col gap-6">
+    <div role="status" aria-live="polite" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <span className="sr-only">Loading your store</span>
-      <Skeleton className="h-9 w-72" />
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Skeleton className="h-44 w-full rounded-lg" />
+      <div className="flex flex-col gap-6">
+        <Skeleton className="h-48 w-full rounded-lg" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Skeleton className="h-56 w-full rounded-lg" />
+          <Skeleton className="h-80 w-full rounded-lg" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Skeleton className="h-24 w-full rounded-lg" />
+          <Skeleton className="h-24 w-full rounded-lg" />
+          <Skeleton className="h-24 w-full rounded-lg" />
+        </div>
         <Skeleton className="h-72 w-full rounded-lg" />
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Skeleton className="h-28 w-full rounded-lg" />
-        <Skeleton className="h-28 w-full rounded-lg" />
-        <Skeleton className="h-28 w-full rounded-lg" />
-      </div>
-      <Skeleton className="h-64 w-full rounded-lg" />
+      <Skeleton className="hidden h-[640px] w-full rounded-lg xl:block" />
     </div>
   );
 }

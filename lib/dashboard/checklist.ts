@@ -39,8 +39,8 @@ export function buildChecklist(input: ChecklistInput): {
   const items: ChecklistItem[] = [
     {
       id: "store-setup",
-      label: "Store setup",
-      description: "Add your photo, a short bio and your social links.",
+      label: "Set up your store",
+      description: "Add your photo, bio and social links.",
       // Done once the creator has personalized the store: a photo or a bio.
       done: Boolean(input.avatarUrl || input.bio?.trim()),
       available: AVAILABLE["store-setup"],
@@ -49,7 +49,7 @@ export function buildChecklist(input: ChecklistInput): {
     {
       id: "first-product",
       label: "Add your first product",
-      description: "Sell a digital download or a link.",
+      description: "Sell a digital download, a link or a service.",
       done: input.productCount > 0,
       available: AVAILABLE["first-product"],
       href: "/dashboard/products/new",

@@ -2,6 +2,9 @@
 
 export const APP_NAME = "Pickstall";
 
+/** Where creators reach a person for help. Founder: confirm this mailbox exists before launch. */
+export const SUPPORT_EMAIL = "support@pickstall.store";
+
 /** Shown under the logo on auth pages. */
 export const APP_TAGLINE = "Creator Store Platform";
 
@@ -18,6 +21,12 @@ export const OTP_LENGTH = 6;
 export const OTP_RESEND_COOLDOWN_SECONDS = 30;
 /** How long an emailed sign-in code stays valid. */
 export const OTP_TTL_SECONDS = 600;
+
+/**
+ * How long Better Auth trusts the signed session cookie before checking the database again
+ * (lib/auth/auth.ts). Shorter = a session ended elsewhere stops sooner; longer = fewer DB trips.
+ */
+export const SESSION_COOKIE_CACHE_SECONDS = 5 * 60;
 
 /** Sign-in code emails per email address and per IP address, in a 15-minute window. */
 export const SEND_CODE_RATE_LIMITS = {

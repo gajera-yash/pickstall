@@ -1,23 +1,31 @@
-import { CheckCircle2, ChevronRight, Circle } from "lucide-react";
+import { CheckCircle2, ChevronRight, Circle, CreditCard, ImageIcon, Package, Rocket, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import type { ChecklistItem } from "@/lib/dashboard/checklist";
+import type { ChecklistItem, ChecklistItemId } from "@/lib/dashboard/checklist";
 import { cn } from "@/lib/utils";
 
+const STEP_ICONS: Record<ChecklistItemId, LucideIcon> = {
+  "store-setup": ImageIcon,
+  "first-product": Package,
+  "connect-payments": CreditCard,
+  publish: Rocket,
+};
+
 /**
- * First-run checklist (DESIGN.md 10.8): "Get started", a progress bar with "1 of 4 done", four rows
- * with a status icon, a one-line description and a chevron. Done rows show a mint check, the next
- * step is highlighted. Steps whose screen is not built yet say "Coming next" instead of linking.
+ * First-run checklist (DESIGN.md 10.8, reference docs/ui-reference/dashboard.webp): "Get started",
+ * "1 of 4 completed" with a progress bar, then one row per step with a status circle, a step icon,
+ * the title, one line of help and a chevron. The next step is highlighted; done steps get a mint
+ * check. Steps whose screen is not built yet say "Coming next" instead of linking.
  */
 export function ChecklistCard({ items, next, doneCount }: { items: ChecklistItem[]; next: ChecklistItem | null; doneCount: number }) {
-  const progressText = `${doneCount} of ${items.length} done`;
+  const progressText = `${doneCount} of ${items.length} completed`;
 
   return (
     <Card className="gap-4">
-      <section aria-labelledby="checklist-title" className="flex flex-col gap-4">
+      <section id="get-started" aria-labelledby="checklist-title" className="flex scroll-mt-24 flex-col gap-4">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 id="checklist-title" className="font-display text-h3">
@@ -31,6 +39,7 @@ export function ChecklistCard({ items, next, doneCount }: { items: ChecklistItem
         <ol className="flex flex-col gap-1">
           {items.map((item) => {
             const isNext = next?.id === item.id;
+            const StepIcon = STEP_ICONS[item.id];
             const content = (
               <>
                 {item.done ? (
@@ -38,6 +47,7 @@ export function ChecklistCard({ items, next, doneCount }: { items: ChecklistItem
                 ) : (
                   <Circle aria-hidden="true" className={cn("size-5 shrink-0", isNext ? "text-blue" : "text-mute")} />
                 )}
+                <StepIcon aria-hidden="true" className={cn("size-5 shrink-0", item.done ? "text-mute" : "text-ink")} />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className={cn("flex flex-wrap items-center gap-2 font-semibold", item.done && "text-mute line-through decoration-1")}>
                     {item.label}
@@ -48,7 +58,7 @@ export function ChecklistCard({ items, next, doneCount }: { items: ChecklistItem
                 </span>
               </>
             );
-            const rowClass = cn("flex min-h-14 items-center gap-3 rounded-md px-3 py-2.5", isNext && "bg-blue-soft");
+            const rowClass = cn("flex min-h-16 items-center gap-3 rounded-md px-3 py-2.5", isNext && "bg-blue-soft");
 
             return (
               <li key={item.id}>
@@ -58,7 +68,10 @@ export function ChecklistCard({ items, next, doneCount }: { items: ChecklistItem
                     <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-mute" />
                   </Link>
                 ) : (
-                  <div className={rowClass}>{content}</div>
+                  <div className={rowClass}>
+                    {content}
+                    {!item.done && <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-mute/40" />}
+                  </div>
                 )}
               </li>
             );

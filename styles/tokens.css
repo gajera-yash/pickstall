@@ -39,6 +39,10 @@
   --mint: #0a7a53;
   --mint-soft: #e3f6ee;
 
+  /* Third data color (orders KPI, charts) next to blue and mint (D-029). Icons and lines only. */
+  --violet: #6d3fd8;
+  --violet-soft: #f1ebff;
+
   /* Errors and destructive actions. --on-danger is not in DESIGN.md section 3: white fails
      contrast on the dark-mode danger color, so text on --danger needs its own token. */
   --danger: #c42020;
