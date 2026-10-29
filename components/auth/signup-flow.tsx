@@ -6,6 +6,7 @@ import { useActionState, useEffect, useState } from "react";
 
 import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
 import { CodeStep } from "@/components/auth/code-step";
+import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { PhoneField } from "@/components/auth/phone-field";
 import { useResendCooldown } from "@/components/auth/use-resend-cooldown";
 import { UsernameField } from "@/components/auth/username-field";
@@ -26,7 +27,8 @@ type FieldName = "username" | "fullName" | "email";
  * Signup steps 1 and 2: details, then the email code (shared CodeStep). After the code the user
  * gets a draft store and goes straight to /dashboard. Fields are controlled so an error never clears what was typed.
  */
-export function SignupFlow() {
+/** `googleNext` is where Google sends a returning user; null hides the Google button. */
+export function SignupFlow({ googleNext }: { googleNext: string | null }) {
   const [state, action, pending] = useActionState<SignupState, FormData>(startSignup, null);
   const cooldown = useResendCooldown();
 
@@ -137,6 +139,8 @@ export function SignupFlow() {
               <ArrowRight aria-hidden="true" className="size-5" />
             </Button>
           </form>
+
+          {googleNext && <GoogleSignIn next={googleNext} />}
         </>
       )}
     </AuthShell>

@@ -1,71 +1,70 @@
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, ChevronRight, Circle } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import type { ChecklistItem } from "@/lib/dashboard/checklist";
+import { cn } from "@/lib/utils";
 
 /**
- * First-run checklist (DESIGN.md 10.8): each step shows done or not done with an icon and text;
- * the one primary action is the next step that is not done. Steps whose screen is not built yet
- * say so plainly instead of linking somewhere empty.
+ * First-run checklist (DESIGN.md 10.8): "Get started", a progress bar with "1 of 4 done", four rows
+ * with a status icon, a one-line description and a chevron. Done rows show a mint check, the next
+ * step is highlighted. Steps whose screen is not built yet say "Coming next" instead of linking.
  */
-export function ChecklistCard({
-  items,
-  next,
-  doneCount,
-}: {
-  items: ChecklistItem[];
-  next: ChecklistItem | null;
-  doneCount: number;
-}) {
+export function ChecklistCard({ items, next, doneCount }: { items: ChecklistItem[]; next: ChecklistItem | null; doneCount: number }) {
+  const progressText = `${doneCount} of ${items.length} done`;
+
   return (
-    <section aria-labelledby="checklist-title" className="flex flex-col gap-4 rounded-lg border border-border-ui p-5 sm:p-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="checklist-title" className="font-display text-h2">
-          Get your store ready
-        </h2>
-        <p className="text-sm text-mute">
-          {doneCount} of {items.length} done
-        </p>
-      </div>
+    <Card className="gap-4">
+      <section aria-labelledby="checklist-title" className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="checklist-title" className="font-display text-h3">
+              Get started
+            </h2>
+            <p className="text-sm font-medium text-mute">{progressText}</p>
+          </div>
+          <Progress value={doneCount} max={items.length} aria-label="Setup progress" aria-valuetext={progressText} />
+        </div>
 
-      <ol className="flex flex-col divide-y divide-line">
-        {items.map((item) => (
-          <li key={item.id} className="flex items-start gap-3 py-3">
-            {item.done ? (
-              <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-mint" />
-            ) : (
-              <Circle aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-mute" />
-            )}
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <p className="flex flex-wrap items-center gap-2 font-semibold">
-                {item.label}
-                <span className="sr-only">{item.done ? "(done)" : "(not done)"}</span>
-                {!item.done && !item.available && <Badge variant="soon">Coming next</Badge>}
-              </p>
-              <p className="text-sm text-mute">{item.description}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
+        <ol className="flex flex-col gap-1">
+          {items.map((item) => {
+            const isNext = next?.id === item.id;
+            const content = (
+              <>
+                {item.done ? (
+                  <CheckCircle2 aria-hidden="true" className="size-5 shrink-0 fill-mint text-surface" />
+                ) : (
+                  <Circle aria-hidden="true" className={cn("size-5 shrink-0", isNext ? "text-blue" : "text-mute")} />
+                )}
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className={cn("flex flex-wrap items-center gap-2 font-semibold", item.done && "text-mute line-through decoration-1")}>
+                    {item.label}
+                    <span className="sr-only">{item.done ? "(done)" : isNext ? "(next step)" : "(not done)"}</span>
+                    {!item.done && !item.available && <Badge variant="soon">Coming next</Badge>}
+                  </span>
+                  <span className="text-sm text-mute">{item.description}</span>
+                </span>
+              </>
+            );
+            const rowClass = cn("flex min-h-14 items-center gap-3 rounded-md px-3 py-2.5", isNext && "bg-blue-soft");
 
-      {next ? (
-        next.available ? (
-          <Button asChild size="lg" className="self-start">
-            <Link href={next.href}>{next.label}</Link>
-          </Button>
-        ) : (
-          <p className="text-sm text-mute">
-            Next: <strong className="font-semibold text-ink">{next.label}</strong>. This screen is coming in the next build.
-          </p>
-        )
-      ) : (
-        <p className="flex items-center gap-2 text-sm font-medium text-mint">
-          <CheckCircle2 aria-hidden="true" className="size-4" />
-          Your store is ready and live.
-        </p>
-      )}
-    </section>
+            return (
+              <li key={item.id}>
+                {item.available && !item.done ? (
+                  <Link href={item.href} className={cn(rowClass, "transition-colors duration-(--dur-fast)", !isNext && "hover:bg-bg-subtle")}>
+                    {content}
+                    <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-mute" />
+                  </Link>
+                ) : (
+                  <div className={rowClass}>{content}</div>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+    </Card>
   );
 }

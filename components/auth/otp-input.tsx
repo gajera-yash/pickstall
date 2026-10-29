@@ -78,7 +78,7 @@ export function OtpInput({ value, onChange, labelledBy, describedBy, invalid, di
           onKeyDown={(event) => onKeyDown(index, event)}
           onPaste={(event) => onPaste(index, event)}
           className={cn(
-            "size-12 min-w-0 rounded-sm border border-input bg-surface text-center font-display text-h3 font-bold text-ink tabular-nums sm:size-14",
+            "size-12 min-w-0 rounded-md border border-input bg-surface text-center font-display text-h3 font-bold text-ink tabular-nums sm:size-14",
             "transition-colors duration-(--dur-fast) focus-visible:border-blue",
             "disabled:cursor-not-allowed disabled:opacity-50",
             value[index] && "border-blue bg-blue-soft",

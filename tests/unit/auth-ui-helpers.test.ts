@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { enterCodeDigits, eraseCodeDigit } from "@/lib/auth/code";
-import { composePhone, regionFromLocale } from "@/lib/phone";
+import { composePhone, countryFromLocale, phoneCountryOptions } from "@/lib/phone";
 import { slugSchema, usernameCandidates } from "@/lib/slug";
 
 describe("enterCodeDigits", () => {
@@ -69,15 +69,29 @@ describe("composePhone", () => {
   });
 });
 
-describe("regionFromLocale", () => {
+describe("countryFromLocale", () => {
   it("reads the region of a listed country", () => {
-    expect(regionFromLocale("en-IN")).toBe("IN");
-    expect(regionFromLocale("en_GB")).toBe("GB");
+    expect(countryFromLocale("en-IN")).toBe("IN");
+    expect(countryFromLocale("en_GB")).toBe("GB");
+  });
+
+  it("reads any country, not only a short list", () => {
+    expect(countryFromLocale("fr-SN")).toBe("SN");
   });
 
   it("falls back to the US", () => {
-    expect(regionFromLocale("en")).toBe("US");
-    expect(regionFromLocale("xx-ZZ")).toBe("US");
-    expect(regionFromLocale(undefined)).toBe("US");
+    expect(countryFromLocale("en")).toBe("US");
+    expect(countryFromLocale("xx-ZZ")).toBe("US");
+    expect(countryFromLocale(undefined)).toBe("US");
+  });
+});
+
+describe("phoneCountryOptions", () => {
+  it("lists every country with its dial code, sorted by name", () => {
+    const options = phoneCountryOptions();
+    expect(options.length).toBeGreaterThan(200);
+    expect(options.find((option) => option.country === "IN")).toEqual({ country: "IN", dial: "91", name: "India" });
+    const names = options.map((option) => option.name);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, "en")));
   });
 });

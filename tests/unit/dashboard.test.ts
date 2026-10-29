@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { buildChecklist, type ChecklistInput } from "@/lib/dashboard/checklist";
-import { DASHBOARD_SECTIONS, isSectionActive } from "@/lib/dashboard/nav";
+import { firstName } from "@/lib/dashboard/greeting";
+import { DASHBOARD_SECTIONS, SETTINGS_SECTIONS, breadcrumbFor, isSectionActive, isSettingsSectionActive } from "@/lib/dashboard/nav";
 
 const fresh: ChecklistInput = { bio: null, avatarUrl: null, chargesEnabled: false, isPublished: false, productCount: 0 };
 
@@ -13,7 +14,7 @@ describe("dashboard sections (D-011)", () => {
   it.each([
     ["/dashboard", "/dashboard", true],
     ["/dashboard/products/abc", "/dashboard", true],
-    ["/dashboard/store", "/dashboard", true],
+    ["/dashboard/settings", "/dashboard", false],
     ["/dashboard/income", "/dashboard", false],
     ["/dashboard/income", "/dashboard/income", true],
     ["/dashboard/customers/123", "/dashboard/customers", true],
@@ -27,7 +28,7 @@ describe("dashboard sections (D-011)", () => {
 describe("first-run checklist (D-009)", () => {
   it("lists the four steps in order, none done for a new draft store", () => {
     const { items, next, doneCount } = buildChecklist(fresh);
-    expect(items.map((item) => item.label)).toEqual(["Store setup", "Add first product", "Connect payments", "Publish"]);
+    expect(items.map((item) => item.label)).toEqual(["Store setup", "Add your first product", "Connect payments", "Publish your store"]);
     expect(doneCount).toBe(0);
     expect(next?.id).toBe("store-setup");
   });
@@ -48,5 +49,51 @@ describe("first-run checklist (D-009)", () => {
     const all = buildChecklist({ bio: "Hi", avatarUrl: null, chargesEnabled: true, isPublished: true, productCount: 1 });
     expect(all.next).toBeNull();
     expect(all.doneCount).toBe(4);
+  });
+});
+
+describe("settings sub-nav and breadcrumb (D-028)", () => {
+  it("has Store, Payments and Account, with Store as the Settings root", () => {
+    expect(SETTINGS_SECTIONS.map((section) => [section.label, section.href])).toEqual([
+      ["Store", "/dashboard/settings"],
+      ["Payments", "/dashboard/settings/payments"],
+      ["Account", "/dashboard/settings/account"],
+    ]);
+  });
+
+  it.each([
+    ["/dashboard/settings", "/dashboard/settings", true],
+    ["/dashboard/settings/payments", "/dashboard/settings", false],
+    ["/dashboard/settings/payments", "/dashboard/settings/payments", true],
+    ["/dashboard/settings/account", "/dashboard/settings/account", true],
+  ])("%s marks %s active: %s", (pathname, href, expected) => {
+    expect(isSettingsSectionActive(pathname, href)).toBe(expected);
+  });
+
+  it.each([
+    ["/dashboard", ["My Store"]],
+    ["/dashboard/income", ["Income"]],
+    ["/dashboard/settings", ["Settings", "Store"]],
+    ["/dashboard/settings/account", ["Settings", "Account"]],
+    ["/dashboard/unknown", ["My Store"]],
+  ])("breadcrumb for %s", (pathname, labels) => {
+    expect(breadcrumbFor(pathname).map((crumb) => crumb.label)).toEqual(labels);
+  });
+
+  it("links the checklist steps to the screens that exist", () => {
+    const { items } = buildChecklist(fresh);
+    expect(items.find((item) => item.id === "store-setup")?.href).toBe("/dashboard/settings");
+    expect(items.find((item) => item.id === "connect-payments")?.href).toBe("/dashboard/settings/payments");
+  });
+});
+
+describe("firstName", () => {
+  it.each([
+    ["Maya Patel", "Maya"],
+    ["  Sam  ", "Sam"],
+    ["", null],
+    [null, null],
+  ])("%s -> %s", (input, expected) => {
+    expect(firstName(input)).toBe(expected);
   });
 });

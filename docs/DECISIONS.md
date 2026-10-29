@@ -4,6 +4,23 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-028: R1 design decisions: logo colors stay, one-page dashboard home, mobile bottom bar
+- **Date:** 2026-10-29
+- **Decision** (founder answers to `docs/AUDIT_R0.md` C1, C5, C6):
+  - **C1, logo colors stay.** Blue `#0056FF` (hover `#0047D9`, pressed `#003BB5`, soft `#E6EEFF`), yellow `#FFC400`, Clean preset accent `#0056FF`. `DESIGN.md` sections 3, 3.1, 11 and 16 now follow the code. Every other DESIGN v2 token fix applies: `--border-ui` is renamed `--border-input` (`#7A8099`), `--line` (= DESIGN `--border`) is `#E5E7EB`, `--bg-subtle` `#F7F8FA`, `--mute` `#5B6078`, radii 8/12/16, `--shadow-popover`, shadcn `--muted` = `--bg-subtle`, `--accent` = `--blue-soft`, `--border` = `--line`, Body 15 px, inputs 44 px with 16 px text (no zoom on phones). The auth card from D-026 stays.
+  - **C5, dashboard home is one page at `/dashboard`.** Greeting, store-link card with Copy, first-run checklist with a progress bar, KPI cards labelled "Example layout", then the tabs *Products* and *Page design*. No fifth nav item. Page design (theme and accent) is edited in that tab; Store setup is Settings > Store (`/dashboard/settings`, the Settings root; `/dashboard/store` redirects there) and keeps the profile: name, photo, bio, social links, currency and the username. Settings > Payments and Settings > Account are `/dashboard/settings/payments` and `/dashboard/settings/account`.
+  - **C6, mobile keeps the bottom tab bar** (D-023) instead of a sheet; written into `DESIGN.md` section 5.
+  - R1 defaults the founder approved: social links are a list of `{ kind, url }` (website, instagram, youtube, tiktok, x, linkedin, facebook; max 6; https only) that replaces the single `link` field (migration `scripts/migrations/2026-10-29-store-social-links.mjs`, run by the founder); a username can be changed 3 times per 24 hours, the old link stops working at once, and the unique index on `stores.slug` is the only authority.
+- **Why:** founder decisions, 2026-10-29.
+- **Supersedes:** the `--accent` workaround in D-027 (the command list now uses `--accent`, which is `--blue-soft`).
+
+## D-027: Searchable country picker for the phone field
+- **Date:** 2026-10-29
+- **Decision:** the phone field's country code is a searchable dropdown (founder sketch): a trigger with the flag, dial code and chevron opens a shadcn `Popover` + `Command` list with a search box, flags, country names and codes. Search matches the name, ISO code or dial code; names that start with the search rank first. Picking a country moves focus to the number field.
+  - New dependencies (founder asked for shadcn components and the full list): `cmdk` (shadcn Command), `libphonenumber-js` (every country, dial codes, and real per-country validation on the server in `optionalPhoneSchema`), `country-flag-icons` (SVG flags; DESIGN.md forbids emoji icons).
+  - `components/ui/popover.tsx` and `components/ui/command.tsx` come from shadcn/ui, restyled with our tokens (the highlighted row is `--blue-soft`, because shadcn's `--accent` maps to yellow here).
+- **Why:** founder request with a dropdown sketch, 2026-10-29.
+
 ## D-026: Logo colors, auth card and the live username check
 - **Date:** 2026-10-28
 - **Decision:**

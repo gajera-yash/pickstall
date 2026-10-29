@@ -27,7 +27,7 @@ export async function createDraftStore(ownerId: string, username: string, name: 
       name: storeName,
       bio: null,
       avatarUrl: null,
-      link: null,
+      socialLinks: [],
       theme: { ...DEFAULT_THEME },
       currency: DEFAULT_CURRENCY,
       stripeAccountId: null,

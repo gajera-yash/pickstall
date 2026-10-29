@@ -10,8 +10,8 @@ import { cn } from "@/lib/utils";
 const ICONS: Record<DashboardSectionId, LucideIcon> = { store: Store, income: Wallet, customers: Users, settings: Settings };
 
 /**
- * DESIGN.md 5.3 and 9.8: a sidebar on desktop, a bottom tab bar on mobile (4 items).
- * Active item: blue-soft background, ink text, a 3px blue bar, and aria-current.
+ * DESIGN.md 5 and 9.8: a sidebar on desktop, a bottom tab bar on mobile (4 items, D-023).
+ * Sidebar items are 40px; active = blue-soft background, ink text, medium weight, aria-current.
  */
 export function DashboardNav({ variant }: { variant: "sidebar" | "bottom" }) {
   const pathname = usePathname();
@@ -32,8 +32,8 @@ export function DashboardNav({ variant }: { variant: "sidebar" | "bottom" }) {
                   href={section.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-semibold",
-                    active ? "text-blue" : "text-mute",
+                    "relative flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-semibold",
+                    active ? "text-blue before:absolute before:inset-x-6 before:top-0 before:h-0.5 before:rounded-full before:bg-blue" : "text-mute",
                   )}
                 >
                   <Icon aria-hidden="true" className="size-6" />
@@ -59,13 +59,11 @@ export function DashboardNav({ variant }: { variant: "sidebar" | "bottom" }) {
                 href={section.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "relative flex h-11 items-center gap-3 rounded-md px-3 text-base font-medium",
-                  active
-                    ? "bg-blue-soft text-ink before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-blue"
-                    : "text-mute hover:bg-blue-soft hover:text-ink",
+                  "flex h-10 items-center gap-3 rounded-md px-3 text-base font-medium transition-colors duration-(--dur-fast)",
+                  active ? "bg-blue-soft text-ink" : "text-mute hover:bg-bg-subtle hover:text-ink",
                 )}
               >
-                <Icon aria-hidden="true" className="size-5" />
+                <Icon aria-hidden="true" className={cn("size-5", active && "text-blue")} />
                 {section.label}
               </Link>
             </li>

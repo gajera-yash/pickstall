@@ -8,9 +8,10 @@ const badgeVariants = cva("inline-flex items-center gap-1 rounded-full px-2.5 py
   variants: {
     variant: {
       live: "bg-mint-soft text-mint",
-      draft: "bg-blue-soft text-ink",
+      draft: "bg-bg-subtle text-mute",
       soon: "bg-yellow text-on-yellow",
-      example: "border border-line text-mute",
+      example: "border border-line bg-bg-subtle text-mute",
+      testMode: "bg-yellow-soft text-warning",
     },
   },
   defaultVariants: { variant: "draft" },

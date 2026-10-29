@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { E164_PATTERN, normalizePhone, optionalPhoneSchema } from "@/lib/phone";
+import { E164_PATTERN, normalizePhone, optionalPhoneSchema, splitPhone } from "@/lib/phone";
 
 describe("normalizePhone", () => {
   it.each([
@@ -40,5 +40,18 @@ describe("optionalPhoneSchema", () => {
 
   it("matches the pattern used by the database check", () => {
     expect(E164_PATTERN.source).toBe("^\\+[1-9]\\d{6,14}$");
+  });
+});
+
+describe("splitPhone", () => {
+  it("splits a saved number into the picker's country and the national number", () => {
+    expect(splitPhone("+919876543210")).toEqual({ country: "IN", national: "9876543210" });
+    expect(splitPhone("+14155552671")).toEqual({ country: "US", national: "4155552671" });
+  });
+
+  it("returns null for nothing or garbage", () => {
+    expect(splitPhone(null)).toBeNull();
+    expect(splitPhone("")).toBeNull();
+    expect(splitPhone("not a phone")).toBeNull();
   });
 });

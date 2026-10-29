@@ -15,7 +15,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 export async function saveProfile(
   userId: string,
   email: string,
-  changes: { fullName?: string; phone?: string },
+  changes: { fullName?: string; phone?: string | null },
 ): Promise<void> {
   const { profiles } = await collections();
   const now = new Date();

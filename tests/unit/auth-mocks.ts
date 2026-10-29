@@ -38,10 +38,15 @@ const hoisted = vi.hoisted(() => {
 
   const intents = { saveSignupIntent: vi.fn(), takeSignupIntent: vi.fn() };
   const draftStore = { createDraftStore: vi.fn() };
-  const storeQueries = { findStoreByOwner: vi.fn(), updateStoreSetup: vi.fn() };
+  const storeQueries = {
+    findStoreByOwner: vi.fn(),
+    updateStoreProfile: vi.fn(),
+    updateStorePageDesign: vi.fn(),
+    changeStoreSlug: vi.fn(),
+  };
   const profiles = { getProfile: vi.fn(), saveProfile: vi.fn() };
   const slugs = { isSlugTaken: vi.fn(), findTakenSlugs: vi.fn() };
-  const rateLimit = { takeRateLimit: vi.fn() };
+  const rateLimit = { takeRateLimit: vi.fn(), releaseRateLimit: vi.fn() };
 
   return {
     RedirectSignal,
@@ -128,6 +133,7 @@ vi.mock("@/lib/stores/slug-availability", () => hoisted.slugs);
 vi.mock("@/lib/rate-limit", () => ({
   rateLimitKey: (scope: string, value: string) => `${scope}:${value}`,
   takeRateLimit: hoisted.rateLimit.takeRateLimit,
+  releaseRateLimit: hoisted.rateLimit.releaseRateLimit,
 }));
 
 export const userId = "11111111-1111-4111-8111-111111111111";

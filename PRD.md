@@ -1,573 +1,288 @@
-# PRD: Pickstall
+# PRD: Pickstall (v2.0, final)
 
-> Status: v1.0 | Owner: Founder (solo, vibe-coding with AI tools) | Last updated: 2026-10-22
-> Rename the product by editing `lib/config.ts` (`APP_NAME`, `ROOT_DOMAIN`). Do not hardcode the name anywhere else.
+> Owner: founder (solo, building with Claude Code). Last updated: 2026-10-29.
+> Stack: Next.js + Node.js + MongoDB (Atlas) + AWS. Design system: `DESIGN.md`. Database field-level spec: `docs/DATABASE.md`. Architecture and scaling: `ARCHITECTURE.md`. Working rules: `CLAUDE.md`.
+> **How to use this file:** it describes the whole product and, in section 8, exactly what is still to build. Do not rebuild what already works. First audit the code against this file (section 0), then build the remaining blocks in order.
+
+---
+
+## 0. Current status and instructions for Claude Code
+
+**Done (verify in code, do not rewrite):**
+- MongoDB foundation, repositories, config, env validation.
+- Login (email 6-digit code) and signup (2 steps: details, then email code), draft store created at signup, user lands in `/dashboard`.
+- White theme foundation.
+
+**Remaining (this PRD):** dashboard shell and store setup, files/S3, products (digital) with full customization, public store and product pages at `/@username`, payments (provider layer, MockProvider, Stripe Connect), checkout with creator-defined fields, webhook and orders pipeline, Customers panel, Income, buyer library with secure downloads, emails, security review, AWS deploy. Then Phases 2 to 5.
+
+**First task, before any code:** audit the repo against this PRD and `docs/DATABASE.md`. Report (1) what exists and matches, (2) what exists but differs (names, fields, routes), (3) what is missing, (4) contradictions in the docs. **Existing working code and names win** unless they violate a security rule here; propose changes instead of rewriting. Then wait for approval and build block by block (section 8).
 
 ---
 
 ## 1. Summary
 
-Pickstall combines **Stan Store** (link-in-bio storefront, courses, order bumps/upsells) and **Gumroad** (digital product selling, pay-what-you-want, license keys, memberships, bundles) in one platform for **online course creators and digital-product sellers**. A creator gets a mobile-first link-in-bio storefront, hosts video courses, sells digital downloads, and takes payment through Stripe checkout with coupons and order bumps. There is **no transaction fee**; the platform earns from a low monthly subscription.
+Pickstall is a no-code platform where creators open a mobile-first store at **`pickstall.store/@username`**, sell digital products (and later courses, memberships, coaching calls), take payments in their own payment account, and see their customers and income in one dashboard. **0% transaction fees**: Pickstall never takes a cut of sales; it earns from a flat monthly plan. Stripe's card processing fees still apply to creators.
 
-**One-line positioning:** "Stan Store + Gumroad in one platform: storefront, courses, digital products, coupons and bumps for one low monthly price. 0% transaction fee."
+**Positioning:** "Stan Store + Gumroad in one place. Stan's pro features at a lower price. Everything customizable by the creator."
 
-**Fee comparison hook (verify current Gumroad fees before using in marketing):** Gumroad charges 10% + $0.50 per direct sale (plus card processing). Example: 40 sales of $50 in a month = $200 + $20 = $220 in Gumroad fees, versus a flat $19-39 subscription here.
+**Audience:** course creators and digital-product sellers selling to customers in the US, UK and Canada; creators in other countries can connect where the payment provider supports them.
 
-### 1.1 Target user (ICP)
-- Course creators and coaches located in **tier-1 countries (USA, UK, Canada; Australia later)**.
-- 3k-100k followers, already selling or about to sell at least one course.
-- Currently pays for 2+ tools (link-in-bio store + course platform) or finds Stan's $99 plan expensive.
-- Secondary: digital-product sellers (ebooks, templates, presets, software) who want out of Gumroad's per-sale fee.
+**Principles:** money is the hero (clear, honest fees); mobile-first; one primary action per screen; creators can customize almost everything, within safe limits; honest UI (no fake proof).
 
-### 1.2 Problem
-- Creators stitch together a store, a course host, email and discount tooling, and pay for each separately.
-- Stan locks upsells, funnels, email and affiliates behind its highest plan, and has no custom domain support.
+### 1.1 Goals (first 90 days of beta)
+10 to 15 founding creators onboarded (10 free spots for 6 months, personal setup); 70% publish a store; 40% get a first sale; 5+ paying after the free period; no critical bug open longer than 48 hours.
 
-### 1.3 Goals (first 90 days after beta starts)
-| Goal | Target |
-|---|---|
-| Founding creators onboarded | 10-15 |
-| Creators who publish a store | 70% of onboarded |
-| Creators with at least one real sale | 40% of onboarded |
-| Paying creators after trial | 5+ |
-| Critical bugs open > 48h | 0 |
-
-### 1.4 Non-goals (MVP)
-- No physical products, no marketplace/discovery feed, no mobile app, no community/forum, no live classes, no affiliate payouts, no WhatsApp automation, no multi-language UI.
+### 1.2 Non-goals (Phase 1)
+Courses with video, coupons, order bumps, email marketing, funnels, memberships, bookings, affiliates, community, AutoDM, custom domains, import tools, platform billing, mobile app, multi-language UI, physical products, Merchant of Record, application fees.
 
 ---
 
-## 2. HARD CONSTRAINTS (read before designing anything)
+## 2. HARD CONSTRAINTS
 
-These come from Stripe's reply to the founder's inquiry (founder is India-based). Re-verify with Stripe before launch; they drive the whole payments design.
-
-1. The platform Stripe account is **India-based and invite-only**. Live mode requires an invite granted via Stripe's sales contact form.
-2. Creators connect their own **Standard** connected accounts (OAuth). Customers' money goes **directly to the creator** via **direct charges**.
-3. **NO application fee** on direct charges (not supported for India platform + non-India connected account).
-4. **Do NOT use**: destination charges, separate charges and transfers, standalone transfers, manual payouts to connected accounts, or cross-border payouts. They are unsupported for India platforms.
-5. Platform subscription revenue is collected via **Stripe Billing on the platform account** in USD/GBP/CAD ("export" charges). Payouts to the founder settle in **INR** only.
-6. Consequences:
-   - Pricing model is **subscription only**. No "free plan with a % fee". Use a **14-day free trial**.
-   - **Affiliate payouts cannot be automated.** Affiliates are post-MVP and track-only.
-   - Creators (connected accounts) are responsible for their own KYC, taxes and negative balances.
-7. If the founder later creates a US entity (Stripe Atlas), these restrictions may lift. Isolate payment logic behind `lib/payments/` so the model can change without rewriting features.
-8. **We are NOT a Merchant of Record (unlike Gumroad, which has been MoR since Jan 2025 and handles global sales tax and chargeback liability).** Creators are the seller of record for their own sales and handle their own tax (VAT/GST/sales tax) and disputes through their Standard Stripe accounts. Never promise tax handling in the product or marketing. Show a clear notice in the dashboard (Connect payments step) and Terms. A third-party MoR option is a P2 consideration.
-9. Student memberships/subscriptions as direct charges on a creator's connected account are **unverified** for an India-based platform. Confirm with Stripe before building them (P1).
-10. **Payments must be provider-agnostic.** All payment code sits behind a `PaymentProvider` interface (`createCheckout`, `handleWebhook`, `refund`). Build the **Stripe adapter first**. A **PayPal adapter** (PayPal Commerce Platform / multiparty, requires PayPal approval) is a backup only if Stripe's India invite is delayed. Never leak provider-specific types outside `lib/payments/`.
+1. **Payments:** the founder's payment platform account is India-based. Use Stripe **Connect Standard** (OAuth) with **direct charges** on the creator's connected account. **Never** set an application fee; do not use destination charges, transfers, standalone transfers, manual payouts or cross-border payouts. The India account is invite-only; live mode needs approval. Until then use test mode or the MockProvider.
+2. **Not a Merchant of Record.** Creators are the seller of record: they handle their own tax, VAT/GST and disputes. Never claim tax handling in product or marketing. Creators are the data controllers of their buyers' data (state this in Terms and in the checkout-fields editor).
+3. **Access is granted only by a verified payment webhook**, never by a success redirect.
+4. **Provider-agnostic payments:** all payment code is behind a `PaymentProvider` interface (`createCheckout`, `handleWebhook`, `refund`) inside `lib/payments/`. Adapters: **Stripe** (first), **MockProvider** (development only, hard-disabled when `NODE_ENV=production`), PayPal (later, if approved).
+5. **No Row Level Security on MongoDB:** tenant isolation is enforced by the repository layer (section 5.5). This is a security-critical rule.
+6. **Honesty rules:** no fake testimonials, counts or logos. Demo data is labelled "Example". Every "0%" claim sits near "Stripe's card processing fees still apply". Features not shipped are tagged "Coming soon".
+7. **Subscriptions as direct charges** (memberships) and **installments** are unverified for an India platform: confirm with the provider before building (Phase 4). **Affiliate payouts cannot be automated**; tracking only.
 
 ---
 
-## 3. Personas and user stories
+## 3. Personas
 
-### 3.1 Creator (primary)
-- As a creator, I sign up and get my store live in under 15 minutes.
-- As a creator, I connect my Stripe account so sales go straight to me.
-- As a creator, I upload video lessons, organize them in modules, and set a price.
-- As a creator, I create discount codes and an order bump to raise average order value.
-- As a creator, I see my sales, revenue and student list in one dashboard.
-- As a creator, I get an email when I make a sale.
-
-### 3.2 Buyer / student
-- As a buyer, I open a creator's store on my phone and buy a course in under a minute (Apple Pay / Google Pay / card).
-- As a buyer, I receive an email with a link to my course immediately after paying.
-- As a buyer, I sign in with an email code (no password) and see my library.
-- As a buyer, I watch lessons, resume where I left, and mark lessons complete.
-
-### 3.3 Platform owner (founder)
-- As the owner, I see all creators, plans, trial status and basic usage in an admin page.
+- **Creator:** signs up, sets up a store in minutes, adds products, customizes everything, connects payments, shares one link, sees customers and income.
+- **Buyer:** opens a store link on a phone, buys in under a minute, receives an email, signs in with an email code, downloads from the library.
+- **Owner (founder):** sees creators, plans and basic health in an admin page (later phase).
 
 ---
 
-## 4. MVP feature scope
+## 4. Features
 
-Priority: **P0** = must ship in MVP, **P1** = fast follow (weeks 7-10), **P2** = later.
+Priority: **P0** Phase 1 (build now), **P1** Phase 2-3, **P2** Phase 4-5.
 
-### F1. Auth and signup (P0)
-- Creator signup is **2 steps**: details (username, full name, email, optional phone), then a 6-digit email code, then straight to `/dashboard`. The username is the store slug (unique, `^[a-z0-9-]{3,30}$`). No store setup, activation page or billing steps in signup (D-008).
-- A **draft (unpublished) store is created automatically** at signup, using the username as slug. The link is reserved and the user becomes a creator. The signup details wait server-side in `signup_intents` (30 minutes, bound to the browser that started signup) and the store is created with the user's own session right after the code is verified; client-editable auth metadata is never trusted (D-019). If the username was taken in the meantime, the session is kept and the user chooses another username (D-020).
-- Google sign-in is supported. New Google users get one extra step to choose a username (and an optional phone number).
-- Store setup (name, avatar, bio, currency, theme, accent, link) is a **first-run checklist in the dashboard**: Store setup, Add first product, Connect payments, Publish (D-009, F8).
-- Buyer auth: email OTP only. Buyers **never use signup**; they sign in with an email code at checkout or on the library page, and the account is created automatically after purchase.
-- **Acceptance:** a new creator reaches the dashboard with a reserved link in under 2 minutes and a published (empty) store page in under 5; usernames are validated server-side; reserved slugs (`app`, `www`, `api`, `admin`, `login`, `s`, etc.) are rejected; the sign-in response is the same whether or not the email has an account.
+### F1. Auth and signup (DONE, verify) (P0)
+- Signup: step 1 details (username, full name, email, optional phone) stored server-side in `signup_intents` (TTL 30 min); step 2 six-digit email code; on success create the user and the **draft (unpublished) store** (slug = username, name = full name, currency USD) and go to `/dashboard`.
+- Login: email code. Same response whether or not the email exists. Resend cooldown 30 s; 5 wrong attempts lock the code.
+- Google sign-in: new Google users choose a username (optional phone) before the draft store is created. If not yet built, add it in block R1.
+- Buyers use the same email-code sign-in at checkout and in `/library`; they never see the signup page.
+- If the username is taken at creation time, keep the verified session and send the user to "Choose another username". The unique index on `stores.slug` is the final authority.
+- **Acceptance:** username validated server-side (`^[a-z0-9-]{3,30}$`, reserved list rejected); no account enumeration; sessions are `httpOnly`, `Secure`, `SameSite=Lax`.
 
-### F2. Storefront (P0)
-- Public page at `{ROOT_DOMAIN}/@username` (production domain `pickstall.store`); product pages at `/@username/product-slug`. Path-based on one domain, no subdomains (D-010). `/@username` is a `next.config` rewrite to `/s/:username`. Custom domains (Phase 3) map a host to a store.
-- Sections: avatar + name + bio, social links, product cards (cover, title, price, CTA), optional email-capture block (P1).
-- 3 theme presets (Clean, Bold, Soft) with an accent color that is checked for contrast (`DESIGN.md` section 11). The creator also sets name, photo, bio and links (D-013). Mobile-first, passes Lighthouse performance and accessibility >= 90.
-- SEO: title, description, Open Graph image, canonical URL, sitemap.
-- **Acceptance:** store renders server-side, loads under 2.5s LCP on 4G, and works at 360px width.
+### F2. Storefront at `/@username` (P0)
+- Public URL `pickstall.store/@username` (path-based, one domain). Implement with `next.config` rewrites from `/@:username` to an internal route (an `app/@...` folder is a parallel route in Next.js and cannot be used).
+- Content: avatar, name, bio, social links, product cards (cover, title, price, **creator-defined button text**), footer "Powered by Pickstall".
+- Themes: Clean, Bold, Soft + accent color with a contrast guard (see `DESIGN.md` section 11). Draft stores are not publicly visible (404 for the public; owner sees a preview banner).
+- Server-rendered and cached (static generation with on-demand revalidation when the creator edits); only public fields exposed (never payment account ids).
+- **Acceptance:** loads under 2.5 s LCP on 4G at 360 px; unpublished store returns 404 to the public; theme and button text render exactly as configured.
 
-### F3. Course hosting (P0)
-- Course = ordered modules, each with ordered lessons.
-- Lesson types: video (Mux direct upload), text/markdown, downloadable attachment (P1).
-- Draft/published state per course and per lesson; free preview lessons; drip by days (P1).
-- Student player: resume position, mark complete, next lesson, progress bar.
-- Videos are never served from public URLs: **signed playback tokens**, created server-side after an enrollment check.
-- **Acceptance:** a non-enrolled user cannot obtain a playable URL for a paid lesson (verified by test); video upload shows progress and processing state.
+### F3. Product types, picker and editor (P0)
+- **Type registry:** each product type is a module (Zod schema for `typeData`, editor form definition, checkout and delivery handler, public rendering). Adding a type means adding a module and one registry line.
+- **Live in Phase 1:** Digital product (uploaded file or external link). **Coming soon (tagged, not selectable):** Course (Phase 2), Coaching call, Membership, Collect emails, Link.
+- Add product opens a **type picker**, then the editor.
+- **Digital product editor tabs:** *Details* (title, description, cover, file or external link, price fixed or pay-what-you-want with minimum, button text), *Checkout* (F11), *After purchase* (F11), *Settings* (slug, download limit, status draft/published/archived).
+- Pay-what-you-want: `amountMinor` is the suggested price, `minAmountMinor` the minimum, max from config `PWYW_MAX_CENTS` (default 50000). Server validates every amount.
+- Publish rules: store connected for payments (or MockProvider in dev), product has a file or an `externalUrl`, price valid, title present.
+- My Store lists products with cover, title, type badge, price, status toggle, drag to reorder, duplicate, archive.
+- **Acceptance:** non-owners cannot read or edit; `externalUrl` and file keys never appear in public responses; every text field sanitized and length-limited.
 
-### F3b. Digital products (Gumroad parity, P0)
-- Products are created through a **type picker** (D-012). Live in Phase 1: **Digital product**. Shown as "Coming soon" and not selectable: Course, Coaching call, Membership, Collect emails, Link.
-- Product type `digital`: the creator uploads one or more files (PDF, ZIP, audio, templates) to **private** object storage (provider not chosen yet, D-024), or provides an external link. Default max 500 MB per file (config value). An external link is delivered like a file: only after the verified payment, in the Library and the receipt email.
-- Delivery: after the verified payment webhook creates the enrollment, files appear in the buyer's Library. Downloads use **short-lived signed URLs (about 60 seconds)** generated server-side after an enrollment check. Optional per-product download limit.
-- Pricing models: **fixed** or **pay-what-you-want** (creator sets a minimum; buyer enters an amount on our product page; server validates `amount >= minPriceCents` and a sane maximum, then passes the amount as inline `price_data`).
-- Digital products can be sold standalone or used as order-bump items.
-- **Customization** (D-013): title, description, cover, fixed or pay-what-you-want price, button text, checkout headline, thank-you message, confirmation email subject and body (variables `{{customer_name}}`, `{{product_title}}`, `{{download_link}}`), download limit. Stored in `products.settings` (planned, see 5.4.1). Guardrails: all creator text is sanitized and length-limited (no raw HTML); the sender identity and the download link are always in the email; after-purchase redirect URLs must be `https` (D-014).
-- **Acceptance:** a non-buyer cannot obtain a file URL; a pay-what-you-want amount below the minimum is rejected server-side; a refund revokes access; files are never reachable through a public storage path.
+### F3b. Digital delivery (P0)
+- Files stored in a **private S3 bucket**; metadata in `files`. Downloads only through **presigned URLs (about 60 seconds)** issued after an entitlement check; `downloadCount` incremented atomically and `downloadLimit` enforced. External-link products reveal the link only inside the buyer library after purchase.
+- Allowed file types and max size from config; server validates MIME and size; no public bucket paths.
 
 ### F4. Product page and checkout (P0)
-- Product page: cover, title, description, curriculum outline (courses, Phase 2), price, buy button. The creator can change the button text, the checkout headline and the thank-you message (F3b).
-- Checkout via **Stripe Checkout Session, direct charge on the creator's connected account** (`stripeAccount` header), **no application fee**.
-- Prices are computed **on the server** from DB values. Never trust client prices.
-- Uses Stripe Checkout **dynamic payment methods** (card, Apple Pay, Google Pay and more where available), so creators in other countries can offer more methods. The exact availability is verified in the Stripe docs during the payments block (D-016). Currency per store.
-- **Checkout fields** (D-013): name and email are always required; an optional phone toggle; up to 5 custom questions per product (text, long text, dropdown, checkbox, each with a required flag). No sensitive questions (card or ID numbers). Answers are validated server-side, stored per order (`orders.answers`, planned) and shown in the Customers panel (F8) with CSV export.
-- After payment: order marked paid, enrollment created, buyer emailed (F7), creator notified.
-- Refunds: creator refunds in their own Stripe dashboard; webhook `charge.refunded` revokes enrollment (configurable, default revoke).
-- **Acceptance:** duplicate webhook deliveries never create duplicate orders or enrollments; a creator without a connected Stripe account cannot publish a paid product; required questions are enforced on the server and answers can never change the price.
+- Product page at `/@username/product-slug`: cover, title, description, price (or pay-what-you-want input), creator button text, sticky buy button on mobile.
+- Checkout page: creator headline, name and email (always), optional phone, creator's custom questions (F11), order summary (with "Platform fee $0.00" line), payment methods, "Paid securely via Stripe" line.
+- Flow: `POST /api/checkout` validates input with strict Zod, loads product and store, **recomputes the price server-side**, creates a `pending` order with a snapshot of the product, creates a provider checkout (Stripe Checkout Session as a direct charge, no application fee) and returns the URL.
+- **More payment methods:** use Stripe Checkout dynamic payment methods so creators in other countries can offer more methods; which are available depends on the creator's country, currency and Stripe settings (verify in Stripe docs during the payments block).
+- **Acceptance:** tampered prices are ignored; answers validated against the field definitions; creators without connected payments cannot publish paid products; rate limited.
 
-### F5. Coupons (P0)
-- Creator creates codes: percent or fixed, optional expiry, max redemptions, product restriction.
-- Applied at checkout; discount calculated server-side; redemption counted atomically on payment success.
-- **Acceptance:** expired, exhausted, or wrong-product codes show a clear error; a code cannot be redeemed beyond its limit under concurrent checkouts.
-
-### F6. Order bump (Phase 2, available on Starter and up)
-- A creator attaches one bump product to a product: headline, price, checkbox on the checkout step.
-- Implemented as an extra line item on the same Checkout Session.
-- **Acceptance:** bump shows only when configured; the order records the bump as a separate `order_items` row with `is_bump = true`.
+### F5. Coupons (Phase 2), F6. Order bump (Phase 2)
+Described in `docs/DATABASE.md` (`coupons`, `coupon_redemptions`, `products.bump`). Not in Phase 1.
 
 ### F7. Transactional email (P0)
-Provider: Resend. Templates built with React Email.
-- Creator welcome.
-- Buyer purchase receipt / confirmation with "Access your purchase" link (course or downloads). The creator can customize the subject and body per product with the variables `{{customer_name}}`, `{{product_title}}` and `{{download_link}}`. The sender identity, the footer and the download link are always included, and the text is sanitized (no raw HTML) (D-014).
-- Creator "You made a sale" notification.
-- Buyer sign-in code (6-digit code from Better Auth, sent with Resend, branded).
-- Every email has the sender identity, physical-address footer (CAN-SPAM) and, for marketing email, an unsubscribe link (P1).
-- **Acceptance:** emails are sent from a queue/job (not inline in the webhook), with retry on failure and a row in `email_log`.
+- Provider: Resend (queued, retry, `email_log`). Templates: buyer receipt (with library link), creator sale notification, login code.
+- Creator-customizable confirmation email: subject and body with variables `{{customer_name}}`, `{{product_title}}`, `{{download_link}}`. Sender identity, library/download link and a physical-address footer are **always included** and cannot be removed.
+- Creator can send themselves a test email.
+- **Acceptance:** emails sent by the worker/outbox, never inline in the webhook; duplicates impossible when a webhook is replayed.
 
 ### F8. Creator dashboard (P0)
-Four sections (D-011): **My Store**, **Income**, **Customers**, **Settings**. A first-run checklist (D-009) shows until done: Store setup, Add first product, Connect payments, Publish.
-- **My Store:** store setup (name, avatar, bio, currency, theme, accent, link) and products: type picker, list, create, edit, publish/unpublish, reorder, with the customization options of F3b.
-- **Income:** revenue (today / 7d / 30d), orders count, top products, recent orders with status, amount and refund state.
-- **Customers:** buyers with email, name, optional phone, purchase date and their answers to the checkout questions (F4); CSV export (formulas neutralized, D-014).
-- **Settings:** account, Stripe connection status. Billing arrives in Phase 3; coupons and student progress (courses) arrive in Phase 2.
-- **Acceptance:** all dashboard queries are scoped by the creator's own `storeId`, taken from the verified session (section 5.5).
+- **Shell:** left sidebar (My Store, Income, Customers, Settings), top bar (breadcrumb, "View my store", account menu). White theme per `DESIGN.md`.
+- **First-run checklist:** Store setup, Add first product, Connect payments, Publish store; shows the store link with Copy.
+- **Store setup (inside the dashboard):** store name, avatar, bio, social links, currency (USD, GBP, CAD), theme, accent, link display with **Change** (username change rules: uniqueness, rate limited, old link stops working in Phase 1).
+- **My Store:** tabs *Products* and *Page design* (Page design is theme and accent in Phase 1; block editor later).
+- **Income:** today, 7 days, 30 days revenue, orders, average order, chart, recent orders; data from `store_stats_daily`.
+- **Customers:** see F12.
+- **Settings:** Store, Payments (connect/disconnect, status, test mode badge, payment-methods note), Account (name, email, phone, sign out, delete account request).
+- **Acceptance:** every query scoped by `storeId` through repositories; loading, empty, error and populated states everywhere.
 
-### F9. Platform billing (Phase 3, must be live before the 6-month founding free period ends)
-- Founding creators (10 spots) get 6 months free, so billing is **not needed for Phase 1 or 2**. Build it in Phase 3. Provider is decided then: Stripe Billing (if the India invite is granted) or a Merchant of Record such as Dodo Payments (India-based, UPI). After the founding period, new creators get a 14-day free trial.
-- Customer Portal for upgrade, downgrade, cancel, invoices.
-- Feature gating through one central `PLAN_LIMITS` config and a `can(plan, feature)` helper.
-- Past-due grace period of 7 days, then stores are unpublished (data kept, never deleted).
+### F9. Platform billing (Phase 3)
+Founding creators free for 6 months, so no billing in Phase 1-2. Provider decided in Phase 3 (Stripe Billing if approved, or a Merchant of Record such as Dodo Payments). Plan limits through one `can(plan, feature)` helper.
 
-| Plan | Price (placeholder, validate) | Includes |
+| Plan | Price (placeholder) | Includes |
 |---|---|---|
 | Founding (10 spots) | Free for 6 months | Pro features, personal setup |
-| Starter | $19/mo | Unlimited digital products, up to 5 courses, 20 hours of video, 1,000 email subscribers, pay-what-you-want, coupons, order bumps, lead magnets, pixel tracking, purchase emails, 0% fee |
-| Pro | $39/mo | Unlimited courses, 100 hours of video, 10,000 subscribers, upsells, funnels, payment plans, memberships, bookings, affiliate tracking, custom domain, remove branding, quizzes and certificates, automation flows |
-| Business | $79/mo | 300 hours of video, 50,000 subscribers, A/B tests, advanced attribution, API, team seats, priority support, import help |
+| Starter | $19/mo | Unlimited digital products, up to 5 courses, 20 h video, 1,000 subscribers, coupons, order bumps, lead magnets, pixels |
+| Pro | $39/mo | Unlimited courses, 100 h video, 10,000 subscribers, upsells, funnels, payment plans, memberships, bookings, affiliates, custom domain, quizzes, automations |
+| Business | $79/mo | 300 h video, 50,000 subscribers, A/B tests, attribution, API, team seats, priority support |
 
-Video hours and subscriber limits are placeholders until Mux and Resend costs are checked. Feature availability follows the phases in section 12; features not yet built are labelled "Coming soon" in the product and on the landing page.
+All plans: 0% transaction fee. Limits are placeholders until video and email costs are checked.
 
-Limits and prices are config values, not hardcoded.
+### F10. Legal (P0 before real money)
+Terms, Privacy Policy, Refund policy template, cookie banner (GDPR/UK GDPR/CCPA), account deletion and data export, CAN-SPAM/CASL compliance for any marketing email.
 
-### F10. Legal and compliance basics (P0)
-- Platform Terms of Service, Privacy Policy, Refund policy template, cookie banner (GDPR / UK GDPR / CCPA).
-- Each store footer links to platform terms and shows the creator's name. Creators set their own refund policy text.
-- Data export and account deletion request flow (GDPR).
-- Creators are responsible for their own sales tax/VAT/GST (Standard accounts). State this in Terms and in the dashboard's Connect payments step.
+### F11. Creator customization (P0, core differentiator)
+Creators customize, within limits:
+- **Store:** name, photo, bio, links, theme preset, accent color (contrast guard).
+- **Product:** title, description, cover, price model, **button text** (store card and product page), download limit.
+- **Checkout page:** headline; name and email always required; phone toggle; **up to 5 custom questions** (kinds: text, long text, dropdown, checkbox; required flag; options for dropdown). Show a note: "Answers appear in your Customers tab. Don't ask for card numbers or ID numbers."
+- **After purchase:** thank-you message, optional https redirect URL, confirmation email subject and body (F7).
+- **Guardrails:** sanitize all text (no raw HTML, strip scripts), length limits, allow-list of email variables, https-only URLs, no sensitive question types (block obvious patterns such as card numbers), creators are controllers of buyer data. Stored in `products.checkout`, `products.afterPurchase`, `products.ui`.
+- Live preview next to the editor for the card, product page and checkout.
 
-### P1 backlog (weeks 7-10)
-1. Custom domains (Vercel Domains API, auto SSL, CNAME instructions).
-2. Abandoned-cart email (1h and 24h).
-3. Post-purchase upsell.
-4. Email capture block + simple broadcast to subscribers (with unsubscribe).
-5. Drip content, downloadable attachments, quizzes, completion certificates.
-6. Analytics: traffic source, UTM, funnel; Meta/TikTok pixel field.
-7. AI helper (Claude API): product description, course outline, email copy.
-8. "Powered by" badge removal on Pro.
-9. License keys for software products (auto-generated per purchase, verification endpoint).
-10. Product bundles (several products sold as one).
-11. Student memberships/subscriptions with tiers (only after Stripe confirms direct-charge subscriptions work for an India platform; see Constraint 9).
-12. Free ($0) products with email capture, PDF stamping with buyer email, buyer email workflows (post-purchase sequences).
+### F12. Customers panel (P0)
+- Table: customer (name, email), products bought, total spent, last order, answers count. Search, filter by product, cursor pagination, **Export CSV** (sanitize against CSV formula injection).
+- Customer detail drawer: contact info, orders, **checkout answers** (question label snapshot and value), notes, tags.
+- Data comes from `customers` (updated atomically when an order is paid) and `orders.answers`. Creators only see their own customers.
 
-### P2 backlog
-Payment plans/installments, 1:1 booking, pre-orders, a Discover-style marketplace (needs real traffic first), a merchant-of-record option through a third-party provider, affiliate tracking (no automated payouts unless a US entity exists), community, template marketplace, Australia/EU expansion, mobile app (Flutter).
-
-### Gumroad parity map
-| Gumroad capability | Here | Priority |
-|---|---|---|
-| Digital downloads | F3b | P0 |
-| Pay-what-you-want | F3b | P0 |
-| Discount codes | F5 | P0 |
-| Upsells / order bump | F6 + P1 upsells | P0 / P1 |
-| Custom domain | P1 backlog | P1 |
-| Product bundles | P1 backlog | P1 |
-| License keys | P1 backlog | P1 |
-| Memberships / tiers | P1 backlog, pending Stripe confirmation | P1 |
-| Email workflows to buyers | P1 backlog | P1 |
-| PDF stamping | P1 backlog | P1 |
-| Affiliates | Track-only, no automated payouts (Constraint 6) | P2 |
-| Pre-orders | P2 backlog | P2 |
-| Discover marketplace | Needs traffic first | P2 |
-| Merchant of Record tax handling | **Not possible now** (Constraint 8) | Not planned |
+### F13. Buyer library (P0)
+`/library`: sign in with email code; list of purchases with cover, title, creator, date and a Download (or Open link) button; shows "Download limit reached" state; refunds revoke access. A buyer sees only their own entitlements.
 
 ---
 
 ## 5. Architecture
 
-### 5.1 Stack (locked)
-| Layer | Choice |
-|---|---|
-| App | Next.js (latest stable, App Router), TypeScript strict |
-| UI | Tailwind CSS + shadcn/ui, lucide-react icons |
-| Database | MongoDB (Atlas in production), official `mongodb` Node.js driver, no ORM (D-024) |
-| Auth | Better Auth: email 6-digit code (`emailOTP` plugin), Google, database sessions (D-024) |
-| File storage | Not chosen yet (D-024). Must support private files and short-lived signed URLs |
-| Types / schema | TypeScript document types in `lib/db/collections.ts`, indexes in `lib/db/mongo.ts`, Zod at every boundary |
-| Payments | Stripe (Connect Standard + Checkout direct charges; Billing for platform plans) |
-| Video | Mux (direct uploads, signed playback) |
-| Email | Resend + React Email |
-| Jobs | Inngest (webhook follow-up work, emails, retries) |
-| Hosting | Vercel |
-| Analytics | PostHog |
-| Errors | Sentry |
-| Validation | Zod on every API/server action input |
-| Tests | Vitest (unit), Playwright (e2e happy path) |
+### 5.1 Stack
+Next.js (App Router) + TypeScript strict + Tailwind + shadcn/ui; Node.js worker; MongoDB Atlas; Redis (rate limits, later cache); S3 (private) + CloudFront; Resend; Zod; Vitest and Playwright; Sentry. Hosting on AWS (path to ECS Fargate in `ARCHITECTURE.md`; Phase 1 deploy picks the simplest reliable option). Money as integer minor units.
 
 ### 5.2 Routing (path-based, one domain)
-- One domain (`ROOT_DOMAIN`; production `pickstall.store`) and **no subdomains** (D-010):
-  - `/`: marketing site. `/login`, `/signup`: auth. `/dashboard`: creator app. `/library`: buyer library.
-  - `/@username` and `/@username/product-slug`: public store and product pages. Implemented with `next.config` **rewrites** to `/s/:username` and `/s/:username/:path*`, because an `app/@...` folder would be a Next.js parallel route and cannot be used.
-  - Unknown host: look up `stores.custom_domain` and serve that store at `/` (Phase 3, section 13).
-- Every store-scoped query includes `storeId`, taken from the verified session or the public slug lookup. Never infer the store from client input alone.
-
-### 5.3 Folder structure
-```
-/app
-  /(marketing)            landing, pricing, legal
-  /(dashboard)/dashboard  creator area
-  /(store)/s/[slug]       public store + product + checkout return pages (served at /@username by a rewrite)
-  /(student)/library      student library + lesson player
-  /api/webhooks/stripe-platform/route.ts
-  /api/webhooks/stripe-connect/route.ts
-  /api/webhooks/mux/route.ts
-/components               ui (shadcn) + feature components
-/lib
-  config.ts               APP_NAME, ROOT_DOMAIN, PLAN_LIMITS, RESERVED_SLUGS
-  /payments               stripe client, checkout, connect, billing helpers
-  /db                     MongoDB client, indexes, document types
-  /email                  resend client + react-email templates
-  /video                  mux helpers (upload url, signed token)
-  /auth                   Better Auth config, guards: requireCreator, requireStoreOwner, requireEnrollment
-  /stores, /products ...  data-access functions (the only code that queries collections)
-/tests
-```
-
-### 5.4 Data model (MongoDB)
-MongoDB with the official driver (D-024). Conventions:
-- `_id` is a UUID string (`crypto.randomUUID()`), except in Better Auth's own collections. References store the other document's `_id`.
-- Field names are camelCase. Timestamps are `Date` (UTC). Money is **integer cents** plus a currency code.
-- Uniqueness and one-to-one rules are **unique indexes** (created in `lib/db/mongo.ts`), never check-then-insert.
-- Document types live in `lib/db/collections.ts`; every write is validated with Zod first.
-- Writes that must succeed together (fulfilment: order + enrollments + coupon count) use a MongoDB transaction (needs a replica set; Atlas has one).
-
-**Managed by Better Auth** (app code never writes these directly): `user`, `session`, `account`, `verification`, `rateLimit`.
-
-**Live now (Phase 1, Block B)**
-
-| Collection | Fields | Indexes |
-|---|---|---|
-| `profiles` | `_id` (= Better Auth user id), `email`, `fullName`, `phone`, `createdAt`, `updatedAt` | `_id` |
-| `stores` | `_id`, `ownerId`, `slug` (`^[a-z0-9-]{3,30}$`), `name`, `bio`, `avatarUrl`, `link`, `theme` (`preset`: clean, bold or soft; `accent`), `currency` (usd, gbp, cad), `stripeAccountId`, `stripeChargesEnabled`, `isPublished`, `createdAt`, `updatedAt` | unique `slug`; unique `ownerId` (one store per user, D-003) |
-| `signupIntents` | `_id`, `email`, `username`, `fullName`, `phone`, `tokenHash`, `attempts`, `windowStartedAt`, `ipHash`, `createdAt`, `expiresAt` (D-019) | unique `email`; TTL on `expiresAt`; `{ ipHash, createdAt }` |
-| `rateLimits` | `_id` (scope + hashed key), `count`, `expiresAt` | TTL on `expiresAt` |
-
-**Planned (added by the block that needs them; ask the founder before adding fields)**
-
-| Collection | Fields | Indexes |
-|---|---|---|
-| `products` | `_id`, `storeId`, `type` (digital, course), `title`, `slug`, `description`, `coverUrl`, `priceCents`, `compareAtPriceCents`, `pricingModel` (fixed, pwyw), `minPriceCents`, `downloadLimit`, `externalUrl` (https only, D-021), `status` (draft, published, archived), `settings` (5.4.1), `checkoutFields` (5.4.1), `bump` (`productId`, `priceCents`, `headline`), `sortOrder`, `createdAt`, `updatedAt` | unique `{ storeId, slug }`; `{ storeId, status, sortOrder }` |
-| `productFiles` | `_id`, `productId`, `storeId`, `storageKey` (private, never public), `fileName`, `sizeBytes`, `mimeType`, `position`, `createdAt` | `{ productId, position }` |
-| `modules` | `_id`, `productId`, `storeId`, `title`, `position` | `{ productId, position }` |
-| `lessons` | `_id`, `moduleId`, `productId`, `storeId`, `title`, `position`, `kind` (video, text), `muxAssetId`, `muxPlaybackId`, `muxStatus`, `durationSeconds`, `contentMd`, `isFreePreview`, `isPublished`, `dripDays` | `{ moduleId, position }` |
-| `coupons` | `_id`, `storeId`, `code`, `codeUpper`, `discountType` (percent, fixed), `discountValue`, `maxRedemptions`, `redeemedCount`, `expiresAt`, `productIds`, `active`, `createdAt` | unique `{ storeId, codeUpper }` |
-| `orders` | `_id`, `storeId`, `buyerUserId`, `buyerEmail`, `buyerName`, `buyerPhone`, `status` (pending, paid, refunded, failed), `items` (each: `productId`, `unitPriceCents`, `isBump`), `subtotalCents`, `discountCents`, `totalCents`, `currency`, `couponId`, `answers`, `stripeCheckoutSessionId`, `stripePaymentIntentId`, `createdAt` | unique `stripeCheckoutSessionId`; `{ storeId, createdAt }` |
-| `enrollments` | `_id`, `userId`, `productId`, `storeId`, `orderId`, `revokedAt`, `createdAt` | unique `{ userId, productId }`; `{ storeId }` |
-| `lessonProgress` | `_id`, `userId`, `lessonId`, `positionSeconds`, `completedAt` | unique `{ userId, lessonId }` |
-| `customers` | `_id`, `storeId`, `email`, `name`, `phone`, `createdAt` | unique `{ storeId, email }` |
-| `platformSubscriptions` | `_id`, `ownerId`, `stripeCustomerId`, `stripeSubscriptionId`, `plan` (trial, starter, pro, business), `status`, `trialEnd`, `currentPeriodEnd`, `updatedAt` | unique `ownerId` |
-| `webhookEvents` | `_id` (= Stripe or Mux event id, the idempotency key), `source` (stripe-platform, stripe-connect, mux), `type`, `payload`, `processedAt`, `createdAt` | `_id` (an insert fails on a replay) |
-| `emailLog` | `_id`, `storeId`, `toEmail`, `template`, `status`, `providerId`, `createdAt` | `{ storeId, createdAt }` |
-| `events` | `_id`, `storeId`, `type` (store_view, product_view, checkout_start, purchase), `path`, `utm`, `sessionId`, `createdAt` | `{ storeId, type, createdAt }` |
-
-Order items are embedded in `orders` (they are never read alone). `storeId` is copied onto child documents (files, modules, lessons, enrollments) so every owner check is one filter.
-
-Coupon redemption is atomic: one `findOneAndUpdate` that matches only an active coupon whose `redeemedCount` is below `maxRedemptions` and increments `redeemedCount`. No match means the code is exhausted.
-
-#### 5.4.1 Product customization fields (D-013, D-015)
-Each gets an ownership test: a creator can only read and write their own products.
-- `products.settings`: button text, checkout headline, thank-you message, confirmation email subject and body, redirect URL, and so on. Public reads return only a whitelist of keys (the email text and redirect URL are not public).
-- `products.checkoutFields`: up to 5 custom questions (label, type text / long text / dropdown / checkbox, options, required flag, position).
-- `orders.answers`: the buyer's answers, stored per order.
-- `customers`: one document per buyer per store.
-- Publish rule (D-021): a digital product can only be published with at least one file or an `externalUrl`. Enforced in the product data-access code (`lib/products`), including when the last file of a published product is deleted.
-
-### 5.5 Access control (no row-level security)
-MongoDB has no RLS, so authorization lives in server code (D-024):
-- **All** database access goes through data-access functions in `/lib`. Components, pages and route handlers never query collections directly.
-- The user id always comes from the verified Better Auth session (`requireUser`, `requireCreator`), never from client input. Every creator query filters by that owner: the store by `ownerId`, child documents by that store's `storeId`.
-- `profiles`: a user reads and updates only their own document.
-- Public reads (`/@username` pages) use separate functions that filter `stores.isPublished` and `products.status = "published"` and return only public fields (a projection). Never return `stripeAccountId`, Mux ids, `storageKey`, `externalUrl`, email text or buyer data.
-- Lesson content and Mux playback ids are never public. Access goes through a server route that calls `requireEnrollment` (or the free-preview check) and then issues a signed Mux token.
-- `enrollments`, `lessonProgress`: a user reads their own; a creator reads enrollments of their own products.
-- `webhookEvents`, `emailLog`, `platformSubscriptions`: written only by webhook and job code; creators read their own subscription.
-- `MONGODB_URI` and `BETTER_AUTH_SECRET` are server-only (`lib/db/mongo.ts`, `lib/auth/auth.ts`).
-- Every data-access function has a test that creator A cannot read or change creator B's documents.
-
-### 5.6 Payment flows
-
-**A. Creator connects Stripe (Standard, OAuth)**
-1. Dashboard "Connect Stripe" starts the OAuth flow with a signed `state` (CSRF-safe, bound to the user).
-2. Callback exchanges the code, stores `stripeAccountId` on the store.
-3. Webhook `account.updated` (Connect endpoint) refreshes `stripeChargesEnabled`.
-4. `account.application.deauthorized` clears the account and unpublishes paid products.
-
-**B. Buyer checkout (direct charge, no application fee)**
-1. `POST /api/checkout` validates input (Zod): `productId`, optional `couponCode`, `bump` boolean, `email`.
-2. Server loads product, store, coupon from DB, and recomputes amounts.
-3. `stripe.checkout.sessions.create({ mode: 'payment', line_items, currency, customer_email, metadata: { order_id, store_id }, success_url, cancel_url }, { stripeAccount: store.stripeAccountId })`. **Do not pass `application_fee_amount`.**
-4. Insert an `orders` document as `pending` with the session id.
-5. Return the session URL; redirect the buyer.
-
-**C. Fulfillment via Connect webhook**
-1. Verify the signature with the Connect webhook secret. Reject on failure.
-2. Insert the event id as `_id` into `webhookEvents`; on a duplicate-key error, return 200 and stop (idempotent).
-3. On `checkout.session.completed`: in one transaction, mark the order `paid`, create or find the buyer by email, create `enrollments`, increment the coupon `redeemedCount` atomically; then enqueue emails (Inngest).
-4. On `charge.refunded`: mark order `refunded`, set `enrollments.revokedAt`.
-5. Always respond quickly with 200; do heavy work in background jobs.
-
-**D. Platform billing (Stripe Billing, platform account)**
-1. Create Products/Prices for each plan and currency (USD, GBP, CAD) with `trial_period_days = 14`.
-2. Dashboard "Choose plan" creates a Checkout Session in `subscription` mode on the platform account.
-3. Platform webhook handles `customer.subscription.created|updated|deleted`, `invoice.payment_failed`, `invoice.paid`; updates `platform_subscriptions`.
-4. Billing page links to the Stripe Customer Portal.
-
-### 5.7 Video flow (Mux)
-1. Creator selects a file; server creates a Mux **direct upload** URL (policy: signed playback).
-2. Browser uploads directly to Mux. The lesson gets `muxStatus = "uploading"`.
-3. Mux webhook `video.asset.ready` stores `muxAssetId`, `muxPlaybackId`, duration; status `ready`.
-4. Player requests `/api/lessons/[id]/playback`; server verifies enrollment/free preview, drip rule and non-revoked status, then returns a short-lived signed token.
-
-### 5.8 Routes
 | Route | Purpose |
 |---|---|
-| `/` , `/pricing`, `/terms`, `/privacy` | Marketing + legal |
-| `/login`, `/signup` | Auth: 2-step signup, Google, email-code login (no `/onboarding` page, D-008) |
-| `/dashboard` | My Store: first-run checklist, store setup, products |
-| `/dashboard/products`, `/dashboard/products/[id]` | Product + course builder |
-| `/dashboard/income`, `/dashboard/customers` | Income; Customers (answers, CSV export). Student progress arrives in Phase 2 |
-| `/dashboard/coupons` | Coupons |
-| `/dashboard/settings`, `/dashboard/billing`, `/dashboard/stripe` | Store, billing, Stripe connection |
-| `/@username` (rewrite to `/s/[slug]`) | Public store |
+| `/` | Marketing landing |
+| `/login`, `/signup` | Auth (done) |
+| `/dashboard` and children | Creator app |
+| `/@username` | Public store (rewrite to an internal route) |
 | `/@username/[productSlug]` | Product page |
-| `/@username/checkout/success` | Post-payment page |
-| `/library`, `/library/[productId]`, `/library/[productId]/[lessonId]` | Student area |
-| `/api/webhooks/*` | Stripe platform, Stripe Connect, Mux |
+| `/@username/[productSlug]/checkout` | Checkout |
+| `/checkout/success` | Post-payment page |
+| `/library` | Buyer library |
+| `/api/checkout`, `/api/webhooks/stripe-connect`, `/api/files/*`, `/api/library/download/*` | Server endpoints |
+
+Custom domains later map a host to a store. Reserved usernames include `app, www, api, admin, login, signup, dashboard, library, checkout, pricing, terms, privacy, help, support`.
+
+### 5.3 Folder structure
+Modular monolith: `apps/web` (Next.js), `apps/worker` (Node), `packages/core` (domain logic, repositories, Zod schemas, product-type registry, payment providers). Business logic lives in `packages/core`, never in route files. (If the repo uses a different layout, keep it and document it.)
+
+### 5.4 Data model (MongoDB)
+Full field-level spec: **`docs/DATABASE.md`** (50 collections across phases). Phase 1 collections: `users`, `auth_otps`, `signup_intents`, `sessions`, `stores`, `files`, `products`, `orders` (with embedded `items[]`, `answers[]`, `refunds[]`), `customers`, `entitlements`, `store_stats_daily`, `webhook_events`, `outbox_events`, `email_log`, `audit_logs`.
+Rules: every tenant document has `storeId`; money as `...Minor` integers; snapshots on orders; unbounded data in its own collection; TTL on temporary data; every query has an index; additive schema changes with `schemaVersion`. If the existing code differs from `docs/DATABASE.md`, report it and agree on one source of truth.
+
+### 5.5 Tenant isolation and security
+1. All data access through repositories in `packages/core`; route handlers, server actions and components never touch models or the driver (enforce with an ESLint rule).
+2. Every repository call receives a context (`actorId`, `storeId`, role) and always adds ownership scoping.
+3. Server-side guards: `requireUser`, `requireStoreOwner`, `requireEntitlement`.
+4. Locked fields are server-written only: `users.isCreator`, `stores.payments.*`, `stores.planTier`, `orders.*`, `entitlements.*`.
+5. **NoSQL injection:** strict Zod schemas, reject objects where strings are expected and keys starting with `$` or containing `.`.
+6. A **cross-tenant test suite** must stay green: creator A cannot read, update or delete creator B's store, products, orders, customers, entitlements; buyers see only their own purchases; anonymous users see only published public data; locked fields cannot be changed through any request.
+7. Secrets in env/Secrets Manager only; never in client bundles or logs. Rate limit auth, checkout, files and download endpoints. Security headers and CSP. Audit log for sensitive actions.
+
+### 5.6 Payments and orders flow
+A. **Connect:** OAuth with signed, user-bound `state`; store `accountId`; keep `chargesEnabled`/`payoutsEnabled` fresh from account webhooks; handle deauthorization (unpublish paid products).
+B. **Checkout:** see F4. With MockProvider, the checkout page redirects to a fake hosted page that fires the same internal "payment succeeded" event as the Stripe webhook, so the whole pipeline is testable without Stripe.
+C. **Webhook (provider events):** verify signature; insert the event id into `webhook_events` (unique `_id`); if it already exists, return 200 and stop; enqueue work; respond quickly.
+D. **Worker, in one MongoDB transaction:** mark order `paid`, upsert `customers` (`$inc` totals), upsert `entitlements`, `$inc` `store_stats_daily`, write `outbox_events` (`order.paid`). Subscribers send emails. On refund: mark refunded, set entitlement `revoked`, adjust stats.
+E. **Library download:** check entitlement and limit, atomic `downloadCount` increment, return presigned URL.
+
+### 5.7 Video (Phase 2)
+Mux direct upload, webhook-driven status, signed playback tokens issued after an entitlement check (details in `docs/DATABASE.md` `lessons`).
+
+### 5.8 API and server rules
+Strict Zod on every input; typed `Result` outputs; no internal error leakage; pagination by cursor; idempotent webhooks and jobs.
 
 ---
 
 ## 6. Non-functional requirements
-
-**Security (must)**
-- Webhook signatures verified for Stripe (two separate secrets) and Mux.
-- All secrets in environment variables; never in the repo or client bundle.
-- Zod validation on every input; server-side authorization on every mutation (ownership checks, not just UI hiding).
-- Rate limit: login/OTP, checkout creation, coupon validation, playback token endpoint.
-- File and video access only via signed, expiring URLs/tokens.
-- No query objects built from raw client input (NoSQL injection): validate with Zod first, never pass a client object as a filter, never use `$where` or server-side JavaScript.
-- Security headers (CSP, `SameSite`/`HttpOnly`/`Secure` cookies, `X-Frame-Options` except where embedding is intended).
-- Audit log for sensitive actions (Stripe connect/disconnect, plan change, refund-driven revokes).
-
-**Performance:** storefront server-rendered and cached (ISR with on-demand revalidation when a creator edits). Images via `next/image`. Target LCP < 2.5s.
-
-**Accessibility:** WCAG 2.1 AA for storefront and checkout flow; keyboard-operable player controls.
-
-**Privacy and legal:** GDPR/UK GDPR/CCPA consent and deletion; CAN-SPAM/CASL for any marketing email (consent + unsubscribe + physical address); cookie banner for EU/UK visitors; log only what is needed.
-
-**Reliability:** idempotent webhooks; jobs retry with backoff; Sentry alerts on webhook failures; daily DB backups (MongoDB Atlas backups).
-
-**Observability:** PostHog events: `signup`, `store_published`, `product_published`, `stripe_connected`, `checkout_started`, `purchase_completed`, `lesson_completed`.
+- **Security:** section 5.5; webhook signatures; presigned URLs; sanitized markup; CSV injection protection; dependency audit.
+- **Performance:** public pages cached (CDN plus revalidation), LCP under 2.5 s, API p95 under 300 ms, no collection scans (tests assert indexes on hot queries). Design for 10k concurrent users, deploy for 100; no capacity claims before a load test.
+- **Accessibility:** WCAG 2.1 AA, keyboard-operable everything, reduced motion.
+- **Privacy:** collect the minimum, consent text stored for marketing contacts, data export and deletion, cookie banner for EU/UK.
+- **Reliability:** idempotent webhooks, queue retries, backups, error monitoring.
 
 ---
 
-## 7. Design direction
-
-> Full design system lives in `DESIGN.md` (tokens, typography, components, themes, motion, accessibility). The summary below is only a pointer; `DESIGN.md` wins on any conflict.
-
-The founder is a UI/UX designer; design quality is the competitive edge.
-- Clean, modern, generous whitespace, strong typography (one display + one text font), soft shadows, 12-16px radii.
-- Storefront must feel premium on a 360px phone; large tap targets; sticky buy button on product pages.
-- Dashboard: simple left nav, empty states with one clear next action, first-run checklist ("Store setup", "Add first product", "Connect payments", "Publish").
-- Each theme preset is a token set (colors, radius, font pairing) so new themes are data, not code.
-- Dark mode for dashboard (P1).
+## 7. Design
+`DESIGN.md` is the source of truth (white, professional, Stan-like centered layouts, tokens, components, themes). Use only tokens and the shared components. UI reference images, when provided, live in `docs/ui-reference/` named by screen; read one only when building that screen.
 
 ---
 
-## 8. Build plan (milestones, one at a time)
+## 8. Build plan: remaining blocks (one block per session, plan first)
 
-Each milestone ends with: app runs, tests pass, security checklist from `CLAUDE.md` applied, git commit.
+Each block ends with: runs locally, lint, typecheck and tests green, security checklist from `CLAUDE.md`, small commits, short report. Order is fixed.
 
-| # | Milestone | Deliverable and Definition of Done |
+| Block | Goal | Read from this PRD | Key deliverables | Gate |
+|---|---|---|---|---|
+| **R0** | Audit | whole file once | Status report vs this PRD and `docs/DATABASE.md` | Founder approves |
+| **R1** | Dashboard shell + Store setup | F8, F1 (Google), 5.2 | Sidebar and top bar, checklist, Store setup, Settings skeleton, Google sign-in if missing | Creator completes setup |
+| **R2** | Files and S3 | F3b, 5.5 | `files` repository, presigned upload, validation, private bucket, avatar and cover upload | Private objects never public |
+| **R3** | Products | F3, F11 | Type registry, picker, digital editor (4 tabs), checkout-fields builder, My Store list, publish rules | Create, edit, publish a product |
+| **R4** | Public store and product pages | F2, F4 (product page), 5.2 | `/@username` rewrite, store page, product page, themes, SEO, caching and revalidation, Buy disabled until R5 | Share a working link |
+| **R5** | Payments and checkout | F4, 5.6, section 2 | `PaymentProvider`, MockProvider, Stripe adapter, Payments settings, checkout with custom fields, pending orders | Mock purchase reaches paid |
+| **R6** | Orders pipeline, Customers, Income | F12, F8, 5.6 | Webhook handler, worker/outbox, transaction, customers, stats, Customers and Income screens, CSV export | Paid order appears in panels |
+| **R7** | Buyer library and secure downloads | F13, F3b | `/library`, entitlement checks, presigned downloads, limits, external links, refund revocation | Buyer downloads securely |
+| **R8** | Emails | F7 | Resend templates, queue, `email_log`, creator-customizable confirmation, test email | Receipt arrives once per order |
+| **R9** | Security review and tests | 5.5, 6 | Cross-tenant tests, injection tests, rate limits, headers, Playwright e2e smoke, basic load test | Review findings fixed |
+| **R10** | Deploy to AWS | 6 | Environments, container build, deploy, domain, webhooks registered, monitoring, backups | Go/no-go checklist passes |
+
+**Estimate (solo + Claude Code):** R1 to R4 about 2 days; R5 to R8 about 2 days; R9 to R10 about 1 to 2 days. If a block runs long, cut customization depth, not tests or security.
+
+### 8.1 Smoke test (founder, manual, end of R9)
+1. Sign up as Creator A; confirm the draft store and checklist.
+2. Complete Store setup; open `pickstall.store/@username` (draft is 404 publicly).
+3. Add a digital product with a file, custom button text and two checkout questions; publish.
+4. As an anonymous buyer buy it (MockProvider/test mode), answering the questions.
+5. Receipt email arrives once; library shows the product; download works; the link expires after about a minute.
+6. Creator sees the order, the customer, the answers and income updated.
+7. Replay the webhook: still one order and one entitlement.
+8. Refund: access revoked.
+9. Creator B cannot open Creator A's product, order, customer or file by ID.
+10. Check 360 px mobile, keyboard navigation and reduced motion.
+
+### 8.2 Go / no-go
+**Private alpha (test/mock mode):** smoke test passes, tests green, deployed with HTTPS, alpha creators told it is a test version.
+**Public launch with real money:** payment provider live approval, one real $5 purchase and refund, Terms/Privacy/Refund live, independent review of auth and payment code, monitoring and support channel, CA consulted on export-of-services income.
+
+---
+
+## 9. Roadmap after Phase 1
+
+| Phase | Time (rough) | Features |
 |---|---|---|
-| M0 | Setup | Repo, Next.js + TS + Tailwind + shadcn, database project (MongoDB since D-024), env template, CI (lint, typecheck, test), Sentry, PostHog stub |
-| M1 | Auth + data model | Collections and indexes, ownership checks + tests, creator/buyer auth (Better Auth: OTP + Google), profiles |
-| M2 | Signup + store setup | 2-step signup + Google, slug validation, dashboard shell with first-run checklist, public store page at `/@username` (rewrite), 3 themes |
-| M3 | Products + course builder | Product type picker, product CRUD (course and digital), customization (D-013), modules/lessons, digital file upload + signed downloads, pay-what-you-want, reorder, draft/publish, product page |
-| M4 | Video | Mux direct upload, webhook, signed playback endpoint, student player with progress |
-| M5 | Stripe Connect | OAuth connect, account status webhook, publish guard for paid products |
-| M6 | Checkout + fulfillment | Checkout Session (direct charge, no fee), creator checkout fields, Connect webhook, orders, enrollments, Customers panel, idempotency tests |
-| M7 | Coupons + bump | Coupon CRUD and checkout application, order bump, concurrency test on redemption |
-| M8 | Email | Resend templates, Inngest jobs, `email_log`, receipt + creator notification |
-| M9 | Platform billing | Plans, trial, Checkout subscription, portal, webhook, `PLAN_LIMITS` gating |
-| M10 | Hardening | Security review pass, rate limits, legal pages, cookie banner, data export/delete, e2e happy path, admin page |
-| M11 | Beta | 5 founding creators, personal onboarding, feedback loop |
+| **2. Core** | Week 2 | Courses (modules, lessons, Mux video, progress), coupons, order bumps, legal pages, cookie banner |
+| **3. Growth** | Weeks 3-5 | Email list and lead magnets, broadcasts and basic automation, abandoned cart, pixels, upsell, custom domain, block-based page editor, import (Gumroad API, Stan CSV) and export, platform billing and plan limits |
+| **4. Advanced selling** | Weeks 6-9 | Funnels, memberships, payment plans, bookings, affiliate tracking, quizzes and certificates, reviews, license keys, multi-currency, attribution analytics |
+| **5. Moat** | Months 3-4 | Instagram AutoDM, community, A/B tests, AI assistant, API and webhooks, team roles, creator PWA, template library |
 
-### 8.1 Phase mapping (supersedes the order above where they differ)
-- **Phase 1 (3-day private alpha, test mode, D-017):** M0, M1, M2 (signup, dashboard store setup, public store page), M3 (digital products only, with customization), M5, M6 (checkout with creator fields, Customers panel), M8 (lite), M10 (partial). Day 1 = signup, Google, dashboard store setup, My Store with digital product customization, public store page, product page (Buy disabled). Day 2 = Stripe Connect (or MockProvider), checkout, webhook, orders, Customers panel, buyer library, downloads, emails. Day 3 = security review, more payment methods, deploy, smoke test. See `PHASE1_PLAN.md`.
-- **Phase 2 (days 4-8):** M4 (courses + Mux), M7 (coupons + order bumps), legal pages.
-- **Phase 3 (weeks 2-4):** M9 (platform billing) plus the growth tools in section 12.
-- **Phases 4-5:** see section 12.
-
-**Pre-launch checklist**
-- [ ] Stripe India invite granted; live keys configured; Connect webhook endpoint registered
-- [ ] Real $5 test purchase on a real connected account, then refund
-- [ ] Ownership test: creator A cannot read or modify creator B's data
-- [ ] Non-enrolled user cannot obtain playback token
-- [ ] Duplicate webhook replay is harmless
-- [ ] Legal pages reviewed by a professional
-- [ ] CA consulted on export-of-services income and INR payouts
+Custom domain and import specs: connect via a domain-verification flow (DNS records shown in the UI, status pending, verified, SSL, live) and import with preview, column mapping, idempotent jobs, consent handling (imported contacts are not marketable until re-permission) and encrypted OAuth tokens.
 
 ---
 
-## 9. Success metrics
-- Activation: signup -> published store (target 70%), -> Stripe connected (60%), -> first sale (40%).
-- Time to first published course: median < 1 day.
-- Support load: bugs reported per active creator per week.
-- Retention: trial -> paid conversion (target 30%); monthly churn < 8%.
-- Qualitative: "How would you feel if this tool disappeared tomorrow?" (target: >= 40% "very disappointed").
+## 10. Success metrics
+Activation (signup to published store to connected payments to first sale), time to first published product, bugs per active creator, trial-to-paid conversion, qualitative "very disappointed if gone" score.
 
----
+## 11. Open questions
+1. Stripe India invite and test-mode availability (use MockProvider meanwhile).
+2. Final AWS region and hosting option for the first deploy (EC2 vs ECS Fargate).
+3. Resend sending domain and physical address for email footers.
+4. Username change policy after publishing (Phase 1: allowed, old link stops working; revisit).
+5. Mongoose vs official driver (use what the code already uses).
+6. PayPal application outcome.
 
-## 10. Open questions (decide before or during build)
-1. **Product name and domain.** Domain decided: `pickstall.store`, path-based (D-010). Still open: the email sending domain and sender setup.
-2. **Card required at trial start?** Higher conversion quality vs lower signups. Default: yes, card required.
-3. **Does Stripe provide test-mode keys before the India invite is granted?** Confirm with Stripe. If not, use a temporary test account from a supported country for local development only.
-4. **Video cost model.** Mux charges by storage and delivery; confirm limits (hours per plan) against real Mux pricing before finalizing plan limits.
-5. **Refund policy defaults** and whether revoking access on refund is automatic (default: yes).
-6. **Company entity** for the platform (existing company vs new) and a US entity later if application fees/affiliate payouts become necessary.
-7. **Support channel** for founding creators (WhatsApp vs email vs Discord).
-
----
-
-## 11. Risks
+## 12. Risks
 | Risk | Mitigation |
 |---|---|
-| Stripe India restrictions block planned features | Subscription-only model, direct charges, isolate payments code, plan US entity if demand proves it |
-| Vibe-coded security gaps (missing owner filters, webhooks, IDOR) | Mandatory security checklist in `CLAUDE.md`, review pass at M10, professional review of auth and payments before launch |
-| Video costs outgrow plan prices | Hour limits per plan, usage monitoring, per-plan overage rules |
-| Scope creep (clone everything) | Milestone order above; P1/P2 items only after founding-creator feedback |
-| Low creator trust in a new tool | Founding-member offer, personal onboarding, fast bug fixes, visible roadmap |
-| Email deliverability | SPF/DKIM/DMARC on sending domain from day one, transactional-only at launch |
-
----
-
-## 12. Full feature roadmap (Stan parity + advanced)
-
-Goal: every Stan Store feature (including its $99 Pro tier) on our lower plans, plus extras, so creators have no reason to look elsewhere. Ship in phases and only advertise what is live.
-
-| Phase | Time (rough) | Features | Gate |
-|---|---|---|---|
-| 3. Growth tools | Weeks 2-4 | Email list builder, lead magnets, email broadcasts + basic automation, abandoned cart, pixel tracking (Meta/TikTok/Google), one-click upsell, custom domain, block-based store editor, import tools (Stan/Gumroad/Linktree), platform billing + plan limits, cookie banner/GDPR tools | Billing live before founding free period ends |
-| 4. Advanced selling | Weeks 5-8 | Funnels + templates, memberships/subscriptions, payment plans, bookings (Google Calendar), affiliate tracking (manual payout), quizzes + certificates, student reviews, bundles, license keys, multi-currency, advanced analytics + attribution | Provider confirms subscriptions/installments work for an India platform |
-| 5. Moat features | Months 3-4 | AutoDM (Instagram), community, A/B tests, AI assistant (Claude API), API/webhooks/Zapier, team roles, creator PWA, template library | Meta approval for AutoDM |
-
-### Stan parity checklist
-| Stan feature | Stan plan | Ours (plan) | Phase |
-|---|---|---|---|
-| Mobile store, unlimited courses, 1-tap checkout, analytics | Creator | Starter | 1-2 |
-| Lead magnets, email list builder | Creator | Starter | 3 |
-| Subscriptions (memberships), bookings, community, AutoDM | Creator | Pro (Business for AI/API extras) | 4-5 |
-| Discount codes, order bumps | Pro | Starter | 2 |
-| Email marketing, pixel tracking | Pro | Starter | 3 |
-| Payment plans, funnels, affiliate payments | Pro | Pro | 4 |
-
-### Constraints that shape the roadmap
-- Affiliate payouts cannot be automated on an India platform. Ship tracking and a dashboard; payouts are manual.
-- Memberships and payment plans as direct charges are unverified for an India platform; confirm before building.
-- AutoDM needs Instagram/Meta API access and app review.
-- We are not a Merchant of Record; creators are the seller of record for tax.
-
-### Additional open questions
-8. Will PayPal approve the platform application, and on what terms? Submit the platforms/multiparty form alongside the Stripe invite request.
-9. Which provider handles our own subscription billing in Phase 3 (Stripe Billing vs a Merchant of Record)?
-10. Resolved (D-020): if the username was taken between signup and code verification, the verified session is kept and the user chooses another username. The unique constraint on `stores.slug` decides.
-
----
-
-## 13. Custom domains (Phase 3, Pro plan)
-
-**Goal:** a creator connects `shop.theirbrand.com` and the store, product pages and checkout run on it with automatic HTTPS.
-
-**Flow**
-1. Creator enters a domain in Settings > Domain. Recommend a **subdomain** (`shop.` or `learn.`). Apex domains need an A/ALIAS record and are supported but flagged as harder.
-2. Server calls the **Vercel Domains API** to add the domain to the project and reads the required DNS records and verification status. Show those exact records in the UI (CNAME or A, plus a TXT when verification is needed), with short guides for common registrars (GoDaddy, Namecheap, Cloudflare, Google/Squarespace).
-3. Poll status with a "Check again" button: `pending DNS` > `verified` > `SSL issued` > `live`. Do not mark the store live on the custom domain before verification.
-4. `stores.custom_domain` (unique) plus `custom_domain_status`. Middleware resolves `Host` to the store. Redirect `www` <> apex and the old `/@username` URL to the custom domain; set canonical URLs. On a custom domain the store is served at `/` (D-010).
-5. On downgrade or removal, remove the domain from Vercel and fall back to `/@username`.
-
-**Rules and edge cases**
-- Cloudflare proxy (orange cloud) must be set to DNS only unless configured correctly; show a warning.
-- Reject domains already in use by another store; reject our own root domain and reserved names.
-- Rate limits: Vercel domain adds are limited per hour per team, so queue and throttle.
-- No wildcard `*.ourdomain.com` is needed: creator links are path-based (D-010). Only custom domains need DNS records.
-- Vercel Hobby is limited and non-commercial; use **Pro** for production (verify current terms and limits).
-- Auth cookies are per domain. Keep creator login on the main domain (`/dashboard`). For buyers, the library stays on the main domain at first (magic-link access from the receipt email); per-domain buyer sessions are a later step.
-- Security: verify ownership before activating, never trust a user-supplied `Host` without a DB match, log every domain change.
-
-**Acceptance:** a test domain goes from added to live with HTTPS in under 30 minutes of DNS propagation; removing it restores the `/@username` URL; two stores cannot claim the same domain.
-
-## 14. Import and export (Phase 3)
-
-**Principle:** switching must take minutes, and leaving must be easy (export everything is also a trust and GDPR feature).
-
-### 14.1 Import sources
-| Source | What we can import | Method |
-|---|---|---|
-| **Gumroad** | Products (name, price, description), offer codes, customers and sales history, subscribers, license keys | **OAuth** with the Gumroad API (register our OAuth app), plus CSV export fallback |
-| **Stan Store** | Customers and order history | **CSV upload** (Customers and Income exports). No public Stan API found. |
-| **Any platform** | Email list | CSV upload (first name, last name, email) |
-| Linktree and link-in-bio tools | Links, bio | Manual entry (copy helper); scraping only after checking terms |
-
-**What cannot be imported automatically:** course videos and uploaded files (creator re-uploads originals), designs, and anything the source platform does not export. Say this clearly in the importer.
-
-### 14.2 Import flow
-1. Choose source, see exactly what will and will not be imported.
-2. Connect (OAuth) or upload a CSV. Validate file type and size, parse in a background job.
-3. **Preview and map columns**, show counts and problems (duplicates, missing names, invalid emails). Nothing is saved until the creator confirms.
-4. Import as a job with progress, idempotent (re-running does not duplicate), with a downloadable error report.
-5. Past buyers: create customer records and **enrollments** for the matching products so existing buyers keep access, once the creator has re-uploaded the files or recreated the products. The creator chooses whether to email buyers their new access link.
-
-### 14.3 Consent and compliance (important)
-- Imported contacts are **not automatically marketable**. Require the creator to confirm they have consent, and import marketing contacts with a status `imported_unverified`.
-- Send a **re-permission email** (clear sender, why they are being contacted, one-click opt-in) before any marketing campaign. Transactional emails (receipts, access links) are fine.
-- Respect CAN-SPAM, CASL (Canada: express consent) and GDPR/UK GDPR. Store consent source and timestamp per contact.
-- Never import or store card numbers, payment methods or government IDs.
-
-### 14.4 Security
-- Treat all uploaded files as hostile: size limit, content-type check, CSV formula-injection sanitization on any re-exported cell, no server-side fetching of user-supplied URLs (SSRF).
-- Store Gumroad OAuth tokens **encrypted**, request read-only scopes where possible, and revoke on completion.
-- Rate limit import endpoints; imports run per store, and every write is scoped to that store's `storeId`.
-
-### 14.5 Export (data portability)
-"Export everything" in Settings: customers, orders, products, coupons, enrollments as CSV/JSON, delivered by email link that expires. Required for GDPR and a selling point ("no lock-in").
-
-### 14.6 Founding creator concierge
-For the first 10 creators, the founder migrates their store by hand and uses the findings to design the importer.
+| Stripe India limits or invite delay | MockProvider, provider interface, PayPal application, plan for a US entity only if demand proves it |
+| Tenant data leak without RLS | Repository layer, lint rule, cross-tenant tests on every commit, independent review |
+| Scope creep | Fixed block order, "Coming soon" tags, phase gates |
+| Customization abuse (XSS, spam, sensitive data) | Sanitization, limits, allow-lists, field guardrails |
+| Cost and complexity of AWS | Design for 10k, deploy for 100; staged scaling |
+| Low trust in a new platform | Founding offer, personal onboarding, honest copy |

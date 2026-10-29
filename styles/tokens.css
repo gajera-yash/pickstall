@@ -1,7 +1,7 @@
 /*
  * Design tokens: single source of truth (DESIGN.md sections 3, 6 and 16).
  * Raw color values live ONLY in this file and in lib/themes.ts. Everything else uses the
- * Tailwind names mapped in app/globals.css (bg-surface, text-ink, border-border-strong, ...).
+ * Tailwind names mapped in app/globals.css (bg-surface, text-ink, border-line, border-input, ...).
  *
  * The app is light only (docs/DECISIONS.md D-025): app/layout.tsx sets <html data-theme="light">.
  * The dark values below are kept for a possible later toggle; they are not used now.
@@ -11,16 +11,16 @@
  */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   /* Surfaces and text */
   --bg: #ffffff; /* white theme: pure white page (docs/DECISIONS.md D-007) */
-  --bg-subtle: #f7f9fc; /* behind the auth card only (D-026) */
+  --bg-subtle: #f7f8fa; /* app background behind cards, table header, hover */
   --surface: #ffffff;
   --ink: #0b0d2a;
-  --mute: #555a82;
-  --line: #cfd3f5; /* decorative dividers only, never component borders */
-  --border-ui: #878cb0; /* inputs, cards, secondary buttons: soft 1px border, 3:1 on white */
+  --mute: #5b6078;
+  --line: #e5e7eb; /* DESIGN.md --border: cards and dividers, decorative only (1.2:1) */
+  --border-input: #7a8099; /* inputs, selects, checkboxes, secondary buttons: 3:1 on white */
   --border-strong: #0b0d2a; /* emphasis outlines only: coupons, receipts, highlight button */
 
   /* Primary (actions, links, focus): the logo blue (D-026) */
@@ -33,40 +33,39 @@
   /* Highlight, the logo yellow (D-026): small accents only. Text on yellow is always --on-yellow. */
   --yellow: #ffc400;
   --on-yellow: #0b0d2a;
-  --yellow-soft: #fff4cc;
+  --yellow-soft: #fff6d6;
 
   /* Money and success */
   --mint: #0a7a53;
-  --mint-soft: #ddf5ea;
+  --mint-soft: #e3f6ee;
 
   /* Errors and destructive actions. --on-danger is not in DESIGN.md section 3: white fails
      contrast on the dark-mode danger color, so text on --danger needs its own token. */
   --danger: #c42020;
   --on-danger: #ffffff;
-  --danger-soft: #fde3e3;
+  --danger-soft: #fdecec;
 
   --warning: #8a5a00;
-  --warning-soft: #fff1c2;
+  --warning-soft: #fff3d1;
 
   /* Shape */
-  --radius-xs: 6px; /* badges, checkboxes */
-  --radius-sm: 10px; /* inputs, small buttons */
-  --radius-md: 14px; /* buttons, list items */
-  --radius-lg: 20px; /* cards */
-  --radius-xl: 28px; /* hero panels, dialogs */
+  --radius-sm: 8px; /* badges, checkboxes, menu items */
+  --radius-md: 12px; /* inputs, buttons, list rows */
+  --radius-lg: 16px; /* cards, dialogs */
 
-  /* Shadows: hard offset, no blur. Overlays may blur. */
+  /* Shadows: none on app cards. --shadow-popover is for menus, popovers and dialogs. The hard
+     offset shadows are for the marketing landing only (DESIGN.md 7). */
   --shadow-sm: 3px 3px 0 var(--border-strong);
   --shadow-md: 6px 6px 0 var(--border-strong);
   --shadow-lg: 14px 14px 0 var(--blue);
-  --shadow-overlay: 0 12px 32px rgb(11 13 42 / 0.18);
+  --shadow-popover: 0 8px 24px rgb(11 13 42 / 0.12);
   --shadow-card: 0 1px 2px rgb(11 13 42 / 0.04), 0 8px 24px rgb(11 13 42 / 0.06); /* auth card only */
-  --scrim: rgb(11 13 42 / 0.5);
+  --scrim: rgb(11 13 42 / 0.4);
 
   /* Motion (DESIGN.md section 12) */
   --dur-fast: 120ms;
   --dur-base: 200ms;
-  --dur-slow: 360ms;
+  --dur-slow: 320ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
@@ -83,7 +82,7 @@
   --ink: #f1f2ff;
   --mute: #a3a8d0;
   --line: #2a2e57;
-  --border-ui: #6068a0;
+  --border-input: #6068a0;
   --border-strong: #6b76c4;
   --blue: #7d88ff;
   --on-blue: #0c0e24;
@@ -98,7 +97,7 @@
   --danger-soft: #3a1a2a;
   --warning: #ffd84d;
   --warning-soft: #3a3310;
-  --shadow-overlay: 0 12px 32px rgb(0 0 0 / 0.5);
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -110,7 +109,7 @@
     --ink: #f1f2ff;
     --mute: #a3a8d0;
     --line: #2a2e57;
-    --border-ui: #6068a0;
+    --border-input: #6068a0;
     --border-strong: #6b76c4;
     --blue: #7d88ff;
     --on-blue: #0c0e24;
@@ -125,6 +124,6 @@
     --danger-soft: #3a1a2a;
     --warning: #ffd84d;
     --warning-soft: #3a3310;
-    --shadow-overlay: 0 12px 32px rgb(0 0 0 / 0.5);
+    --shadow-popover: 0 8px 24px rgb(0 0 0 / 0.5);
   }
 }

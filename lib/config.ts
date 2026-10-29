@@ -62,6 +62,7 @@ export const RESERVED_SLUGS: readonly string[] = [
   "assets",
   "auth",
   "blog",
+  "checkout",
   "dashboard",
   "help",
   "library",
@@ -71,12 +72,30 @@ export const RESERVED_SLUGS: readonly string[] = [
   "pricing",
   "privacy",
   "s",
+  "signup",
   "static",
   "status",
   "support",
   "terms",
   "www",
 ];
+
+/** Username changes per owner (D-028). The old link stops working at once (Phase 1). */
+export const USERNAME_CHANGE_RATE_LIMIT = { max: 3, windowMinutes: 24 * 60 } as const;
+
+/** Social links on the store page (D-028): https only, shown as icons. */
+export const SOCIAL_LINK_KINDS = ["website", "instagram", "youtube", "tiktok", "x", "linkedin", "facebook"] as const;
+export type SocialLinkKind = (typeof SOCIAL_LINK_KINDS)[number];
+export const SOCIAL_LINK_LABELS: Record<SocialLinkKind, string> = {
+  website: "Website",
+  instagram: "Instagram",
+  youtube: "YouTube",
+  tiktok: "TikTok",
+  x: "X",
+  linkedin: "LinkedIn",
+  facebook: "Facebook",
+};
+export const SOCIAL_LINKS_MAX = 6;
 
 export const PLANS = ["trial", "starter", "pro", "business"] as const;
 export type Plan = (typeof PLANS)[number];

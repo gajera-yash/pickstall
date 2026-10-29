@@ -12,9 +12,11 @@ export const CUSTOM_FONT_SIZES = [
   "h3",
   "h2",
   "h1",
+  "display",
   "display-l",
   "display-xl",
   "body-l",
+  "field",
   "money-m",
   "money-l",
 ] as const;
@@ -24,7 +26,7 @@ export const cn = createCn({
   extend: {
     classGroups: {
       "font-size": [{ text: [...CUSTOM_FONT_SIZES] }],
-      shadow: [{ shadow: ["hard-sm", "hard-md", "hard-lg", "overlay"] }],
+      shadow: [{ shadow: ["hard-sm", "hard-md", "hard-lg", "popover", "card"] }],
     },
   },
 });

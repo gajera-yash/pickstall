@@ -2,16 +2,16 @@
 
 import { Mail } from "lucide-react";
 import { useActionState, useState } from "react";
-import { useFormStatus } from "react-dom";
 
 import { CodeStep } from "@/components/auth/code-step";
+import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { useResendCooldown } from "@/components/auth/use-resend-cooldown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { IconInput } from "@/components/ui/icon-input";
 import { Label } from "@/components/ui/label";
-import { sendEmailCode, signInWithGoogle, type SendCodeState } from "@/lib/auth/actions";
+import { sendEmailCode, type SendCodeState } from "@/lib/auth/actions";
 import { OTP_LENGTH } from "@/lib/config";
 
 export type LoginNotice = { title: string; description: string };
@@ -77,28 +77,7 @@ export function LoginForm({ next, notice, googleEnabled }: Props) {
         </Button>
       </form>
 
-      {googleEnabled && (
-        <>
-          <div aria-hidden="true" className="flex items-center gap-3 text-sm text-mute">
-            <span className="h-px flex-1 bg-line" />
-            or
-            <span className="h-px flex-1 bg-line" />
-          </div>
-          <form action={signInWithGoogle}>
-            <input type="hidden" name="next" value={next} />
-            <GoogleButton />
-          </form>
-        </>
-      )}
+      {googleEnabled && <GoogleSignIn next={next} />}
     </>
-  );
-}
-
-function GoogleButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" variant="secondary" size="lg" className="w-full" loading={pending}>
-      Continue with Google
-    </Button>
   );
 }

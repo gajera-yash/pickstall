@@ -10,7 +10,7 @@ function Select({ className, children, ...props }: React.ComponentProps<"select"
       <select
         data-slot="select"
         className={cn(
-          "h-12 w-full min-w-0 appearance-none rounded-sm border border-input bg-surface pr-12 pl-4 text-base text-ink",
+          "h-11 w-full min-w-0 appearance-none rounded-md border border-input bg-surface pr-12 pl-4 text-field text-ink",
           "transition-colors duration-(--dur-fast)",
           "disabled:cursor-not-allowed disabled:opacity-50",
           "aria-invalid:border-danger",

@@ -28,5 +28,5 @@ export function AuthShell({ children, top, footer }: { children: ReactNode; top?
 
 /** Page title, centered at the top of the card. */
 export function AuthHeading({ children }: { children: ReactNode }) {
-  return <h1 className="text-center font-display text-h1">{children}</h1>;
+  return <h1 className="text-center font-display text-display">{children}</h1>;
 }

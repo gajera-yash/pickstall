@@ -3,7 +3,7 @@ import "server-only";
 import type { Collection } from "mongodb";
 
 import { getDb } from "@/lib/db/mongo";
-import type { Currency } from "@/lib/config";
+import type { Currency, SocialLinkKind } from "@/lib/config";
 import type { ThemePresetId } from "@/lib/themes";
 
 // Document shapes of the app's own collections (D-024). Better Auth owns `user`, `session`,
@@ -28,8 +28,13 @@ export type StoreDoc = {
   name: string;
   bio: string | null;
   avatarUrl: string | null;
-  /** One https link shown on the store page. */
-  link: string | null;
+  /**
+   * Social links on the store page (D-028), https only, max 6. Missing on stores created before
+   * the migration `scripts/migrations/2026-10-29-store-social-links.mjs`; readers fall back to `link`.
+   */
+  socialLinks?: { kind: SocialLinkKind; url: string }[];
+  /** @deprecated Replaced by `socialLinks`. The migration copies it and removes it. Never write it. */
+  link?: string | null;
   theme: { preset: ThemePresetId; accent: string };
   currency: Currency;
   /** Written only by the Stripe OAuth callback and the Connect webhook (Block D). */

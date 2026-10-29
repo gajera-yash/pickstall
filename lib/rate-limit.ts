@@ -44,3 +44,12 @@ export async function takeRateLimit(key: string, max: number, windowMinutes: num
   }
   return (doc?.count ?? 1) <= max;
 }
+
+/**
+ * Gives back one attempt taken with `takeRateLimit`, for an attempt that did not happen after all
+ * (for example a username change that failed because the name was taken). Never goes below zero.
+ */
+export async function releaseRateLimit(key: string): Promise<void> {
+  const { rateLimits } = await collections();
+  await rateLimits.updateOne({ _id: key, count: { $gt: 0 } }, { $inc: { count: -1 } });
+}

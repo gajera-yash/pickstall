@@ -32,4 +32,10 @@ describe("cn with design tokens", () => {
     const custom = [...new Set(defined)].filter((name) => !builtIn.has(name));
     expect(custom.sort()).toEqual([...CUSTOM_FONT_SIZES].sort());
   });
+
+  it("never gives a text size the name of a color (text-input would turn into a color)", () => {
+    const css = readFileSync("app/globals.css", "utf8");
+    const colors = new Set([...css.matchAll(/--color-([a-z0-9-]+):/g)].map((match) => match[1] as string));
+    expect(CUSTOM_FONT_SIZES.filter((size) => colors.has(size))).toEqual([]);
+  });
 });

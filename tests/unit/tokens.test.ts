@@ -39,7 +39,7 @@ const dark = { ...light, ...darkOverrides };
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const COLOR_TOKENS = [
-  "bg", "bg-subtle", "surface", "ink", "mute", "line", "border-ui", "border-strong",
+  "bg", "bg-subtle", "surface", "ink", "mute", "line", "border-input", "border-strong",
   "blue", "on-blue", "blue-hover", "blue-active", "blue-soft",
   "yellow", "on-yellow", "yellow-soft", "mint", "mint-soft",
   "danger", "on-danger", "danger-soft", "warning", "warning-soft",
@@ -67,28 +67,32 @@ describe("tokens.css structure", () => {
   });
 
   it("uses the radii from DESIGN.md section 6", () => {
-    expect([light["radius-xs"], light["radius-sm"], light["radius-md"], light["radius-lg"], light["radius-xl"]]).toEqual([
-      "6px", "10px", "14px", "20px", "28px",
-    ]);
+    expect([light["radius-sm"], light["radius-md"], light["radius-lg"]]).toEqual(["8px", "12px", "16px"]);
+  });
+
+  it("uses the popover shadow from DESIGN.md section 6", () => {
+    expect(light["shadow-popover"]).toBe("0 8px 24px rgb(11 13 42 / 0.12)");
   });
 });
 
 type Mode = "light" | "dark";
 const modes: Record<Mode, Record<string, string>> = { light, dark };
 
-/** [foreground token, background token, minimum ratio, documented ratio from DESIGN.md 3.2 or null] */
+/** [foreground token, background token, minimum ratio, documented ratio from DESIGN.md 3.1 or null] */
 const PAIRS: Record<Mode, [string, string, number, number | null][]> = {
   light: [
     ["ink", "bg", AA_TEXT, 19.0],
+    ["ink", "bg-subtle", AA_TEXT, 17.9],
     ["ink", "surface", AA_TEXT, null],
-    ["mute", "bg", AA_TEXT, 6.6],
+    ["mute", "bg", AA_TEXT, 6.2],
     ["mute", "surface", AA_TEXT, null],
-    ["mute", "bg-subtle", AA_TEXT, null],
-    ["blue", "bg-subtle", AA_TEXT, null],
-    ["border-ui", "bg-subtle", AA_LARGE_OR_UI, null],
+    ["mute", "bg-subtle", AA_TEXT, 5.8],
+    ["blue", "bg-subtle", AA_TEXT, 5.2],
+    ["blue", "blue-soft", AA_TEXT, 4.8],
+    ["border-input", "bg-subtle", AA_LARGE_OR_UI, 3.7],
     ["on-blue", "blue", AA_TEXT, 5.6],
-    ["on-blue", "blue-hover", AA_TEXT, null],
-    ["on-blue", "blue-active", AA_TEXT, null],
+    ["on-blue", "blue-hover", AA_TEXT, 7.2],
+    ["on-blue", "blue-active", AA_TEXT, 9.2],
     ["blue", "bg", AA_TEXT, 5.6],
     ["blue", "surface", AA_TEXT, null],
     ["ink", "blue-soft", AA_TEXT, null],
@@ -97,14 +101,15 @@ const PAIRS: Record<Mode, [string, string, number, number | null][]> = {
     ["ink", "yellow-soft", AA_TEXT, null],
     ["mint", "surface", AA_TEXT, 5.4],
     ["mint", "bg", AA_TEXT, 5.4],
-    ["mint", "mint-soft", AA_TEXT, null],
+    ["mint", "mint-soft", AA_TEXT, 4.8],
     ["danger", "surface", AA_TEXT, 5.9],
-    ["danger", "danger-soft", AA_TEXT, null],
+    ["danger", "danger-soft", AA_TEXT, 5.1],
     ["on-danger", "danger", AA_TEXT, null],
     ["warning", "surface", AA_TEXT, 5.9],
-    ["warning", "warning-soft", AA_TEXT, null],
-    ["border-ui", "bg", AA_LARGE_OR_UI, 3.3],
-    ["border-ui", "surface", AA_LARGE_OR_UI, 3.3],
+    ["warning", "warning-soft", AA_TEXT, 5.4],
+    ["warning", "yellow-soft", AA_TEXT, 5.5],
+    ["border-input", "bg", AA_LARGE_OR_UI, 3.9],
+    ["border-input", "surface", AA_LARGE_OR_UI, 3.9],
     ["border-strong", "bg", AA_LARGE_OR_UI, null],
     ["border-strong", "surface", AA_LARGE_OR_UI, null],
   ],
@@ -130,8 +135,8 @@ const PAIRS: Record<Mode, [string, string, number, number | null][]> = {
     ["on-danger", "danger", AA_TEXT, null],
     ["warning", "surface", AA_TEXT, null],
     ["warning", "warning-soft", AA_TEXT, null],
-    ["border-ui", "bg", AA_LARGE_OR_UI, 3.6],
-    ["border-ui", "surface", AA_LARGE_OR_UI, 3.2],
+    ["border-input", "bg", AA_LARGE_OR_UI, 3.6],
+    ["border-input", "surface", AA_LARGE_OR_UI, 3.2],
     ["border-strong", "bg", AA_LARGE_OR_UI, 4.5],
     ["border-strong", "surface", AA_LARGE_OR_UI, 4.0],
   ],
@@ -143,7 +148,7 @@ describe.each(["light", "dark"] as const)("contrast in %s mode", (mode) => {
     expect(ratio).toBeGreaterThanOrEqual(minimum);
   });
 
-  it("matches the measured ratios documented in DESIGN.md section 3.2", () => {
+  it("matches the measured ratios documented in DESIGN.md section 3.1", () => {
     for (const [fg, bg, , documented] of PAIRS[mode]) {
       if (documented === null) continue;
       const ratio = contrastRatio(modes[mode][fg] as string, modes[mode][bg] as string);

@@ -56,7 +56,7 @@ export function UsernameField({ value, onChange, serverError, autoFocus }: Props
       <Label htmlFor="username">Username</Label>
       <div
         className={cn(
-          "flex h-12 w-full min-w-0 items-stretch overflow-hidden rounded-sm border bg-surface transition-colors duration-(--dur-fast)",
+          "flex h-11 w-full min-w-0 items-stretch overflow-hidden rounded-md border bg-surface transition-colors duration-(--dur-fast)",
           "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
           problem ? "border-danger" : available ? "border-mint" : "border-input",
         )}
@@ -84,7 +84,7 @@ export function UsernameField({ value, onChange, serverError, autoFocus }: Props
           onChange={(event) => onChange(normalizeSlugInput(event.target.value))}
           aria-invalid={problem ? true : undefined}
           aria-describedby={hintId}
-          className="min-w-0 flex-1 bg-transparent px-3 text-base text-ink outline-none placeholder:text-mute"
+          className="min-w-0 flex-1 bg-transparent px-3 text-field text-ink outline-none placeholder:text-mute"
         />
         <span aria-hidden="true" className="flex shrink-0 items-center pr-3">
           {checking ? (

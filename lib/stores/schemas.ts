@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { AA_TEXT } from "@/lib/contrast";
-import { CURRENCIES } from "@/lib/config";
+import { CURRENCIES, SOCIAL_LINK_KINDS, SOCIAL_LINKS_MAX } from "@/lib/config";
 import { hasControlChar } from "@/lib/text";
 import { THEME_PRESET_IDS, onAccentFor } from "@/lib/themes";
 
@@ -54,15 +54,62 @@ export const accentSchema = z
     error: "This color is too light or too dark for button text. Pick a stronger color.",
   });
 
-/** Store setup form (PHASE1_PLAN.md B4). Slug, Stripe and publish state are never set here. */
-export const storeSetupInput = z.object({
+/** One social link: a known kind and a required https URL. */
+export const socialLinkSchema = z.object({
+  kind: z.enum(SOCIAL_LINK_KINDS, { error: "Pick where this link goes." }),
+  url: httpsUrlSchema("link").pipe(z.string({ error: "Enter the link, or remove this row." })),
+});
+
+export type SocialLink = z.infer<typeof socialLinkSchema>;
+
+export const socialLinksSchema = z
+  .array(socialLinkSchema)
+  .max(SOCIAL_LINKS_MAX, { error: `Add up to ${SOCIAL_LINKS_MAX} links.` })
+  .superRefine((links, ctx) => {
+    const seen = new Set<string>();
+    links.forEach((link, index) => {
+      const key = link.url.toLowerCase();
+      if (seen.has(key)) ctx.addIssue({ code: "custom", path: [index, "url"], message: "You already added this link." });
+      seen.add(key);
+    });
+  });
+
+/** Store setup form (D-028): the profile. Slug, theme, Stripe and publish state are never set here. */
+export const storeProfileInput = z.object({
   name: storeNameSchema,
   bio: storeBioSchema,
   avatarUrl: httpsUrlSchema("image link"),
-  link: httpsUrlSchema("link"),
   currency: z.enum(CURRENCIES, { error: "Pick a currency." }),
+  socialLinks: socialLinksSchema,
+});
+
+export type StoreProfileInput = z.infer<typeof storeProfileInput>;
+
+/** Page design tab on My Store (PRD F8): theme preset and accent. */
+export const pageDesignInput = z.object({
   themePreset: z.enum(THEME_PRESET_IDS, { error: "Pick a theme." }),
   accent: accentSchema,
 });
 
-export type StoreSetupInput = z.infer<typeof storeSetupInput>;
+export type PageDesignInput = z.infer<typeof pageDesignInput>;
+
+/**
+ * Social link rows from a form (`socialKind` and `socialUrl`, one pair per row). Rows with an
+ * empty URL are dropped, so an added but unused row is not an error. `rows` maps each kept link
+ * back to its row on screen, for error messages.
+ */
+export function socialLinkRowsFromForm(formData: FormData): { links: { kind: unknown; url: unknown }[]; rows: number[] } {
+  const kinds = formData.getAll("socialKind");
+  const urls = formData.getAll("socialUrl");
+  const links: { kind: unknown; url: unknown }[] = [];
+  const rows: number[] = [];
+  // Never read more rows than the limit allows (plus one, so the max error can still show).
+  const count = Math.min(Math.max(kinds.length, urls.length), SOCIAL_LINKS_MAX + 1);
+  for (let row = 0; row < count; row++) {
+    const url = urls[row];
+    if (typeof url !== "string" || url.trim() === "") continue;
+    links.push({ kind: kinds[row], url });
+    rows.push(row);
+  }
+  return { links, rows };
+}

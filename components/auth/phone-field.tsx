@@ -1,32 +1,73 @@
 "use client";
 
-import { ChevronDown, Phone } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import * as Flags from "country-flag-icons/react/3x2";
+import { Check, ChevronDown, Globe } from "lucide-react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { FieldError, FieldHint } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_DIAL_REGION, DIAL_CODES, PHONE_HINT, composePhone, regionFromLocale, type DialRegion } from "@/lib/phone";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DEFAULT_PHONE_COUNTRY,
+  PHONE_HINT,
+  composePhone,
+  countryFromLocale,
+  phoneCountryOptions,
+  splitPhone,
+  type PhoneCountry,
+} from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
 const noSubscribe = () => () => {};
 
-/**
- * Optional phone with a country-code picker (reference docs/ui-reference/username.webp). The
- * picker is a native <select> laid over the "+91" label, so it keeps native keyboard and mobile
- * behaviour. The form gets one value, `phone`, in international format; the server validates it.
- */
-export function PhoneField({ error }: { error?: string | null }) {
-  // The browser's country is the default (the server renders the fallback, so hydration matches).
-  const localeRegion = useSyncExternalStore(
-    noSubscribe,
-    () => regionFromLocale(navigator.language),
-    () => DEFAULT_DIAL_REGION,
-  );
-  const [picked, setPicked] = useState<DialRegion | null>(null);
-  const region = picked ?? localeRegion;
-  const [national, setNational] = useState("");
+/** cmdk filter: names that start with the search rank first, then any other match. */
+function countryFilter(value: string, search: string): number {
+  const query = search.trim().toLowerCase().replace(/^\+/, "");
+  const text = value.toLowerCase();
+  if (query === "") return 1;
+  if (text.startsWith(query)) return 1;
+  return text.includes(query) ? 0.5 : 0;
+}
 
-  const dial = DIAL_CODES.find((entry) => entry.region === region)?.dial ?? "1";
+type FlagComponent = (props: { className?: string; title?: string }) => React.JSX.Element;
+const FLAGS = Flags as unknown as Record<string, FlagComponent | undefined>;
+
+/** Country flag (SVG, never emoji: DESIGN.md 0.7). Decorative: the name or dial code is always next to it. */
+function CountryFlag({ country, className }: { country: PhoneCountry; className?: string }) {
+  const Flag = FLAGS[country];
+  return (
+    <span aria-hidden="true" className={cn("flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-bg-subtle", className)}>
+      {Flag ? <Flag className="h-full w-auto max-w-none" /> : <Globe className="size-4 text-mute" />}
+    </span>
+  );
+}
+
+/**
+ * Optional phone with a searchable country picker (reference docs/ui-reference/username.webp and
+ * the founder's dropdown sketch): flag, dial code and a chevron open a shadcn Popover + Command list
+ * with search, flags, names and codes. The form gets one value, `phone`, in international format;
+ * the server validates it (optionalPhoneSchema).
+ */
+export function PhoneField({ error, defaultValue }: { error?: string | null; defaultValue?: string | null }) {
+  // The browser's country is the default (the server renders the fallback, so hydration matches).
+  const localeCountry = useSyncExternalStore(
+    noSubscribe,
+    () => countryFromLocale(navigator.language),
+    () => DEFAULT_PHONE_COUNTRY,
+  );
+  // A saved number (Settings > Account) starts with its own country and national number.
+  const [saved] = useState(() => splitPhone(defaultValue));
+  const [picked, setPicked] = useState<PhoneCountry | null>(saved?.country ?? null);
+  const country = picked ?? localeCountry;
+  const [national, setNational] = useState(saved?.national ?? "");
+  const [open, setOpen] = useState(false);
+  const numberRef = useRef<HTMLInputElement>(null);
+  // After picking a country, focus goes to the number field; Esc or a click outside returns it to the picker.
+  const focusNumberOnClose = useRef(false);
+
+  const options = useMemo(() => phoneCountryOptions(), []);
+  const current = options.find((option) => option.country === country);
   const describedBy = error ? "phone-error" : "phone-hint";
 
   return (
@@ -34,34 +75,72 @@ export function PhoneField({ error }: { error?: string | null }) {
       <Label htmlFor="phone">
         Phone <span className="font-normal text-mute">(optional)</span>
       </Label>
-      <input type="hidden" name="phone" value={composePhone(region, national)} />
+      <input type="hidden" name="phone" value={composePhone(country, national)} />
       <div
         className={cn(
-          "flex h-12 w-full min-w-0 items-stretch overflow-hidden rounded-sm border bg-surface",
+          "flex h-11 w-full min-w-0 items-stretch overflow-hidden rounded-md border bg-surface",
           "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
           error ? "border-danger" : "border-input",
         )}
       >
-        <div className="relative flex shrink-0 items-center gap-2 border-r border-line pr-3 pl-4">
-          <Phone aria-hidden="true" className="size-5 text-mute" />
-          <span aria-hidden="true" className="text-base font-medium text-ink tabular-nums">
-            +{dial}
-          </span>
-          <ChevronDown aria-hidden="true" className="size-4 text-mute" />
-          <select
-            aria-label="Country code"
-            value={region}
-            onChange={(event) => setPicked(event.target.value as DialRegion)}
-            className="absolute inset-0 cursor-pointer opacity-0"
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={`Country code: ${current?.name ?? country} +${current?.dial ?? ""}. Change`}
+              className="flex shrink-0 items-center gap-2 border-r border-line pr-3 pl-3 outline-none hover:bg-bg-subtle focus-visible:bg-blue-soft"
+            >
+              <CountryFlag country={country} />
+              <span className="text-field font-medium text-ink tabular-nums">+{current?.dial}</span>
+              <ChevronDown aria-hidden="true" className={cn("size-4 text-mute transition-transform duration-(--dur-fast)", open && "rotate-180")} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="w-[min(20rem,calc(100vw-2rem))] p-0"
+            onCloseAutoFocus={(event) => {
+              if (!focusNumberOnClose.current) return;
+              focusNumberOnClose.current = false;
+              event.preventDefault();
+              numberRef.current?.focus();
+            }}
           >
-            {DIAL_CODES.map((entry) => (
-              <option key={entry.region} value={entry.region}>
-                {entry.name} +{entry.dial}
-              </option>
-            ))}
-          </select>
-        </div>
+            <Command
+              // Search by country name, ISO code or dial code ("india", "IN", "91" or "+91").
+              filter={countryFilter}
+            >
+              <CommandInput placeholder="Search" aria-label="Search countries" />
+              <CommandList>
+                <CommandEmpty>No country found.</CommandEmpty>
+                <CommandGroup>
+                  {options.map((option) => (
+                    <CommandItem
+                      key={option.country}
+                      value={`${option.name} ${option.country} ${option.dial}`}
+                      onSelect={() => {
+                        setPicked(option.country);
+                        focusNumberOnClose.current = true;
+                        setOpen(false);
+                        // Focus now, not after the close animation, so typing right away lands in the number.
+                        numberRef.current?.focus();
+                      }}
+                    >
+                      <CountryFlag country={option.country} />
+                      <span className="flex-1 truncate">{option.name}</span>
+                      <span className="text-mute tabular-nums">+{option.dial}</span>
+                      <Check
+                        aria-hidden="true"
+                        className={cn("size-4 text-blue", option.country === country ? "opacity-100" : "opacity-0")}
+                      />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
         <input
+          ref={numberRef}
           id="phone"
           type="tel"
           inputMode="tel"
@@ -71,7 +150,7 @@ export function PhoneField({ error }: { error?: string | null }) {
           onChange={(event) => setNational(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className="min-w-0 flex-1 bg-transparent px-3 text-base text-ink outline-none placeholder:text-mute"
+          className="min-w-0 flex-1 bg-transparent px-3 text-field text-ink outline-none placeholder:text-mute"
         />
       </div>
       {error ? <FieldError id="phone-error">{error}</FieldError> : <FieldHint id="phone-hint">{PHONE_HINT}</FieldHint>}

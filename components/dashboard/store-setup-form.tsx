@@ -1,242 +1,316 @@
 "use client";
 
-import { CheckCircle2, Image as ImageIcon, Link2, Store } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { Check, Eye, Image as ImageIcon, Plus, Store, Trash2 } from "lucide-react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
+import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
+import { StorePreview } from "@/components/dashboard/store-preview";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { FieldError, FieldHint } from "@/components/ui/field";
+import { Card, CardHeader } from "@/components/ui/card";
+import { FieldError } from "@/components/ui/field";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { IconInput } from "@/components/ui/icon-input";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CURRENCIES, CURRENCY_LABELS, type Currency } from "@/lib/config";
-import { AA_TEXT } from "@/lib/contrast";
+import {
+  CURRENCIES,
+  CURRENCY_LABELS,
+  SOCIAL_LINK_KINDS,
+  SOCIAL_LINK_LABELS,
+  SOCIAL_LINKS_MAX,
+  type Currency,
+  type SocialLinkKind,
+} from "@/lib/config";
 import { saveStoreSetup, type StoreSetupState } from "@/lib/stores/actions";
 import { STORE_BIO_MAX_LENGTH, STORE_NAME_MAX_LENGTH } from "@/lib/stores/schemas";
-import { THEME_PRESETS, THEME_PRESET_IDS, onAccentFor, type ThemePresetId } from "@/lib/themes";
-import { cn } from "@/lib/utils";
+import type { ThemePresetId } from "@/lib/themes";
+
+type SocialRow = { key: number; kind: SocialLinkKind; url: string };
 
 type Values = {
   name: string;
   bio: string;
   avatarUrl: string;
-  link: string;
   currency: Currency;
-  themePreset: ThemePresetId;
-  accent: string;
+  socialLinks: { kind: SocialLinkKind; url: string }[];
 };
 
-type FieldName = keyof Values;
+type Props = {
+  initial: Values;
+  slug: string;
+  /** Theme is edited on My Store > Page design; the preview still uses it. */
+  theme: { preset: ThemePresetId; accent: string };
+};
 
-const HEX = /^#[0-9a-fA-F]{6}$/;
+const toRows = (links: Values["socialLinks"]): SocialRow[] => links.map((link, index) => ({ key: index, ...link }));
+const snapshot = (values: Omit<Values, "socialLinks">, rows: SocialRow[]) =>
+  JSON.stringify([values, rows.filter((row) => row.url.trim()).map(({ kind, url }) => [kind, url.trim()])]);
 
-/** Store setup form (DESIGN.md 9.13: single column; counters on length-limited text; contrast check on the accent). */
-export function StoreSetupForm({ initial }: { initial: Values }) {
+/**
+ * Store setup (PRD F8, DESIGN.md 10.3 and 9.13): profile cards in one column with a sticky live
+ * preview on wide screens (behind a Preview button otherwise), social links list, unsaved-changes
+ * guard, and "Saving..." then "Saved" on the button.
+ */
+export function StoreSetupForm({ initial, slug, theme }: Props) {
   const [state, action, pending] = useActionState<StoreSetupState, FormData>(saveStoreSetup, null);
-  const [values, setValues] = useState<Values>(initial);
-  const set = <K extends FieldName>(field: K, value: Values[K]) => setValues((current) => ({ ...current, [field]: value }));
+  const { socialLinks: initialLinks, ...initialFields } = initial;
+  const [values, setValues] = useState(initialFields);
+  const [rows, setRows] = useState<SocialRow[]>(() => toRows(initialLinks));
+  const nextKey = useRef(initialLinks.length);
+  const [saved, setSaved] = useState(() => snapshot(initialFields, toRows(initialLinks)));
+
+  const current = snapshot(values, rows);
+  const dirty = current !== saved;
+
+  const set = <K extends keyof typeof values>(field: K, value: (typeof values)[K]) => setValues((prev) => ({ ...prev, [field]: value }));
+  const setRow = (key: number, change: Partial<SocialRow>) => setRows((prev) => prev.map((row) => (row.key === key ? { ...row, ...change } : row)));
+  const addRow = () => {
+    const used = new Set(rows.map((row) => row.kind));
+    const kind = SOCIAL_LINK_KINDS.find((candidate) => !used.has(candidate)) ?? "website";
+    const key = nextKey.current++;
+    setRows((prev) => [...prev, { key, kind, url: "" }]);
+    // Focus the new URL field once it exists.
+    requestAnimationFrame(() => document.getElementById(`socialUrl-${rows.length}`)?.focus());
+  };
+  const removeRow = (key: number) => setRows((prev) => prev.filter((row) => row.key !== key));
 
   const error = state && !state.ok ? state : null;
-  const fieldError = (field: FieldName) => (error?.field === field ? error.error : null);
+  const fieldError = (field: string) => (error?.field === field ? error.error : null);
   const formError = error && !error.field ? error.error : null;
+  const justSaved = state?.ok && !dirty;
+
+  // What was sent becomes the saved snapshot when the result comes back ok.
+  const [submitted, setSubmitted] = useState(saved);
+  const [seenState, setSeenState] = useState(state);
+  if (state !== seenState) {
+    setSeenState(state);
+    if (state?.ok) setSaved(submitted);
+  }
 
   useEffect(() => {
     if (state && !state.ok && state.field) document.getElementById(state.field)?.focus();
   }, [state]);
 
-  const accentValid = HEX.test(values.accent);
-  const contrast = accentValid ? onAccentFor(values.accent) : null;
-  const contrastOk = contrast !== null && contrast.ratio >= AA_TEXT;
+  // Unsaved-changes guard (DESIGN.md 9.13).
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
-  const pickPreset = (id: ThemePresetId) => setValues((current) => ({ ...current, themePreset: id, accent: THEME_PRESETS[id].accent }));
+  const previewData = {
+    slug,
+    name: values.name,
+    bio: values.bio,
+    avatarUrl: values.avatarUrl,
+    socialLinks: rows.filter((row) => row.url.trim()).map(({ kind, url }) => ({ kind, url })),
+    themePreset: theme.preset,
+    accent: theme.accent,
+  };
 
   return (
-    <form action={action} noValidate className="flex max-w-xl flex-col gap-6">
-      {state?.ok && (
-        <Alert variant="success">
-          <AlertDescription>Your store is saved.</AlertDescription>
-        </Alert>
-      )}
-      {formError && (
-        <Alert variant="error">
-          <AlertDescription>{formError}</AlertDescription>
-        </Alert>
-      )}
-
-      <FormField id="name" label="Store name" error={fieldError("name")} hint={`${values.name.length}/${STORE_NAME_MAX_LENGTH}`}>
-        <IconInput
-          icon={Store}
-          id="name"
-          name="name"
-          required
-          maxLength={STORE_NAME_MAX_LENGTH}
-          value={values.name}
-          onChange={(event) => set("name", event.target.value)}
-          aria-invalid={fieldError("name") ? true : undefined}
-          aria-describedby={describedBy("name", fieldError("name"), "hint")}
-        />
-      </FormField>
-
-      <FormField id="bio" label="Bio (optional)" error={fieldError("bio")} hint={`${values.bio.length}/${STORE_BIO_MAX_LENGTH}`}>
-        <Textarea
-          id="bio"
-          name="bio"
-          rows={3}
-          maxLength={STORE_BIO_MAX_LENGTH}
-          placeholder="I teach busy people to cook in 20 minutes."
-          value={values.bio}
-          onChange={(event) => set("bio", event.target.value)}
-          aria-invalid={fieldError("bio") ? true : undefined}
-          aria-describedby={describedBy("bio", fieldError("bio"), "hint")}
-        />
-      </FormField>
-
-      <FormField
-        id="avatarUrl"
-        label="Photo link (optional)"
-        error={fieldError("avatarUrl")}
-        hint="Paste an https link to your photo. Uploading a photo is coming next."
-      >
-        <IconInput
-          icon={ImageIcon}
-          id="avatarUrl"
-          name="avatarUrl"
-          type="url"
-          inputMode="url"
-          placeholder="https://"
-          value={values.avatarUrl}
-          onChange={(event) => set("avatarUrl", event.target.value)}
-          aria-invalid={fieldError("avatarUrl") ? true : undefined}
-          aria-describedby={describedBy("avatarUrl", fieldError("avatarUrl"), "hint")}
-        />
-      </FormField>
-
-      <FormField id="link" label="Your link (optional)" error={fieldError("link")} hint="Your website, YouTube or Instagram. Must start with https://">
-        <IconInput
-          icon={Link2}
-          id="link"
-          name="link"
-          type="url"
-          inputMode="url"
-          placeholder="https://"
-          value={values.link}
-          onChange={(event) => set("link", event.target.value)}
-          aria-invalid={fieldError("link") ? true : undefined}
-          aria-describedby={describedBy("link", fieldError("link"), "hint")}
-        />
-      </FormField>
-
-      <FormField id="currency" label="Currency" error={fieldError("currency")} hint="Prices on your store use this currency.">
-        <Select
-          id="currency"
-          name="currency"
-          value={values.currency}
-          onChange={(event) => set("currency", event.target.value as Currency)}
-          aria-invalid={fieldError("currency") ? true : undefined}
-          aria-describedby={describedBy("currency", fieldError("currency"), "hint")}
-        >
-          {CURRENCIES.map((currency) => (
-            <option key={currency} value={currency}>
-              {CURRENCY_LABELS[currency]}
-            </option>
-          ))}
-        </Select>
-      </FormField>
-
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-semibold">Theme</legend>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {THEME_PRESET_IDS.map((id) => {
-            const preset = THEME_PRESETS[id];
-            const selected = values.themePreset === id;
-            return (
-              <label
-                key={id}
-                className={cn(
-                  "flex cursor-pointer items-center gap-3 rounded-md border p-3 transition-colors duration-(--dur-fast)",
-                  "has-focus-visible:ring-2 has-focus-visible:ring-ring",
-                  selected ? "border-blue bg-blue-soft" : "border-border-ui hover:border-ink",
-                )}
-              >
-                <input
-                  type="radio"
-                  name="themePreset"
-                  value={id}
-                  checked={selected}
-                  onChange={() => pickPreset(id)}
-                  className="sr-only"
-                />
-                {/* Preview swatch: the preset's own colors (theme data, lib/themes.ts). */}
-                <span
-                  aria-hidden="true"
-                  className="flex size-10 shrink-0 items-center justify-center rounded-sm border border-line text-xs font-bold"
-                  style={{ background: preset.background, color: preset.text }}
-                >
-                  Aa
-                </span>
-                <span className="flex flex-1 items-center justify-between gap-2 font-semibold">
-                  {preset.name}
-                  {selected && <CheckCircle2 aria-hidden="true" className="size-5 text-blue" />}
-                </span>
-              </label>
-            );
-          })}
-        </div>
-        {fieldError("themePreset") && <FieldError id="themePreset-error">{fieldError("themePreset")}</FieldError>}
-      </fieldset>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="accent">Accent color</Label>
-        <div className="flex items-center gap-3">
-          <input
-            type="color"
-            aria-label="Pick accent color"
-            value={(accentValid ? values.accent : THEME_PRESETS[values.themePreset].accent).toLowerCase()}
-            onChange={(event) => set("accent", event.target.value.toUpperCase())}
-            className="h-12 w-14 shrink-0 cursor-pointer rounded-sm border border-input bg-surface p-1"
-          />
-          <Input
-            id="accent"
-            name="accent"
-            autoCapitalize="none"
-            spellCheck={false}
-            maxLength={7}
-            className="font-mono uppercase"
-            value={values.accent}
-            onChange={(event) => set("accent", event.target.value.trim())}
-            aria-invalid={fieldError("accent") || (accentValid && !contrastOk) ? true : undefined}
-            aria-describedby={fieldError("accent") ? "accent-error" : "accent-check"}
-          />
-        </div>
-        {fieldError("accent") ? (
-          <FieldError id="accent-error">{fieldError("accent")}</FieldError>
-        ) : contrast && contrastOk ? (
-          <FieldHint id="accent-check" className="flex items-center gap-2">
-            {/* Live button preview with the computed on-accent color. */}
-            <span
-              aria-hidden="true"
-              className="rounded-sm px-3 py-1 text-sm font-semibold"
-              style={{ background: values.accent, color: contrast.color }}
-            >
-              Buy now
-            </span>
-            Contrast {contrast.ratio.toFixed(1)}:1, easy to read.
-          </FieldHint>
-        ) : (
-          <FieldError id="accent-check">
-            {accentValid
-              ? `Contrast ${contrast?.ratio.toFixed(1)}:1 is too low for button text. Pick a stronger color.`
-              : `Enter a color like ${THEME_PRESETS.clean.accent}.`}
-          </FieldError>
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
+      <form action={action} onSubmit={() => setSubmitted(current)} noValidate className="flex min-w-0 flex-col gap-6">
+        {justSaved && (
+          <Alert variant="success">
+            <AlertDescription>Your store is saved.</AlertDescription>
+          </Alert>
         )}
-      </div>
+        {formError && (
+          <Alert variant="error">
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
 
-      <Button type="submit" size="lg" className="self-start" loading={pending} disabled={!contrastOk}>
-        Save store
-      </Button>
-    </form>
+        <Card>
+          <CardHeader>
+            <h2 className="font-display text-h3">Profile</h2>
+            <p className="text-sm text-mute">What buyers see at the top of your store page.</p>
+          </CardHeader>
+
+          <FormField id="name" label="Store name" error={fieldError("name")} hint={`${values.name.length}/${STORE_NAME_MAX_LENGTH}`}>
+            <IconInput
+              icon={Store}
+              id="name"
+              name="name"
+              required
+              maxLength={STORE_NAME_MAX_LENGTH}
+              value={values.name}
+              onChange={(event) => set("name", event.target.value)}
+              aria-invalid={fieldError("name") ? true : undefined}
+              aria-describedby={describedBy("name", fieldError("name"), "hint")}
+            />
+          </FormField>
+
+          <FormField
+            id="avatarUrl"
+            label="Photo link (optional)"
+            error={fieldError("avatarUrl")}
+            hint="Paste an https link to your photo. Uploading a photo is coming next."
+          >
+            <IconInput
+              icon={ImageIcon}
+              id="avatarUrl"
+              name="avatarUrl"
+              type="url"
+              inputMode="url"
+              placeholder="https://"
+              value={values.avatarUrl}
+              onChange={(event) => set("avatarUrl", event.target.value)}
+              aria-invalid={fieldError("avatarUrl") ? true : undefined}
+              aria-describedby={describedBy("avatarUrl", fieldError("avatarUrl"), "hint")}
+            />
+          </FormField>
+
+          <FormField id="bio" label="Bio (optional)" error={fieldError("bio")} hint={`${values.bio.length}/${STORE_BIO_MAX_LENGTH}`}>
+            <Textarea
+              id="bio"
+              name="bio"
+              rows={3}
+              maxLength={STORE_BIO_MAX_LENGTH}
+              placeholder="I teach busy people to cook in 20 minutes."
+              value={values.bio}
+              onChange={(event) => set("bio", event.target.value)}
+              aria-invalid={fieldError("bio") ? true : undefined}
+              aria-describedby={describedBy("bio", fieldError("bio"), "hint")}
+            />
+          </FormField>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <h2 className="font-display text-h3">Social links</h2>
+            <p className="text-sm text-mute">
+              Shown as icons under your bio. Up to {SOCIAL_LINKS_MAX}, each starting with https://
+            </p>
+          </CardHeader>
+
+          {rows.length > 0 && (
+            <ul className="flex flex-col gap-4">
+              {rows.map((row, index) => {
+                const Icon = SOCIAL_ICONS[row.kind];
+                const urlId = `socialUrl-${index}`;
+                const urlError = fieldError(urlId);
+                return (
+                  <li key={row.key} className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                      <div className="relative sm:w-44 sm:shrink-0">
+                        <Icon aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 z-10 size-5 -translate-y-1/2 text-mute" />
+                        <Select
+                          name="socialKind"
+                          aria-label={`Link ${index + 1}: where it goes`}
+                          value={row.kind}
+                          onChange={(event) => setRow(row.key, { kind: event.target.value as SocialLinkKind })}
+                          className="pl-11"
+                        >
+                          {SOCIAL_LINK_KINDS.map((kind) => (
+                            <option key={kind} value={kind}>
+                              {SOCIAL_LINK_LABELS[kind]}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div className="flex min-w-0 flex-1 gap-2">
+                        <Input
+                          id={urlId}
+                          name="socialUrl"
+                          type="url"
+                          inputMode="url"
+                          placeholder="https://"
+                          aria-label={`Link ${index + 1}: ${SOCIAL_LINK_LABELS[row.kind]} address`}
+                          value={row.url}
+                          onChange={(event) => setRow(row.key, { url: event.target.value })}
+                          aria-invalid={urlError ? true : undefined}
+                          aria-describedby={urlError ? `${urlId}-error` : undefined}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Remove link ${index + 1} (${SOCIAL_LINK_LABELS[row.kind]})`}
+                          onClick={() => removeRow(row.key)}
+                        >
+                          <Trash2 aria-hidden="true" />
+                        </Button>
+                      </div>
+                    </div>
+                    {urlError && <FieldError id={`${urlId}-error`}>{urlError}</FieldError>}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {fieldError("socialLinks") && <FieldError id="socialLinks">{fieldError("socialLinks")}</FieldError>}
+
+          {rows.length < SOCIAL_LINKS_MAX ? (
+            <Button type="button" variant="secondary" className="self-start" onClick={addRow}>
+              <Plus aria-hidden="true" />
+              {rows.length === 0 ? "Add a link" : "Add another link"}
+            </Button>
+          ) : (
+            <p className="text-sm text-mute">You have added the most links a store can show.</p>
+          )}
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <h2 className="font-display text-h3">Currency</h2>
+          </CardHeader>
+          <FormField id="currency" label="Store currency" error={fieldError("currency")} hint="Prices on your store use this currency.">
+            <Select
+              id="currency"
+              name="currency"
+              value={values.currency}
+              onChange={(event) => set("currency", event.target.value as Currency)}
+              aria-invalid={fieldError("currency") ? true : undefined}
+              aria-describedby={describedBy("currency", fieldError("currency"), "hint")}
+            >
+              {CURRENCIES.map((currency) => (
+                <option key={currency} value={currency}>
+                  {CURRENCY_LABELS[currency]}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        </Card>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="submit" loading={pending} disabled={!dirty && !pending}>
+            {pending ? "Saving..." : justSaved ? (
+              <>
+                <Check aria-hidden="true" />
+                Saved
+              </>
+            ) : (
+              "Save changes"
+            )}
+          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button type="button" variant="secondary" className="xl:hidden">
+                <Eye aria-hidden="true" />
+                Preview
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-bg-subtle sm:max-w-[420px]">
+              <DialogHeader>
+                <DialogTitle>Preview</DialogTitle>
+              </DialogHeader>
+              <StorePreview data={previewData} />
+            </DialogContent>
+          </Dialog>
+          {dirty && !pending && <p className="text-sm text-mute">You have unsaved changes.</p>}
+        </div>
+      </form>
+
+      <div className="hidden flex-col gap-3 xl:sticky xl:top-20 xl:flex">
+        <p className="text-sm font-semibold text-mute">Live preview</p>
+        <StorePreview data={previewData} />
+      </div>
+    </div>
   );
 }

@@ -7,8 +7,9 @@ describe("config", () => {
     expect(APP_NAME.length).toBeGreaterThan(0);
   });
 
-  it("reserves the slugs required by PRD F1 and the app routes", () => {
-    for (const slug of ["app", "www", "api", "admin", "login", "s", "dashboard", "library"]) {
+  it("reserves the slugs required by PRD 5.2 and the app routes", () => {
+    const prd = ["app", "www", "api", "admin", "login", "signup", "dashboard", "library", "checkout", "pricing", "terms", "privacy", "help", "support"];
+    for (const slug of [...prd, "s"]) {
       expect(RESERVED_SLUGS).toContain(slug);
     }
   });
