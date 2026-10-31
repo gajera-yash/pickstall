@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 
 import { ProductPage } from "@/components/store/product-page";
 import { APP_NAME } from "@/lib/config";
 import { findPublicProduct, findPublicStore } from "@/lib/stores/public";
 
 // Public product page at /@username/product-slug (rewrite in next.config.ts). Only a published
-// product of a published store is shown; anything else is a real 404.
-export const instant = false;
+// product of a published store is shown; anything else is a real 404. `connection()` renders per request.
+
 
 function safeUrl(value: string | null): string | undefined {
   try {
@@ -18,6 +19,7 @@ function safeUrl(value: string | null): string | undefined {
 }
 
 export async function generateMetadata({ params }: PageProps<"/s/[username]/[productSlug]">): Promise<Metadata> {
+  await connection();
   const { username, productSlug } = await params;
   const store = await findPublicStore(username);
   const product = store ? await findPublicProduct(store.id, productSlug) : null;
@@ -33,6 +35,7 @@ export async function generateMetadata({ params }: PageProps<"/s/[username]/[pro
 }
 
 export default async function PublicProductPage({ params }: PageProps<"/s/[username]/[productSlug]">) {
+  await connection();
   const { username, productSlug } = await params;
   const store = await findPublicStore(username);
   if (!store) notFound();
