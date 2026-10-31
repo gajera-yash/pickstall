@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-036: R7 buyer library and secure delivery
+- **Date:** 2026-11-01
+- **Decision:**
+  - Buyers sign in with the same 6-digit email code and see the paid and refunded orders placed with their verified email (`/library`, `/library/[orderId]`). No buyer password, no separate buyer account system.
+  - The delivery link (`externalUrl`) never appears in a page or API response. The "Open your purchase" form POSTs to `/library/[orderId]/open`, which checks the same-origin `Origin`, the session, that the order is this buyer's and paid (a refund removes access), that the product still has a link, and the download limit, then redirects (303) to the stored https link with `Referrer-Policy: no-referrer`. POST only, so previews and prefetch cannot use up an open. The target comes from the database, never from the request.
+  - The download limit is one atomic update on the order (`accessCount` below the limit), so parallel requests cannot both take the last use. The limit counts opens of the link; it cannot stop someone who already has the link from sharing it. Real file downloads with short-lived signed URLs need private file storage (not built; links only for now).
+  - Refunds: the Stripe adapter turns a fully refunded `charge.refunded` into a refund event; the order is found through the PaymentIntent id saved when it was paid (`providerPaymentId`, unique index) and set to refunded. A partial refund keeps access. Creators refund in their own Stripe dashboard.
+  - The thank-you page links to the library; the confirmation email with an access link comes with R8.
+- **Why:** PRD F13 and F3b, R7.
+
 ## D-035: R6 orders, customers and income from paid orders
 - **Date:** 2026-11-01
 - **Decision:**

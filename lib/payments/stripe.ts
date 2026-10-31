@@ -74,10 +74,18 @@ export const stripeProvider: PaymentProvider = {
         type: "payment.succeeded",
         orderId,
         providerSessionId: session.id,
+        providerPaymentId: typeof session.payment_intent === "string" ? session.payment_intent : (session.payment_intent?.id ?? undefined),
         amountCents: session.amount_total ?? undefined,
         currency: session.currency ?? undefined,
       };
       return { ok: true, event: normalized };
+    }
+    // A fully refunded charge: find our order through the payment id (a partial refund keeps access).
+    if (event.type === "charge.refunded") {
+      const charge = event.data.object;
+      const paymentId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+      if (!paymentId || !charge.refunded) return { ok: true, event: null };
+      return { ok: true, event: { eventId: event.id, type: "payment.refunded", orderId: null, providerSessionId: null, providerPaymentId: paymentId } };
     }
     logger.info("stripe.webhook_ignored", { type: event.type });
     return { ok: true, event: null };

@@ -52,7 +52,7 @@ export const mockProvider: PaymentProvider = {
     if (typeof body.id !== "string" || typeof body.orderId !== "string" || (body.type !== "payment.succeeded" && body.type !== "payment.refunded")) {
       return { ok: false, reason: "bad_payload" };
     }
-    const event: PaymentEvent = { eventId: body.id, type: body.type, orderId: body.orderId, providerSessionId: `mock_${body.orderId}` };
+    const event: PaymentEvent = { eventId: body.id, type: body.type, orderId: body.orderId, providerSessionId: `mock_${body.orderId}`, providerPaymentId: `mockpay_${body.orderId}` };
     return { ok: true, event };
   },
 

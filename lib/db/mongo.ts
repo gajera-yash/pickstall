@@ -27,6 +27,8 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("products").createIndex({ storeId: 1, slug: 1 }, { unique: true, name: "products_store_slug_unique" }),
     db.collection("products").createIndex({ storeId: 1, status: 1, sortOrder: 1 }, { name: "products_store_status" }),
     db.collection("orders").createIndex({ providerSessionId: 1 }, { unique: true, partialFilterExpression: { providerSessionId: { $type: "string" } }, name: "orders_provider_session_unique" }),
+    db.collection("orders").createIndex({ providerPaymentId: 1 }, { unique: true, partialFilterExpression: { providerPaymentId: { $type: "string" } }, name: "orders_provider_payment_unique" }),
+    db.collection("orders").createIndex({ buyerEmail: 1, status: 1, paidAt: -1 }, { name: "orders_buyer_email" }),
     db.collection("orders").createIndex({ storeId: 1, createdAt: -1 }, { name: "orders_store_created" }),
     db.collection("uploads").createIndex({ storeId: 1, createdAt: -1 }, { name: "uploads_store" }),
     db.collection("signupIntents").createIndex({ email: 1 }, { unique: true, name: "signup_intents_email_unique" }),

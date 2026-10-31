@@ -21,8 +21,11 @@ export type PaymentEvent = {
   /** The provider's event id, the idempotency key. */
   eventId: string;
   type: "payment.succeeded" | "payment.refunded";
-  orderId: string;
+  /** Our order id. A refund event only knows the provider's payment id, so this can be null there. */
+  orderId: string | null;
   providerSessionId: string | null;
+  /** The provider's payment id (Stripe PaymentIntent), used to find the order on a refund. */
+  providerPaymentId?: string;
   /** What the provider says was paid. When present, fulfilment checks it against our own order total. */
   amountCents?: number;
   currency?: string;

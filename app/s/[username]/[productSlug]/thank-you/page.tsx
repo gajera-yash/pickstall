@@ -40,6 +40,11 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
               ? "This can take a moment. Refresh this page in a few seconds."
               : "Something went wrong with this payment. You were not charged for this order."}
         </p>
+        {paid && (
+          <Link href="/library" className="font-semibold underline underline-offset-4">
+            Open your purchase in your library
+          </Link>
+        )}
         <Link href={`/@${context.store.slug}`} className="font-semibold underline underline-offset-4">
           Back to {context.store.name}
         </Link>

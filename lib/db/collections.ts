@@ -117,6 +117,10 @@ export type OrderDoc = {
   /** Who takes the payment: Stripe, the development-only mock, or none for a free product. */
   provider: "stripe" | "mock" | "free";
   providerSessionId: string | null;
+  /** The provider's payment id, saved when the order is paid; a refund event finds the order through it. */
+  providerPaymentId?: string | null;
+  /** How many times the buyer opened the delivery link (R7), checked against the product's download limit. */
+  accessCount?: number;
   createdAt: Date;
   paidAt: Date | null;
 };

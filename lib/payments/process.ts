@@ -26,7 +26,7 @@ export async function handleWebhookRequest(providerName: string, rawBody: string
   const key = `${provider.name}:${event.eventId}`;
 
   try {
-    await webhookEvents.insertOne({ _id: key, source: provider.name, type: event.type, orderId: event.orderId, processedAt: new Date() });
+    await webhookEvents.insertOne({ _id: key, source: provider.name, type: event.type, orderId: event.orderId ?? null, processedAt: new Date() });
   } catch (error) {
     if (isDuplicateKeyError(error)) return { status: 200, body: "duplicate" };
     logger.error("webhook.record_failed", { name: error instanceof Error ? error.name : undefined });
@@ -47,6 +47,15 @@ export async function handleWebhookRequest(providerName: string, rawBody: string
 async function applyEvent(event: PaymentEvent): Promise<void> {
   const { orders } = await collections();
 
+  // A refund may only know the provider's payment id; find our order through it.
+  if (event.type === "payment.refunded") {
+    const match = event.orderId ? { _id: event.orderId } : event.providerPaymentId ? { providerPaymentId: event.providerPaymentId } : null;
+    if (!match) return;
+    await orders.updateOne({ ...match, status: "paid" }, { $set: { status: "refunded" } });
+    return;
+  }
+  if (!event.orderId) return;
+
   if (event.type === "payment.succeeded") {
     const order = await orders.findOne({ _id: event.orderId }, { projection: { totalCents: 1, currency: 1, status: 1 } });
     if (!order) return;
@@ -58,11 +67,11 @@ async function applyEvent(event: PaymentEvent): Promise<void> {
       return; // never mark an order paid for a different amount
     }
     // Only a pending order becomes paid; a second delivery changes nothing.
-    await orders.updateOne({ _id: event.orderId, status: "pending" }, { $set: { status: "paid", paidAt: new Date() } });
-    return;
+    await orders.updateOne(
+      { _id: event.orderId, status: "pending" },
+      { $set: { status: "paid", paidAt: new Date(), ...(event.providerPaymentId ? { providerPaymentId: event.providerPaymentId } : {}) } },
+    );
   }
-
-  await orders.updateOne({ _id: event.orderId, status: "paid" }, { $set: { status: "refunded" } });
 }
 
 /** A free product has no payment step: this marks its zero-amount order paid (only if it really is free and pending). */

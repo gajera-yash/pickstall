@@ -154,7 +154,13 @@ describe("handleWebhookRequest (the only way an order becomes paid)", () => {
     expect(await handleWebhookRequest("mock", body, signature)).toEqual({ status: 200, body: "ok" });
     expect(await handleWebhookRequest("mock", body, signature)).toEqual({ status: 200, body: "duplicate" });
     expect(hoisted.orders.updateOne).toHaveBeenCalledTimes(1);
-    expect(hoisted.orders.updateOne).toHaveBeenCalledWith({ _id: "order-1", status: "pending" }, { $set: { status: "paid", paidAt: expect.any(Date) } });
+    expect(hoisted.orders.updateOne).toHaveBeenCalledWith({ _id: "order-1", status: "pending" }, { $set: { status: "paid", paidAt: expect.any(Date), providerPaymentId: "mockpay_order-1" } });
+  });
+
+  it("marks a paid order refunded on a refund event, and only a paid one", async () => {
+    const body = JSON.stringify({ id: "evt-refund", type: "payment.refunded", orderId: "order-1" });
+    expect(await handleWebhookRequest("mock", body, signMockBody(body))).toEqual({ status: 200, body: "ok" });
+    expect(hoisted.orders.updateOne).toHaveBeenCalledWith({ _id: "order-1", status: "paid" }, { $set: { status: "refunded" } });
   });
 
   it("refuses a bad signature with 400 and touches nothing", async () => {
