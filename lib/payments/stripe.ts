@@ -3,6 +3,7 @@ import "server-only";
 import Stripe from "stripe";
 
 import { serverEnv } from "@/lib/env.server";
+import { logger } from "@/lib/logger";
 import { isOwnTestAccount } from "@/lib/payments/test-account";
 import type { CheckoutInput, PaymentEvent, PaymentProvider, WebhookOutcome } from "@/lib/payments/types";
 
@@ -64,7 +65,10 @@ export const stripeProvider: PaymentProvider = {
     if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
       const session = event.data.object;
       const orderId = session.metadata?.order_id ?? session.client_reference_id;
-      if (!orderId || session.payment_status !== "paid") return { ok: true, event: null };
+      if (!orderId || session.payment_status !== "paid") {
+        logger.info("stripe.webhook_ignored", { type: event.type, paymentStatus: session.payment_status, hasOrderId: Boolean(orderId) });
+        return { ok: true, event: null };
+      }
       const normalized: PaymentEvent = {
         eventId: event.id,
         type: "payment.succeeded",
@@ -75,6 +79,7 @@ export const stripeProvider: PaymentProvider = {
       };
       return { ok: true, event: normalized };
     }
+    logger.info("stripe.webhook_ignored", { type: event.type });
     return { ok: true, event: null };
   },
 
