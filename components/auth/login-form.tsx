@@ -4,6 +4,7 @@ import { Mail } from "lucide-react";
 import { useActionState, useState } from "react";
 
 import { CodeStep } from "@/components/auth/code-step";
+import { PasswordLoginForm } from "@/components/auth/password-login-form";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { useResendCooldown } from "@/components/auth/use-resend-cooldown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -25,6 +26,7 @@ type Props = { next: string; notice: LoginNotice | null; googleEnabled: boolean 
 export function LoginForm({ next, notice, googleEnabled }: Props) {
   const [sendState, sendAction, sending] = useActionState<SendCodeState, FormData>(sendEmailCode, null);
   const [email, setEmail] = useState("");
+  const [mode, setMode] = useState<"code" | "password">("code");
   const cooldown = useResendCooldown();
 
   // "Use a different email" remembers which successful send to ignore, so no effect has to sync state.
@@ -36,10 +38,36 @@ export function LoginForm({ next, notice, googleEnabled }: Props) {
     return <CodeStep email={sentTo} next={next} cooldown={cooldown} onChangeEmail={() => setDismissed(sendState)} />;
   }
 
+  const modeTabs = (
+    <div role="group" aria-label="How to sign in" className="grid grid-cols-2 gap-1 rounded-md border border-line bg-bg-subtle p-1">
+      {(["code", "password"] as const).map((value) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={mode === value}
+          onClick={() => setMode(value)}
+          className={`min-h-10 cursor-pointer rounded-sm text-sm font-semibold ${mode === value ? "border border-blue bg-blue-soft text-ink" : "border border-transparent text-mute hover:text-ink"}`}
+        >
+          {value === "code" ? "Email code" : "Password"}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (mode === "password") {
+    return (
+      <>
+        {modeTabs}
+        <PasswordLoginForm next={next} onUseCode={() => setMode("code")} />
+      </>
+    );
+  }
+
   return (
     <>
-      <p className="-mt-3 text-center text-mute" aria-live="polite">
-        We&apos;ll email you a {OTP_LENGTH}-digit code. No password.
+      {modeTabs}
+      <p className="text-center text-mute" aria-live="polite">
+        We&apos;ll email you a {OTP_LENGTH}-digit code. No password needed.
       </p>
 
       {notice && (

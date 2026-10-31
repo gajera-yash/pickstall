@@ -4,6 +4,7 @@ import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { logger } from "@/lib/logger";
 import { providerByName } from "@/lib/payments";
+import { scheduleOrderConfirmation } from "@/lib/orders/confirmation";
 import type { PaymentEvent } from "@/lib/payments/types";
 
 // The one place an order becomes paid or refunded. Stripe's webhook route and the development-only
@@ -71,11 +72,14 @@ async function applyEvent(event: PaymentEvent): Promise<void> {
       { _id: event.orderId, status: "pending" },
       { $set: { status: "paid", paidAt: new Date(), ...(event.providerPaymentId ? { providerPaymentId: event.providerPaymentId } : {}) } },
     );
+    // The order email goes out after the response; a replay is safe (one outbox row per order).
+    scheduleOrderConfirmation(event.orderId);
   }
 }
 
 /** A free product has no payment step: this marks its zero-amount order paid (only if it really is free and pending). */
 export async function markFreeOrderPaid(orderId: string): Promise<void> {
   const { orders } = await collections();
-  await orders.updateOne({ _id: orderId, status: "pending", provider: "free", totalCents: 0 }, { $set: { status: "paid", paidAt: new Date() } });
+  const result = await orders.updateOne({ _id: orderId, status: "pending", provider: "free", totalCents: 0 }, { $set: { status: "paid", paidAt: new Date() } });
+  if (result.matchedCount === 1) scheduleOrderConfirmation(orderId);
 }

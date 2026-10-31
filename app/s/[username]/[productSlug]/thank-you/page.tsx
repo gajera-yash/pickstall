@@ -35,14 +35,16 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
         </h1>
         <p className="max-w-sm break-words whitespace-pre-line" style={{ color: preset.muted }}>
           {paid
-            ? context.product.thankYou || `Your purchase of ${context.product.title} is confirmed.`
+            ? `${context.product.thankYou || `Your purchase of ${context.product.title} is confirmed.`}
+
+Check your email: we sent you a link to create your password and open your purchase.`
             : order.status === "pending"
               ? "This can take a moment. Refresh this page in a few seconds."
               : "Something went wrong with this payment. You were not charged for this order."}
         </p>
         {paid && (
           <Link href="/library" className="font-semibold underline underline-offset-4">
-            Open your purchase in your library
+            Already have a password? Open your library
           </Link>
         )}
         <Link href={`/@${context.store.slug}`} className="font-semibold underline underline-offset-4">

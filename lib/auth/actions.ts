@@ -11,9 +11,10 @@ import { INTENT_COOKIE } from "@/lib/auth/intent-token";
 import { DASHBOARD_PATH, USERNAME_PATH } from "@/lib/auth/post-login";
 import { getProfile, saveProfile } from "@/lib/auth/profiles";
 import { loginPath, safeNextPath } from "@/lib/auth/redirect";
+import { passwordLoginInput } from "@/lib/auth/password-schemas";
 import { claimUsernameInput, sendCodeInput, signupInput, verifyCodeInput } from "@/lib/auth/schemas";
 import { saveSignupIntent } from "@/lib/auth/signup-intents";
-import { SEND_CODE_RATE_LIMITS, SIGNUP_INTENT_TTL_MINUTES } from "@/lib/config";
+import { PASSWORD_RATE_LIMIT, SEND_CODE_RATE_LIMITS, SIGNUP_INTENT_TTL_MINUTES } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { getClientIpHash } from "@/lib/request-ip";
@@ -26,6 +27,7 @@ export type SendCodeState = Result<{ email: string }> | null;
 export type VerifyCodeState = Result<never> | null;
 export type SignupState = Result<{ email: string }> | null;
 export type ClaimUsernameState = Result<never> | null;
+export type PasswordLoginState = Result<never> | null;
 
 const TOO_MANY = "Too many attempts. Wait a minute, then try again.";
 const SEND_FAILED = "Couldn't send the code. Check your connection and try again.";
@@ -198,4 +200,39 @@ export async function signOut(): Promise<void> {
     logger.warn("auth.sign_out_failed", { name: errorName(error) });
   }
   redirect("/login");
+}
+
+const WRONG_PASSWORD = "Email or password is incorrect.";
+
+/**
+ * Password sign-in for buyers (D-037). Same answer for an unknown email and a wrong password, rate
+ * limited per email and per IP. Creators can use it too once they have a password; the destination
+ * follows the usual rules (their dashboard, or the library for someone who only bought).
+ */
+export async function signInWithPassword(_prev: PasswordLoginState, formData: FormData): Promise<PasswordLoginState> {
+  const parsed = passwordLoginInput.safeParse({
+    email: formData.get("email") ?? "",
+    password: formData.get("password") ?? "",
+    next: typeof formData.get("next") === "string" ? formData.get("next") : undefined,
+  });
+  if (!parsed.success) return fieldIssue(parsed.error);
+  const { email, password, next } = parsed.data;
+
+  let user: { id: string; email: string };
+  try {
+    const { max, windowMinutes } = PASSWORD_RATE_LIMIT;
+    const ipHash = await getClientIpHash();
+    const byEmail = await takeRateLimit(rateLimitKey("password-login:email", email), max, windowMinutes);
+    const byIp = ipHash ? await takeRateLimit(rateLimitKey("password-login:ip", ipHash), max * 3, windowMinutes) : true;
+    if (!byEmail || !byIp) return err(TOO_MANY);
+
+    const result = await auth.api.signInEmail({ body: { email, password }, headers: await headers() });
+    user = result.user;
+  } catch (error) {
+    logger.warn("auth.password_login_failed", { name: errorName(error), status: isAPIError(error) ? error.statusCode : undefined });
+    if (isAPIError(error) && error.statusCode === 429) return err(TOO_MANY);
+    return err(WRONG_PASSWORD);
+  }
+
+  redirect(await completeSignup(user, next));
 }

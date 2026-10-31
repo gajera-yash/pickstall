@@ -18,11 +18,11 @@ import { findStoreByOwner } from "@/lib/stores/queries";
 export async function completeSignup(user: { id: string; email?: string | null }, next: unknown): Promise<string> {
   const cookieStore = await cookies();
   const cookieValue = cookieStore.get(INTENT_COOKIE)?.value;
-  if (!cookieValue || !user.email) return resolvePostLoginPath(user.id, next);
+  if (!cookieValue || !user.email) return resolvePostLoginPath(user.id, next, user.email);
 
   const intent = await takeSignupIntent(user.email, cookieValue);
   cookieStore.delete(INTENT_COOKIE);
-  if (!intent) return resolvePostLoginPath(user.id, next);
+  if (!intent) return resolvePostLoginPath(user.id, next, user.email);
 
   // An existing creator who went through signup again: keep their store and profile as they are.
   if (await findStoreByOwner(user.id)) return DASHBOARD_PATH;

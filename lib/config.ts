@@ -118,6 +118,13 @@ export const CHECKOUT_RATE_LIMIT = { max: 20, windowMinutes: 10 } as const;
 export const ANSWER_MAX_CHARS = { text: 300, long_text: 2000 } as const;
 export const BUYER_NAME_MAX = 80;
 
+/** Order email link (D-037): how long the "create your password" link works, and how long we keep its record. */
+export const ACCESS_LINK_DAYS = 30;
+export const ACCESS_RECORD_DAYS = 90;
+export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_MAX_LENGTH = 128;
+export const PASSWORD_RATE_LIMIT = { max: 10, windowMinutes: 15 } as const;
+
 /** Image uploads per creator (D-032). */
 export const UPLOAD_RATE_LIMIT = { max: 30, windowMinutes: 10 } as const;
 export const PRODUCT_RATE_LIMIT = { max: 60, windowMinutes: 10 } as const;

@@ -5,7 +5,7 @@ import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins";
 
-import { APP_NAME, OTP_LENGTH, OTP_TTL_SECONDS, SESSION_COOKIE_CACHE_SECONDS } from "@/lib/config";
+import { APP_NAME, OTP_LENGTH, OTP_TTL_SECONDS, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, SESSION_COOKIE_CACHE_SECONDS } from "@/lib/config";
 import { mongoDb } from "@/lib/db/mongo";
 import { sendSignInCode } from "@/lib/email/send-sign-in-code";
 import { publicEnv } from "@/lib/env";
@@ -25,7 +25,15 @@ export const auth = betterAuth({
   secret: serverEnv.BETTER_AUTH_SECRET,
   // No `client` passed: transactions stay off, so a standalone local MongoDB works too.
   database: mongodbAdapter(mongoDb),
-  emailAndPassword: { enabled: false },
+  // Password login is for buyers (D-037). Public sign-up stays OFF: a password is only ever created by
+  // lib/auth/buyer-account.ts after the one-time link from the order email was checked.
+  emailAndPassword: {
+    enabled: true,
+    disableSignUp: true,
+    autoSignIn: false,
+    minPasswordLength: PASSWORD_MIN_LENGTH,
+    maxPasswordLength: PASSWORD_MAX_LENGTH,
+  },
   socialProviders: google,
   // Speed (2026-10-29, founder approved): the session is also kept in a signed cookie (HMAC,
   // Better Auth's "compact" strategy) for a few minutes, so most page loads skip the database

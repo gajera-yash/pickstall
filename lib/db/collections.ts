@@ -128,6 +128,34 @@ export type OrderDoc = {
 /** A provider webhook already handled. `_id` is the provider's event id, so a replay fails to insert (idempotency). */
 export type WebhookEventDoc = { _id: string; source: string; type: string; orderId: string | null; processedAt: Date };
 
+/**
+ * The unique link in a buyer's order email (D-037). Only the SHA-256 of the token is stored. The link
+ * lets the buyer create a password for the email they paid with (the email itself proves they own it).
+ */
+export type AccessTokenDoc = {
+  /** SHA-256 hex of the token in the link. */
+  _id: string;
+  orderId: string;
+  email: string;
+  name: string;
+  createdAt: Date;
+  expiresAt: Date;
+  usedAt: Date | null;
+  /** The TTL index removes the document at this time. */
+  deleteAt: Date;
+};
+
+/** One email to send per order and kind. `_id` is `<orderId>:<kind>`, so a replayed event cannot send it twice. */
+export type EmailOutboxDoc = {
+  _id: string;
+  orderId: string;
+  kind: "order-confirmation";
+  status: "sending" | "sent" | "failed";
+  attempts: number;
+  createdAt: Date;
+  sentAt: Date | null;
+};
+
 /** An uploaded image (D-032). The file itself is in file storage under `key`; images are public. */
 export type UploadDoc = {
   _id: string;
@@ -148,6 +176,8 @@ export async function collections(): Promise<{
   products: Collection<ProductDoc>;
   uploads: Collection<UploadDoc>;
   orders: Collection<OrderDoc>;
+  accessTokens: Collection<AccessTokenDoc>;
+  emailOutbox: Collection<EmailOutboxDoc>;
   webhookEvents: Collection<WebhookEventDoc>;
   signupIntents: Collection<SignupIntentDoc>;
   rateLimits: Collection<RateLimitDoc>;
@@ -159,6 +189,8 @@ export async function collections(): Promise<{
     products: db.collection<ProductDoc>("products"),
     uploads: db.collection<UploadDoc>("uploads"),
     orders: db.collection<OrderDoc>("orders"),
+    accessTokens: db.collection<AccessTokenDoc>("accessTokens"),
+    emailOutbox: db.collection<EmailOutboxDoc>("emailOutbox"),
     webhookEvents: db.collection<WebhookEventDoc>("webhookEvents"),
     signupIntents: db.collection<SignupIntentDoc>("signupIntents"),
     rateLimits: db.collection<RateLimitDoc>("rateLimits"),

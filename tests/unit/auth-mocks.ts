@@ -24,6 +24,7 @@ const hoisted = vi.hoisted(() => {
     getSession: vi.fn(),
     sendVerificationOTP: vi.fn(),
     signInEmailOTP: vi.fn(),
+    signInEmail: vi.fn(),
     signInSocial: vi.fn(),
     signOut: vi.fn(),
   };
@@ -49,6 +50,7 @@ const hoisted = vi.hoisted(() => {
   const profiles = { getProfile: vi.fn(), saveProfile: vi.fn() };
   const slugs = { isSlugTaken: vi.fn(), findTakenSlugs: vi.fn() };
   const testAccount = { testSellerAccountId: vi.fn() };
+  const library = { hasPurchases: vi.fn() };
   const rateLimit = { takeRateLimit: vi.fn(), releaseRateLimit: vi.fn() };
 
   return {
@@ -64,6 +66,7 @@ const hoisted = vi.hoisted(() => {
     slugs,
     rateLimit,
     testAccount,
+    library,
   };
 });
 
@@ -80,6 +83,7 @@ export const {
   slugs,
   rateLimit,
   testAccount,
+  library,
 } = hoisted;
 
 vi.mock("server-only", () => ({}));
@@ -135,6 +139,7 @@ vi.mock("@/lib/stores/queries", () => hoisted.storeQueries);
 vi.mock("@/lib/auth/profiles", () => hoisted.profiles);
 vi.mock("@/lib/stores/slug-availability", () => hoisted.slugs);
 vi.mock("@/lib/payments/test-account", () => hoisted.testAccount);
+vi.mock("@/lib/library/queries", () => hoisted.library);
 
 vi.mock("@/lib/rate-limit", () => ({
   rateLimitKey: (scope: string, value: string) => `${scope}:${value}`,

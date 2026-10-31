@@ -72,6 +72,12 @@ export async function findPurchase(email: string, orderId: string): Promise<Purc
   return (await loadDetails([doc]))[0] ?? null;
 }
 
+/** Has this email bought anything? Used to send a buyer to the library after login instead of the creator setup step. */
+export async function hasPurchases(email: string): Promise<boolean> {
+  const { orders } = await collections();
+  return (await orders.countDocuments({ buyerEmail: normalize(email), status: { $in: ["paid", "refunded"] } }, { limit: 1 })) > 0;
+}
+
 export type AccessResult = { ok: true; url: string } | { ok: false; reason: "not_found" | "refunded" | "unavailable" | "limit" };
 
 /**

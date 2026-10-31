@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-037: Buyer accounts: order email link, then a password (supersedes D-002 for buyers)
+- **Date:** 2026-11-01
+- **Decision:** after a paid (or free) order the buyer gets an order email with one unique link (`/welcome/<token>`). The link lets them create a password for the email they paid with, signs them in and opens their purchase in the library. Later they sign in with email and password (new "Password" tab on the login page); the email code still works and is the way back in after a forgotten password.
+  - The token is 32 random bytes; only its SHA-256 is stored; it works for 30 days and for one password; saving a failed password gives the link back. The email link is the proof that the buyer owns that email. An account that already has a password is never changed (the buyer is sent to sign in).
+  - Better Auth `emailAndPassword` is enabled with `disableSignUp: true`: nobody can register through the public endpoint (tested: 400). Accounts and passwords are created only by `lib/auth/buyer-account.ts` after the link check. Passwords are hashed by Better Auth, 8 to 128 characters. Password sign-in is rate-limited per email and per IP and answers "Email or password is incorrect" for both an unknown email and a wrong password.
+  - The order email is sent after the response (`after()`), once per order (an `emailOutbox` row per order and kind; a failed send is kept as failed and retried the next time). The creator's own subject and message (R3) are used with the three allowed variables; the store name and the link are always in the email. `{{download_link}}` is the welcome link. Email HTML needs inline colors, so `lib/email/templates.ts` is allowed raw colors.
+  - After sign-in, a user with no store but with purchases lands in `/library` instead of the creator setup step.
+  - Known gaps: there is no "set a password" option inside the library for someone who signed in with a code; Resend delivers only to your own address until a sending domain is verified; failed emails are not retried by a timer yet.
+- **Why:** founder request, 2026-11-01.
+
 ## D-036: R7 buyer library and secure delivery
 - **Date:** 2026-11-01
 - **Decision:**
