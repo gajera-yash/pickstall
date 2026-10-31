@@ -44,9 +44,11 @@ const hoisted = vi.hoisted(() => {
     updateStorePageDesign: vi.fn(),
     changeStoreSlug: vi.fn(),
     setStorePublished: vi.fn(),
+    setStoreStripeAccount: vi.fn(),
   };
   const profiles = { getProfile: vi.fn(), saveProfile: vi.fn() };
   const slugs = { isSlugTaken: vi.fn(), findTakenSlugs: vi.fn() };
+  const testAccount = { testSellerAccountId: vi.fn() };
   const rateLimit = { takeRateLimit: vi.fn(), releaseRateLimit: vi.fn() };
 
   return {
@@ -61,6 +63,7 @@ const hoisted = vi.hoisted(() => {
     profiles,
     slugs,
     rateLimit,
+    testAccount,
   };
 });
 
@@ -76,6 +79,7 @@ export const {
   profiles,
   slugs,
   rateLimit,
+  testAccount,
 } = hoisted;
 
 vi.mock("server-only", () => ({}));
@@ -130,6 +134,7 @@ vi.mock("@/lib/stores/create-draft-store", () => ({
 vi.mock("@/lib/stores/queries", () => hoisted.storeQueries);
 vi.mock("@/lib/auth/profiles", () => hoisted.profiles);
 vi.mock("@/lib/stores/slug-availability", () => hoisted.slugs);
+vi.mock("@/lib/payments/test-account", () => hoisted.testAccount);
 
 vi.mock("@/lib/rate-limit", () => ({
   rateLimitKey: (scope: string, value: string) => `${scope}:${value}`,

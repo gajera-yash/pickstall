@@ -93,6 +93,16 @@ export async function changeStoreSlug(ownerId: string, slug: string): Promise<Ch
   }
 }
 
+/** Sets the store's Stripe seller account and whether it can take charges. `null` disconnects. */
+export async function setStoreStripeAccount(ownerId: string, accountId: string | null): Promise<boolean> {
+  const { stores } = await collections();
+  const result = await stores.updateOne(
+    { ownerId },
+    { $set: { stripeAccountId: accountId, stripeChargesEnabled: accountId !== null, updatedAt: new Date() } },
+  );
+  return result.matchedCount === 1;
+}
+
 /** Publishes or unpublishes the owner's store page. Returns false if they have no store. */
 export async function setStorePublished(ownerId: string, isPublished: boolean): Promise<boolean> {
   const { stores } = await collections();

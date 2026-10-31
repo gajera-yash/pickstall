@@ -4,6 +4,15 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-034: Stripe test account as the seller, and .env.local out of git
+- **Date:** 2026-11-01
+- **Decision:**
+  - With a test key (`sk_test_`) and `STRIPE_PLATFORM_ACCOUNT_ID`, Settings > Payments offers "Use test Stripe account": the founder's own account becomes the store's seller account, so real Stripe Checkout can be tried before Connect OAuth exists. The adapter then makes a plain charge on that account (Stripe rejects "on behalf of" yourself). Never available with a live key. Real creators connect through Connect OAuth later (needs `STRIPE_CONNECT_CLIENT_ID`).
+  - The Stripe provider is used only when the store has a seller account AND both `STRIPE_SECRET_KEY` and `STRIPE_CONNECT_WEBHOOK_SECRET` exist, because without the webhook a paid order could never be confirmed. Otherwise development falls back to the mock; production has no fallback.
+  - Verified against Stripe test mode: the key is valid, the account id matches, and a Checkout Session request in our shape is accepted.
+  - `.env.local` had been committed and pushed (commit 97c9217) and the `.env*` ignore rule was missing. The rule is restored and the file is untracked. The history still holds the old values, so the MongoDB password, `BETTER_AUTH_SECRET`, the Resend key and the Stripe key must be rotated (founder action).
+- **Why:** founder shared Stripe test keys, 2026-11-01.
+
 ## D-033: R5 payments and checkout
 - **Date:** 2026-10-31
 - **Decision:**

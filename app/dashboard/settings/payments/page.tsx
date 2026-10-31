@@ -1,13 +1,14 @@
-import { CheckCircle2, CircleDashed, CreditCard } from "lucide-react";
+import { CheckCircle2, CircleDashed } from "lucide-react";
 import { Suspense } from "react";
 
+import { StripeConnectButtons } from "@/components/dashboard/stripe-connect-buttons";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
+import { testSellerAccountId } from "@/lib/payments/test-account";
 
-// Settings > Payments (PRD F8): status, test mode badge, payment-methods note. Connecting Stripe
-// arrives in R5, so the button is an honest "Coming soon" for now.
+// Settings > Payments (PRD F8): status, test mode badge, connect and the payment-methods note.
 export default function PaymentsSettingsPage() {
   return (
     <Suspense fallback={<Skeleton className="h-64 w-full rounded-lg" />}>
@@ -43,15 +44,7 @@ async function PaymentsContent() {
             <span className="text-sm text-mute">{connected ? "Connected. You can take payments." : "Not connected yet."}</span>
           </span>
         </p>
-        {!connected && (
-          <span className="inline-flex items-center gap-2 self-start sm:self-center">
-            <span aria-disabled="true" className="inline-flex h-11 items-center gap-2 rounded-md border border-line px-4 text-button text-mute">
-              <CreditCard aria-hidden="true" className="size-5" />
-              Connect Stripe
-            </span>
-            <Badge variant="soon">Coming soon</Badge>
-          </span>
-        )}
+        <StripeConnectButtons connected={connected} testAvailable={testSellerAccountId() !== null} />
       </div>
 
       <p className="text-sm text-mute">

@@ -30,6 +30,8 @@ export const serverEnvSchema = publicEnvSchema.extend({
   // Stripe (test mode until the founder approves live mode). Server only; never logged.
   STRIPE_SECRET_KEY: optional(z.string().min(1)),
   STRIPE_CONNECT_WEBHOOK_SECRET: optional(z.string().min(1)),
+  // The founder's own Stripe account id. In TEST mode only, a store may use it directly as its seller account (D-034).
+  STRIPE_PLATFORM_ACCOUNT_ID: optional(z.string().regex(/^acct_[A-Za-z0-9]+$/)),
   // Hashes client IPs for signup rate limits (D-019). Optional: without it the per-IP limit is off.
   IP_HASH_SECRET: optional(z.string().min(16)),
 });

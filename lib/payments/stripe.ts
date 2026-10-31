@@ -3,6 +3,7 @@ import "server-only";
 import Stripe from "stripe";
 
 import { serverEnv } from "@/lib/env.server";
+import { isOwnTestAccount } from "@/lib/payments/test-account";
 import type { CheckoutInput, PaymentEvent, PaymentProvider, WebhookOutcome } from "@/lib/payments/types";
 
 // Stripe adapter (CLAUDE.md 7): Standard connected accounts, Checkout Sessions as DIRECT charges on
@@ -25,6 +26,9 @@ export const stripeProvider: PaymentProvider = {
 
   async createCheckout(input: CheckoutInput) {
     if (!input.connectedAccountId) throw new Error("This store has not connected Stripe.");
+    // A direct charge on the creator's account. When that account IS our own test account there is
+    // nothing to act on behalf of (Stripe rejects it), so the request is a plain charge on it.
+    const ownTestAccount = isOwnTestAccount(input.connectedAccountId);
     const session = await client().checkout.sessions.create(
       {
         mode: "payment",
@@ -40,7 +44,7 @@ export const stripeProvider: PaymentProvider = {
         success_url: input.successUrl,
         cancel_url: input.cancelUrl,
       },
-      { stripeAccount: input.connectedAccountId },
+      ownTestAccount ? undefined : { stripeAccount: input.connectedAccountId },
     );
     if (!session.url) throw new Error("Stripe did not return a checkout URL.");
     return { url: session.url, providerSessionId: session.id };

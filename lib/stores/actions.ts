@@ -9,7 +9,8 @@ import { logger } from "@/lib/logger";
 import { rateLimitKey, releaseRateLimit, takeRateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import { SLUG_TAKEN_MESSAGE, slugSchema } from "@/lib/slug";
-import { changeStoreSlug, setStorePublished, updateStorePageDesign, updateStoreProfile } from "@/lib/stores/queries";
+import { testSellerAccountId } from "@/lib/payments/test-account";
+import { changeStoreSlug, setStorePublished, setStoreStripeAccount, updateStorePageDesign, updateStoreProfile } from "@/lib/stores/queries";
 import { pageDesignInput, socialLinkRowsFromForm, storeProfileInput } from "@/lib/stores/schemas";
 
 export type StoreSetupState = Result<{ savedAt: number }> | null;
@@ -123,6 +124,37 @@ export async function changeUsername(_prev: ChangeUsernameState, formData: FormD
 
   revalidatePath("/dashboard", "layout");
   return ok({ username });
+}
+
+/**
+ * Test mode only (D-034): uses the founder's own Stripe test account as this store's seller account,
+ * so real Stripe Checkout can be tried before Connect OAuth exists. Refused with a live key.
+ */
+export async function connectStripeTestAccount(): Promise<Result<{ connected: true }>> {
+  const { user } = await requireCreator("/dashboard/settings/payments");
+  const accountId = testSellerAccountId();
+  if (!accountId) return err("Test Stripe isn't set up on this server.");
+  try {
+    if (!(await setStoreStripeAccount(user.id, accountId))) return err(NO_STORE);
+  } catch (error) {
+    logger.error("stores.stripe_connect_failed", { name: errorName(error) });
+    return err(SAVE_FAILED);
+  }
+  revalidatePath("/dashboard", "layout");
+  return ok({ connected: true });
+}
+
+/** Disconnects Stripe from the creator's own store. Paid products stay, but cannot be bought until connected again. */
+export async function disconnectStripe(): Promise<Result<{ connected: false }>> {
+  const { user } = await requireCreator("/dashboard/settings/payments");
+  try {
+    if (!(await setStoreStripeAccount(user.id, null))) return err(NO_STORE);
+  } catch (error) {
+    logger.error("stores.stripe_disconnect_failed", { name: errorName(error) });
+    return err(SAVE_FAILED);
+  }
+  revalidatePath("/dashboard", "layout");
+  return ok({ connected: false });
 }
 
 /** Publishes or unpublishes the creator's own store page (the last step of the first-run checklist). */
