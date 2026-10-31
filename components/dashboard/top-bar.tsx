@@ -18,13 +18,13 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { signOut } from "@/lib/auth/actions";
 
-type Props = { displayName: string; email: string | null; storeUrl: string };
+type Props = { displayName: string; email: string | null; storeUrl: string; publicPath: string | null };
 
 /**
  * Dashboard top bar (D-029, reference docs/ui-reference/dashboard.webp): search / command palette,
  * "View my store", notifications and the account menu. 64px high, sticky, white.
  */
-export function TopBar({ displayName, email, storeUrl }: Props) {
+export function TopBar({ displayName, email, storeUrl, publicPath }: Props) {
   return (
     <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur md:px-6">
       <Wordmark className="h-7 md:hidden" />
@@ -35,7 +35,7 @@ export function TopBar({ displayName, email, storeUrl }: Props) {
 
       <div className="flex items-center gap-1 sm:gap-2">
         <Button asChild variant="secondary" size="sm" className="hidden h-10 sm:inline-flex">
-          <Link href="/dashboard?tab=design#store-preview">
+          <Link href={publicPath ?? "/dashboard?tab=design#store-preview"} {...(publicPath ? { target: "_blank", rel: "noopener" } : {})}>
             <ExternalLink aria-hidden="true" className="size-4" />
             View my store
           </Link>

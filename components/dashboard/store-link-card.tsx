@@ -1,12 +1,14 @@
 "use client";
 
-import { ArrowRight, Check, Copy, Info, Link2, Pencil } from "lucide-react";
+import { ArrowRight, Check, Copy, ExternalLink, Info, Link2, Pencil } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { setStorePublishedAction } from "@/lib/stores/actions";
 
 type CopyState = "idle" | "copied" | "failed";
 
@@ -17,6 +19,18 @@ type CopyState = "idle" | "copied" | "failed";
  */
 export function StoreLinkCard({ link, isPublished }: { link: string; isPublished: boolean }) {
   const [copy, setCopy] = useState<CopyState>("idle");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const togglePublished = (next: boolean) => {
+    setProblem(null);
+    startTransition(async () => {
+      const result = await setStorePublishedAction(next);
+      if (!result.ok) setProblem(result.error);
+      else router.refresh();
+    });
+  };
 
   useEffect(() => {
     if (copy === "idle") return;
@@ -34,7 +48,7 @@ export function StoreLinkCard({ link, isPublished }: { link: string; isPublished
   };
 
   return (
-    <Card className="gap-5">
+    <Card id="your-store-link" className="scroll-mt-24 gap-5">
       <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-display text-h3">Your store link</h2>
@@ -75,12 +89,26 @@ export function StoreLinkCard({ link, isPublished }: { link: string; isPublished
             <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-blue" />
             Your store is in draft mode. Publish it to make it public.
           </p>
-          <Link href="#get-started" className="inline-flex items-center gap-1 self-start font-semibold text-blue hover:text-blue-hover sm:self-auto">
+          <Button type="button" size="sm" onClick={() => togglePublished(true)} loading={pending} className="self-start sm:self-auto">
             Publish store
             <ArrowRight aria-hidden="true" className="size-4" />
-          </Link>
+          </Button>
         </div>
       )}
+      {isPublished && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="secondary" size="sm">
+            <Link href={`/@${link.split("/@")[1] ?? ""}`} target="_blank" rel="noopener">
+              <ExternalLink aria-hidden="true" className="size-4" />
+              Open my store
+            </Link>
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => togglePublished(false)} loading={pending}>
+            Unpublish
+          </Button>
+        </div>
+      )}
+      {problem && <p role="alert" className="text-sm text-danger">{problem}</p>}
     </Card>
   );
 }

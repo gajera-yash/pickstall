@@ -28,7 +28,7 @@ const AVAILABLE: Record<ChecklistItemId, boolean> = {
   "store-setup": true,
   "first-product": true,
   "connect-payments": false,
-  publish: false,
+  publish: true,
 };
 
 export function buildChecklist(input: ChecklistInput): {
@@ -68,7 +68,7 @@ export function buildChecklist(input: ChecklistInput): {
       description: "Make your store page public so buyers can find it.",
       done: input.isPublished,
       available: AVAILABLE.publish,
-      href: "/dashboard",
+      href: "/dashboard#your-store-link",
     },
   ];
 

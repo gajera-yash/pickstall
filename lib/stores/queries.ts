@@ -1,8 +1,11 @@
 import "server-only";
 
-import { collections, type StoreDoc } from "@/lib/db/collections";
+import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import type { PageDesignInput, SocialLink, StoreProfileInput } from "@/lib/stores/schemas";
+import { socialLinksOf } from "@/lib/stores/social-links";
+
+export { socialLinksOf };
 
 // Store reads and writes for the signed-in creator. MongoDB has no row-level security, so the
 // owner filter here IS the access check: every function takes the owner id from the verified
@@ -21,11 +24,6 @@ export type CreatorStore = {
   isPublished: boolean;
 };
 
-/** Social links, with the old single `link` as a website link until the migration has run. */
-export function socialLinksOf(doc: Pick<StoreDoc, "socialLinks" | "link">): SocialLink[] {
-  if (doc.socialLinks) return doc.socialLinks;
-  return doc.link ? [{ kind: "website", url: doc.link }] : [];
-}
 
 /** The store owned by this user, or null. */
 export async function findStoreByOwner(ownerId: string): Promise<CreatorStore | null> {
@@ -93,4 +91,11 @@ export async function changeStoreSlug(ownerId: string, slug: string): Promise<Ch
     if (isDuplicateKeyError(error, "slug")) return "taken";
     throw error;
   }
+}
+
+/** Publishes or unpublishes the owner's store page. Returns false if they have no store. */
+export async function setStorePublished(ownerId: string, isPublished: boolean): Promise<boolean> {
+  const { stores } = await collections();
+  const result = await stores.updateOne({ ownerId }, { $set: { isPublished, updatedAt: new Date() } });
+  return result.matchedCount === 1;
 }

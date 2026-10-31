@@ -43,6 +43,7 @@ const hoisted = vi.hoisted(() => {
     updateStoreProfile: vi.fn(),
     updateStorePageDesign: vi.fn(),
     changeStoreSlug: vi.fn(),
+    setStorePublished: vi.fn(),
   };
   const profiles = { getProfile: vi.fn(), saveProfile: vi.fn() };
   const slugs = { isSlugTaken: vi.fn(), findTakenSlugs: vi.fn() };

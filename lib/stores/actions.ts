@@ -9,7 +9,7 @@ import { logger } from "@/lib/logger";
 import { rateLimitKey, releaseRateLimit, takeRateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import { SLUG_TAKEN_MESSAGE, slugSchema } from "@/lib/slug";
-import { changeStoreSlug, updateStorePageDesign, updateStoreProfile } from "@/lib/stores/queries";
+import { changeStoreSlug, setStorePublished, updateStorePageDesign, updateStoreProfile } from "@/lib/stores/queries";
 import { pageDesignInput, socialLinkRowsFromForm, storeProfileInput } from "@/lib/stores/schemas";
 
 export type StoreSetupState = Result<{ savedAt: number }> | null;
@@ -123,4 +123,20 @@ export async function changeUsername(_prev: ChangeUsernameState, formData: FormD
 
   revalidatePath("/dashboard", "layout");
   return ok({ username });
+}
+
+/** Publishes or unpublishes the creator's own store page (the last step of the first-run checklist). */
+export async function setStorePublishedAction(isPublished: boolean): Promise<Result<{ isPublished: boolean }>> {
+  const { user } = await requireCreator(MY_STORE_PATH);
+  if (typeof isPublished !== "boolean") return err(SAVE_FAILED);
+
+  try {
+    if (!(await setStorePublished(user.id, isPublished))) return err(NO_STORE);
+  } catch (error) {
+    logger.error("stores.publish_failed", { name: errorName(error) });
+    return err(SAVE_FAILED);
+  }
+
+  revalidatePath("/dashboard", "layout");
+  return ok({ isPublished });
 }

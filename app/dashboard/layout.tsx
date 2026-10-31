@@ -55,7 +55,7 @@ async function displayNameFor() {
 
 async function TopBarWithData() {
   const { user, store, displayName } = await displayNameFor();
-  return <TopBar displayName={displayName} email={user.email} storeUrl={`https://${storeLink(store.slug)}`} />;
+  return <TopBar displayName={displayName} email={user.email} storeUrl={`https://${storeLink(store.slug)}`} publicPath={store.isPublished ? `/@${store.slug}` : null} />;
 }
 
 async function SidebarFooterWithData() {

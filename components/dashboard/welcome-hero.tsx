@@ -9,7 +9,7 @@ import { dayPart } from "@/lib/dashboard/greeting";
 
 const noSubscribe = () => () => {};
 
-type Props = { name: string; storeUrl: string; ready: boolean };
+type Props = { name: string; storeUrl: string; ready: boolean; publicPath: string | null };
 
 /**
  * Welcome card at the top of My Store (reference docs/ui-reference/dashboard.webp): a greeting for
@@ -17,7 +17,7 @@ type Props = { name: string; storeUrl: string; ready: boolean };
  * illustration of a store page. The greeting is computed in the browser (the server does not know
  * the viewer's time zone); the server renders "Welcome".
  */
-export function WelcomeHero({ name, storeUrl, ready }: Props) {
+export function WelcomeHero({ name, storeUrl, ready, publicPath }: Props) {
   const part = useSyncExternalStore(noSubscribe, () => dayPart(new Date().getHours()), () => null);
   const [shared, setShared] = useState(false);
 
@@ -53,7 +53,7 @@ export function WelcomeHero({ name, storeUrl, ready }: Props) {
         </p>
         <div className="mt-2 flex flex-wrap gap-3">
           <Button asChild size="lg">
-            <Link href="/dashboard?tab=design#store-preview">
+            <Link href={publicPath ?? "/dashboard?tab=design#store-preview"} {...(publicPath ? { target: "_blank", rel: "noopener" } : {})}>
               View my store
               <ExternalLink aria-hidden="true" className="size-4" />
             </Link>

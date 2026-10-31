@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-031: R4 public store and product pages
+- **Date:** 2026-10-31
+- **Decision:**
+  - Public URLs `/@username` and `/@username/product` are served by `next.config.ts` rewrites to `app/s/[username]` and `app/s/[username]/[productSlug]` (D-010; an `@` folder would be a parallel route). Both pages set `instant = false` so a draft or unknown store is a real 404 and not a streamed page.
+  - Public reads live in `lib/stores/public.ts` and use an explicit field allow-list (projection) plus `isPublished` / `status: "published"`. They never return the owner, Stripe ids, the delivery link, checkout settings or email texts; tests assert this.
+  - The creator publishes the store from the store link card (`setStorePublishedAction`), which also makes the checklist's last step usable. A store can be published at any time; it just shows no products until one is published.
+  - Pages use the creator's theme data (`lib/themes.ts`) with inline styles, an https-only avatar and cover, social links with `rel="noopener noreferrer nofollow"`, and per-page metadata (title, description, Open Graph).
+  - The Buy button is disabled with an honest note until checkout (R5).
+- **Why:** PRD F2 and F4, R4 of the build plan.
+
 ## D-030: R3 products (digital) and the creator-customization rules
 - **Date:** 2026-10-30
 - **Decision:**

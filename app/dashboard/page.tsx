@@ -69,7 +69,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="flex min-w-0 flex-col gap-6">
-        <WelcomeHero name={name} storeUrl={`https://${link}`} ready={!checklist.next} />
+        <WelcomeHero name={name} storeUrl={`https://${link}`} ready={!checklist.next} publicPath={store.isPublished ? `/@${store.slug}` : null} />
 
         <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
           <StoreLinkCard link={link} isPublished={store.isPublished} />
