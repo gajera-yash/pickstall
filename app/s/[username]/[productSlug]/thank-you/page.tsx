@@ -35,7 +35,7 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
         </h1>
         <p className="max-w-sm break-words whitespace-pre-line" style={{ color: preset.muted }}>
           {paid
-            ? context.product.thankYou || `Your purchase of ${context.product.title} is confirmed. A receipt and your access link are on their way by email.`
+            ? context.product.thankYou || `Your purchase of ${context.product.title} is confirmed.`
             : order.status === "pending"
               ? "This can take a moment. Refresh this page in a few seconds."
               : "Something went wrong with this payment. You were not charged for this order."}
