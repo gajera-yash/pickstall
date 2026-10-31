@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-035: R6 orders, customers and income from paid orders
+- **Date:** 2026-11-01
+- **Decision:**
+  - Customers are not a separate collection: they are derived from the store's paid orders (grouped by buyer email), so they cannot drift from the orders. The Customers panel shows totals, last order and each order's answers; the CSV export is `/dashboard/customers/export`.
+  - Every query in `lib/orders/creator-queries.ts` starts from the `storeId` of the signed-in creator's store; tests assert it. Search text is escaped and never used as a regular expression; the query string is parsed by Zod and invalid values are dropped.
+  - CSV cells starting with `=`, `+`, `-`, `@`, tab or CR get a leading apostrophe, so a buyer's text cannot run as a spreadsheet formula (D-014). A buyer handle like `@maya` therefore shows as `'@maya` in a spreadsheet. The export is rate-limited.
+  - Income counts only paid orders in the store's currency; days are UTC; days without sales are real zeros. Orders from the development mock are labelled "Test".
+  - Known gaps: the dashboard "Customers" KPI adds up distinct buyers per day, so a repeat buyer on two days counts twice; refunds arrive with R7; orders cannot be deleted.
+- **Why:** PRD F8 and F12, R6.
+
 ## D-034: Stripe test account as the seller, and .env.local out of git
 - **Date:** 2026-11-01
 - **Decision:**

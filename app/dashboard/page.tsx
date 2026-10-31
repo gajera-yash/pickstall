@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
+import { incomeStats } from "@/lib/orders/creator-queries";
 import { listProducts } from "@/lib/products/queries";
 import { ProductList } from "@/components/dashboard/product-list";
 import { SOCIAL_LINK_LABELS, storeLink } from "@/lib/config";
@@ -44,10 +45,10 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
   const tabParam = typeof params.tab === "string" ? params.tab : "";
   const initialTab: MyStoreTab = (MY_STORE_TABS as readonly string[]).includes(tabParam) ? (tabParam as MyStoreTab) : "products";
 
-  const products = await listProducts(store.id).catch(() => []);
+  const [products, stats] = await Promise.all([listProducts(store.id).catch(() => []), incomeStats(store.id, store.currency, 90).catch(() => null)]);
   const productCount = products.filter((product) => product.status !== "archived").length;
-  // Orders arrive in R5/R6; until then the series are real zeros.
-  const series: KpiSeries = { revenueCents: zeros(), orders: zeros(), customers: zeros() };
+  // Real numbers from paid orders; days without sales (or an unreachable database) are zeros.
+  const series: KpiSeries = stats ? stats.series : { revenueCents: zeros(), orders: zeros(), customers: zeros() };
 
   const checklist = buildChecklist({
     bio: store.bio,

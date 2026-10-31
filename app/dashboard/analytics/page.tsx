@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
+import { incomeStats } from "@/lib/orders/creator-queries";
 
 const zeros = () => Array.from({ length: 90 }, () => 0);
 
@@ -23,9 +24,10 @@ export default function AnalyticsPage() {
 
 async function AnalyticsContent() {
   const { store } = await requireCreator("/dashboard/analytics");
+  const stats = await incomeStats(store.id, store.currency, 90).catch(() => null);
   return (
     <>
-      <KpiSection currency={store.currency} series={{ revenueCents: zeros(), orders: zeros(), customers: zeros() }} />
+      <KpiSection currency={store.currency} series={stats ? stats.series : { revenueCents: zeros(), orders: zeros(), customers: zeros() }} />
       <div className="grid gap-4 lg:grid-cols-2">
         <EmptyState icon={Trophy} title="No top products yet">
           Your best-selling products are ranked here after your first sales.
