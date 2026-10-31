@@ -3,7 +3,7 @@ import { z } from "zod";
 import { CHECKOUT_QUESTIONS_MAX, PRICE_MAX_CENTS, PRICE_MIN_PAID_CENTS } from "@/lib/config";
 import { parseMoneyToCents } from "@/lib/products/money";
 import { cleanText, isSensitiveQuestion, unknownEmailVariables } from "@/lib/products/text";
-import { httpsUrlSchema } from "@/lib/stores/schemas";
+import { httpsUrlSchema, imageField } from "@/lib/stores/schemas";
 
 export const PRODUCT_LIMITS = {
   title: 80,
@@ -91,7 +91,7 @@ export const productInput = z
   .object({
     title: text(PRODUCT_LIMITS.title, "Title").refine((value) => value !== undefined, { error: "Give your product a title." }),
     description: text(PRODUCT_LIMITS.description, "Description", { multiline: true }),
-    coverUrl: httpsUrlSchema("image link"),
+    coverUrl: imageField("Cover"),
     externalUrl: httpsUrlSchema("link"),
     pricingModel: z.enum(["fixed", "pwyw"], { error: "Pick a price type." }),
     price: moneyField("Price"),

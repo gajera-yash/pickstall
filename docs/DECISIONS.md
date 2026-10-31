@@ -4,6 +4,14 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-032: Image upload from the device, saved on our server
+- **Date:** 2026-10-31
+- **Decision:** the profile photo and product cover are uploaded from the creator's device; the "paste a link" fields are gone. `POST /api/uploads` (signed-in creators only, rate-limited) checks the file's own bytes (JPEG, PNG, GIF or WebP; SVG and anything else is refused; max 5 MB), saves it under a new uuid name and records it in the `uploads` collection. `GET /media/<id>` serves it with `nosniff` and a locked-down CSP. Images are public by design, since they appear on public pages.
+  - Storage is behind a small interface (`lib/media/storage.ts`). The driver now writes to this server's disk (`UPLOAD_DIR`, default `.data/uploads`, git-ignored). That works for development and a single server; on AWS use a persistent volume or switch the driver to S3 before running several servers. Private product files (R7) will need private storage with signed URLs and are a separate decision.
+  - Old https image links already saved keep working; new values must be an uploaded `/media/<id>`.
+  - Known gaps: replaced or removed images stay on disk (cleanup job later), and images are not resized.
+- **Why:** founder request, 2026-10-31.
+
 ## D-031: R4 public store and product pages
 - **Date:** 2026-10-31
 - **Decision:**

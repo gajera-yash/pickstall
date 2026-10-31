@@ -1,4 +1,5 @@
 import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
+import { safeImageSrc } from "@/lib/media/media";
 import { SOCIAL_LINK_LABELS, storeLink, type SocialLinkKind } from "@/lib/config";
 import { THEME_PRESETS, onAccentFor, type ThemePresetId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
@@ -15,16 +16,6 @@ export type StorePreviewData = {
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
-/** Only a well-formed https link is shown as an image (the same rule the server applies). */
-function safeImageUrl(value: string): string | null {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password ? url.href : null;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Live phone preview of the public store (DESIGN.md 10.3, 10.4, 11): avatar, name, bio, social
  * icons and an example product card in the creator's theme. Colors come from the theme data in
@@ -35,7 +26,7 @@ export function StorePreview({ data, className }: { data: StorePreviewData; clas
   const theme = THEME_PRESETS[data.themePreset];
   const accent = HEX.test(data.accent) ? data.accent : theme.accent;
   const onAccent = onAccentFor(accent).color;
-  const avatar = safeImageUrl(data.avatarUrl);
+  const avatar = safeImageSrc(data.avatarUrl);
   const initial = data.name.trim().charAt(0).toUpperCase() || "?";
   const cardStyle = {
     background: theme.card,

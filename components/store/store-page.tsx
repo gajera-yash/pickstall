@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
 import { StoreFrame, cardStyle, resolveTheme } from "@/components/store/store-theme";
+import { safeImageSrc } from "@/lib/media/media";
 import { SOCIAL_LINK_LABELS } from "@/lib/config";
 import { formatMoney } from "@/lib/products/money";
 import type { PublicProduct, PublicStore } from "@/lib/stores/public";
@@ -17,10 +18,10 @@ export function StoreHeader({ store, linkToStore }: { store: PublicStore; linkTo
   const initial = store.name.trim().charAt(0).toUpperCase() || "?";
   const body = (
     <>
-      {store.avatarUrl ? (
+      {safeImageSrc(store.avatarUrl) ? (
         // A creator's own https link on any host, so next/image (fixed remote hosts) cannot load it.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={store.avatarUrl} alt="" referrerPolicy="no-referrer" className="size-24 rounded-full object-cover" />
+        <img src={safeImageSrc(store.avatarUrl) ?? ""} alt="" referrerPolicy="no-referrer" className="size-24 rounded-full object-cover" />
       ) : (
         <span aria-hidden="true" className="flex size-24 items-center justify-center rounded-full font-display text-h1" style={{ background: accent, color: onAccent }}>
           {initial}
@@ -88,10 +89,10 @@ export function StorePage({ store, products }: { store: PublicStore; products: P
           {products.map((product) => (
             <li key={product.id}>
               <Link href={`/@${store.slug}/${product.slug}`} className="flex flex-col gap-3 overflow-hidden p-4" style={cardStyle(theme)}>
-                {product.coverUrl && (
+                {safeImageSrc(product.coverUrl) && (
                   // A creator's own https link on any host, so next/image (fixed remote hosts) cannot load it.
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={product.coverUrl} alt="" referrerPolicy="no-referrer" loading="lazy" className="aspect-video w-full rounded-md object-cover" />
+                  <img src={safeImageSrc(product.coverUrl) ?? ""} alt="" referrerPolicy="no-referrer" loading="lazy" className="aspect-video w-full rounded-md object-cover" />
                 )}
                 <span className="font-display text-h3 break-words" style={{ fontWeight: preset.displayWeight }}>
                   {product.title}

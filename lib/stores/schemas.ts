@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { AA_TEXT } from "@/lib/contrast";
 import { CURRENCIES, SOCIAL_LINK_KINDS, SOCIAL_LINKS_MAX } from "@/lib/config";
+import { safeImageSrc } from "@/lib/media/media";
 import { hasControlChar } from "@/lib/text";
 import { THEME_PRESET_IDS, onAccentFor } from "@/lib/themes";
 
@@ -23,6 +24,19 @@ export const storeBioSchema = z
   .max(STORE_BIO_MAX_LENGTH, { error: `Use ${STORE_BIO_MAX_LENGTH} characters or fewer.` })
   .refine((value) => !hasControlChar(value, { allowNewlines: true }), { error: "Remove the special characters from the bio." })
   .transform((value) => (value === "" ? undefined : value));
+
+/**
+ * An uploaded image path (`/media/<id>`, D-032), or an https link kept from before uploads existed.
+ * New images come only from the uploader. Empty becomes undefined.
+ */
+export function imageField(label: string) {
+  return z
+    .string()
+    .trim()
+    .max(STORE_URL_MAX_LENGTH, { error: `${label}: use ${STORE_URL_MAX_LENGTH} characters or fewer.` })
+    .refine((value) => value === "" || safeImageSrc(value) !== null, { error: `${label}: upload an image from your device.` })
+    .transform((value) => (value === "" ? undefined : value));
+}
 
 /** Optional https URL (D-014: no http, no javascript: or data: links). Empty becomes undefined. */
 export function httpsUrlSchema(label: string) {
@@ -78,7 +92,7 @@ export const socialLinksSchema = z
 export const storeProfileInput = z.object({
   name: storeNameSchema,
   bio: storeBioSchema,
-  avatarUrl: httpsUrlSchema("image link"),
+  avatarUrl: imageField("Photo"),
   currency: z.enum(CURRENCIES, { error: "Pick a currency." }),
   socialLinks: socialLinksSchema,
 });

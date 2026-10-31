@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { StoreHeader, priceLabel } from "@/components/store/store-page";
 import { StoreFrame, cardStyle, resolveTheme } from "@/components/store/store-theme";
+import { safeImageSrc } from "@/lib/media/media";
 import { formatMoney } from "@/lib/products/money";
 import type { PublicProduct, PublicStore } from "@/lib/stores/public";
 
@@ -23,10 +24,10 @@ export function ProductPage({ store, product }: { store: PublicStore; product: P
         {store.name}
       </Link>
       <article className="flex w-full flex-col gap-5 overflow-hidden p-5" style={cardStyle(theme)}>
-        {product.coverUrl && (
+        {safeImageSrc(product.coverUrl) && (
           // A creator's own https link on any host, so next/image (fixed remote hosts) cannot load it.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.coverUrl} alt="" referrerPolicy="no-referrer" className="aspect-video w-full rounded-md object-cover" />
+          <img src={safeImageSrc(product.coverUrl) ?? ""} alt="" referrerPolicy="no-referrer" className="aspect-video w-full rounded-md object-cover" />
         )}
         <h1 className="font-display text-h1 break-words" style={{ fontWeight: preset.displayWeight }}>
           {product.title}

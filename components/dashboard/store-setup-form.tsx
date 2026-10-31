@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Eye, Image as ImageIcon, Plus, Store, Trash2 } from "lucide-react";
+import { Check, Eye, Plus, Store, Trash2 } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { FieldError } from "@/components/ui/field";
 import { FormField, describedBy } from "@/components/ui/form-field";
+import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { IconInput } from "@/components/ui/icon-input";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -146,25 +147,15 @@ export function StoreSetupForm({ initial, slug, theme }: Props) {
             />
           </FormField>
 
-          <FormField
+          <input type="hidden" name="avatarUrl" value={values.avatarUrl} />
+          <ImageUploader
             id="avatarUrl"
-            label="Photo link (optional)"
+            label="Profile photo (optional)"
+            kind="avatar"
+            value={values.avatarUrl}
+            onChange={(value) => set("avatarUrl", value)}
             error={fieldError("avatarUrl")}
-            hint="Paste an https link to your photo. Uploading a photo is coming next."
-          >
-            <IconInput
-              icon={ImageIcon}
-              id="avatarUrl"
-              name="avatarUrl"
-              type="url"
-              inputMode="url"
-              placeholder="https://"
-              value={values.avatarUrl}
-              onChange={(event) => set("avatarUrl", event.target.value)}
-              aria-invalid={fieldError("avatarUrl") ? true : undefined}
-              aria-describedby={describedBy("avatarUrl", fieldError("avatarUrl"), "hint")}
-            />
-          </FormField>
+          />
 
           <FormField id="bio" label="Bio (optional)" error={fieldError("bio")} hint={`${values.bio.length}/${STORE_BIO_MAX_LENGTH}`}>
             <Textarea

@@ -1,31 +1,24 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 
 import { StorePage } from "@/components/store/store-page";
 import { APP_NAME } from "@/lib/config";
+import { publicEnv } from "@/lib/env";
+import { absoluteImageUrl } from "@/lib/media/media";
 import { findPublicStore, listPublicProducts } from "@/lib/stores/public";
 
 // Public store page, served at /@username by a rewrite in next.config.ts (D-010). A draft or unknown
-// store is a real 404. `connection()` makes the page render per request, so a publish or edit shows
-// at once and a missing store returns a real 404 status.
+// store is a real 404. The page is rendered per request so a publish or edit shows at once.
+export const instant = false;
 
 
-function safeUrl(value: string | null): string | undefined {
-  try {
-    return value && new URL(value).protocol === "https:" ? value : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 export async function generateMetadata({ params }: PageProps<"/s/[username]">): Promise<Metadata> {
-  await connection();
   const { username } = await params;
   const store = await findPublicStore(username);
   if (!store) return { title: `Not found | ${APP_NAME}`, robots: { index: false } };
   const description = store.bio ?? `Shop ${store.name} on ${APP_NAME}.`;
-  const image = safeUrl(store.avatarUrl);
+  const image = absoluteImageUrl(store.avatarUrl, publicEnv.NEXT_PUBLIC_APP_URL);
   return {
     title: `${store.name} | ${APP_NAME}`,
     description,
@@ -35,7 +28,6 @@ export async function generateMetadata({ params }: PageProps<"/s/[username]">): 
 }
 
 export default async function PublicStorePage({ params }: PageProps<"/s/[username]">) {
-  await connection();
   const { username } = await params;
   const store = await findPublicStore(username);
   if (!store) notFound();

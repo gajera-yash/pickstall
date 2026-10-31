@@ -2,6 +2,7 @@ import { ChevronRight, Download, ImageIcon } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { safeImageSrc } from "@/lib/media/media";
 import { formatMoney } from "@/lib/products/money";
 import type { CreatorProduct } from "@/lib/products/queries";
 
@@ -26,10 +27,10 @@ export function ProductList({ products, currency }: { products: CreatorProduct[]
           <li key={product._id}>
             <Link href={`/dashboard/products/${product._id}`} className="flex min-h-[72px] items-center gap-4 px-2 py-3 transition-colors duration-(--dur-fast) hover:bg-bg-subtle sm:px-3">
               <span aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-blue-soft text-blue">
-                {product.coverUrl ? (
+                {safeImageSrc(product.coverUrl) ? (
                   // A creator's own https image on any host, so next/image (fixed remote hosts) cannot load it.
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={product.coverUrl} alt="" referrerPolicy="no-referrer" className="size-full object-cover" />
+                  <img src={safeImageSrc(product.coverUrl) ?? ""} alt="" referrerPolicy="no-referrer" className="size-full object-cover" />
                 ) : (
                   <ImageIcon className="size-5" />
                 )}

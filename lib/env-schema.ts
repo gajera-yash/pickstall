@@ -25,6 +25,8 @@ export const serverEnvSchema = publicEnvSchema.extend({
   // Sends the sign-in code. Optional in development: the code is then written to the server log.
   RESEND_API_KEY: optional(z.string().min(1)),
   EMAIL_FROM: optional(z.string().min(3)),
+  // Where uploaded images are saved (D-032). Default: .data/uploads inside the project. Use a persistent volume in production.
+  UPLOAD_DIR: optional(z.string().min(1)),
   // Hashes client IPs for signup rate limits (D-019). Optional: without it the per-IP limit is off.
   IP_HASH_SECRET: optional(z.string().min(16)),
 });

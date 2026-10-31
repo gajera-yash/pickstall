@@ -95,6 +95,17 @@ export type ProductDoc = {
   updatedAt: Date;
 };
 
+/** An uploaded image (D-032). The file itself is in file storage under `key`; images are public. */
+export type UploadDoc = {
+  _id: string;
+  storeId: string;
+  kind: "avatar" | "cover";
+  mime: string;
+  size: number;
+  key: string;
+  createdAt: Date;
+};
+
 /** Fixed-window rate-limit counter. Removed by a TTL index after `expiresAt`. */
 export type RateLimitDoc = { _id: string; count: number; expiresAt: Date };
 
@@ -102,6 +113,7 @@ export async function collections(): Promise<{
   profiles: Collection<ProfileDoc>;
   stores: Collection<StoreDoc>;
   products: Collection<ProductDoc>;
+  uploads: Collection<UploadDoc>;
   signupIntents: Collection<SignupIntentDoc>;
   rateLimits: Collection<RateLimitDoc>;
 }> {
@@ -110,6 +122,7 @@ export async function collections(): Promise<{
     profiles: db.collection<ProfileDoc>("profiles"),
     stores: db.collection<StoreDoc>("stores"),
     products: db.collection<ProductDoc>("products"),
+    uploads: db.collection<UploadDoc>("uploads"),
     signupIntents: db.collection<SignupIntentDoc>("signupIntents"),
     rateLimits: db.collection<RateLimitDoc>("rateLimits"),
   };

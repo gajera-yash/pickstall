@@ -26,6 +26,7 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("stores").createIndex({ ownerId: 1 }, { unique: true, name: "stores_owner_unique" }),
     db.collection("products").createIndex({ storeId: 1, slug: 1 }, { unique: true, name: "products_store_slug_unique" }),
     db.collection("products").createIndex({ storeId: 1, status: 1, sortOrder: 1 }, { name: "products_store_status" }),
+    db.collection("uploads").createIndex({ storeId: 1, createdAt: -1 }, { name: "uploads_store" }),
     db.collection("signupIntents").createIndex({ email: 1 }, { unique: true, name: "signup_intents_email_unique" }),
     db.collection("signupIntents").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "signup_intents_ttl" }),
     db.collection("signupIntents").createIndex({ ipHash: 1, createdAt: 1 }, { name: "signup_intents_ip" }),

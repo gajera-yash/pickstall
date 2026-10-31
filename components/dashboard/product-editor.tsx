@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 
+import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CHECKOUT_QUESTIONS_MAX } from "@/lib/config";
 import { changeProductStatus, removeProduct, saveProduct, type SaveProductState } from "@/lib/products/actions";
+import { safeImageSrc } from "@/lib/media/media";
 import { formatMoney, parseMoneyToCents } from "@/lib/products/money";
 import { PRODUCT_LIMITS } from "@/lib/products/schemas";
 import { cn } from "@/lib/utils";
@@ -240,9 +242,7 @@ export function ProductEditor({ initial, currency, storeLink }: Props) {
                 <Field id="description" label="Description (optional)" error={fieldError("description")} hint={`${values.description.length}/${PRODUCT_LIMITS.description}. Plain text, no HTML.`}>
                   <Textarea id="description" rows={5} value={values.description} maxLength={PRODUCT_LIMITS.description} onChange={(event) => set("description", event.target.value)} placeholder="What do buyers get, and who is it for?" />
                 </Field>
-                <Field id="coverUrl" label="Cover image link (optional)" error={fieldError("coverUrl")} hint="An https link to an image. Uploading files arrives soon.">
-                  <Input id="coverUrl" type="url" inputMode="url" value={values.coverUrl} onChange={(event) => set("coverUrl", event.target.value)} placeholder="https://" aria-invalid={!!fieldError("coverUrl")} />
-                </Field>
+                <ImageUploader id="coverUrl" label="Cover image (optional)" kind="cover" shape="wide" value={values.coverUrl} onChange={(value) => set("coverUrl", value)} error={fieldError("coverUrl")} hint="Shown on your store and product page. JPG, PNG, WebP or GIF, up to 5 MB." />
                 <Field id="externalUrl" label="Delivery link" error={fieldError("externalUrl")} hint="Where buyers get the product (Google Drive, Notion, Dropbox...). Only buyers see it, after paying.">
                   <Input id="externalUrl" type="url" inputMode="url" value={values.externalUrl} onChange={(event) => set("externalUrl", event.target.value)} placeholder="https://" aria-invalid={!!fieldError("externalUrl")} />
                 </Field>
@@ -518,14 +518,7 @@ function ProductPreview({ values, currency, priceCents }: { values: EditorProduc
         : priceCents === 0
           ? "Free"
           : formatMoney(priceCents, currency);
-  const cover = (() => {
-    try {
-      const url = new URL(values.coverUrl);
-      return url.protocol === "https:" ? url.href : null;
-    } catch {
-      return null;
-    }
-  })();
+  const cover = safeImageSrc(values.coverUrl);
 
   return (
     <Card className="gap-4">

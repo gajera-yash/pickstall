@@ -46,3 +46,6 @@ next-env.d.ts
 # supabase cli local state (linked project ref, temp files)
 supabase/.temp
 supabase/.branches
+
+# uploaded images (D-032)
+/.data
