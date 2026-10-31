@@ -4,6 +4,15 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-033: R5 payments and checkout
+- **Date:** 2026-10-31
+- **Decision:**
+  - `lib/payments/` holds a `PaymentProvider` interface, a Stripe adapter and a development-only `MockProvider`. Nothing outside this folder imports the Stripe SDK (new dependency `stripe`). The Stripe adapter creates Checkout Sessions as direct charges on the creator's account (`stripeAccount`), no application fee, and does not list payment methods, so Stripe's dynamic payment methods apply. It needs `STRIPE_SECRET_KEY` and `STRIPE_CONNECT_WEBHOOK_SECRET`; it is written to the documented API but **not yet run against Stripe** because no keys exist.
+  - Fulfilment has one path (`lib/payments/process.ts`): verify the signature, insert the provider event id into `webhookEvents` first (a replay is a no-op), then move a pending order to paid. If the provider states an amount or currency that differs from our order, the order is not marked paid. The mock "pays" by sending a signed event into this same function; in production the mock and `/mock-pay` do not exist.
+  - Checkout (`/@user/product/checkout`): buyer name and email, optional phone, the creator's questions (checked against the product's own definitions), and for pay-what-you-want an amount checked against the minimum and a maximum. The price always comes from the product in the database. The order is created before the provider is called; a free product takes a zero-amount order straight to paid. Rate limited per IP and per email. The thank-you page shows a message only and never grants access.
+  - Orders are snapshots (title and price at the time). Not yet built, by design: Stripe Connect OAuth (needs the founder's Stripe client id), customers, income, emails and buyer library (R6 to R8).
+- **Why:** PRD F4 and 5.6, R5.
+
 ## D-032: Image upload from the device, saved on our server
 - **Date:** 2026-10-31
 - **Decision:** the profile photo and product cover are uploaded from the creator's device; the "paste a link" fields are gone. `POST /api/uploads` (signed-in creators only, rate-limited) checks the file's own bytes (JPEG, PNG, GIF or WebP; SVG and anything else is refused; max 5 MB), saves it under a new uuid name and records it in the `uploads` collection. `GET /media/<id>` serves it with `nosniff` and a locked-down CSP. Images are public by design, since they appear on public pages.

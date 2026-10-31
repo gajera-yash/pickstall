@@ -113,6 +113,11 @@ export const CHECKOUT_QUESTIONS_MAX = 5;
 export const PRICE_MAX_CENTS = 50_000;
 /** Smallest paid price in cents (Stripe's minimum charge is 50 cents; we keep a round 1.00). */
 export const PRICE_MIN_PAID_CENTS = 100;
+/** Checkout (D-033): attempts per IP address, and the longest answer a buyer may give. */
+export const CHECKOUT_RATE_LIMIT = { max: 20, windowMinutes: 10 } as const;
+export const ANSWER_MAX_CHARS = { text: 300, long_text: 2000 } as const;
+export const BUYER_NAME_MAX = 80;
+
 /** Image uploads per creator (D-032). */
 export const UPLOAD_RATE_LIMIT = { max: 30, windowMinutes: 10 } as const;
 export const PRODUCT_RATE_LIMIT = { max: 60, windowMinutes: 10 } as const;

@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/@:username", destination: "/s/:username" },
       { source: "/@:username/:product", destination: "/s/:username/:product" },
+      { source: "/@:username/:product/:page", destination: "/s/:username/:product/:page" },
     ];
   },
   partialPrefetching: true,

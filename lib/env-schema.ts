@@ -27,6 +27,9 @@ export const serverEnvSchema = publicEnvSchema.extend({
   EMAIL_FROM: optional(z.string().min(3)),
   // Where uploaded images are saved (D-032). Default: .data/uploads inside the project. Use a persistent volume in production.
   UPLOAD_DIR: optional(z.string().min(1)),
+  // Stripe (test mode until the founder approves live mode). Server only; never logged.
+  STRIPE_SECRET_KEY: optional(z.string().min(1)),
+  STRIPE_CONNECT_WEBHOOK_SECRET: optional(z.string().min(1)),
   // Hashes client IPs for signup rate limits (D-019). Optional: without it the per-IP limit is off.
   IP_HASH_SECRET: optional(z.string().min(16)),
 });

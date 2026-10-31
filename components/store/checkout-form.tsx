@@ -1,0 +1,120 @@
+"use client";
+
+import { Lock } from "lucide-react";
+import { useActionState, useEffect, useState } from "react";
+
+import { PhoneField } from "@/components/auth/phone-field";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { FormField, describedBy } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { ANSWER_MAX_CHARS, BUYER_NAME_MAX } from "@/lib/config";
+import { startCheckout, type CheckoutState } from "@/lib/orders/actions";
+
+export type CheckoutQuestion = { id: string; label: string; kind: "text" | "long_text" | "dropdown" | "checkbox"; required: boolean; options: string[] };
+
+type Props = {
+  username: string;
+  productSlug: string;
+  askPhone: boolean;
+  questions: CheckoutQuestion[];
+  /** Pay-what-you-want: the suggested amount to prefill (a plain decimal). Null for a fixed price. */
+  suggestedAmount: string | null;
+  minimumLabel: string | null;
+  submitLabel: string;
+};
+
+/**
+ * Checkout form (PRD F4): name and email always, optional phone, the creator's questions and, for
+ * pay-what-you-want, the amount. Typed values are kept after an error and focus moves to the first
+ * problem. The server decides the real price; nothing here can change it.
+ */
+export function CheckoutForm({ username, productSlug, askPhone, questions, suggestedAmount, minimumLabel, submitLabel }: Props) {
+  const [state, action, pending] = useActionState<CheckoutState, FormData>(startCheckout.bind(null, username, productSlug), null);
+  const error = state && !state.ok ? state : null;
+  const fieldError = (field: string) => (error?.field === field ? error.error : null);
+  const formError = error && !error.field ? error.error : null;
+  const [values, setValues] = useState<Record<string, string>>({ amount: suggestedAmount ?? "" });
+  const set = (key: string, value: string) => setValues((current) => ({ ...current, [key]: value }));
+
+  useEffect(() => {
+    if (error?.field) document.getElementById(error.field)?.focus();
+  }, [error]);
+
+  return (
+    <form action={action} noValidate className="flex flex-col gap-5">
+      {formError && (
+        <Alert variant="error">
+          <AlertDescription>{formError}</AlertDescription>
+        </Alert>
+      )}
+
+      <FormField id="name" label="Your name" error={fieldError("name")}>
+        <Input id="name" name="name" autoComplete="name" required maxLength={BUYER_NAME_MAX} value={values.name ?? ""} onChange={(event) => set("name", event.target.value)} aria-invalid={fieldError("name") ? true : undefined} aria-describedby={describedBy("name", fieldError("name"))} />
+      </FormField>
+
+      <FormField id="email" label="Email" error={fieldError("email")} hint="Your receipt and access link go here.">
+        <Input id="email" name="email" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required value={values.email ?? ""} onChange={(event) => set("email", event.target.value)} aria-invalid={fieldError("email") ? true : undefined} aria-describedby={describedBy("email", fieldError("email"), "hint")} />
+      </FormField>
+
+      {askPhone && <PhoneField error={fieldError("phone")} />}
+
+      {suggestedAmount !== null && (
+        <FormField id="amount" label="Amount you want to pay" error={fieldError("amount")} hint={minimumLabel ?? undefined}>
+          <Input id="amount" name="amount" inputMode="decimal" value={values.amount ?? ""} onChange={(event) => set("amount", event.target.value)} aria-invalid={fieldError("amount") ? true : undefined} aria-describedby={describedBy("amount", fieldError("amount"), minimumLabel ?? undefined)} />
+        </FormField>
+      )}
+
+      {questions.map((question) => {
+        const field = `answer-${question.id}`;
+        const problem = fieldError(field);
+        const suffix = question.required ? "" : " (optional)";
+        if (question.kind === "checkbox") {
+          return (
+            <div key={question.id} className="flex flex-col gap-2">
+              <label className="flex cursor-pointer items-start gap-3 text-sm font-medium">
+                <input id={field} type="checkbox" name={field} className="mt-0.5 size-5 shrink-0 accent-blue" checked={values[field] === "true"} onChange={(event) => set(field, event.target.checked ? "true" : "false")} aria-invalid={problem ? true : undefined} />
+                <span>
+                  {question.label}
+                  {suffix}
+                </span>
+              </label>
+              {values[field] !== "true" && <input type="hidden" name={field} value="false" />}
+              {problem && <p role="alert" className="text-sm font-medium text-danger">{problem}</p>}
+            </div>
+          );
+        }
+        return (
+          <FormField key={question.id} id={field} label={`${question.label}${suffix}`} error={problem}>
+            {question.kind === "long_text" ? (
+              <Textarea id={field} name={field} rows={4} maxLength={ANSWER_MAX_CHARS.long_text} value={values[field] ?? ""} onChange={(event) => set(field, event.target.value)} aria-invalid={problem ? true : undefined} />
+            ) : question.kind === "dropdown" ? (
+              <Select id={field} name={field} value={values[field] ?? ""} onChange={(event) => set(field, event.target.value)} aria-invalid={problem ? true : undefined}>
+                <option value="">Choose...</option>
+                {question.options.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <Input id={field} name={field} maxLength={ANSWER_MAX_CHARS.text} value={values[field] ?? ""} onChange={(event) => set(field, event.target.value)} aria-invalid={problem ? true : undefined} />
+            )}
+          </FormField>
+        );
+      })}
+
+      <Button type="submit" size="lg" className="w-full" loading={pending}>
+        <Lock aria-hidden="true" className="size-4" />
+        {submitLabel}
+      </Button>
+      <p className="text-center text-sm text-mute">
+        <Label className="sr-only">Secure checkout</Label>
+        Pickstall takes 0% of your payment. Card details are entered on the payment provider&apos;s page, never here.
+      </p>
+    </form>
+  );
+}

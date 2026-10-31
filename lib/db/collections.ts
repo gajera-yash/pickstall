@@ -95,6 +95,35 @@ export type ProductDoc = {
   updatedAt: Date;
 };
 
+/** One answer to a checkout question, with the label as it was when the buyer answered (D-033). */
+export type OrderAnswerDoc = { questionId: string; label: string; value: string };
+
+/** An order (D-033). Amounts are integer cents; they are computed on the server from the product, never from the client. */
+export type OrderDoc = {
+  _id: string;
+  storeId: string;
+  productId: string;
+  /** What the buyer bought, frozen at checkout. Later edits to the product do not change the order. */
+  item: { title: string; unitPriceCents: number };
+  buyerEmail: string;
+  buyerName: string;
+  buyerPhone: string | null;
+  answers: OrderAnswerDoc[];
+  subtotalCents: number;
+  discountCents: number;
+  totalCents: number;
+  currency: string;
+  status: "pending" | "paid" | "refunded" | "failed";
+  /** Who takes the payment: Stripe, the development-only mock, or none for a free product. */
+  provider: "stripe" | "mock" | "free";
+  providerSessionId: string | null;
+  createdAt: Date;
+  paidAt: Date | null;
+};
+
+/** A provider webhook already handled. `_id` is the provider's event id, so a replay fails to insert (idempotency). */
+export type WebhookEventDoc = { _id: string; source: string; type: string; orderId: string | null; processedAt: Date };
+
 /** An uploaded image (D-032). The file itself is in file storage under `key`; images are public. */
 export type UploadDoc = {
   _id: string;
@@ -114,6 +143,8 @@ export async function collections(): Promise<{
   stores: Collection<StoreDoc>;
   products: Collection<ProductDoc>;
   uploads: Collection<UploadDoc>;
+  orders: Collection<OrderDoc>;
+  webhookEvents: Collection<WebhookEventDoc>;
   signupIntents: Collection<SignupIntentDoc>;
   rateLimits: Collection<RateLimitDoc>;
 }> {
@@ -123,6 +154,8 @@ export async function collections(): Promise<{
     stores: db.collection<StoreDoc>("stores"),
     products: db.collection<ProductDoc>("products"),
     uploads: db.collection<UploadDoc>("uploads"),
+    orders: db.collection<OrderDoc>("orders"),
+    webhookEvents: db.collection<WebhookEventDoc>("webhookEvents"),
     signupIntents: db.collection<SignupIntentDoc>("signupIntents"),
     rateLimits: db.collection<RateLimitDoc>("rateLimits"),
   };

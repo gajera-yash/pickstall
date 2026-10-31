@@ -12,7 +12,7 @@ import type { PublicProduct, PublicStore } from "@/lib/stores/public";
  * and the Buy button. Checkout is built in R5, so the button is disabled and says why; nothing
  * private (delivery link, questions, email text) is on this page.
  */
-export function ProductPage({ store, product }: { store: PublicStore; product: PublicProduct }) {
+export function ProductPage({ store, product, buyable }: { store: PublicStore; product: PublicProduct; buyable: boolean }) {
   const theme = resolveTheme(store.theme);
   const { preset } = theme;
   const minimum = product.pricingModel === "pwyw" ? (product.minPriceCents ?? 0) : 0;
@@ -46,18 +46,30 @@ export function ProductPage({ store, product }: { store: PublicStore; product: P
             </p>
           )}
         </div>
-        <button
-          type="button"
-          disabled
-          className="flex h-13 w-full cursor-not-allowed items-center justify-center gap-2 text-button opacity-60"
-          style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}
-        >
-          <Lock aria-hidden="true" className="size-4" />
-          {product.buttonText || "Buy now"}
-        </button>
-        <p className="text-center text-sm" style={{ color: preset.muted }}>
-          Checkout opens soon. Payments are being connected for this store.
-        </p>
+        {buyable ? (
+          <Link
+            href={`/@${store.slug}/${product.slug}/checkout`}
+            className="flex h-13 w-full items-center justify-center gap-2 text-button"
+            style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}
+          >
+            {product.buttonText || "Buy now"}
+          </Link>
+        ) : (
+          <>
+            <button
+              type="button"
+              disabled
+              className="flex h-13 w-full cursor-not-allowed items-center justify-center gap-2 text-button opacity-60"
+              style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}
+            >
+              <Lock aria-hidden="true" className="size-4" />
+              {product.buttonText || "Buy now"}
+            </button>
+            <p className="text-center text-sm" style={{ color: preset.muted }}>
+              Payments aren&apos;t set up for this store yet. Please check back soon.
+            </p>
+          </>
+        )}
       </article>
       <StoreHeader store={store} linkToStore />
     </StoreFrame>
