@@ -1,6 +1,7 @@
 import "server-only";
 
 import { collections, type OrderDoc } from "@/lib/db/collections";
+import { isUuid } from "@/lib/media/media";
 
 // The buyer's library (R7). A buyer is identified by the verified email of their session (they
 // proved it with the 6-digit code), and sees only paid or refunded orders placed with that email.
@@ -66,6 +67,7 @@ export async function listPurchases(email: string): Promise<Purchase[]> {
 
 /** One purchase of this buyer, or null (also for someone else's order id). */
 export async function findPurchase(email: string, orderId: string): Promise<Purchase | null> {
+  if (!isUuid(orderId)) return null;
   const { orders } = await collections();
   const doc = await orders.findOne({ _id: orderId, buyerEmail: normalize(email), status: { $in: ["paid", "refunded"] } });
   if (!doc) return null;
@@ -86,6 +88,7 @@ export type AccessResult = { ok: true; url: string } | { ok: false; reason: "not
  * limit is enforced by one atomic update, so two parallel requests cannot both take the last use.
  */
 export async function grantAccess(email: string, orderId: string): Promise<AccessResult> {
+  if (!isUuid(orderId)) return { ok: false, reason: "not_found" };
   const { orders, products } = await collections();
   const buyerEmail = normalize(email);
 

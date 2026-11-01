@@ -15,6 +15,21 @@ export default defineConfig({
           environment: "node",
         },
       },
+      {
+        // Real MongoDB, started in memory by the global setup: never the founder's database.
+        resolve: {
+          alias: { ...alias, "server-only": path.resolve(import.meta.dirname, "tests/integration/server-only-stub.ts") },
+        },
+        test: {
+          name: "integration",
+          include: ["tests/integration/**/*.test.ts"],
+          environment: "node",
+          globalSetup: ["tests/integration/global-setup.ts"],
+          setupFiles: ["tests/integration/setup.ts"],
+          testTimeout: 30_000,
+          hookTimeout: 120_000,
+        },
+      },
     ],
   },
 });
