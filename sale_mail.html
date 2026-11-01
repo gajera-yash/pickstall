@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Sale Alert</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F7F9FC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0B0D2A; -webkit-font-smoothing: antialiased;">
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color: #F7F9FC; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card -->
+        <table width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width: 520px; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #E2E6F0; padding: 36px 32px; box-shadow: 0 4px 12px rgba(11, 13, 42, 0.03);">
+          
+          <!-- Badge -->
+          <tr>
+            <td align="center" style="padding-bottom: 16px;">
+              <span style="background-color: #E6F9F2; color: #00B37E; font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 30px; display: inline-block;">
+                🎉 New Sale!
+              </span>
+            </td>
+          </tr>
+
+          <!-- Heading -->
+          <tr>
+            <td align="center" style="padding-bottom: 24px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #0B0D2A; letter-spacing: -0.4px;">
+                +{{amount}}
+              </h1>
+              <p style="margin: 6px 0 0; font-size: 15px; color: #555A82;">
+                Awesome news, {{creator_name}}! You just sold an item.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Sale Details Table -->
+          <tr>
+            <td style="padding-bottom: 28px;">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color: #F7F9FC; border: 1px solid #E2E6F0; border-radius: 12px; padding: 16px 20px;">
+                <tr>
+                  <td style="font-size: 13px; color: #555A82; padding-bottom: 8px;">Product:</td>
+                  <td align="right" style="font-size: 14px; font-weight: 600; color: #0B0D2A; padding-bottom: 8px;">{{product_title}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size: 13px; color: #555A82; padding-bottom: 8px;">Customer:</td>
+                  <td align="right" style="font-size: 14px; font-weight: 600; color: #0B0D2A; padding-bottom: 8px;">{{customer_name}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size: 13px; color: #555A82; padding-bottom: 8px;">Customer Email:</td>
+                  <td align="right" style="font-size: 14px; color: #0B0D2A; padding-bottom: 8px;">{{customer_email}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size: 13px; color: #555A82;">Order ID:</td>
+                  <td align="right" style="font-size: 12px; font-family: monospace; color: #8F95B2;">{{order_id}}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Primary CTA Button -->
+          <tr>
+            <td align="center" style="padding-bottom: 12px;">
+              <a href="{{dashboard_link}}" target="_blank" style="display: block; width: 85%; background-color: #0056FF; color: #FFFFFF; font-size: 15px; font-weight: 600; text-align: center; text-decoration: none; padding: 13px 20px; border-radius: 10px;">
+                View Order in Dashboard
+              </a>
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- Footer -->
+        <table width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width: 520px; padding-top: 20px;">
+          <tr>
+            <td align="center">
+              <p style="margin: 0; font-size: 12px; color: #8F95B2;">
+                Pickstall • Creator Store Platform
+              </p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
