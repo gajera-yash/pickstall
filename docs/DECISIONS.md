@@ -4,6 +4,17 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-041: The dev server works from any PC, IDE preview or device
+- **Date:** 2026-11-01
+- **Problem (founder report):** opened from Antigravity or another PC, the app loaded but typing in inputs failed with errors. Cause, reproduced: Next.js 16 serves its dev resources (scripts, hot reload) only to `localhost`, so `127.0.0.1` (IDE previews) and LAN addresses got 403 and the page broke. Login and redirects were also tied to `NEXT_PUBLIC_APP_URL` (`localhost`), which on another PC points to that PC itself.
+- **Decision:**
+  - `allowedDevOrigins` in `next.config.ts` from `lib/dev-hosts.ts`: `127.0.0.1`, `[::1]`, the private IPv4 ranges, `*.local`, this PC's name and `DEV_ALLOWED_HOSTS`. Only `next dev` uses it; other sites are still blocked (checked: 403).
+  - In development only, links and redirects follow the local or LAN address the request came in on (`lib/app-origin.ts`): Google callback redirect, the library "open" same-origin check, Stripe success and cancel URLs, and Better Auth's trusted origins. Production keeps using `NEXT_PUBLIC_APP_URL` alone and never trusts the Host header (unit-tested).
+  - Cross-Origin-Opener-Policy is sent in production only (browsers ignore it on plain http and log an error).
+  - `pnpm doctor` checks a new PC: Node 20.9+, dependencies, `.env.local` and its required values, and a MongoDB ping, with plain fixes for the usual failures (Atlas IP access list, DNS that cannot resolve `mongodb+srv`). `engines.node` is `>=20.9`.
+- **Verified:** sign-up with the email code from `http://192.168.1.22` (LAN) reaching the dashboard, and typing plus the hero demo from `http://127.0.0.1`, both without console errors.
+- **Why:** founder request, 2026-11-01.
+
 ## D-040: Landing page competes with Stan Store by name, with planned prices
 - **Date:** 2026-11-01
 - **Decision:**

@@ -41,11 +41,16 @@ export function securityHeaders(isDev: boolean): HeaderPair[] {
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "X-Frame-Options", value: "DENY" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-    { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
     { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()" },
     { key: "X-DNS-Prefetch-Control", value: "off" },
-    // Browsers ignore HSTS on plain http, and localhost is never https, so it is sent in production only.
-    ...(isDev ? [] : [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]),
+    // HSTS and COOP need https: browsers ignore them on plain http (and log an error for COOP when the
+    // dev server is opened from a LAN address), so they are sent in production only.
+    ...(isDev
+      ? []
+      : [
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+        ]),
   ];
 }
 

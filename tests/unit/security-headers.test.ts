@@ -13,9 +13,11 @@ describe("securityHeaders", () => {
     }
   });
 
-  it("sends HSTS in production only", () => {
+  it("sends HSTS and COOP in production only (they need https)", () => {
     expect(header(false, "Strict-Transport-Security")).toMatch(/^max-age=\d{8,}/);
     expect(header(true, "Strict-Transport-Security")).toBeUndefined();
+    expect(header(false, "Cross-Origin-Opener-Policy")).toBe("same-origin");
+    expect(header(true, "Cross-Origin-Opener-Policy")).toBeUndefined();
   });
 });
 

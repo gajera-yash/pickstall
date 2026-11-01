@@ -6,6 +6,7 @@ import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins";
 
 import { APP_NAME, OTP_LENGTH, OTP_TTL_SECONDS, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, SESSION_COOKIE_CACHE_SECONDS } from "@/lib/config";
+import { appOriginFrom } from "@/lib/app-origin";
 import { mongoDb } from "@/lib/db/mongo";
 import { sendSignInCode } from "@/lib/email/send-sign-in-code";
 import { publicEnv } from "@/lib/env";
@@ -22,6 +23,9 @@ const google =
 export const auth = betterAuth({
   appName: APP_NAME,
   baseURL: publicEnv.NEXT_PUBLIC_APP_URL,
+  // Development only (D-041): also trust the local or LAN address the app was opened on, so sign-in
+  // works from 127.0.0.1, an IDE preview or another PC. Production trusts baseURL alone.
+  trustedOrigins: (request) => (process.env.NODE_ENV === "development" && request ? [appOriginFrom(request.headers)] : []),
   secret: serverEnv.BETTER_AUTH_SECRET,
   // No `client` passed: transactions stay off, so a standalone local MongoDB works too.
   database: mongodbAdapter(mongoDb),

@@ -3,7 +3,7 @@
 Storefront, digital products and courses for online creators. Spec: `PRD.md`. Rules for AI tools: `CLAUDE.md`. Design system: `DESIGN.md`. Decisions: `docs/DECISIONS.md`.
 
 ## Prerequisites
-- Node.js 24+
+- Node.js 20.9+ (22 LTS or 24 recommended)
 - pnpm (`corepack enable pnpm`)
 - A MongoDB database: a free **MongoDB Atlas** cluster, or MongoDB running locally (no real data in dev). See `docs/DECISIONS.md` (D-024).
 
@@ -13,7 +13,15 @@ Storefront, digital products and courses for online creators. Spec: `PRD.md`. Ru
    - `MONGODB_URI`: from Atlas (**Connect > Drivers**), for example `mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net`. In Atlas **Network Access**, allow your IP.
    - `BETTER_AUTH_SECRET`: a long random string, for example the output of `openssl rand -base64 32`.
    - `NEXT_PUBLIC_APP_URL=http://localhost:3000`, `NEXT_PUBLIC_ROOT_DOMAIN=localhost:3000`.
-3. `pnpm dev`, then open http://localhost:3000. Collections and indexes are created on first use.
+3. `pnpm doctor` checks Node, `.env.local` and that MongoDB answers from this PC, and says how to fix anything missing.
+4. `pnpm dev`, then open http://localhost:3000. Collections and indexes are created on first use.
+
+## Run on another PC or open from another device
+- **Another PC (its own copy):** clone the repo, `pnpm install`, copy `.env.local` from your main PC (safely, never through git), then run `pnpm doctor`. The usual problems it catches:
+  - *MongoDB did not answer*: in Atlas **Network Access**, add that PC's public IP.
+  - *MongoDB address could not be found*: the network's DNS cannot resolve `mongodb+srv` addresses. Set the PC's DNS to 8.8.8.8, or use Atlas's standard `mongodb://` connection string.
+- **Another device, same Wi-Fi (phone, second laptop, an IDE preview such as Antigravity):** run `pnpm dev` on the main PC and open the `http://192.168.x.x:3000` address that `pnpm doctor` or `pnpm dev` prints. `127.0.0.1`, LAN addresses and this PC's name work in development (D-041); for anything else (a tunnel) add the host to `DEV_ALLOWED_HOSTS`. If the other device cannot connect at all, allow Node.js through the Windows firewall on the main PC.
+- Google sign-in only works on the address registered in Google Cloud (`localhost:3000`); use the email code elsewhere.
 
 ## Sign-in codes (email)
 - **Development without Resend:** leave `RESEND_API_KEY` empty. The 6-digit code is printed in the `pnpm dev` terminal as `auth.dev_sign_in_code`.
@@ -28,6 +36,7 @@ Storefront, digital products and courses for online creators. Spec: `PRD.md`. Ru
 | Command | What it does |
 |---|---|
 | `pnpm dev` | Run locally |
+| `pnpm doctor` | Checks this PC can run the app: Node, `.env.local`, MongoDB connection |
 | `pnpm dev:sandbox` | Run locally on a throwaway in-memory database (port 3100); nothing touches your real data |
 | `pnpm build` | Production build |
 | `pnpm lint` | ESLint |

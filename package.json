@@ -2,9 +2,13 @@
   "name": "pickstall",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9"
+  },
   "scripts": {
     "dev": "next dev",
     "dev:sandbox": "node scripts/dev-sandbox.mjs",
+    "doctor": "node scripts/doctor.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

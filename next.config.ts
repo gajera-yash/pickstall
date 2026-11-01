@@ -1,10 +1,16 @@
+import { hostname } from "node:os";
+
 import type { NextConfig } from "next";
 
+import { devAllowedOrigins } from "./lib/dev-hosts";
 import { contentSecurityPolicy, PAGE_CSP_SOURCE, securityHeaders } from "./lib/security/headers";
 
 const isDev = process.env.NODE_ENV !== "production";
 
 const nextConfig: NextConfig = {
+  // Lets the dev server work when opened as 127.0.0.1, from an IDE preview or from another device on
+  // the network (D-041). Only used by `next dev`.
+  allowedDevOrigins: devAllowedOrigins(hostname(), process.env.DEV_ALLOWED_HOSTS),
   cacheComponents: true,
   poweredByHeader: false,
   async headers() {

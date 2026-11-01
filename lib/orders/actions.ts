@@ -4,9 +4,9 @@ import { randomUUID } from "node:crypto";
 
 import { redirect, unstable_rethrow } from "next/navigation";
 
+import { appOrigin } from "@/lib/app-origin";
 import { CHECKOUT_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
-import { publicEnv } from "@/lib/env";
 import { validateAnswers } from "@/lib/orders/answers";
 import { computeAmountCents } from "@/lib/orders/pricing";
 import {
@@ -94,7 +94,7 @@ export async function startCheckout(username: string, productSlug: string, _prev
     });
 
     const base = `/@${context.store.slug}/${context.product.slug}`;
-    const appUrl = publicEnv.NEXT_PUBLIC_APP_URL;
+    const appUrl = await appOrigin();
 
     if (free || !provider) {
       await markFreeOrderPaid(orderId);

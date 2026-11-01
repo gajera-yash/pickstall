@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { appOriginFrom } from "@/lib/app-origin";
 import { getCurrentUser } from "@/lib/auth/guards";
-import { publicEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { grantAccess } from "@/lib/library/queries";
 import { isUuid } from "@/lib/media/media";
@@ -11,7 +11,7 @@ import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 // The destination comes from the database, never from the request, so this is not an open redirect.
 export async function POST(request: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
-  const base = new URL(publicEnv.NEXT_PUBLIC_APP_URL);
+  const base = new URL(appOriginFrom(request.headers));
   const back = (query = "") => NextResponse.redirect(new URL(`/library/${isUuid(orderId) ? orderId : ""}${query}`, base), 303);
 
   // Same-origin only: a form on another site cannot trigger this.
