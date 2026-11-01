@@ -5,7 +5,7 @@ import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { logger } from "@/lib/logger";
 import { providerByName } from "@/lib/payments";
 import { scheduleOrderConfirmation } from "@/lib/orders/confirmation";
-import type { PaymentEvent } from "@/lib/payments/types";
+import type { PaymentEvent, PaymentProvider } from "@/lib/payments/types";
 
 // The one place an order becomes paid or refunded. Stripe's webhook route and the development-only
 // mock both come through here, so no provider has a shortcut (CLAUDE.md 7). Access is never granted
@@ -35,7 +35,7 @@ export async function handleWebhookRequest(providerName: string, rawBody: string
   }
 
   try {
-    await applyEvent(event);
+    await applyEvent(provider.name, event);
     return { status: 200, body: "ok" };
   } catch (error) {
     // Let the provider retry: forget the event so the replay is processed.
@@ -45,21 +45,30 @@ export async function handleWebhookRequest(providerName: string, rawBody: string
   }
 }
 
-async function applyEvent(event: PaymentEvent): Promise<void> {
+async function applyEvent(providerName: PaymentProvider["name"], event: PaymentEvent): Promise<void> {
   const { orders } = await collections();
 
-  // A refund may only know the provider's payment id; find our order through it.
+  // A refund may only know the provider's payment id; find our order through it. Only an order of
+  // this provider can be refunded by its events.
   if (event.type === "payment.refunded") {
     const match = event.orderId ? { _id: event.orderId } : event.providerPaymentId ? { providerPaymentId: event.providerPaymentId } : null;
     if (!match) return;
-    await orders.updateOne({ ...match, status: "paid" }, { $set: { status: "refunded" } });
+    await orders.updateOne({ ...match, provider: providerName, status: "paid" }, { $set: { status: "refunded" } });
     return;
   }
   if (!event.orderId) return;
 
   if (event.type === "payment.succeeded") {
-    const order = await orders.findOne({ _id: event.orderId }, { projection: { totalCents: 1, currency: 1, status: 1 } });
-    if (!order) return;
+    // The event must belong to the checkout session we created for this order (R9). Without this, a
+    // connected creator could pay a session on their own Stripe account with another store's order id
+    // in its metadata and unlock that store's product.
+    if (!event.providerSessionId) return;
+    const binding = { _id: event.orderId, provider: providerName, providerSessionId: event.providerSessionId };
+    const order = await orders.findOne(binding, { projection: { totalCents: 1, currency: 1, status: 1 } });
+    if (!order) {
+      logger.error("webhook.session_mismatch", { orderId: event.orderId });
+      return;
+    }
     const mismatch =
       (event.amountCents !== undefined && event.amountCents !== order.totalCents) ||
       (event.currency !== undefined && event.currency.toLowerCase() !== order.currency.toLowerCase());
@@ -69,7 +78,7 @@ async function applyEvent(event: PaymentEvent): Promise<void> {
     }
     // Only a pending order becomes paid; a second delivery changes nothing.
     await orders.updateOne(
-      { _id: event.orderId, status: "pending" },
+      { ...binding, status: "pending" },
       { $set: { status: "paid", paidAt: new Date(), ...(event.providerPaymentId ? { providerPaymentId: event.providerPaymentId } : {}) } },
     );
     // The order email goes out after the response; a replay is safe (one outbox row per order).

@@ -154,13 +154,27 @@ describe("handleWebhookRequest (the only way an order becomes paid)", () => {
     expect(await handleWebhookRequest("mock", body, signature)).toEqual({ status: 200, body: "ok" });
     expect(await handleWebhookRequest("mock", body, signature)).toEqual({ status: 200, body: "duplicate" });
     expect(hoisted.orders.updateOne).toHaveBeenCalledTimes(1);
-    expect(hoisted.orders.updateOne).toHaveBeenCalledWith({ _id: "order-1", status: "pending" }, { $set: { status: "paid", paidAt: expect.any(Date), providerPaymentId: "mockpay_order-1" } });
+    expect(hoisted.orders.updateOne).toHaveBeenCalledWith(
+      { _id: "order-1", provider: "mock", providerSessionId: "mock_order-1", status: "pending" },
+      { $set: { status: "paid", paidAt: expect.any(Date), providerPaymentId: "mockpay_order-1" } },
+    );
+  });
+
+  it("ignores a payment event whose checkout session is not the one created for the order", async () => {
+    const { body, signature } = event("evt-other-session");
+    hoisted.orders.findOne.mockResolvedValue(null); // no order with this provider and session id
+    expect(await handleWebhookRequest("mock", body, signature)).toEqual({ status: 200, body: "ok" });
+    expect(hoisted.orders.findOne).toHaveBeenCalledWith(
+      { _id: "order-1", provider: "mock", providerSessionId: "mock_order-1" },
+      expect.anything(),
+    );
+    expect(hoisted.orders.updateOne).not.toHaveBeenCalled();
   });
 
   it("marks a paid order refunded on a refund event, and only a paid one", async () => {
     const body = JSON.stringify({ id: "evt-refund", type: "payment.refunded", orderId: "order-1" });
     expect(await handleWebhookRequest("mock", body, signMockBody(body))).toEqual({ status: 200, body: "ok" });
-    expect(hoisted.orders.updateOne).toHaveBeenCalledWith({ _id: "order-1", status: "paid" }, { $set: { status: "refunded" } });
+    expect(hoisted.orders.updateOne).toHaveBeenCalledWith({ _id: "order-1", provider: "mock", status: "paid" }, { $set: { status: "refunded" } });
   });
 
   it("refuses a bad signature with 400 and touches nothing", async () => {
@@ -268,7 +282,7 @@ describe("confirmMockPayment", () => {
     hoisted.orders.findOne.mockResolvedValue({ _id: id, totalCents: 1900, currency: "usd", status: "pending" });
     hoisted.orders.updateOne.mockResolvedValue({ matchedCount: 1 });
     expect(await redirectOf(() => confirmMockPayment(id))).toBe(`/@maya/playbook/thank-you?order=${id}`);
-    expect(hoisted.orders.updateOne).toHaveBeenCalledWith({ _id: id, status: "pending" }, expect.anything());
+    expect(hoisted.orders.updateOne).toHaveBeenCalledWith({ _id: id, provider: "mock", providerSessionId: `mock_${id}`, status: "pending" }, expect.anything());
   });
 
   it("ignores ids that are not uuids", async () => {
