@@ -34,7 +34,14 @@ export function UsernameField({ value, onChange, serverError, autoFocus }: Props
     if (value.length < SLUG_MIN_LENGTH) return;
     const timer = setTimeout(async () => {
       const result = await checkUsername(value).catch(
-        (): UsernameCheck => ({ status: "error", username: value, message: "Couldn't check that username. Try again." }),
+        (): UsernameCheck => ({
+          status: "error",
+          username: value,
+          message:
+            process.env.NODE_ENV === "development"
+              ? "The check request failed before it reached the database. See the terminal running pnpm dev."
+              : "Couldn't check that username. Try again.",
+        }),
       );
       // Ignore answers for something the user has already changed.
       if (latest.current === value) setCheck(result);

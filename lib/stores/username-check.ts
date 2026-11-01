@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 import { USERNAME_CHECK_RATE_LIMIT } from "@/lib/config";
+import { usernameCheckError } from "@/lib/db/errors";
 import { logger } from "@/lib/logger";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { getClientIpHash } from "@/lib/request-ip";
@@ -53,6 +54,6 @@ export async function checkUsername(raw: unknown): Promise<UsernameCheck> {
     return { status: "taken", username, message: SLUG_TAKEN_MESSAGE, suggestions };
   } catch (error) {
     logger.error("username_check.failed", { name: error instanceof Error ? error.name : undefined });
-    return { status: "error", username, message: "Couldn't check that username. Try again." };
+    return { status: "error", username, message: usernameCheckError(error) };
   }
 }

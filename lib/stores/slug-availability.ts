@@ -1,6 +1,7 @@
 import "server-only";
 
 import { collections } from "@/lib/db/collections";
+import { usernameCheckError } from "@/lib/db/errors";
 import { logger } from "@/lib/logger";
 import { err, ok, type Result } from "@/lib/result";
 
@@ -15,7 +16,7 @@ export async function isSlugTaken(slug: string): Promise<Result<boolean>> {
     return ok(found !== null);
   } catch (error) {
     logger.error("stores.slug_check_failed", { name: error instanceof Error ? error.name : undefined });
-    return err("Couldn't check that username. Try again.", "username");
+    return err(usernameCheckError(error), "username");
   }
 }
 

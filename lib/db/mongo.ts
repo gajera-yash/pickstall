@@ -10,7 +10,8 @@ import { logger } from "@/lib/logger";
 
 const globalForMongo = globalThis as unknown as { pickstallMongo?: MongoClient; pickstallIndexes?: Promise<void> };
 
-export const mongoClient: MongoClient = globalForMongo.pickstallMongo ?? new MongoClient(serverEnv.MONGODB_URI);
+// 10 s instead of the driver's 30 s, so a database that cannot be reached shows up quickly.
+export const mongoClient: MongoClient = globalForMongo.pickstallMongo ?? new MongoClient(serverEnv.MONGODB_URI, { serverSelectionTimeoutMS: 10_000 });
 if (process.env.NODE_ENV !== "production") globalForMongo.pickstallMongo = mongoClient;
 
 /** The app database. The driver connects lazily on the first operation. */
@@ -46,8 +47,19 @@ async function ensureIndexes(db: Db): Promise<void> {
   ]);
 }
 
+/**
+ * Connects explicitly (D-041). After a failed connection (Atlas not allowing this IP, network down)
+ * the driver keeps a closed topology and its automatic connect never replaces it, so every later
+ * operation fails with MongoTopologyClosedError until the server restarts. An explicit connect()
+ * opens a new one. Costs nothing when already connected.
+ */
+export async function ensureConnected(): Promise<void> {
+  await mongoClient.connect();
+}
+
 /** The app database with its indexes in place. Use this from data-access code. */
 export async function getDb(): Promise<Db> {
+  await ensureConnected();
   globalForMongo.pickstallIndexes ??= ensureIndexes(mongoDb).catch((error: unknown) => {
     globalForMongo.pickstallIndexes = undefined; // retry on the next call
     logger.error("db.ensure_indexes_failed", { code: error instanceof MongoServerError ? error.code : undefined });

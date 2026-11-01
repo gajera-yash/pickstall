@@ -25,6 +25,9 @@ export type { CreatorStore };
  * With Cache Components, call this only inside a <Suspense> boundary.
  */
 export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
+  // Heals the database connection after an outage without waiting for it, so a session served from
+  // the signed cookie stays fast; Better Auth's own queries then use the reopened connection.
+  void import("@/lib/db/mongo").then(({ ensureConnected }) => ensureConnected()).catch(() => undefined);
   try {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session) return null;

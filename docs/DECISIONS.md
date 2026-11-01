@@ -4,6 +4,15 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-042: The app recovers from a MongoDB outage without a restart
+- **Date:** 2026-11-01
+- **Problem (founder report):** signup from Antigravity showed "Couldn't check that username. Try again." The dev log showed `MongoServerSelectionError` (this PC could not reach Atlas; DNS and TCP were fine, so most likely Atlas Network Access does not list the PC's current IP), then `MongoTopologyClosedError` on every later request. The MongoDB driver (7.x) closes the topology after a failed connect but keeps it on the client; its automatic connect never replaces it, so the app stayed broken until restarted, even after the network was fixed.
+- **Decision:**
+  - `getDb()` calls `mongoClient.connect()` explicitly (`ensureConnected`), which opens a new topology after a failure and costs nothing when connected. The session guard starts the same repair without waiting, so Better Auth's queries heal too. Server selection timeout is 10 s instead of 30 s. Integration test `tests/integration/reconnect.test.ts` fails without the fix (MongoTopologyClosedError) and passes with it.
+  - In development the username check now says what is wrong and how to fix it (`lib/db/errors.ts`: Atlas IP, wrong password, DNS, missing `.env.local`); production keeps the generic message.
+- **Founder action:** in MongoDB Atlas > Network Access, add this PC's current IP (home IPs change), or run `pnpm doctor` to confirm.
+- **Why:** founder report, 2026-11-01.
+
 ## D-041: The dev server works from any PC, IDE preview or device
 - **Date:** 2026-11-01
 - **Problem (founder report):** opened from Antigravity or another PC, the app loaded but typing in inputs failed with errors. Cause, reproduced: Next.js 16 serves its dev resources (scripts, hot reload) only to `localhost`, so `127.0.0.1` (IDE previews) and LAN addresses got 403 and the page broke. Login and redirects were also tied to `NEXT_PUBLIC_APP_URL` (`localhost`), which on another PC points to that PC itself.
