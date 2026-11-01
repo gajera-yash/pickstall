@@ -4,14 +4,15 @@ import type { ReactNode } from "react";
 
 import { Wordmark } from "@/components/brand/wordmark";
 import { ClaimLink } from "@/components/landing/claim-link";
-import { CARD_FEES_NOTE, COMING_SOON, FAQ, LANDING_NAV, STEPS } from "@/components/landing/content";
+import { CARD_FEES_NOTE, COMING_SOON, FAQ, LANDING_NAV, STAN, STEPS } from "@/components/landing/content";
 import { FeeCalculator } from "@/components/landing/fee-calculator";
 import { PwywTile, ThemeTile } from "@/components/landing/feature-tiles";
 import { FoundingCoupon } from "@/components/landing/founding-coupon";
 import { StallDemo } from "@/components/landing/stall-demo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { APP_NAME, SUPPORT_EMAIL } from "@/lib/config";
+import { APP_NAME, PLANNED_PRICE_CENTS, SUPPORT_EMAIL } from "@/lib/config";
+import { formatWholeDollars, yearlySavingsCents } from "@/lib/landing/demo";
 import { cn } from "@/lib/utils";
 
 // Sections of the marketing landing (D-039). Server components; the interactive parts are the
@@ -36,12 +37,13 @@ export function AnnouncementBar() {
     <div className="border-b-2 border-border-strong bg-yellow text-on-yellow">
       <Container className="flex min-h-10 flex-wrap items-center justify-center gap-x-3 gap-y-1 py-2 text-center text-sm font-semibold">
         <span>
-          10 founding creator spots. Free for 6 months.<span className="hidden sm:inline"> 0% transaction fees.</span>
+          {STAN.name} Pro is {formatWholeDollars(STAN.creatorProCents)}/mo. Ours is planned at {formatWholeDollars(PLANNED_PRICE_CENTS.pro)}.
+          <span className="hidden sm:inline"> Founding creators: 6 months free.</span>
         </span>
-        <Link href="/signup" className="inline-flex items-center gap-1 underline underline-offset-4">
-          Claim yours
+        <a href="#compare" className="inline-flex items-center gap-1 underline underline-offset-4">
+          Compare
           <ArrowRight aria-hidden="true" className="size-4" />
-        </Link>
+        </a>
       </Container>
     </div>
   );
@@ -73,6 +75,23 @@ export function Hero() {
             </Button>
           </div>
           <p className="text-sm text-mute">Free to join. Founding creators get 6 months free. {CARD_FEES_NOTE}</p>
+          <a
+            href="#compare"
+            className="group flex w-full items-center gap-4 rounded-lg sm:max-w-md border-2 border-border-strong bg-yellow-soft p-4 text-left shadow-hard-sm transition-transform duration-(--dur-fast) hover:-translate-y-0.5"
+          >
+            <span className="flex flex-col items-center rounded-md bg-surface px-3 py-2 font-display leading-none">
+              <span className="text-xs font-semibold text-mute line-through">{formatWholeDollars(STAN.creatorProCents)}</span>
+              <span className="text-money-m text-blue">{formatWholeDollars(PLANNED_PRICE_CENTS.pro)}</span>
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="font-semibold">Coming from {STAN.name}?</span>
+              <span className="text-sm text-mute">
+                Pro planned at {formatWholeDollars(PLANNED_PRICE_CENTS.pro)}/mo instead of {formatWholeDollars(STAN.creatorProCents)}. Save{" "}
+                {formatWholeDollars(yearlySavingsCents(STAN.creatorProCents, PLANNED_PRICE_CENTS.pro))} a year.
+              </span>
+            </span>
+            <ArrowRight aria-hidden="true" className="size-5 shrink-0 transition-transform duration-(--dur-fast) group-hover:translate-x-0.5" />
+          </a>
         </div>
         <StallDemo />
       </Container>
@@ -371,7 +390,10 @@ export function LandingFooter() {
         </div>
         <div className="flex flex-col gap-1 border-t border-line pt-6 text-xs text-mute sm:flex-row sm:justify-between">
           <p>© {APP_NAME}</p>
-          <p>{CARD_FEES_NOTE.replace("still ", "")} Creators are the seller of record for their sales.</p>
+          <p>
+            {CARD_FEES_NOTE.replace("still ", "")} Creators are the seller of record for their sales. {STAN.name} is a trademark of its owner; {APP_NAME} is
+            not affiliated with it.
+          </p>
         </div>
       </Container>
     </footer>

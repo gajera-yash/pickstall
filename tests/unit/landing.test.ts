@@ -9,7 +9,9 @@ import {
   formatWholeDollars,
   initialsOf,
   nextSale,
+  priceShare,
   snapSales,
+  yearlySavingsCents,
 } from "@/lib/landing/demo";
 
 describe("cleanStallName", () => {
@@ -62,5 +64,19 @@ describe("snapSales", () => {
 describe("formatWholeDollars", () => {
   it("formats big round numbers without cents", () => {
     expect(formatWholeDollars(300_000)).toBe("$3,000");
+  });
+});
+
+describe("plan comparison math", () => {
+  it("adds up a year of monthly savings and never goes negative", () => {
+    expect(yearlySavingsCents(9900, 3900)).toBe(72_000);
+    expect(yearlySavingsCents(2900, 1900)).toBe(12_000);
+    expect(yearlySavingsCents(1900, 2900)).toBe(0);
+  });
+
+  it("states our price as a whole-percent share of theirs, rounded down", () => {
+    expect(priceShare(3900, 9900)).toBe(39);
+    expect(priceShare(1900, 2900)).toBe(65);
+    expect(priceShare(100, 0)).toBe(100);
   });
 });

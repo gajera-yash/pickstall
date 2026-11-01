@@ -1,12 +1,12 @@
 // `pnpm dev:sandbox`: the dev server on a throwaway in-memory MongoDB (port 3100), for trying the
 // app or previewing UI without touching the real database. Data is gone when it stops. Stripe,
 // Resend and Google keys are emptied, so payments use the development mock and emails only log.
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import path from "node:path";
 
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 
-const PORT = Number(process.env.SANDBOX_PORT ?? 3100);
+const PORT = Number(process.env.SANDBOX_PORT ?? process.env.PORT ?? 3100);
 
 // A small WiredTiger cache: by default mongod claims about half the RAM.
 const replSet = await MongoMemoryReplSet.create({
@@ -37,8 +37,15 @@ const child = spawn(process.execPath, [next, "dev", "--port", String(PORT)], {
   },
 });
 
+// On Windows `kill()` stops only the direct child; next dev's workers would keep the port.
+const killTree = () => {
+  if (child.exitCode !== null || !child.pid) return;
+  if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+  else child.kill("SIGTERM");
+};
+
 const stop = async () => {
-  child.kill();
+  killTree();
   await replSet.stop();
   process.exit(0);
 };

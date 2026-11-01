@@ -77,3 +77,14 @@ export function snapSales(cents: number): number {
 export function formatWholeDollars(cents: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(cents / 100);
 }
+
+/** What a cheaper monthly plan saves over a year, in cents (never negative). */
+export function yearlySavingsCents(theirMonthlyCents: number, ourMonthlyCents: number): number {
+  return Math.max(0, theirMonthlyCents - ourMonthlyCents) * 12;
+}
+
+/** Our price as a share of theirs, rounded down to a whole percent ("39% of the price"). */
+export function priceShare(ourMonthlyCents: number, theirMonthlyCents: number): number {
+  if (theirMonthlyCents <= 0) return 100;
+  return Math.floor((ourMonthlyCents / theirMonthlyCents) * 100);
+}

@@ -150,3 +150,13 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   pro: { maxCourses: null, videoHours: 100, emailSubscribers: 10_000 },
   business: { maxCourses: null, videoHours: 300, emailSubscribers: 50_000 },
 };
+
+/**
+ * Planned monthly prices from PRD F9, integer cents. Shown on the landing page as "planned"; billing is
+ * Phase 3 and founding creators pay nothing for 6 months. Change them here only.
+ */
+export const PLANNED_PRICE_CENTS: Record<Exclude<Plan, "trial">, number> = {
+  starter: 1900,
+  pro: 3900,
+  business: 7900,
+};

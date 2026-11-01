@@ -1,8 +1,12 @@
 // Copy for the marketing landing (D-039). Honesty rules: Phase 1 sells digital products; anything
 // else is tagged "Coming soon"; every 0% claim sits near the card-processing note (DESIGN.md 15).
 
+import { PLANNED_PRICE_CENTS } from "@/lib/config";
+import { formatWholeDollars } from "@/lib/landing/demo";
+
 export const LANDING_NAV = [
   { href: "#features", label: "Features" },
+  { href: "#compare", label: "Vs Stan Store" },
   { href: "#how-it-works", label: "How it works" },
   { href: "#fees", label: "Fees" },
   { href: "#faq", label: "FAQ" },
@@ -29,6 +33,24 @@ export const COMING_SOON = [
   "Affiliates",
 ] as const;
 
+/**
+ * Stan Store's public plans, from Stan's own help center (help.stan.store, "Creator vs Creator Pro"
+ * and "Creator Pro features", last updated June 2026), checked 2026-11-01. Only facts from those
+ * pages: nothing about Stan's fees or trial, because they are not stated there. Re-check before
+ * changing any number.
+ */
+export const STAN = {
+  name: "Stan Store",
+  source: "help.stan.store",
+  checkedOn: "November 1, 2026",
+  creatorCents: 2900,
+  creatorProCents: 9900,
+} as const;
+
+const price = (cents: number) => formatWholeDollars(cents);
+const STARTER = price(PLANNED_PRICE_CENTS.starter);
+const PRO = price(PLANNED_PRICE_CENTS.pro);
+
 export const FAQ = [
   {
     q: "What does 0% transaction fees mean?",
@@ -36,7 +58,11 @@ export const FAQ = [
   },
   {
     q: "What does it cost?",
-    a: "Founding creators get the first 6 months free. After that it is one flat monthly plan with 0% transaction fees. You will see the price before anyone is asked to pay.",
+    a: `Founding creators get the first 6 months free. After that, plans are planned at ${STARTER} a month (Starter) and ${PRO} a month (Pro), with 0% transaction fees. Final prices are confirmed before anyone is asked to pay.`,
+  },
+  {
+    q: "How is Pickstall different from Stan Store?",
+    a: `Same kind of creator store, at a lower price. ${STAN.name}'s plans are ${price(STAN.creatorCents)} and ${price(STAN.creatorProCents)} a month; ours are planned at ${STARTER} and ${PRO}, and founding creators pay nothing for 6 months. Storefront, digital products and sales analytics are live today; courses, discount codes, order bumps, email marketing and the rest of the Pro toolkit are on the way and marked Coming soon.`,
   },
   {
     q: "Do I need to code or design?",
@@ -62,4 +88,37 @@ export const FAQ = [
     q: "Which countries?",
     a: "We start with creators selling to buyers in the US, UK and Canada. Creators elsewhere can join where Stripe supports them.",
   },
+] as const;
+
+export type CompareRow = {
+  feature: string;
+  /** Which Stan Store plan includes it. */
+  stan: "Creator" | "Creator Pro";
+  /** Live today on Pickstall, or on the roadmap. */
+  status: "live" | "soon";
+  /** The planned Pickstall plan that includes it (PRD F9). */
+  plan: "starter" | "pro";
+};
+
+export const COMPARE_ROWS: readonly CompareRow[] = [
+  { feature: "Mobile storefront at your own link", stan: "Creator", status: "live", plan: "starter" },
+  { feature: "Sell digital products", stan: "Creator", status: "live", plan: "starter" },
+  { feature: "Sales and customer analytics", stan: "Creator", status: "live", plan: "starter" },
+  { feature: "Online courses", stan: "Creator", status: "soon", plan: "starter" },
+  { feature: "Lead magnets and email collection", stan: "Creator", status: "soon", plan: "starter" },
+  { feature: "Discount codes", stan: "Creator Pro", status: "soon", plan: "starter" },
+  { feature: "Order bumps", stan: "Creator Pro", status: "soon", plan: "starter" },
+  { feature: "Ad pixel tracking", stan: "Creator Pro", status: "soon", plan: "starter" },
+  { feature: "Upsells and funnels", stan: "Creator Pro", status: "soon", plan: "pro" },
+  { feature: "Email marketing and automations", stan: "Creator Pro", status: "soon", plan: "pro" },
+  { feature: "Affiliate tracking", stan: "Creator Pro", status: "soon", plan: "pro" },
+  { feature: "Bookings and memberships", stan: "Creator", status: "soon", plan: "pro" },
+];
+
+/** Live on Pickstall today. Stated about Pickstall only; no claim about what other platforms lack. */
+export const PICKSTALL_EXTRAS = [
+  "Pay what you want, with your minimum",
+  "Up to 5 custom checkout questions",
+  "Purchase email written in your words",
+  "Customer list with CSV export",
 ] as const;

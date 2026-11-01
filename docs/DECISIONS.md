@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-040: Landing page competes with Stan Store by name, with planned prices
+- **Date:** 2026-11-01
+- **Decision:**
+  - Founder request: the landing page names Stan Store and shows the same kind of features at a lower price. This supersedes the "never name competitors" rule in `LANDING_PAGE_PROMPT_V2.md` section 3 for Stan Store only.
+  - Stan Store facts come only from Stan's own help center (help.stan.store, "Creator vs Creator Pro" and "Creator Pro features", updated June 2026), checked 2026-11-01: Creator $29/mo, Creator Pro $99/mo, no free plan, and which plan includes which feature. Stan's fees and trial length are not stated there, so the page says nothing about them. The numbers live in `STAN` in `components/landing/content.ts` with the source and date; re-check before changing them.
+  - Pickstall prices are the PRD F9 placeholders, shown as "planned": Starter $19, Pro $39 (`PLANNED_PRICE_CENTS` in `lib/config.ts`). Founding creators: 6 months free. Billing is still Phase 3.
+  - Honesty: the feature table marks each Pickstall feature Live or Coming soon; it never says Stan lacks something; a footnote gives the source and date, says Stan Store is a trademark of its owner and that Pickstall is not affiliated.
+  - Highlighted in: the announcement bar, a "Coming from Stan Store?" card in the hero, a "Vs Stan Store" nav link, a new section after the trust strip, an FAQ entry and the page description.
+- **Why:** founder request, 2026-11-01. Naming a competitor is comparative advertising: claims must stay true and current, so the founder should have the copy checked before paid ads and re-check Stan's prices regularly.
+
 ## D-039: Marketing landing page with sign-up and log-in
 - **Date:** 2026-11-01
 - **Decision:**

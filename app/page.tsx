@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import { CompareStan } from "@/components/landing/compare-stan";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { GuestActions, NavActions } from "@/components/landing/nav-actions";
 import {
@@ -19,7 +20,8 @@ import { APP_NAME } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: `${APP_NAME}: your own stall, 0% transaction fees`,
-  description: "Sell digital products from one tap-to-buy page made for phones. No code, no cut of your sales. Stripe's card processing fees still apply.",
+  description:
+    "A lower-cost Stan Store alternative: sell digital products from one tap-to-buy page made for phones. No code, no cut of your sales. Stripe's card processing fees still apply.",
   openGraph: {
     title: `${APP_NAME}: open your own stall`,
     description: "Sell digital products from one tap-to-buy page. 0% transaction fees.",
@@ -45,6 +47,7 @@ export default function Home() {
       <main id="main" className="flex-1">
         <Hero />
         <TrustStrip />
+        <CompareStan />
         <ZeroFees />
         <HowItWorks />
         <Features />

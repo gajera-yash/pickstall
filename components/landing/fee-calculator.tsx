@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 
+import { PLANNED_PRICE_CENTS } from "@/lib/config";
 import { CALCULATOR, compareFees, formatWholeDollars, snapSales } from "@/lib/landing/demo";
 
 /** Monthly sales slider: what an assumed 10% per-sale cut would take, against Pickstall's $0. */
@@ -65,8 +66,8 @@ export function FeeCalculator() {
       </dl>
 
       <p className="text-xs text-mute">
-        10% is an assumed example rate, not a quote for any platform. Stripe&apos;s card processing fees apply on top in both cases. Our flat
-        monthly plan will be announced before anyone is asked to pay.
+        10% is an assumed example rate, not a quote for any platform. Stripe&apos;s card processing fees apply on top in both cases. Pickstall
+        plans are planned at a flat {formatWholeDollars(PLANNED_PRICE_CENTS.starter)} or {formatWholeDollars(PLANNED_PRICE_CENTS.pro)} a month.
       </p>
     </div>
   );
