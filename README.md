@@ -32,6 +32,11 @@ Storefront, digital products and courses for online creators. Spec: `PRD.md`. Ru
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | Route types + `tsc --noEmit` |
 | `pnpm test:unit` | Unit tests (no database) |
-| `pnpm test` | All tests |
+| `pnpm test:integration` | Cross-tenant and payment tests on a throwaway in-memory MongoDB |
+| `pnpm test` | Unit + integration tests |
+| `pnpm test:e2e` | Playwright smoke: in-memory MongoDB + dev server on port 3100 (stop `pnpm dev` first; run `pnpm exec playwright install chromium` once before the first run) |
+| `node scripts/load-test.mjs <url>` | Basic load test (localhost only by default) |
+
+The integration and e2e tests never touch your real database: they start their own MongoDB in memory (the first run downloads the `mongod` binary, about 800 MB, into `node_modules/.cache`).
 
 The data model lives in `lib/db/collections.ts` (document types) and `lib/db/mongo.ts` (indexes).

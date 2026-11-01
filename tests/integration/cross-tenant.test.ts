@@ -85,7 +85,7 @@ describe("stores: writes go only to the owner's own store", () => {
   });
 
   it("B's profile, design and publish changes leave A untouched", async () => {
-    await updateStoreProfile(storeB.ownerId, { name: "B renamed", bio: undefined, avatarUrl: undefined, currency: "eur", socialLinks: [] });
+    await updateStoreProfile(storeB.ownerId, { name: "B renamed", bio: undefined, avatarUrl: undefined, currency: "gbp", socialLinks: [] });
     await updateStorePageDesign(storeB.ownerId, { themePreset: "clean", accent: "#000000" });
     await setStorePublished(storeB.ownerId, true);
 

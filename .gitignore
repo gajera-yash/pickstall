@@ -51,3 +51,7 @@ supabase/.branches
 
 # uploaded images (D-032)
 /.data
+
+# playwright
+/test-results/
+/playwright-report/

@@ -4,6 +4,15 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-038: R9 security review and test setup
+- **Date:** 2026-11-01
+- **Decision:**
+  - A payment event pays only the order whose provider and checkout session id match the event; refunds only touch orders of the same provider. Closes a cross-store unlock through a creator's own Stripe session (`docs/SECURITY_REVIEW_R9.md` F1).
+  - Security headers for every route from `lib/security/headers.ts`. The CSP allows inline scripts (Next.js page data) instead of nonces, so public store pages stay cacheable.
+  - New dev dependencies: `mongodb-memory-server` (integration and e2e tests start their own MongoDB, never the founder's) and `@playwright/test` (e2e smoke). `pnpm test` now runs unit + integration tests; `pnpm test:e2e` runs the smoke test on port 3100.
+  - The load test is a small script without dependencies, limited to localhost unless `--allow-remote` is passed.
+- **Why:** PRD R9 (sections 5.5 and 6).
+
 ## D-037: Buyer accounts: order email link, then a password (supersedes D-002 for buyers)
 - **Date:** 2026-11-01
 - **Decision:** after a paid (or free) order the buyer gets an order email with one unique link (`/welcome/<token>`). The link lets them create a password for the email they paid with, signs them in and opens their purchase in the library. Later they sign in with email and password (new "Password" tab on the login page); the email code still works and is the way back in after a forgotten password.
