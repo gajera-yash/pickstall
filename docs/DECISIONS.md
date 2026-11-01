@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-039: Marketing landing page with sign-up and log-in
+- **Date:** 2026-11-01
+- **Decision:**
+  - `/` is the marketing landing from `LANDING_PAGE_PROMPT_V2.md`, adapted to the live product: every call to action goes to the real `/signup` or `/login` (signed-in visitors see "Go to dashboard"), so there is no waitlist backend. The final "Claim your stall" form runs the same live username check as signup and opens `/signup?username=...` prefilled; nothing is reserved until the account is created.
+  - Built: announcement bar, sticky nav with a mobile menu, hero with the interactive "Build your stall" demo (name, shelf, "Make a sale", receipt with "Platform fee $0.00", running total; labelled Demo, client-side only), trust strip, fees section with an example receipt and the 10% example calculator, four steps, feature tiles with live theme and pay-what-you-want controls, founding offer coupon, FAQ, final call to action, footer.
+  - Honesty: Phase 1 sells digital products, so the demo and copy say digital products; courses, coupons, order bumps, file uploads and the rest are tagged "Coming soon"; every 0% claim sits next to the Stripe card-processing note; mock data is labelled Demo or Example; no prices invented.
+  - Light theme only (D-025 wins over the prompt's dark mode). No new dependency: CSS keyframes instead of the `motion` package; everything stops under reduced motion. Skipped for now: the pinned scroll story, device showcase, compare table, founder note (needs real name and photo), analytics and the OG image.
+  - `pnpm dev:sandbox` runs the dev server on a throwaway in-memory MongoDB (port 3100), so UI can be previewed without touching the real database.
+- **Why:** founder request, 2026-11-01.
+
 ## D-038: R9 security review and test setup
 - **Date:** 2026-11-01
 - **Decision:**

@@ -28,11 +28,11 @@ type FieldName = "username" | "fullName" | "email";
  * gets a draft store and goes straight to /dashboard. Fields are controlled so an error never clears what was typed.
  */
 /** `googleNext` is where Google sends a returning user; null hides the Google button. */
-export function SignupFlow({ googleNext }: { googleNext: string | null }) {
+export function SignupFlow({ googleNext, initialUsername = "" }: { googleNext: string | null; initialUsername?: string }) {
   const [state, action, pending] = useActionState<SignupState, FormData>(startSignup, null);
   const cooldown = useResendCooldown();
 
-  const [values, setValues] = useState({ username: "", fullName: "", email: "" });
+  const [values, setValues] = useState({ username: initialUsername, fullName: "", email: "" });
   const set = (field: FieldName, value: string) => setValues((current) => ({ ...current, [field]: value }));
 
   // "Use a different email" remembers which successful send to ignore, so no effect has to sync state.

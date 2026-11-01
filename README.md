@@ -28,6 +28,7 @@ Storefront, digital products and courses for online creators. Spec: `PRD.md`. Ru
 | Command | What it does |
 |---|---|
 | `pnpm dev` | Run locally |
+| `pnpm dev:sandbox` | Run locally on a throwaway in-memory database (port 3100); nothing touches your real data |
 | `pnpm build` | Production build |
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | Route types + `tsc --noEmit` |

@@ -155,6 +155,40 @@
   box-shadow: var(--shadow-card);
 }
 
+/* Marketing landing only (DESIGN.md 7, D-039). Transform and opacity only; the reduced-motion rule
+   at the end of this file switches all of them off. */
+@theme {
+  --animate-sign-swing: sign-swing 1.8s var(--ease-out) both;
+  --animate-rise: rise var(--dur-slow) var(--ease-out) both;
+  --animate-print: print 0.7s var(--ease-out) both;
+  --animate-pop: pop var(--dur-slow) var(--ease-out) both;
+  --animate-tear: tear 0.6s var(--ease-in-out) both;
+
+  @keyframes sign-swing {
+    0% { transform: rotate(-9deg); }
+    30% { transform: rotate(6deg); }
+    55% { transform: rotate(-3deg); }
+    78% { transform: rotate(1.5deg); }
+    100% { transform: rotate(0deg); }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes print {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: scale(0.92) translateY(6px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes tear {
+    from { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+    to { opacity: 0; transform: translate(24px, 48px) rotate(14deg); }
+  }
+}
+
 /* shadcn variable mapping (DESIGN.md 16.4). Values follow the tokens, so dark mode is automatic. */
 :root {
   --radius: var(--radius-md);

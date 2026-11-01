@@ -4,8 +4,18 @@
     {
       "name": "pickstall-dev",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev"],
+      "runtimeArgs": [
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "pickstall-sandbox",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev:sandbox"
+      ],
+      "port": 3100
     }
   ]
 }
