@@ -39,7 +39,7 @@ const PRODUCT_SLUG = /^[a-z0-9-]{1,60}$/;
 
 /** A published store by its username, or null (a draft store looks exactly like a missing one). */
 export async function findPublicStore(slug: string): Promise<PublicStore | null> {
-  if (!SLUG.test(slug)) return null;
+  if (typeof slug !== "string" || !SLUG.test(slug)) return null;
   const { stores } = await collections();
   const doc = await stores.findOne({ slug, isPublished: true }, { projection: STORE_FIELDS });
   if (!doc) return null;
@@ -78,7 +78,7 @@ export async function listPublicProducts(storeId: string): Promise<PublicProduct
 
 /** One published product of a store by its slug, or null. */
 export async function findPublicProduct(storeId: string, slug: string): Promise<PublicProduct | null> {
-  if (!PRODUCT_SLUG.test(slug)) return null;
+  if (typeof storeId !== "string" || typeof slug !== "string" || !PRODUCT_SLUG.test(slug)) return null;
   const { products } = await collections();
   const doc = await products.findOne({ storeId, slug, status: "published" }, { projection: PRODUCT_FIELDS });
   return doc ? toPublicProduct(doc) : null;

@@ -15,7 +15,7 @@ export function hashToken(token: string): string {
 }
 
 export function isTokenShape(value: string): boolean {
-  return TOKEN.test(value);
+  return typeof value === "string" && TOKEN.test(value);
 }
 
 /** Creates a link token for this order and email. Returns the plain token, which only goes into the email. */

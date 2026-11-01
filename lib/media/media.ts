@@ -26,7 +26,7 @@ export function mediaIdFromPath(value: string): string | null {
 }
 
 export function isUuid(value: string): boolean {
-  return new RegExp(`^${UUID}$`).test(value);
+  return typeof value === "string" && new RegExp(`^${UUID}$`).test(value);
 }
 
 /**

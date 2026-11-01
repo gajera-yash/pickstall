@@ -49,7 +49,8 @@ const PRODUCT_FIELDS = {
 
 /** The published store and product for a checkout, or null. Never includes the delivery link. */
 export async function loadCheckoutContext(username: string, productSlug: string): Promise<CheckoutContext | null> {
-  if (!SLUG.test(username) || !PRODUCT_SLUG.test(productSlug)) return null;
+  // typeof first: RegExp.test turns an array like ["maya"] into "maya" (R9, no operator or array input).
+  if (typeof username !== "string" || typeof productSlug !== "string" || !SLUG.test(username) || !PRODUCT_SLUG.test(productSlug)) return null;
   const { stores, products } = await collections();
 
   const store = await stores.findOne({ slug: username, isPublished: true }, { projection: STORE_FIELDS });
