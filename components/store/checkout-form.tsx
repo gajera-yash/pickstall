@@ -6,6 +6,8 @@ import { useActionState, useEffect, useState } from "react";
 import { PhoneField } from "@/components/auth/phone-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FieldError } from "@/components/ui/field";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,14 +69,14 @@ export function CheckoutForm({ username, productSlug, askPhone, questions, submi
           return (
             <div key={question.id} className="flex flex-col gap-2">
               <label className="flex cursor-pointer items-start gap-3 text-sm font-medium">
-                <input id={field} type="checkbox" name={field} className="mt-0.5 size-5 shrink-0 accent-blue" checked={values[field] === "true"} onChange={(event) => set(field, event.target.checked ? "true" : "false")} aria-invalid={problem ? true : undefined} />
+                <Checkbox id={field} name={field} className="mt-0.5" checked={values[field] === "true"} onCheckedChange={(checked) => set(field, checked === true ? "true" : "false")} aria-invalid={problem ? true : undefined} />
                 <span>
                   {question.label}
                   {suffix}
                 </span>
               </label>
               {values[field] !== "true" && <input type="hidden" name={field} value="false" />}
-              {problem && <p role="alert" className="text-sm font-medium text-danger">{problem}</p>}
+              <FieldError>{problem}</FieldError>
             </div>
           );
         }

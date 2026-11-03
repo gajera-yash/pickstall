@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 
 import { PriceTag } from "@/components/store/price-tag";
 import { Switch } from "@/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { THEME_PRESETS, THEME_PRESET_IDS, type ThemePresetId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 
@@ -17,23 +18,13 @@ export function ThemeTile() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div role="radiogroup" aria-label="Store theme" className="flex flex-wrap gap-2">
+      <ToggleGroup type="single" variant="outline" aria-label="Store theme" value={themeId} onValueChange={(value) => value && setThemeId(value as ThemePresetId)} className="flex-wrap gap-2">
         {THEME_PRESET_IDS.map((id) => (
-          <button
-            key={id}
-            type="button"
-            role="radio"
-            aria-checked={id === themeId}
-            onClick={() => setThemeId(id)}
-            className={cn(
-              "min-h-11 rounded-full border px-4 text-sm font-semibold transition-colors duration-(--dur-fast)",
-              id === themeId ? "border-blue bg-blue-soft text-ink" : "border-input bg-surface text-ink hover:bg-bg-subtle",
-            )}
-          >
+          <ToggleGroupItem key={id} value={id} className="min-h-11 rounded-full px-4">
             {THEME_PRESETS[id].name}
-          </button>
+          </ToggleGroupItem>
         ))}
-      </div>
+      </ToggleGroup>
       <div
         aria-hidden="true"
         className="flex flex-col gap-2.5 p-4 transition-colors duration-(--dur-base)"

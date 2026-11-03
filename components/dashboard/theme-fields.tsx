@@ -1,10 +1,10 @@
 "use client";
-
 import { CheckCircle2 } from "lucide-react";
 
 import { FieldError, FieldHint } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AA_TEXT } from "@/lib/contrast";
 import { THEME_PRESETS, THEME_PRESET_IDS, onAccentFor, type ThemePresetId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
@@ -38,31 +38,28 @@ export function ThemeFields({ themePreset, accent, onThemePreset, onAccent, fiel
     <div className="flex flex-col gap-5">
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 text-sm font-semibold">Theme</legend>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <RadioGroup
+          name="themePreset"
+          value={themePreset}
+          onValueChange={(value) => {
+            const id = value as ThemePresetId;
+            onThemePreset(id);
+            onAccent(THEME_PRESETS[id].accent);
+          }}
+          aria-invalid={fieldError("themePreset") ? true : undefined}
+          aria-describedby={fieldError("themePreset") ? "themePreset-error" : undefined}
+          className="grid-cols-1 sm:grid-cols-3"
+        >
           {THEME_PRESET_IDS.map((id) => {
             const preset = THEME_PRESETS[id];
-            const selected = themePreset === id;
             return (
               <label
                 key={id}
                 className={cn(
-                  "flex cursor-pointer items-center gap-3 rounded-md border p-3 transition-colors duration-(--dur-fast)",
-                  "has-focus-visible:ring-2 has-focus-visible:ring-ring",
-                  selected ? "border-blue bg-blue-soft" : "border-input hover:bg-bg-subtle",
+                  "flex cursor-pointer items-center gap-3 rounded-md border border-input p-3 transition-colors duration-(--dur-fast) hover:bg-bg-subtle",
+                  "has-data-[state=checked]:border-blue has-data-[state=checked]:bg-blue-soft",
                 )}
               >
-                <input
-                  id={id === THEME_PRESET_IDS[0] ? "themePreset" : undefined}
-                  type="radio"
-                  name="themePreset"
-                  value={id}
-                  checked={selected}
-                  onChange={() => {
-                    onThemePreset(id);
-                    onAccent(THEME_PRESETS[id].accent);
-                  }}
-                  className="sr-only"
-                />
                 {/* Swatch in the preset's own colors (theme data, lib/themes.ts). */}
                 <span
                   aria-hidden="true"
@@ -71,14 +68,12 @@ export function ThemeFields({ themePreset, accent, onThemePreset, onAccent, fiel
                 >
                   Aa
                 </span>
-                <span className="flex flex-1 items-center justify-between gap-2 font-semibold">
-                  {preset.name}
-                  {selected && <CheckCircle2 aria-hidden="true" className="size-5 text-blue" />}
-                </span>
+                <span className="flex-1 font-semibold">{preset.name}</span>
+                <RadioGroupItem id={id === THEME_PRESET_IDS[0] ? "themePreset" : undefined} value={id} aria-label={preset.name} />
               </label>
             );
           })}
-        </div>
+        </RadioGroup>
         {fieldError("themePreset") && <FieldError id="themePreset-error">{fieldError("themePreset")}</FieldError>}
       </fieldset>
 

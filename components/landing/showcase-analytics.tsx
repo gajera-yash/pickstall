@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { Reveal } from "@/components/landing/motion";
 import { Frame } from "@/components/landing/ui";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatMoney } from "@/lib/products/money";
 import { cn } from "@/lib/utils";
 
@@ -61,18 +62,18 @@ export function AnalyticsShowcase() {
     <Frame address="Dashboard / Income" bodyClassName="flex flex-col gap-6 p-5 sm:p-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="font-display text-h3">Income</p>
-        <div role="radiogroup" aria-label="Date range" className="flex gap-1 rounded-md border border-line bg-bg-subtle p-1">
+        <ToggleGroup
+          type="single"
+          variant="bare"
+          aria-label="Date range"
+          value={rangeId}
+          onValueChange={(value) => value && setRangeId(value as typeof rangeId)}
+          className="rounded-md border border-line bg-bg-subtle p-1"
+        >
           {RANGES.map((item) => {
             const on = item.id === rangeId;
             return (
-              <button
-                key={item.id}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                onClick={() => setRangeId(item.id)}
-                className={cn("relative min-h-10 rounded-sm px-4 text-sm font-semibold", on ? "text-ink" : "text-mute hover:text-ink")}
-              >
+              <ToggleGroupItem key={item.id} value={item.id} className={cn("relative min-h-10 rounded-sm px-4", on ? "text-ink" : "text-mute hover:text-ink")}>
                 {on && (
                   <m.span
                     layoutId="range-active"
@@ -82,10 +83,10 @@ export function AnalyticsShowcase() {
                   />
                 )}
                 <span className="relative">{item.label}</span>
-              </button>
+              </ToggleGroupItem>
             );
           })}
-        </div>
+        </ToggleGroup>
       </div>
 
       <dl className="grid grid-cols-3 gap-3" aria-live="polite">

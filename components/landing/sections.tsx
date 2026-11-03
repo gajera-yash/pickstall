@@ -6,6 +6,7 @@ import { ClaimLink } from "@/components/landing/claim-link";
 import { CARD_FEES_NOTE, FAQ, LANDING_NAV, STAN } from "@/components/landing/content";
 import { FoundingCoupon } from "@/components/landing/founding-coupon";
 import { Container, SectionHeading } from "@/components/landing/ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { APP_NAME, SUPPORT_EMAIL } from "@/lib/config";
 
 // The closing sections of the marketing landing (D-039): founding creators (in place of
@@ -50,17 +51,19 @@ export function Faq() {
             </a>
           </p>
         </div>
-        <div className="flex flex-col border-t border-line">
+        <Accordion type="multiple" className="border-t border-line">
           {FAQ.map((item) => (
-            <details key={item.q} className="group border-b border-line">
-              <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 py-4 font-display text-h4 transition-colors duration-(--dur-fast) hover:text-blue [&::-webkit-details-marker]:hidden">
+            <AccordionItem key={item.q} value={item.q} className="last:border-b">
+              <AccordionTrigger
+                className="min-h-16 py-4 font-display text-h4 font-normal hover:text-blue"
+                icon={<Plus aria-hidden="true" className="size-5 shrink-0 text-mute transition-transform duration-(--dur-base) ease-(--ease-out) group-data-[state=open]/accordion-trigger:rotate-45" />}
+              >
                 {item.q}
-                <Plus aria-hidden="true" className="size-5 shrink-0 text-mute transition-transform duration-(--dur-base) ease-(--ease-out) group-open:rotate-45" />
-              </summary>
-              <p className="animate-rise pr-8 pb-6 text-mute text-pretty">{item.a}</p>
-            </details>
+              </AccordionTrigger>
+              <AccordionContent className="pr-8 pb-6 text-base text-mute text-pretty">{item.a}</AccordionContent>
+            </AccordionItem>
           ))}
-        </div>
+        </Accordion>
       </Container>
     </section>
   );

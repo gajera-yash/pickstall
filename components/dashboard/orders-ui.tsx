@@ -1,8 +1,12 @@
-import { ChevronDown, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { FilterSelect } from "@/components/dashboard/details-sheet";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import type { OrderRow } from "@/lib/orders/creator-queries";
 import { formatMoney } from "@/lib/products/money";
 
@@ -47,9 +51,9 @@ export function orderNumber(id: string): string {
 
 export function Initial({ name }: { name: string }) {
   return (
-    <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-soft font-display text-sm font-bold text-ink">
-      {name.trim().charAt(0).toUpperCase() || "?"}
-    </span>
+    <Avatar aria-hidden="true">
+      <AvatarFallback>{name.trim().charAt(0).toUpperCase() || "?"}</AvatarFallback>
+    </Avatar>
   );
 }
 
@@ -113,48 +117,50 @@ export function ListToolbar({
   return (
     <form action={action} className="flex flex-col gap-2 sm:flex-row sm:items-center">
       {Object.entries(keep).map(([name, value]) => (value ? <input key={name} type="hidden" name={name} value={value} /> : null))}
-      <label className="relative flex w-full sm:w-72">
-        <span className="sr-only">{searchLabel}</span>
-        <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-mute" />
-        <input type="search" name="q" defaultValue={q ?? ""} maxLength={80} placeholder="Search name or email..." className="h-10 w-full rounded-md border border-line bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-mute" />
-      </label>
+      <InputGroup className="h-10 sm:w-72">
+        <InputGroupInput type="search" name="q" aria-label={searchLabel} defaultValue={q ?? ""} maxLength={80} placeholder="Search name or email..." className="text-sm" />
+        <InputGroupAddon>
+          <Search aria-hidden="true" className="size-4" />
+        </InputGroupAddon>
+      </InputGroup>
       {products.length > 0 && (
         <div className="sm:w-56">
           <FilterSelect label="Filter by product" name="product" value={product ?? ""} options={[{ value: "", label: "All products" }, ...products.map((item) => ({ value: item.id, label: item.title }))]} />
         </div>
       )}
-      <button type="submit" className="sr-only">
+      <Button type="submit" className="sr-only">
         Apply
-      </button>
+      </Button>
     </form>
   );
 }
 
-/** One order as a row: product, buyer, amount, status and date, with the buyer's answers one tap away. */
-export function OrderListItem({ order }: { order: OrderRow }) {
+/** Orders as rows (product, buyer, amount, status, date), each opening to show the buyer's answers. */
+export function OrderAccordion({ orders }: { orders: OrderRow[] }) {
   return (
-    <li>
-      <details className="group">
-        <summary className="flex min-h-[72px] cursor-pointer list-none items-center gap-3 px-2 py-3 hover:bg-bg-subtle sm:gap-4 sm:px-3 [&::-webkit-details-marker]:hidden">
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="truncate font-semibold">{order.title}</span>
-            <span className="truncate text-sm text-mute">
-              {order.buyerName} · {order.buyerEmail}
+    <Accordion type="multiple">
+      {orders.map((order) => (
+        <AccordionItem key={order.id} value={order.id}>
+          <AccordionTrigger className="min-h-[72px] gap-3 px-3 font-normal hover:bg-bg-subtle sm:gap-4">
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="truncate font-semibold">{order.title}</span>
+              <span className="truncate text-sm text-mute">
+                {order.buyerName} · {order.buyerEmail}
+              </span>
             </span>
-          </span>
-          <span className="hidden text-sm text-mute sm:block">{formatDay(order.createdAt)}</span>
-          <span className="flex flex-col items-end gap-1">
-            <span className="font-semibold tabular-nums">{formatMoney(order.totalCents, order.currency)}</span>
-            <OrderBadges status={order.status} provider={order.provider} />
-          </span>
-          <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-mute transition-transform duration-(--dur-fast) group-open:rotate-180" />
-        </summary>
-        <div className="flex flex-col gap-3 border-t border-line bg-bg-subtle px-4 py-4 sm:px-6">
-          <p className="text-sm text-mute sm:hidden">{formatDay(order.createdAt)}</p>
-          <Answers answers={order.answers} />
-        </div>
-      </details>
-    </li>
+            <span className="hidden text-sm text-mute sm:block">{formatDay(order.createdAt)}</span>
+            <span className="flex flex-col items-end gap-1">
+              <span className="font-semibold tabular-nums">{formatMoney(order.totalCents, order.currency)}</span>
+              <OrderBadges status={order.status} provider={order.provider} />
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="flex flex-col gap-3 border-t border-line bg-bg-subtle px-4 py-4 sm:px-6">
+            <p className="text-sm text-mute sm:hidden">{formatDay(order.createdAt)}</p>
+            <Answers answers={order.answers} />
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
   );
 }
 

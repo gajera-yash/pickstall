@@ -13,12 +13,15 @@ import { PriceTag } from "@/components/store/price-tag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Checkbox } from "@/components/ui/checkbox";
 import { FieldError, FieldHint } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { CHECKOUT_QUESTIONS_MAX } from "@/lib/config";
 import { changeProductStatus, removeProduct, saveProduct, type SaveProductState } from "@/lib/products/actions";
@@ -310,32 +313,23 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
               <ImageUploader id="coverUrl" label="Cover image (optional)" kind="cover" shape="wide" value={values.coverUrl} onChange={(value) => set("coverUrl", value)} error={fieldError("coverUrl")} hint="Shown on your store and product page. JPG, PNG, WebP or GIF, up to 5 MB." />
               <fieldset className="flex flex-col gap-3">
                 <legend className="mb-2 text-sm font-semibold">How buyers get it</legend>
-                <div role="radiogroup" aria-label="Delivery" className="grid grid-cols-2 gap-1 rounded-md border border-line bg-bg-subtle p-1">
-                  {(
-                    [
-                      { id: "file", label: "Upload file", icon: FileUp },
-                      { id: "link", label: "Redirect to URL", icon: Link2 },
-                    ] as const
-                  ).map(({ id, label, icon: Icon }) => {
-                    const on = values.deliveryType === id;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        role="radio"
-                        aria-checked={on}
-                        onClick={() => set("deliveryType", id)}
-                        className={cn(
-                          "flex min-h-10 items-center justify-center gap-2 rounded-sm px-3 text-sm font-semibold transition-colors duration-(--dur-fast)",
-                          on ? "border border-blue bg-blue-soft text-ink" : "border border-transparent text-mute hover:text-ink",
-                        )}
-                      >
-                        <Icon aria-hidden="true" className="size-4" />
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
+                <ToggleGroup
+                  type="single"
+                  variant="segment"
+                  aria-label="Delivery"
+                  value={values.deliveryType}
+                  onValueChange={(value) => value && set("deliveryType", value as EditorProduct["deliveryType"])}
+                  className="grid w-full grid-cols-2"
+                >
+                  <ToggleGroupItem value="file">
+                    <FileUp aria-hidden="true" />
+                    Upload file
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="link">
+                    <Link2 aria-hidden="true" />
+                    Redirect to URL
+                  </ToggleGroupItem>
+                </ToggleGroup>
                 {values.deliveryType === "file" ? (
                   <ProductFileField productId={values.id} file={values.file} onChange={(file) => set("file", file)} />
                 ) : (
@@ -473,15 +467,15 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
                 </Field>
               </div>
 
-              <details className="group rounded-md border border-line">
-                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 px-4 font-semibold [&::-webkit-details-marker]:hidden">
-                  <span className="flex items-center gap-2">
-                    <Settings2 aria-hidden="true" className="size-4 text-mute" />
-                    More settings
-                  </span>
-                  <ChevronDown aria-hidden="true" className="size-4 text-mute transition-transform duration-(--dur-fast) group-open:rotate-180" />
-                </summary>
-                <div className="flex flex-col gap-5 border-t border-line p-4">
+              <Accordion type="single" collapsible className="rounded-md border border-line">
+                <AccordionItem value="more">
+                  <AccordionTrigger className="px-4">
+                    <span className="flex items-center gap-2">
+                      <Settings2 aria-hidden="true" className="size-4 text-mute" />
+                      More settings
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="flex flex-col gap-5 border-t border-line p-4">
                   <Field id="slug" label="Product link" hint="Made from the title. It stays the same once you publish.">
                     <p className="flex min-h-11 items-center rounded-md border border-line bg-bg-subtle px-3 font-mono text-sm break-all text-ink">
                       {storeLink}/{values.slug}
@@ -521,8 +515,9 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
                         </Button>
                       ))}
                   </div>
-                </div>
-              </details>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </>
           )}
 
@@ -659,7 +654,7 @@ function QuestionList({ questions, onChange, errorFor, listError }: { questions:
                 </Select>
               </Field>
               <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium">
-                <input type="checkbox" className="size-5 accent-blue" checked={question.required} onChange={(event) => update(index, { required: event.target.checked })} />
+                <Checkbox checked={question.required} onCheckedChange={(checked) => update(index, { required: checked === true })} />
                 Required
               </label>
             </div>

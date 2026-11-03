@@ -6,6 +6,7 @@ import { useRef } from "react";
 
 import { Wordmark } from "@/components/brand/wordmark";
 import { CommandMenu } from "@/components/dashboard/command-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,7 +16,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { signOut } from "@/lib/auth/actions";
 
 type Props = { displayName: string; email: string | null; storeUrl: string; publicPath: string | null };
@@ -50,20 +53,28 @@ export function TopBar({ displayName, email, storeUrl, publicPath }: Props) {
 function Notifications() {
   return (
     <Popover>
-      <PopoverTrigger
-        aria-label="Notifications"
-        className="flex size-11 cursor-pointer items-center justify-center rounded-full text-ink hover:bg-bg-subtle data-[state=open]:bg-bg-subtle"
-      >
-        <Bell aria-hidden="true" className="size-5" />
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Notifications" className="rounded-full data-[state=open]:bg-bg-subtle">
+              <Bell aria-hidden="true" />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Notifications</TooltipContent>
+      </Tooltip>
       <PopoverContent align="end" className="w-80 p-0">
         <p className="border-b border-line px-4 py-3 font-display text-h4">Notifications</p>
         <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
-          <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-full bg-bg-subtle text-mute">
-            <BellOff className="size-5" />
-          </span>
-          <p className="font-semibold">You&apos;re all caught up</p>
-          <p className="text-sm text-mute">New sales, customers and payouts will show up here.</p>
+          <Empty className="border-0 px-0 py-0">
+            <EmptyHeader>
+              <EmptyMedia className="size-11 rounded-full bg-bg-subtle text-mute">
+                <BellOff aria-hidden="true" className="size-5" />
+              </EmptyMedia>
+              <EmptyTitle className="font-sans text-base font-semibold">You&apos;re all caught up</EmptyTitle>
+              <EmptyDescription>New sales, customers and payouts will show up here.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         </div>
       </PopoverContent>
     </Popover>
@@ -75,13 +86,12 @@ function AccountMenu({ displayName, email }: { displayName: string; email: strin
   const initial = displayName.trim().charAt(0).toUpperCase() || "?";
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label="Account menu"
-        className="flex size-11 cursor-pointer items-center justify-center rounded-full hover:bg-bg-subtle data-[state=open]:bg-bg-subtle"
-      >
-        <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-full bg-blue-soft font-display text-base font-bold text-ink">
-          {initial}
-        </span>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Account menu" className="rounded-full data-[state=open]:bg-bg-subtle">
+          <Avatar aria-hidden="true">
+            <AvatarFallback className="text-base">{initial}</AvatarFallback>
+          </Avatar>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel className="flex flex-col gap-0.5">

@@ -1,6 +1,7 @@
 import { Check, ChevronRight, Crown } from "lucide-react";
 import Link from "next/link";
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 const PRO_PERKS = ["Lower fees", "Custom domain", "Advanced analytics"] as const;
@@ -43,9 +44,9 @@ export function SidebarFooter({ displayName }: { displayName: string }) {
         href="/dashboard/settings/account"
         className="flex items-center gap-3 rounded-md p-2 transition-colors duration-(--dur-fast) hover:bg-bg-subtle"
       >
-        <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-soft font-display text-base font-bold text-ink">
-          {initial}
-        </span>
+        <Avatar size="lg" aria-hidden="true" className="size-10">
+          <AvatarFallback className="text-base">{initial}</AvatarFallback>
+        </Avatar>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-semibold text-ink">{displayName}</span>
           <span className="text-sm text-mute">Free plan</span>

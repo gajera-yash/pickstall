@@ -2,7 +2,7 @@ import { ShoppingBag, Trophy, Users, Wallet, type LucideIcon } from "lucide-reac
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { ListCard, OrderListItem } from "@/components/dashboard/orders-ui";
+import { ListCard, OrderAccordion } from "@/components/dashboard/orders-ui";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { Card } from "@/components/ui/card";
@@ -121,11 +121,7 @@ async function IncomeContent({ searchParams }: Pick<PageProps<"/dashboard/income
             </Link>
           </div>
           <ListCard>
-            <ul className="divide-y divide-line">
-              {recent.orders.map((order) => (
-                <OrderListItem key={order.id} order={order} />
-              ))}
-            </ul>
+            <OrderAccordion orders={recent.orders} />
           </ListCard>
         </Card>
       </div>

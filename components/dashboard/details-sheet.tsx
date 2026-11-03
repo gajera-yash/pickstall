@@ -4,8 +4,10 @@ import { Check, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
-import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/select";
 import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * A details drawer opened by the URL (`?order=` or `?customer=`), so it can be linked and the back
@@ -34,19 +36,16 @@ export function DetailsSheet({ closeHref, title, description, children }: { clos
   );
 }
 
-/** A filter <select> that applies itself on change; inside a GET form, so Enter still works without JS. */
+/** A filter select that applies itself on change; inside a GET form, so Enter still works without JS. */
 export function FilterSelect({ label, name, value, options }: { label: string; name: string; value: string; options: { value: string; label: string }[] }) {
   return (
-    <label className="flex min-w-0 flex-col">
-      <span className="sr-only">{label}</span>
-      <Select name={name} defaultValue={value} onChange={(event) => event.currentTarget.form?.requestSubmit()} className="h-10 text-sm">
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </Select>
-    </label>
+    <NativeSelect size="sm" name={name} aria-label={label} defaultValue={value} onChange={(event) => event.currentTarget.form?.requestSubmit()}>
+      {options.map((option) => (
+        <NativeSelectOption key={option.value} value={option.value}>
+          {option.label}
+        </NativeSelectOption>
+      ))}
+    </NativeSelect>
   );
 }
 
@@ -54,21 +53,28 @@ export function FilterSelect({ label, name, value, options }: { label: string; n
 export function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <button
-      type="button"
-      aria-label={copied ? "Copied" : label}
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(value);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        } catch {
-          setCopied(false);
-        }
-      }}
-      className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-mute transition-colors duration-(--dur-fast) hover:bg-bg-subtle hover:text-ink"
-    >
-      {copied ? <Check aria-hidden="true" className="size-4 text-mint" /> : <Copy aria-hidden="true" className="size-4" />}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={copied ? "Copied" : label}
+          className="text-mute"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(value);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            } catch {
+              setCopied(false);
+            }
+          }}
+        >
+          {copied ? <Check aria-hidden="true" className="size-4 text-mint" /> : <Copy aria-hidden="true" className="size-4" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{copied ? "Copied" : label}</TooltipContent>
+    </Tooltip>
   );
 }

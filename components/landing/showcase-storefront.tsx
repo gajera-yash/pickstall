@@ -8,6 +8,7 @@ import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
 import { Tilt } from "@/components/landing/motion";
 import { cardStyle, resolveTheme } from "@/components/store/store-theme";
 import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { APP_NAME } from "@/lib/config";
 import { THEME_PRESETS, THEME_PRESET_IDS, type ThemePresetId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
@@ -43,22 +44,23 @@ export function StorefrontShowcase({ intro }: { intro: ReactNode }) {
     <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16">
       <div className="flex flex-col gap-8">
         {intro}
-        <div role="radiogroup" aria-label="Store theme" className="flex flex-col gap-2">
+        <ToggleGroup
+          type="single"
+          variant="bare"
+          aria-label="Store theme"
+          value={presetId}
+          onValueChange={(value) => {
+            if (!value) return;
+            setPresetId(value as ThemePresetId);
+            setAccent(null);
+            setTouched(true);
+          }}
+          className="w-full flex-col items-stretch gap-2"
+        >
           {THEME_PRESET_IDS.map((id) => {
             const on = id === presetId;
             return (
-              <button
-                key={id}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                onClick={() => {
-                  setPresetId(id);
-                  setAccent(null);
-                  setTouched(true);
-                }}
-                className="relative flex min-h-16 items-center gap-4 rounded-md px-4 py-3 text-left transition-colors duration-(--dur-fast) hover:bg-bg-subtle"
-              >
+              <ToggleGroupItem key={id} value={id} className="relative flex min-h-16 justify-start gap-4 rounded-md px-4 py-3 text-left text-base font-normal whitespace-normal text-ink hover:bg-bg-subtle">
                 {on && (
                   <m.span
                     layoutId="theme-active"
@@ -77,37 +79,37 @@ export function StorefrontShowcase({ intro }: { intro: ReactNode }) {
                   <span className="text-sm text-mute">{THEME_NOTES[id]}</span>
                 </span>
                 {on && <Check aria-hidden="true" className="relative ml-auto size-5 shrink-0 text-blue" />}
-              </button>
+              </ToggleGroupItem>
             );
           })}
-        </div>
+        </ToggleGroup>
 
         <div className="flex flex-wrap items-center gap-3">
           <span className="flex items-center gap-2 text-sm font-semibold">
             <Palette aria-hidden="true" className="size-4 text-blue" />
             Accent color
           </span>
-          <div role="radiogroup" aria-label="Accent color" className="flex gap-2">
+          <ToggleGroup
+            type="single"
+            variant="bare"
+            aria-label="Accent color"
+            value={ACCENTS.includes(theme.accent) ? theme.accent : ""}
+            onValueChange={(value) => {
+              if (!value) return;
+              setAccent(value);
+              setTouched(true);
+            }}
+            className="gap-2"
+          >
             {ACCENTS.map((color, index) => {
               const on = theme.accent === color;
               return (
-                <button
-                  key={color}
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  aria-label={`Accent ${index + 1}`}
-                  onClick={() => {
-                    setAccent(color);
-                    setTouched(true);
-                  }}
-                  className={cn("flex size-11 items-center justify-center rounded-full border-2", on ? "border-blue" : "border-transparent")}
-                >
+                <ToggleGroupItem key={color} value={color} aria-label={`Accent ${index + 1}`} className={cn("size-11 rounded-full border-2 px-0", on ? "border-blue" : "border-transparent")}>
                   <span aria-hidden="true" className="size-7 rounded-full border border-line" style={{ background: color }} />
-                </button>
+                </ToggleGroupItem>
               );
             })}
-          </div>
+          </ToggleGroup>
           <span className="text-xs text-mute">Or any color you like, as long as it stays readable.</span>
         </div>
       </div>

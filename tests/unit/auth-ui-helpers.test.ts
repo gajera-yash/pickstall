@@ -1,40 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { enterCodeDigits, eraseCodeDigit } from "@/lib/auth/code";
+import { normalizeCodeInput } from "@/lib/auth/code";
 import { composePhone, countryFromLocale, phoneCountryOptions } from "@/lib/phone";
 import { slugSchema, usernameCandidates } from "@/lib/slug";
 
-describe("enterCodeDigits", () => {
-  it("types one digit and moves to the next box", () => {
-    expect(enterCodeDigits("12", 2, "3")).toEqual({ code: "123", focus: 3 });
-  });
-
-  it("replaces a digit in a filled box", () => {
-    expect(enterCodeDigits("123456", 1, "9")).toEqual({ code: "193456", focus: 2 });
-  });
-
-  it("fills every box from a paste, ignoring spaces and dashes", () => {
-    expect(enterCodeDigits("", 0, "123-456")).toEqual({ code: "123456", focus: 5 });
-  });
-
-  it("never leaves a gap when typing into a later box", () => {
-    expect(enterCodeDigits("1", 4, "2")).toEqual({ code: "12", focus: 2 });
-  });
-
-  it("caps at six digits and ignores letters", () => {
-    expect(enterCodeDigits("12345", 5, "6789").code).toBe("123456");
-    expect(enterCodeDigits("12", 2, "a")).toEqual({ code: "12", focus: 2 });
-  });
-});
-
-describe("eraseCodeDigit", () => {
-  it("clears the current box", () => {
-    expect(eraseCodeDigit("123", 1)).toEqual({ code: "13", focus: 1 });
-  });
-
-  it("clears the previous box when the current one is empty", () => {
-    expect(eraseCodeDigit("123", 3)).toEqual({ code: "12", focus: 2 });
-    expect(eraseCodeDigit("", 0)).toEqual({ code: "", focus: 0 });
+describe("normalizeCodeInput (pasting into the code boxes)", () => {
+  it("keeps digits only and caps the length", () => {
+    expect(normalizeCodeInput("123-456")).toBe("123456");
+    expect(normalizeCodeInput(" 12 34 56 78")).toBe("123456");
+    expect(normalizeCodeInput("abc")).toBe("");
   });
 });
 

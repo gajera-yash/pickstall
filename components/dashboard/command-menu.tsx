@@ -7,6 +7,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { SECTION_ICONS } from "@/components/dashboard/dashboard-nav";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Kbd } from "@/components/ui/kbd";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard/nav";
 import { cn } from "@/lib/utils";
 
@@ -51,9 +52,7 @@ export function CommandMenu({ storeUrl }: { storeUrl: string }) {
       >
         <Search aria-hidden="true" className="size-5 shrink-0" />
         <span className="flex-1 truncate">Search products, orders, customers...</span>
-        <kbd className="shrink-0 rounded-sm border border-line bg-surface px-1.5 py-0.5 font-sans text-xs font-semibold text-mute">
-          {mac ? "⌘" : "Ctrl"} K
-        </kbd>
+        <Kbd className="shrink-0 bg-surface">{mac ? "⌘" : "Ctrl"} K</Kbd>
       </button>
       <button
         type="button"
