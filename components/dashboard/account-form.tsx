@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { IconInput } from "@/components/ui/icon-input";
+import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { saveAccount, type AccountState } from "@/lib/account/actions";
 
 /** Account details (PRD F8): name and phone can change; the email is the sign-in identity. */
@@ -18,6 +19,7 @@ export function AccountForm({ email, initial }: { email: string; initial: { full
   const error = state && !state.ok ? state : null;
   const fieldError = (field: string) => (error?.field === field ? error.error : null);
   const formError = error && !error.field ? error.error : null;
+  const showSaved = useAutoHide(state?.ok ? state : null);
 
   useEffect(() => {
     if (state && !state.ok && state.field) document.getElementById(state.field)?.focus();
@@ -30,7 +32,7 @@ export function AccountForm({ email, initial }: { email: string; initial: { full
         <p className="text-sm text-mute">Your own details. Buyers do not see these.</p>
       </CardHeader>
       <form action={action} noValidate className="flex flex-col gap-5">
-        {state?.ok && (
+        {showSaved && (
           <Alert variant="success">
             <AlertDescription>Your account is saved.</AlertDescription>
           </Alert>

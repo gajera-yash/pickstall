@@ -4,6 +4,15 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-044: Part A quick fixes (signup checks, full-width dashboard, store name, saved messages)
+- **Date:** 2026-11-03
+- **Decision:**
+  - Signup email gets a live format check (green check / red message), using the same `emailSchema` as the server (`lib/auth/email-format.ts`). Format only: it never looks up accounts, so it cannot reveal whether an email is registered. The username check was tested and already worked (free = green, taken or reserved = red).
+  - The dashboard content no longer stops at 1440px; it uses the full width next to the sidebar (DESIGN.md 5 updated).
+  - A new store is named after the signup username, made readable (`maya-books` -> "Maya Books", `lib/stores/store-name.ts`), instead of the creator's full name. Both signup paths (email and Google) go through `createDraftStore`, which now derives the name itself.
+  - Success messages ("Your store is saved.", "Page design saved.", "Your account is saved.", product saved/published, username changed) hide themselves after 5 seconds (`useAutoHide`). Error messages stay until the next action.
+- **Why:** founder request, 2026-11-03 (store name = username, confirmed in chat).
+
 ## D-042: The app recovers from a MongoDB outage without a restart
 - **Date:** 2026-11-01
 - **Problem (founder report):** signup from Antigravity showed "Couldn't check that username. Try again." The dev log showed `MongoServerSelectionError` (this PC could not reach Atlas; DNS and TCP were fine, so most likely Atlas Network Access does not list the PC's current IP), then `MongoTopologyClosedError` on every later request. The MongoDB driver (7.x) closes the topology after a failed connect but keeps it on the client; its automatic connect never replaces it, so the app stayed broken until restarted, even after the network was fixed.

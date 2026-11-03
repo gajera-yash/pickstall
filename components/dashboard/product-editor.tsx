@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { CHECKOUT_QUESTIONS_MAX } from "@/lib/config";
 import { changeProductStatus, removeProduct, saveProduct, type SaveProductState } from "@/lib/products/actions";
 import { safeImageSrc } from "@/lib/media/media";
@@ -100,6 +101,9 @@ export function ProductEditor({ initial, currency, storeLink }: Props) {
   const set = <K extends keyof EditorProduct>(key: K, value: EditorProduct[K]) => setValues((current) => ({ ...current, [key]: value }));
 
   const error = state && !state.ok ? state : null;
+  const showSaved = useAutoHide(state?.ok ? state : null);
+  // Errors stay until the next action; success notices hide themselves.
+  const showNotice = useAutoHide(notice?.kind === "success" ? notice : null) || notice?.kind === "error";
   const fieldError = (field: string) => (error?.field === field ? error.error : null);
 
   // A failed save opens the tab that holds the problem field (state adjusted while rendering, not in an effect).
@@ -196,7 +200,7 @@ export function ProductEditor({ initial, currency, storeLink }: Props) {
         </div>
       </div>
 
-      {state?.ok && (
+      {showSaved && (
         <Alert variant="success">
           <AlertDescription>Saved. Your changes are in the preview.</AlertDescription>
         </Alert>
@@ -206,7 +210,7 @@ export function ProductEditor({ initial, currency, storeLink }: Props) {
           <AlertDescription>{error.error}</AlertDescription>
         </Alert>
       )}
-      {notice && (
+      {notice && showNotice && (
         <Alert variant={notice.kind === "error" ? "error" : "success"}>
           <AlertDescription>{notice.text}</AlertDescription>
         </Alert>

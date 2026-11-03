@@ -12,6 +12,7 @@ import { FieldError } from "@/components/ui/field";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { IconInput } from "@/components/ui/icon-input";
+import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
@@ -81,7 +82,7 @@ export function StoreSetupForm({ initial, slug, theme }: Props) {
   const error = state && !state.ok ? state : null;
   const fieldError = (field: string) => (error?.field === field ? error.error : null);
   const formError = error && !error.field ? error.error : null;
-  const justSaved = state?.ok && !dirty;
+  const justSaved = useAutoHide(state?.ok ? state : null) && !dirty;
 
   // What was sent becomes the saved snapshot when the result comes back ok.
   const [submitted, setSubmitted] = useState(saved);

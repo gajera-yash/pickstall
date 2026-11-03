@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { USERNAME_CHANGE_RATE_LIMIT, storeLink } from "@/lib/config";
 import { changeUsername, type ChangeUsernameState } from "@/lib/stores/actions";
 
@@ -33,6 +34,7 @@ export function UsernameCard({ username }: { username: string }) {
   }
 
   const serverError = state && !state.ok && submitted === value ? state.error : null;
+  const showChanged = useAutoHide(state?.ok ? state : null);
   const onOpenChange = (next: boolean) => {
     setOpen(next);
     if (next) {
@@ -48,7 +50,7 @@ export function UsernameCard({ username }: { username: string }) {
         <p className="text-sm text-mute">Your username is the last part of your link.</p>
       </CardHeader>
 
-      {changedTo && (
+      {showChanged && changedTo && (
         <Alert variant="success">
           <AlertDescription>
             Username changed. Your new link is <strong className="font-semibold break-all">{storeLink(changedTo)}</strong>.

@@ -10,6 +10,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { FieldError, FieldHint } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { AA_TEXT } from "@/lib/contrast";
 import { savePageDesign, type PageDesignState } from "@/lib/stores/actions";
 import { THEME_PRESETS, THEME_PRESET_IDS, onAccentFor, type ThemePresetId } from "@/lib/themes";
@@ -52,6 +53,7 @@ export function PageDesignForm({ initial, preview }: Props) {
   const error = state && !state.ok ? state : null;
   const fieldError = (field: "themePreset" | "accent") => (error?.field === field ? error.error : null);
   const formError = error && !error.field ? error.error : null;
+  const showSaved = useAutoHide(state?.ok ? state : null);
 
   const pickPreset = (id: ThemePresetId) => {
     setThemePreset(id);
@@ -66,7 +68,7 @@ export function PageDesignForm({ initial, preview }: Props) {
         noValidate
         className="flex min-w-0 flex-col gap-5"
       >
-        {state?.ok && !dirty && (
+        {showSaved && !dirty && (
           <Alert variant="success">
             <AlertDescription>Page design saved.</AlertDescription>
           </Alert>
