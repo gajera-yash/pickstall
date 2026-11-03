@@ -119,7 +119,7 @@ Rules: sentence case everywhere, no all-caps labels; minimum 13 px; text typed i
 ## 5. Spacing, layout and grid
 **Spacing scale (4 px base):** 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80 (`--space-1` to `--space-11`).
 **Breakpoints:** base 0 (design at 360 to 390), sm 640, md 768, lg 1024, xl 1280. No horizontal page scroll; wide tables scroll inside their own container.
-**App shell:** sidebar 240 px from md (768 px) up, top bar 56 px, content max width 1120 px with 24 px padding (16 px mobile), page background `--bg-subtle`, cards white. **Mobile (below md): a fixed bottom tab bar** with the four sections (icon + label, 56 px high, safe-area padding, active item `--blue` text with a 2px top bar) instead of a sheet (D-023, confirmed in D-028); the top bar shows the logo, the page title and the account menu.
+**App shell:** sidebar 240 px from md (768 px) up, top bar 56 px, content uses the full width next to the sidebar (no max width, D-044) with 24 px padding (16 px mobile), page background `--bg-subtle`, cards white. **Mobile (below md): a fixed bottom tab bar** with the four sections (icon + label, 56 px high, safe-area padding, active item `--blue` text with a 2px top bar) instead of a sheet (D-023, confirmed in D-028); the top bar shows the logo, the page title and the account menu.
 **Auth and form pages:** white page, centered column max 420 px (Stan-like), wordmark at the top, progress bar at the page top for multi-step flows.
 **Touch targets:** 44 px minimum on mobile (36 px minimum on desktop), 8 px gap between adjacent targets.
 

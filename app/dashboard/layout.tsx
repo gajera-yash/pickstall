@@ -14,8 +14,8 @@ import { APP_NAME, storeLink } from "@/lib/config";
 export const metadata: Metadata = { title: `Dashboard | ${APP_NAME}`, robots: { index: false } };
 
 // App shell (D-029, reference docs/ui-reference/dashboard.webp): 256px white sidebar with the logo,
-// eight sections, the Pro card and the creator; a 64px top bar with search; content up to 1440px on
-// the --bg-subtle page. Mobile: bottom bar with "More" (D-023, D-028).
+// eight sections, the Pro card and the creator; a 64px top bar with search; content uses the full
+// width on the --bg-subtle page (founder request, 2026-11-03). Mobile: bottom bar with "More" (D-023, D-028).
 export default function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
   return (
     <div className="flex min-h-dvh flex-1 bg-bg-subtle">
@@ -35,7 +35,7 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
         <Suspense fallback={<TopBarSkeleton />}>
           <TopBarWithData />
         </Suspense>
-        <main id="main" className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
+        <main id="main" className="flex w-full flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
           {children}
         </main>
       </div>
