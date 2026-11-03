@@ -8,7 +8,6 @@ import { MyStoreTabs } from "@/components/dashboard/my-store-tabs";
 import { PageDesignForm } from "@/components/dashboard/page-design-form";
 import { ProductsEmpty } from "@/components/dashboard/products-empty";
 import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
-import { StoreLinkCard } from "@/components/dashboard/store-link-card";
 import { HelpCard, StorePreviewCard } from "@/components/dashboard/store-preview-card";
 import { WelcomeHero } from "@/components/dashboard/welcome-hero";
 import { Button } from "@/components/ui/button";
@@ -17,17 +16,17 @@ import { requireCreator } from "@/lib/auth/guards";
 import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
 import { incomeStats } from "@/lib/orders/creator-queries";
-import { listProducts } from "@/lib/products/queries";
 import { ProductList } from "@/components/dashboard/product-list";
 import { SOCIAL_LINK_LABELS, storeLink } from "@/lib/config";
-import { buildChecklist } from "@/lib/dashboard/checklist";
+import { loadSetupState } from "@/lib/dashboard/setup-state";
 import { MY_STORE_TABS, type MyStoreTab } from "@/lib/dashboard/nav";
 import { firstName } from "@/lib/dashboard/greeting";
 import type { SocialLink } from "@/lib/stores/schemas";
 
-// My Store home (D-029, reference docs/ui-reference/dashboard.webp): welcome card, store link,
-// first-run checklist, last-30-days KPIs and the Products / Store design / Links / Analytics tabs,
-// with a live store preview and help on the right from 1280px up.
+// My Store home (D-029, D-045, reference docs/ui-reference/dashboard.webp). Until setup is done:
+// the welcome card and the setup checklist only. After: welcome card, last-30-days KPIs and the
+// Products / Store design / Links / Analytics tabs, with a live store preview and help on the right
+// from 1280px up. Publishing and the store link live in Settings > Store from then on.
 export default function MyStorePage({ searchParams }: PageProps<"/dashboard">) {
   return (
     <Suspense fallback={<MyStoreSkeleton />}>
@@ -45,20 +44,23 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
   const tabParam = typeof params.tab === "string" ? params.tab : "";
   const initialTab: MyStoreTab = (MY_STORE_TABS as readonly string[]).includes(tabParam) ? (tabParam as MyStoreTab) : "products";
 
-  const [products, stats] = await Promise.all([listProducts(store.id).catch(() => []), incomeStats(store.id, store.currency, 90).catch(() => null)]);
-  const productCount = products.filter((product) => product.status !== "archived").length;
-  // Real numbers from paid orders; days without sales (or an unreachable database) are zeros.
-  const series: KpiSeries = stats ? stats.series : { revenueCents: zeros(), orders: zeros(), customers: zeros() };
-
-  const checklist = buildChecklist({
-    bio: store.bio,
-    avatarUrl: store.avatarUrl,
-    chargesEnabled: store.stripeChargesEnabled,
-    isPublished: store.isPublished,
-    productCount,
-  });
+  const { checklist, products } = await loadSetupState(store);
   const name = firstName(profile?.fullName) ?? store.name;
   const link = storeLink(store.slug);
+
+  if (!checklist.complete) {
+    return (
+      <div className="flex max-w-4xl flex-col gap-6">
+        <WelcomeHero name={name} storeUrl={`https://${link}`} ready={false} publicPath={store.isPublished ? `/@${store.slug}` : null} />
+        <ChecklistCard {...checklist} />
+      </div>
+    );
+  }
+
+  const stats = await incomeStats(store.id, store.currency, 90).catch(() => null);
+  const productCount = products.length;
+  // Real numbers from paid orders; days without sales (or an unreachable database) are zeros.
+  const series: KpiSeries = stats ? stats.series : { revenueCents: zeros(), orders: zeros(), customers: zeros() };
   const preview = {
     slug: store.slug,
     name: store.name,
@@ -66,16 +68,14 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
     avatarUrl: store.avatarUrl ?? "",
     socialLinks: store.socialLinks,
   };
+  const previewProducts = products
+    .filter((product) => product.status === "published")
+    .map(({ _id, title, coverUrl, buttonText, pricingModel, priceCents, minPriceCents }) => ({ id: _id, title, coverUrl, buttonText, pricingModel, priceCents, minPriceCents }));
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="flex min-w-0 flex-col gap-6">
-        <WelcomeHero name={name} storeUrl={`https://${link}`} ready={!checklist.next} publicPath={store.isPublished ? `/@${store.slug}` : null} />
-
-        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-          <StoreLinkCard link={link} isPublished={store.isPublished} />
-          <ChecklistCard {...checklist} />
-        </div>
+        <WelcomeHero name={name} storeUrl={`https://${link}`} ready publicPath={store.isPublished ? `/@${store.slug}` : null} />
 
         <KpiSection currency={store.currency} series={series} />
 
@@ -83,14 +83,26 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
           initialTab={initialTab}
           productCount={productCount}
           products={products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} />}
-          design={<PageDesignForm initial={{ themePreset: store.theme.preset, accent: store.theme.accent }} preview={preview} />}
+          design={
+            <PageDesignForm
+              initial={{ themePreset: store.theme.preset, accent: store.theme.accent }}
+              preview={preview}
+              products={previewProducts}
+              currency={store.currency}
+            />
+          }
           links={<LinksTab links={store.socialLinks} />}
           analytics={<AnalyticsTab isPublished={store.isPublished} />}
         />
       </div>
 
       <aside aria-label="Store preview and help" className="flex flex-col gap-6 xl:sticky xl:top-22 xl:self-start">
-        <StorePreviewCard data={{ ...preview, themePreset: store.theme.preset, accent: store.theme.accent }} isPublished={store.isPublished} />
+        <StorePreviewCard
+          data={{ ...preview, themePreset: store.theme.preset, accent: store.theme.accent }}
+          products={previewProducts}
+          currency={store.currency}
+          isPublished={store.isPublished}
+        />
         <HelpCard />
       </aside>
     </div>

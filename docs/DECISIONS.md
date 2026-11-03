@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-045: Store setup wizard; My Store waits for setup
+- **Date:** 2026-11-03
+- **Decision:**
+  - New page `/dashboard/setup` runs the four first-run steps one at a time (Store, First product, Connect payments, Publish) under a stepper that shows what is done and what is left. Without `?step` it opens the next step to do, so finishing a step opens the next one. Step 1 is the store form in a "setup" mode: theme and accent are picked there too (shared `ThemeFields`, same rules as Page design, saved by `saveStoreSetup` only when the form sends them), with a live "Your store so far" summary.
+  - Step state still comes from the store's data (photo or bio; product count; Stripe connected; published): no schema change.
+  - Payments (founder decision): the step is real and required now, using the test-mode seller account (D-034). On a server that cannot connect Stripe at all (no test key, for example the sandbox) the step shows but does not block setup. When Connect OAuth arrives it plugs into `paymentsConnectable()` and the flow stays the same.
+  - My Store shows only the greeting and the setup checklist until setup is complete; after that the KPIs, tabs and store preview, without the "Get started" and store-link cards. Copy link and Publish/Unpublish moved to Settings > Store ("Store status"). Other dashboard pages show a "Continue setup" bar while setup is open.
+  - The store preview is a proper phone frame that shows the creator's real products (published only where it says "what buyers see"), priced with the store page's own `priceLabel`.
+- **Why:** founder request, 2026-11-03.
+
 ## D-044: Part A quick fixes (signup checks, full-width dashboard, store name, saved messages)
 - **Date:** 2026-11-03
 - **Decision:**

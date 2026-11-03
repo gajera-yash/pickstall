@@ -1,11 +1,14 @@
 import { Suspense } from "react";
 
+import { StoreLinkCard } from "@/components/dashboard/store-link-card";
 import { StoreSetupForm } from "@/components/dashboard/store-setup-form";
 import { UsernameCard } from "@/components/dashboard/username-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
+import { storeLink } from "@/lib/config";
 
-// Settings > Store (PRD F8, D-028): store link with Change, then the profile editor with a live preview.
+// Settings > Store (PRD F8, D-028, D-045): publish status and link, username with Change, then the
+// profile editor with a live preview.
 export default function StoreSettingsPage() {
   return (
     <Suspense fallback={<StoreSettingsSkeleton />}>
@@ -18,6 +21,7 @@ async function StoreSettingsContent() {
   const { store } = await requireCreator("/dashboard/settings");
   return (
     <>
+      <StoreLinkCard link={storeLink(store.slug)} isPublished={store.isPublished} showCustomize={false} title="Store status" />
       {/* Its own form, outside the profile form (forms must not nest, even through a portal). */}
       <UsernameCard username={store.slug} />
       <StoreSetupForm

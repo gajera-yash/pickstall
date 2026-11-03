@@ -129,7 +129,7 @@ describe("publish the store", () => {
   });
 
   it("makes the publish step of the checklist reachable", () => {
-    const { items } = buildChecklist({ bio: null, avatarUrl: null, chargesEnabled: false, isPublished: false, productCount: 0 });
+    const { items } = buildChecklist({ bio: null, avatarUrl: null, chargesEnabled: false, isPublished: false, productCount: 0, paymentsAvailable: true });
     expect(items.find((item) => item.id === "publish")).toMatchObject({ available: true, done: false });
     expect(formData({}).has("x")).toBe(false);
   });

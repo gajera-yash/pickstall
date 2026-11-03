@@ -13,7 +13,16 @@ import { connectStripeTestAccount, disconnectStripe } from "@/lib/stores/actions
  * until then, with a test key on the server, "Use test Stripe account" connects the founder's own test
  * account (D-034), so real Stripe Checkout can be tried in test mode.
  */
-export function StripeConnectButtons({ connected, testAvailable }: { connected: boolean; testAvailable: boolean }) {
+export function StripeConnectButtons({
+  connected,
+  testAvailable,
+  continueHref,
+}: {
+  connected: boolean;
+  testAvailable: boolean;
+  /** In the setup wizard: where to go once connected, so the next step opens by itself (D-045). */
+  continueHref?: string;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [problem, setProblem] = useState<string | null>(null);
@@ -22,8 +31,12 @@ export function StripeConnectButtons({ connected, testAvailable }: { connected: 
     setProblem(null);
     startTransition(async () => {
       const result = await action();
-      if (!result.ok) setProblem(result.error ?? "Something went wrong.");
-      else router.refresh();
+      if (!result.ok) {
+        setProblem(result.error ?? "Something went wrong.");
+        return;
+      }
+      if (continueHref && action === connectStripeTestAccount) router.push(continueHref);
+      router.refresh();
     });
   };
 

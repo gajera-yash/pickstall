@@ -3,12 +3,14 @@ import { Suspense } from "react";
 
 import { Wordmark } from "@/components/brand/wordmark";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
+import { SetupBar } from "@/components/dashboard/setup/setup-bar";
 import { SidebarFooter } from "@/components/dashboard/sidebar-footer";
 import { TopBar } from "@/components/dashboard/top-bar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
+import { loadSetupState } from "@/lib/dashboard/setup-state";
 import { APP_NAME, storeLink } from "@/lib/config";
 
 export const metadata: Metadata = { title: `Dashboard | ${APP_NAME}`, robots: { index: false } };
@@ -36,6 +38,9 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
           <TopBarWithData />
         </Suspense>
         <main id="main" className="flex w-full flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
+          <Suspense fallback={null}>
+            <SetupBarWithData />
+          </Suspense>
           {children}
         </main>
       </div>
@@ -56,6 +61,13 @@ async function displayNameFor() {
 async function TopBarWithData() {
   const { user, store, displayName } = await displayNameFor();
   return <TopBar displayName={displayName} email={user.email} storeUrl={`https://${storeLink(store.slug)}`} publicPath={store.isPublished ? `/@${store.slug}` : null} />;
+}
+
+async function SetupBarWithData() {
+  const { store } = await requireCreator(DASHBOARD_PATH);
+  const { checklist } = await loadSetupState(store);
+  if (!checklist.next) return null;
+  return <SetupBar doneCount={checklist.doneCount} requiredCount={checklist.requiredCount} nextLabel={checklist.next.label} />;
 }
 
 async function SidebarFooterWithData() {

@@ -1,10 +1,12 @@
 "use client";
 
-import { Check, Eye, Plus, Store, Trash2 } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, Circle, Eye, Plus, Store, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
-import { StorePreview } from "@/components/dashboard/store-preview";
+import { StorePreview, type PreviewProduct } from "@/components/dashboard/store-preview";
+import { ThemeFields, accentReadable } from "@/components/dashboard/theme-fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -28,7 +30,8 @@ import {
 } from "@/lib/config";
 import { saveStoreSetup, type StoreSetupState } from "@/lib/stores/actions";
 import { STORE_BIO_MAX_LENGTH, STORE_NAME_MAX_LENGTH } from "@/lib/stores/schemas";
-import type { ThemePresetId } from "@/lib/themes";
+import { THEME_PRESETS, type ThemePresetId } from "@/lib/themes";
+import { cn } from "@/lib/utils";
 
 type SocialRow = { key: number; kind: SocialLinkKind; url: string };
 
@@ -43,29 +46,42 @@ type Values = {
 type Props = {
   initial: Values;
   slug: string;
-  /** Theme is edited on My Store > Page design; the preview still uses it. */
+  /** Edited here only in the setup wizard; in Settings it lives on My Store > Page design. */
   theme: { preset: ThemePresetId; accent: string };
+  /**
+   * "setup": step 1 of the setup wizard (D-045). Adds the theme fields and a done/to-do summary,
+   * and "Save and continue" goes to `continueHref` after a successful save.
+   */
+  mode?: "settings" | "setup";
+  continueHref?: string;
+  products?: PreviewProduct[];
 };
 
 const toRows = (links: Values["socialLinks"]): SocialRow[] => links.map((link, index) => ({ key: index, ...link }));
-const snapshot = (values: Omit<Values, "socialLinks">, rows: SocialRow[]) =>
-  JSON.stringify([values, rows.filter((row) => row.url.trim()).map(({ kind, url }) => [kind, url.trim()])]);
+const snapshot = (values: Omit<Values, "socialLinks">, rows: SocialRow[], design: { preset: ThemePresetId; accent: string }) =>
+  JSON.stringify([values, rows.filter((row) => row.url.trim()).map(({ kind, url }) => [kind, url.trim()]), design.preset, design.accent.toUpperCase()]);
 
 /**
  * Store setup (PRD F8, DESIGN.md 10.3 and 9.13): profile cards in one column with a sticky live
  * preview on wide screens (behind a Preview button otherwise), social links list, unsaved-changes
  * guard, and "Saving..." then "Saved" on the button.
  */
-export function StoreSetupForm({ initial, slug, theme }: Props) {
+export function StoreSetupForm({ initial, slug, theme, mode = "settings", continueHref, products }: Props) {
+  const router = useRouter();
+  const setup = mode === "setup";
   const [state, action, pending] = useActionState<StoreSetupState, FormData>(saveStoreSetup, null);
   const { socialLinks: initialLinks, ...initialFields } = initial;
   const [values, setValues] = useState(initialFields);
   const [rows, setRows] = useState<SocialRow[]>(() => toRows(initialLinks));
+  const [design, setDesign] = useState(theme);
   const nextKey = useRef(initialLinks.length);
-  const [saved, setSaved] = useState(() => snapshot(initialFields, toRows(initialLinks)));
+  const [saved, setSaved] = useState(() => snapshot(initialFields, toRows(initialLinks), theme));
 
-  const current = snapshot(values, rows);
+  const current = snapshot(values, rows, design);
   const dirty = current !== saved;
+  // Step 1 counts as done with a photo or a bio (lib/dashboard/checklist.ts), so the wizard asks for one.
+  const personalized = Boolean(values.avatarUrl.trim() || values.bio.trim());
+  const linkCount = rows.filter((row) => row.url.trim()).length;
 
   const set = <K extends keyof typeof values>(field: K, value: (typeof values)[K]) => setValues((prev) => ({ ...prev, [field]: value }));
   const setRow = (key: number, change: Partial<SocialRow>) => setRows((prev) => prev.map((row) => (row.key === key ? { ...row, ...change } : row)));
@@ -81,6 +97,7 @@ export function StoreSetupForm({ initial, slug, theme }: Props) {
 
   const error = state && !state.ok ? state : null;
   const fieldError = (field: string) => (error?.field === field ? error.error : null);
+  const designError = (field: "themePreset" | "accent") => fieldError(field);
   const formError = error && !error.field ? error.error : null;
   const justSaved = useAutoHide(state?.ok ? state : null) && !dirty;
 
@@ -91,6 +108,14 @@ export function StoreSetupForm({ initial, slug, theme }: Props) {
     setSeenState(state);
     if (state?.ok) setSaved(submitted);
   }
+
+  // In the wizard a successful save moves straight on to the next step.
+  useEffect(() => {
+    if (setup && state?.ok && continueHref) {
+      router.push(continueHref);
+      router.refresh();
+    }
+  }, [setup, state, continueHref, router]);
 
   useEffect(() => {
     if (state && !state.ok && state.field) document.getElementById(state.field)?.focus();
@@ -110,8 +135,8 @@ export function StoreSetupForm({ initial, slug, theme }: Props) {
     bio: values.bio,
     avatarUrl: values.avatarUrl,
     socialLinks: rows.filter((row) => row.url.trim()).map(({ kind, url }) => ({ kind, url })),
-    themePreset: theme.preset,
-    accent: theme.accent,
+    themePreset: design.preset,
+    accent: design.accent,
   };
 
   return (
@@ -126,6 +151,19 @@ export function StoreSetupForm({ initial, slug, theme }: Props) {
           <Alert variant="error">
             <AlertDescription>{formError}</AlertDescription>
           </Alert>
+        )}
+
+        {setup && (
+          <SetupSummary
+            items={[
+              { label: "Store name", done: Boolean(values.name.trim()), detail: values.name.trim() || "Missing" },
+              { label: "Profile photo", done: Boolean(values.avatarUrl.trim()), detail: values.avatarUrl.trim() ? "Added" : "Optional" },
+              { label: "Bio", done: Boolean(values.bio.trim()), detail: values.bio.trim() ? "Added" : "Optional" },
+              { label: "Theme", done: true, detail: THEME_PRESETS[design.preset].name },
+              { label: "Social links", done: linkCount > 0, detail: linkCount > 0 ? `${linkCount} added` : "Optional" },
+            ]}
+            hint={personalized ? null : "Add a profile photo or a short bio to finish this step."}
+          />
         )}
 
         <Card>
@@ -172,6 +210,22 @@ export function StoreSetupForm({ initial, slug, theme }: Props) {
             />
           </FormField>
         </Card>
+
+        {setup && (
+          <Card>
+            <CardHeader>
+              <h2 className="font-display text-h3">Theme and color</h2>
+              <p className="text-sm text-mute">Pick a look for your store page. You can change it any time.</p>
+            </CardHeader>
+            <ThemeFields
+              themePreset={design.preset}
+              accent={design.accent}
+              onThemePreset={(preset) => setDesign((prev) => ({ ...prev, preset }))}
+              onAccent={(accent) => setDesign((prev) => ({ ...prev, accent }))}
+              fieldError={designError}
+            />
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -271,6 +325,12 @@ export function StoreSetupForm({ initial, slug, theme }: Props) {
         </Card>
 
         <div className="flex flex-wrap items-center gap-3">
+          {setup ? (
+            <Button type="submit" loading={pending} disabled={!personalized || !accentReadable(design.accent)}>
+              {pending ? "Saving..." : "Save and continue"}
+              {!pending && <ArrowRight aria-hidden="true" />}
+            </Button>
+          ) : (
           <Button type="submit" loading={pending} disabled={!dirty && !pending}>
             {pending ? "Saving..." : justSaved ? (
               <>
@@ -281,6 +341,7 @@ export function StoreSetupForm({ initial, slug, theme }: Props) {
               "Save changes"
             )}
           </Button>
+          )}
           <Dialog>
             <DialogTrigger asChild>
               <Button type="button" variant="secondary" className="xl:hidden">
@@ -292,7 +353,7 @@ export function StoreSetupForm({ initial, slug, theme }: Props) {
               <DialogHeader>
                 <DialogTitle>Preview</DialogTitle>
               </DialogHeader>
-              <StorePreview data={previewData} />
+              <StorePreview data={previewData} products={products} currency={values.currency} />
             </DialogContent>
           </Dialog>
           {dirty && !pending && <p className="text-sm text-mute">You have unsaved changes.</p>}
@@ -301,8 +362,39 @@ export function StoreSetupForm({ initial, slug, theme }: Props) {
 
       <div className="hidden flex-col gap-3 xl:sticky xl:top-20 xl:flex">
         <p className="text-sm font-semibold text-mute">Live preview</p>
-        <StorePreview data={previewData} />
+        <StorePreview data={previewData} products={products} currency={values.currency} />
       </div>
     </div>
+  );
+}
+
+/** What step 1 of the wizard has and still needs, updated as the creator types. */
+function SetupSummary({ items, hint }: { items: { label: string; done: boolean; detail: string }[]; hint: string | null }) {
+  return (
+    <Card className="gap-4">
+      <CardHeader>
+        <h2 className="font-display text-h3">Your store so far</h2>
+        <p className="text-sm text-mute">This list updates as you fill in the form.</p>
+      </CardHeader>
+      <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {items.map((item) => (
+          <li key={item.label} className={cn("flex items-center gap-3 rounded-md border px-3 py-2.5", item.done ? "border-mint/30 bg-mint-soft" : "border-line")}>
+            {item.done ? (
+              <CheckCircle2 aria-hidden="true" className="size-5 shrink-0 fill-mint text-surface" />
+            ) : (
+              <Circle aria-hidden="true" className="size-5 shrink-0 text-mute" />
+            )}
+            <span className="flex min-w-0 flex-col">
+              <span className="text-sm font-semibold">
+                {item.label}
+                <span className="sr-only">{item.done ? " (done)" : " (not done)"}</span>
+              </span>
+              <span className="truncate text-xs text-mute">{item.detail}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {hint && <p className="text-sm font-medium text-warning">{hint}</p>}
+    </Card>
   );
 }

@@ -54,5 +54,7 @@ export function breadcrumbFor(pathname: string): Crumb[] {
     const page = SETTINGS_SECTIONS.find((item) => isSettingsSectionActive(pathname, item.href));
     if (page) crumbs.push({ label: page.label, href: page.href });
   }
+  // The setup wizard (D-045) lives under My Store.
+  if (pathname === "/dashboard/setup" || pathname.startsWith("/dashboard/setup/")) crumbs.push({ label: "Setup", href: "/dashboard/setup" });
   return crumbs;
 }

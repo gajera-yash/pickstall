@@ -15,9 +15,20 @@ type CopyState = "idle" | "copied" | "failed";
 /**
  * Store link card (reference docs/ui-reference/dashboard.webp): the public link with Copy and
  * Customize, and while the store is a draft a notice that points at the steps to publish it.
- * The copy result is announced to screen readers.
+ * The copy result is announced to screen readers. Since D-045 it lives in Settings > Store (where
+ * Customize is left out), because My Store drops it once setup is done.
  */
-export function StoreLinkCard({ link, isPublished }: { link: string; isPublished: boolean }) {
+export function StoreLinkCard({
+  link,
+  isPublished,
+  showCustomize = true,
+  title = "Your store link",
+}: {
+  link: string;
+  isPublished: boolean;
+  showCustomize?: boolean;
+  title?: string;
+}) {
   const [copy, setCopy] = useState<CopyState>("idle");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -51,7 +62,7 @@ export function StoreLinkCard({ link, isPublished }: { link: string; isPublished
     <Card id="your-store-link" className="scroll-mt-24 gap-5">
       <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="font-display text-h3">Your store link</h2>
+          <h2 className="font-display text-h3">{title}</h2>
           {isPublished ? <Badge variant="live">Live</Badge> : <Badge variant="draft">Draft</Badge>}
         </div>
         <p className="text-sm text-mute">
@@ -69,12 +80,14 @@ export function StoreLinkCard({ link, isPublished }: { link: string; isPublished
             {copy === "copied" ? <Check aria-hidden="true" className="text-mint" /> : <Copy aria-hidden="true" />}
             {copy === "copied" ? "Copied" : "Copy"}
           </Button>
-          <Button asChild variant="secondary" className="h-12">
-            <Link href="/dashboard/settings">
-              <Pencil aria-hidden="true" />
-              Customize
-            </Link>
-          </Button>
+          {showCustomize && (
+            <Button asChild variant="secondary" className="h-12">
+              <Link href="/dashboard/settings">
+                <Pencil aria-hidden="true" />
+                Customize
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 

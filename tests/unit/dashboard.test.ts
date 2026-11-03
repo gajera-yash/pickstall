@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildChecklist, type ChecklistInput } from "@/lib/dashboard/checklist";
+import { buildChecklist, currentStep, type ChecklistInput } from "@/lib/dashboard/checklist";
 import { dayPart, firstName } from "@/lib/dashboard/greeting";
 import { DASHBOARD_SECTIONS, SETTINGS_SECTIONS, breadcrumbFor, isSectionActive, isSettingsSectionActive } from "@/lib/dashboard/nav";
 
-const fresh: ChecklistInput = { bio: null, avatarUrl: null, chargesEnabled: false, isPublished: false, productCount: 0 };
+const fresh: ChecklistInput = { bio: null, avatarUrl: null, chargesEnabled: false, isPublished: false, productCount: 0, paymentsAvailable: true };
 
 describe("dashboard sections (D-011)", () => {
   it("has the eight sections of the reference design in order", () => {
@@ -35,12 +35,14 @@ describe("dashboard sections (D-011)", () => {
   });
 });
 
-describe("first-run checklist (D-009)", () => {
+describe("first-run checklist (D-009, D-045)", () => {
   it("lists the four steps in order, none done for a new draft store", () => {
-    const { items, next, doneCount } = buildChecklist(fresh);
+    const { items, next, doneCount, requiredCount, complete } = buildChecklist(fresh);
     expect(items.map((item) => item.label)).toEqual(["Set up your store", "Add your first product", "Connect payments", "Publish your store"]);
     expect(doneCount).toBe(0);
+    expect(requiredCount).toBe(4);
     expect(next?.id).toBe("store-setup");
+    expect(complete).toBe(false);
   });
 
   it("counts store setup as done once there is a photo or a bio", () => {
@@ -55,10 +57,29 @@ describe("first-run checklist (D-009)", () => {
     expect(doneCount).toBe(2);
   });
 
-  it("has no next step when everything is done", () => {
-    const all = buildChecklist({ bio: "Hi", avatarUrl: null, chargesEnabled: true, isPublished: true, productCount: 1 });
+  it("is complete when every step is done", () => {
+    const all = buildChecklist({ ...fresh, bio: "Hi", chargesEnabled: true, isPublished: true, productCount: 1 });
     expect(all.next).toBeNull();
     expect(all.doneCount).toBe(4);
+    expect(all.complete).toBe(true);
+  });
+
+  it("does not block setup on payments when this server cannot connect Stripe yet", () => {
+    const noPayments = { ...fresh, paymentsAvailable: false };
+    expect(buildChecklist(noPayments).requiredCount).toBe(3);
+    expect(buildChecklist({ ...noPayments, bio: "Hi", productCount: 1 }).next?.id).toBe("publish");
+    expect(buildChecklist({ ...noPayments, bio: "Hi", productCount: 1, isPublished: true }).complete).toBe(true);
+    // A store that is already connected keeps counting the step.
+    expect(buildChecklist({ ...noPayments, chargesEnabled: true }).items[2]).toMatchObject({ available: true, done: true });
+  });
+
+  it("opens the step asked for, else the next one, else publish", () => {
+    const list = buildChecklist({ ...fresh, bio: "Hi" });
+    expect(currentStep(list, "publish").id).toBe("publish");
+    expect(currentStep(list, "nope").id).toBe("first-product");
+    expect(currentStep(list, undefined).id).toBe("first-product");
+    const done = buildChecklist({ ...fresh, bio: "Hi", chargesEnabled: true, isPublished: true, productCount: 1 });
+    expect(currentStep(done, undefined).id).toBe("publish");
   });
 });
 
@@ -86,14 +107,19 @@ describe("settings sub-nav and breadcrumb (D-028)", () => {
     ["/dashboard/settings", ["Settings", "Store"]],
     ["/dashboard/settings/account", ["Settings", "Account"]],
     ["/dashboard/unknown", ["My Store"]],
+    ["/dashboard/setup", ["My Store", "Setup"]],
   ])("breadcrumb for %s", (pathname, labels) => {
     expect(breadcrumbFor(pathname).map((crumb) => crumb.label)).toEqual(labels);
   });
 
-  it("links the checklist steps to the screens that exist", () => {
+  it("links every checklist step to its place in the setup wizard", () => {
     const { items } = buildChecklist(fresh);
-    expect(items.find((item) => item.id === "store-setup")?.href).toBe("/dashboard/settings");
-    expect(items.find((item) => item.id === "connect-payments")?.href).toBe("/dashboard/settings/payments");
+    expect(items.map((item) => item.href)).toEqual([
+      "/dashboard/setup?step=store-setup",
+      "/dashboard/setup?step=first-product",
+      "/dashboard/setup?step=connect-payments",
+      "/dashboard/setup?step=publish",
+    ]);
   });
 });
 
