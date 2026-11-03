@@ -266,6 +266,34 @@ describe("product actions use the session owner's store only", () => {
     expect(await changeProductStatus(PRODUCT_ID, "bogus")).toMatchObject({ ok: false });
   });
 
+  it("saves and then publishes in one step with intent=publish (D-048)", async () => {
+    queries.updateProduct.mockResolvedValue("saved");
+    queries.findProduct.mockResolvedValue({ _id: PRODUCT_ID, title: "T", priceCents: 0, salePriceCents: null, externalUrl: "https://x.example.com" });
+    queries.setProductStatus.mockResolvedValue(true);
+    const publishForm = form();
+    publishForm.set("intent", "publish");
+    expect(await saveProduct(PRODUCT_ID, null, publishForm)).toMatchObject({ ok: true, data: { published: true } });
+    // The rules are checked on the product as saved, found through the session owner's store.
+    expect(queries.findProduct).toHaveBeenCalledWith("store-1", PRODUCT_ID);
+    expect(queries.setProductStatus).toHaveBeenCalledWith("store-1", PRODUCT_ID, "published");
+  });
+
+  it("keeps the save but does not publish when a rule fails", async () => {
+    queries.updateProduct.mockResolvedValue("saved");
+    queries.findProduct.mockResolvedValue({ _id: PRODUCT_ID, title: "T", priceCents: 0, salePriceCents: null, externalUrl: null });
+    const publishForm = form();
+    publishForm.set("intent", "publish");
+    expect(await saveProduct(PRODUCT_ID, null, publishForm)).toEqual({ ok: false, error: "Saved, but not published yet: Add a link or a file to deliver." });
+    expect(queries.updateProduct).toHaveBeenCalled();
+    expect(queries.setProductStatus).not.toHaveBeenCalled();
+  });
+
+  it("only saves without the publish intent", async () => {
+    queries.updateProduct.mockResolvedValue("saved");
+    expect(await saveProduct(PRODUCT_ID, null, form())).toMatchObject({ ok: true, data: { published: false } });
+    expect(queries.setProductStatus).not.toHaveBeenCalled();
+  });
+
   it("deletes only through the owner's store and reports why a published product stays", async () => {
     queries.deleteProduct.mockResolvedValue(false);
     expect(await removeProduct(PRODUCT_ID)).toMatchObject({ ok: false });

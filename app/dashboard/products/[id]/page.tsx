@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { storeLink } from "@/lib/config";
 import { centsToInput } from "@/lib/products/money";
+import { paymentsReady } from "@/lib/products/publish";
 import { findProduct } from "@/lib/products/queries";
 import { productIdInput } from "@/lib/products/schemas";
 
@@ -49,7 +50,9 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
     emailBody: product.afterPurchase.emailBody ?? "",
   };
 
-  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} />;
+  // A product that has never been named is fresh from "Create": it opens on step 1 with no steps checked.
+  const isNew = product.status === "draft" && product.title === "Untitled product";
+  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} />;
 }
 
 function EditorSkeleton() {

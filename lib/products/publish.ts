@@ -19,11 +19,20 @@ export function isPaid(product: Priced): boolean {
   return payableCents(product) > 0;
 }
 
-/** Publish rules (PRD F3): a title, something to deliver, a valid price and payments for paid products. */
-export function checkPublish(product: Publishable, store: { stripeChargesEnabled: boolean }, nodeEnv?: string): PublishCheck {
+/**
+ * What still stops a product from being published, in the order the editor shows them (D-048).
+ * Pure, so the editor's Publish step lists exactly what the server will check.
+ */
+export function publishProblems(product: Publishable, paymentsOk: boolean): string[] {
   const problems: string[] = [];
   if (!product.title.trim()) problems.push("Add a title.");
   if (!product.externalUrl && !(product.fileCount && product.fileCount > 0)) problems.push("Add a link or a file to deliver.");
-  if (isPaid(product) && !paymentsReady(store, nodeEnv)) problems.push("Connect payments to publish a paid product.");
+  if (isPaid(product) && !paymentsOk) problems.push("Connect payments to publish a paid product.");
+  return problems;
+}
+
+/** Publish rules (PRD F3): a title, something to deliver, a valid price and payments for paid products. */
+export function checkPublish(product: Publishable, store: { stripeChargesEnabled: boolean }, nodeEnv?: string): PublishCheck {
+  const problems = publishProblems(product, paymentsReady(store, nodeEnv));
   return problems.length === 0 ? { ok: true } : { ok: false, problems };
 }

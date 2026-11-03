@@ -12,7 +12,8 @@ import { productIdInput, productInputFor, productStatusInput } from "@/lib/produ
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 
-export type SaveProductState = Result<{ savedAt: number }> | null;
+/** `published` is true when the save also published the product (intent=publish, D-048). */
+export type SaveProductState = Result<{ savedAt: number; published: boolean }> | null;
 export type ProductStatusState = Result<{ status: string }> | null;
 
 const MAX_PAYLOAD_CHARS = 40_000;
@@ -43,7 +44,10 @@ export async function createProductAndEdit(): Promise<void> {
 
 /**
  * Saves the product editor. The form arrives as one JSON payload; the product is found with the
- * session owner's store id, so a creator can only ever change their own products.
+ * session owner's store id, so a creator can only ever change their own products. With
+ * `intent=publish` (the editor's "Save and publish" button, D-048) it then publishes, checking the
+ * publish rules on the product as just saved; if a rule fails, the save stands and the problems
+ * come back as the error.
  */
 export async function saveProduct(productId: string, _prev: SaveProductState, formData: FormData): Promise<SaveProductState> {
   const { user, store } = await requireCreator(`/dashboard/products/${productId}`);
@@ -68,16 +72,27 @@ export async function saveProduct(productId: string, _prev: SaveProductState, fo
   }
   if (!(await allowed(user.id))) return err("Slow down a little, then try again.");
 
+  const publish = formData.get("intent") === "publish";
   try {
     const result = await updateProduct(store.id, productId, parsed.data);
     if (result === "not_found") return err(NOT_FOUND);
+    if (publish) {
+      const saved = await findProduct(store.id, productId);
+      if (!saved) return err(NOT_FOUND);
+      const check = checkPublish(saved, store);
+      if (!check.ok) {
+        revalidatePath("/dashboard", "layout");
+        return err(`Saved, but not published yet: ${check.problems.join(" ")}`);
+      }
+      if (!(await setProductStatus(store.id, productId, "published"))) return err(NOT_FOUND);
+    }
   } catch (error) {
     logger.error("products.save_failed", { name: errorName(error) });
     return err(SAVE_FAILED);
   }
 
   revalidatePath("/dashboard", "layout");
-  return ok({ savedAt: Date.now() });
+  return ok({ savedAt: Date.now(), published: publish });
 }
 
 /** Publish, unpublish (back to draft) or archive. Publishing checks the rules on the saved product. */

@@ -4,6 +4,14 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-048: Product editor in three steps; save and publish in one step
+- **Date:** 2026-11-03
+- **Decision (founder request):** the product editor works like Stan's, one step at a time: **1 Details** (title, description, cover, delivery link, price and discount, button text), **2 Checkout form** (headline; Name and Email shown as locked "Always asked" rows, a Phone switch, and up to 5 extra fields), **3 Publish** (a "Ready to publish / Before you publish" check, after-purchase message and email, and "More settings": product link, download limit, archive, delete). A stepper on top shows each step as done, in progress or to do; on phones it shows short names.
+- **Saving:** "Save and continue" saves and opens the next step; "Back" and the stepper move freely; "Save" on top saves without moving. "Save and publish" sends `intent=publish`: `saveProduct` saves, then checks the publish rules on the product as just saved and publishes, so nothing typed is lost and the rules are always the server's. If a rule fails, the save stands and the problems come back. The Publish step's checklist uses the same `publishProblems` the server uses.
+- **Fix:** the editor submits through `onSubmit` instead of `action={...}`. React resets a form after an action and the Radix switches followed that reset back to their first value, so the discount (D-047) and phone switches turned themselves off after every save.
+- **Supersedes:** the four editor tabs of PRD F3.
+- **Why:** founder request, 2026-11-03.
+
 ## D-047: Price with an optional discount; pay-what-you-want removed
 - **Date:** 2026-11-03
 - **Decision (founder request):** a product has a price and, behind a "Add a discount" switch, a discounted price buyers pay instead. The store, product page, checkout, preview and product list show the discounted price with the regular one struck through (`PriceTag`; screen readers hear "was $29.00"). Pay-what-you-want is gone: no price type choice in the editor, no amount field at checkout.
