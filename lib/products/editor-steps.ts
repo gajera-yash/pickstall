@@ -20,6 +20,7 @@ export const PRODUCT_STEP_SHORT_LABELS: Record<ProductStep, string> = {
 const FIELD_STEP: Record<string, ProductStep> = {
   title: "details",
   description: "details",
+  descriptionDoc: "details",
   coverUrl: "details",
   externalUrl: "details",
   price: "details",

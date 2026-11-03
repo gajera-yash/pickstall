@@ -2,6 +2,7 @@ import "server-only";
 
 import { collections, type ProductDoc, type StoreDoc } from "@/lib/db/collections";
 import { socialLinksOf } from "@/lib/stores/social-links";
+import type { RichDoc } from "@/lib/products/rich-text";
 import type { SocialLink } from "@/lib/stores/schemas";
 
 // Reads for the public store and product pages (/@username). Anyone can call these, so each one
@@ -24,6 +25,8 @@ export type PublicProduct = {
   slug: string;
   title: string;
   description: string | null;
+  /** Rich description (D-049), or null for products saved before it (show `description`). */
+  descriptionDoc: RichDoc | null;
   coverUrl: string | null;
   priceCents: number;
   /** Discounted price (D-047), or null. */
@@ -32,7 +35,7 @@ export type PublicProduct = {
 };
 
 const STORE_FIELDS = { slug: 1, name: 1, bio: 1, avatarUrl: 1, socialLinks: 1, link: 1, theme: 1, currency: 1 } as const;
-const PRODUCT_FIELDS = { slug: 1, title: 1, description: 1, coverUrl: 1, priceCents: 1, salePriceCents: 1, buttonText: 1 } as const;
+const PRODUCT_FIELDS = { slug: 1, title: 1, description: 1, descriptionDoc: 1, coverUrl: 1, priceCents: 1, salePriceCents: 1, buttonText: 1 } as const;
 
 const SLUG = /^[a-z0-9-]{3,30}$/;
 const PRODUCT_SLUG = /^[a-z0-9-]{1,60}$/;
@@ -55,12 +58,13 @@ export async function findPublicStore(slug: string): Promise<PublicStore | null>
   };
 }
 
-function toPublicProduct(doc: Pick<ProductDoc, "_id" | "slug" | "title" | "description" | "coverUrl" | "priceCents" | "salePriceCents" | "buttonText">): PublicProduct {
+function toPublicProduct(doc: Pick<ProductDoc, "_id" | "slug" | "title" | "description" | "descriptionDoc" | "coverUrl" | "priceCents" | "salePriceCents" | "buttonText">): PublicProduct {
   return {
     id: doc._id,
     slug: doc.slug,
     title: doc.title,
     description: doc.description,
+    descriptionDoc: doc.descriptionDoc ?? null,
     coverUrl: doc.coverUrl,
     priceCents: doc.priceCents,
     // Products saved before D-047 have no discount field yet.

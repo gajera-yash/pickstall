@@ -68,6 +68,7 @@ export async function createDraftProduct(storeId: string, defaults: { buttonText
       title: "Untitled product",
       slug: attempt === 0 ? base : `${base}-${randomUUID().slice(0, 4)}`,
       description: null,
+      descriptionDoc: null,
       coverUrl: null,
       priceCents: 0,
       salePriceCents: null,
@@ -102,6 +103,7 @@ export async function updateProduct(storeId: string, id: string, input: ProductI
   const set: Partial<ProductDoc> = {
     title: input.title ?? current.title,
     description: input.description ?? null,
+    descriptionDoc: input.descriptionDoc,
     coverUrl: input.coverUrl ?? null,
     externalUrl: input.externalUrl ?? null,
     priceCents: input.priceCents,

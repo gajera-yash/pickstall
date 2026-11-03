@@ -4,6 +4,15 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-049: Rich text product descriptions (Tiptap), stored as allow-listed JSON
+- **Date:** 2026-11-03
+- **Decision (founder request and choice of Tiptap):** the Details step has a text editor for the description: bold, italic, underline, two heading sizes, bullet and numbered lists, links, undo and redo, with a character count. New dependencies (founder approved): `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/pm` 3.32.2; StarterKit 3 already includes Link and Underline, so no separate link package.
+- **Storage and safety:** the editor's ProseMirror JSON is stored as `products.descriptionDoc`, checked by `richDocSchema` (lib/products/rich-text.ts): only doc, paragraph, heading 2/3, bullet and numbered lists, list items, hard breaks and text; only bold, italic, underline and link marks; links https or mailto with no credentials, and only the address is kept; text cleaned like all creator text; at most 2000 characters, 600 nodes and 6 levels; empty paragraphs at the start and end are dropped. Unknown nodes or marks fail the save instead of being passed through. `description` keeps the plain text, made on the server from the checked document. Nothing is stored or rendered as HTML: `RichTextView` builds React elements node by node and checks links again (target _blank, rel noopener noreferrer nofollow ugc).
+- **Old products:** a plain description opens in the editor as paragraphs and still shows as before until saved. No migration needed.
+- **Fixes found in the browser:** toolbar buttons keep the editor's selection (mousedown does not take focus), and the editor no longer adds an empty paragraph at the end.
+- **Follow-up, not from this change:** in development, Next.js flags `new Date()` during prerender of the public product page, raised inside the database connection code; to look at separately.
+- **Why:** founder request, 2026-11-03.
+
 ## D-048: Product editor in three steps; save and publish in one step
 - **Date:** 2026-11-03
 - **Decision (founder request):** the product editor works like Stan's, one step at a time: **1 Details** (title, description, cover, delivery link, price and discount, button text), **2 Checkout form** (headline; Name and Email shown as locked "Always asked" rows, a Phone switch, and up to 5 extra fields), **3 Publish** (a "Ready to publish / Before you publish" check, after-purchase message and email, and "More settings": product link, download limit, archive, delete). A stepper on top shows each step as done, in progress or to do; on phones it shows short names.

@@ -5,10 +5,11 @@ import { hasControlChar } from "@/lib/text";
  * (line breaks kept when `multiline`), then trims. React escapes the rest when it is shown, and
  * nothing renders raw HTML.
  */
-export function cleanText(value: string, options: { multiline?: boolean } = {}): string {
+export function cleanText(value: string, options: { multiline?: boolean; trim?: boolean } = {}): string {
   const noTags = value.replace(/<\/?[a-zA-Z!][^>]*>?/g, "");
   const noControl = [...noTags].filter((ch) => !hasControlChar(ch, { allowNewlines: options.multiline })).join("");
-  return noControl.trim();
+  // Rich text pieces keep their spaces ("Bold" + " and " + "link"); whole fields are trimmed.
+  return options.trim === false ? noControl : noControl.trim();
 }
 
 /** The only variables an email template may use (D-014). */

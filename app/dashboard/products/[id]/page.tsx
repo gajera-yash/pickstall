@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { storeLink } from "@/lib/config";
 import { centsToInput } from "@/lib/products/money";
+import { docFromPlainText } from "@/lib/products/rich-text";
 import { paymentsReady } from "@/lib/products/publish";
 import { findProduct } from "@/lib/products/queries";
 import { productIdInput } from "@/lib/products/schemas";
@@ -33,7 +34,8 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
     status: product.status,
     title: product.title,
     slug: product.slug,
-    description: product.description ?? "",
+    // Products saved before D-049 open with their plain description as paragraphs.
+    descriptionDoc: product.descriptionDoc ?? docFromPlainText(product.description),
     coverUrl: product.coverUrl ?? "",
     externalUrl: product.externalUrl ?? "",
     price: centsToInput(product.priceCents, store.currency),

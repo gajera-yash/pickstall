@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 
 import { ImageUploader } from "@/components/dashboard/image-uploader";
+import { RichTextEditor } from "@/components/dashboard/rich-text-editor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PriceTag } from "@/components/store/price-tag";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ import { changeProductStatus, removeProduct, saveProduct, type SaveProductState 
 import { safeImageSrc } from "@/lib/media/media";
 import { parseMoneyToCents, priceDecimals } from "@/lib/products/money";
 import { savingPercent, type Priced } from "@/lib/products/pricing";
+import { plainTextOf, type RichDoc } from "@/lib/products/rich-text";
 import { PRODUCT_STEPS, PRODUCT_STEP_LABELS, PRODUCT_STEP_SHORT_LABELS, detailsMissing, nextStep, previousStep, stepOfField, stepsDone, type ProductStep } from "@/lib/products/editor-steps";
 import { publishProblems } from "@/lib/products/publish";
 import { PRODUCT_LIMITS } from "@/lib/products/schemas";
@@ -35,7 +37,8 @@ export type EditorProduct = {
   status: "draft" | "published" | "archived";
   title: string;
   slug: string;
-  description: string;
+  /** Rich description (D-049). */
+  descriptionDoc: RichDoc;
   coverUrl: string;
   externalUrl: string;
   price: string;
@@ -145,7 +148,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
 
   const payload = JSON.stringify({
     title: values.title,
-    description: values.description,
+    descriptionDoc: values.descriptionDoc,
     coverUrl: values.coverUrl,
     externalUrl: values.externalUrl,
     price: values.price,
@@ -289,9 +292,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
               <Field id="title" label="Title" error={fieldError("title")} hint={`${values.title.length}/${PRODUCT_LIMITS.title}`}>
                 <Input id="title" value={values.title} maxLength={PRODUCT_LIMITS.title} onChange={(event) => set("title", event.target.value)} aria-invalid={!!fieldError("title")} placeholder="Instagram growth playbook" />
               </Field>
-              <Field id="description" label="Description (optional)" error={fieldError("description")} hint={`${values.description.length}/${PRODUCT_LIMITS.description}. Plain text, no HTML.`}>
-                <Textarea id="description" rows={5} value={values.description} maxLength={PRODUCT_LIMITS.description} onChange={(event) => set("description", event.target.value)} placeholder="What do buyers get, and who is it for?" />
-              </Field>
+              <RichTextEditor id="descriptionDoc" label="Description (optional)" value={values.descriptionDoc} onChange={(doc) => set("descriptionDoc", doc)} error={fieldError("descriptionDoc")} />
               <ImageUploader id="coverUrl" label="Cover image (optional)" kind="cover" shape="wide" value={values.coverUrl} onChange={(value) => set("coverUrl", value)} error={fieldError("coverUrl")} hint="Shown on your store and product page. JPG, PNG, WebP or GIF, up to 5 MB." />
               <Field id="externalUrl" label="Delivery link" error={fieldError("externalUrl")} hint="Where buyers get the product (Google Drive, Notion, Dropbox...). Only buyers see it, after paying.">
                 <Input id="externalUrl" type="url" inputMode="url" value={values.externalUrl} onChange={(event) => set("externalUrl", event.target.value)} placeholder="https://" aria-invalid={!!fieldError("externalUrl")} />
@@ -676,7 +677,7 @@ function ProductPreview({ values, currency, price }: { values: EditorProduct; cu
         </div>
         <div className="flex flex-col gap-2 p-4">
           <p className="font-display text-h4 break-words">{values.title.trim() || "Untitled product"}</p>
-          {values.description.trim() && <p className="line-clamp-3 text-sm whitespace-pre-line text-mute">{values.description}</p>}
+          {plainTextOf(values.descriptionDoc) && <p className="line-clamp-3 text-sm whitespace-pre-line text-mute">{plainTextOf(values.descriptionDoc)}</p>}
           <p className="font-display text-money-m">{price ? <PriceTag product={price} currency={currency} regularClassName="text-mute" /> : "Set a price"}</p>
           <span className="flex h-11 items-center justify-center rounded-md bg-primary text-button text-primary-foreground">{values.buttonText.trim() || "Buy now"}</span>
         </div>

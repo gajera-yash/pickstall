@@ -1,4 +1,5 @@
 import "server-only";
+import type { RichDoc } from "@/lib/products/rich-text";
 
 import type { Collection } from "mongodb";
 
@@ -76,7 +77,10 @@ export type ProductDoc = {
   title: string;
   /** Unique per store (index `products_store_slug_unique`). */
   slug: string;
+  /** Plain text of the description (cards, meta, search). Derived from descriptionDoc on save. */
   description: string | null;
+  /** The description as allow-listed rich text (D-049); missing on products saved before it. */
+  descriptionDoc?: RichDoc | null;
   coverUrl: string | null;
   /** Regular price, in Stripe amount units for the store currency (D-046). 0 is free. */
   priceCents: number;

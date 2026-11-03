@@ -26,6 +26,7 @@ let orderB: OrderDoc;
 const input: ProductInput = {
   title: "Hijacked",
   description: undefined,
+  descriptionDoc: null,
   coverUrl: undefined,
   externalUrl: "https://evil.example.com",
   priceCents: 1,

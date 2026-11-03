@@ -25,7 +25,7 @@ const PRODUCT_ID = "11111111-2222-4333-8444-555555555555";
 
 const valid = {
   title: "Instagram playbook",
-  description: "Everything you need.",
+  descriptionDoc: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Everything you need." }] }] },
   coverUrl: "https://images.example.com/cover.jpg",
   externalUrl: "https://drive.example.com/file",
   price: "19.99",
@@ -141,9 +141,18 @@ describe("productInput", () => {
   });
 
   it("strips HTML from every text field", () => {
-    const parsed = productInput.parse({ ...valid, title: "<b>Big</b> sale", description: "<img src=x onerror=alert(1)>Nice" });
+    const descriptionDoc = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "<img src=x onerror=alert(1)>Nice" }] }] };
+    const parsed = productInput.parse({ ...valid, title: "<b>Big</b> sale", descriptionDoc });
     expect(parsed.title).toBe("Big sale");
     expect(parsed.description).toBe("Nice");
+  });
+
+  it("makes the plain description from the checked document, never from the client (D-049)", () => {
+    const parsed = productInput.parse({ ...valid, description: "sent by the client" });
+    expect(parsed.description).toBe("Everything you need.");
+    const empty = productInput.parse({ ...valid, descriptionDoc: { type: "doc", content: [{ type: "paragraph" }] } });
+    expect(empty).toMatchObject({ description: undefined, descriptionDoc: null });
+    expect(productInput.safeParse({ ...valid, descriptionDoc: { type: "doc", content: [{ type: "html", content: "<b>x</b>" }] } }).success).toBe(false);
   });
 
   it("saves a discounted price only while the discount is on (D-047)", () => {

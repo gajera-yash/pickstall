@@ -2,6 +2,7 @@ import { ArrowLeft, Lock } from "lucide-react";
 import Link from "next/link";
 
 import { PriceTag } from "@/components/store/price-tag";
+import { RichTextView } from "@/components/store/rich-text";
 import { StoreHeader } from "@/components/store/store-page";
 import { StoreFrame, cardStyle, resolveTheme } from "@/components/store/store-theme";
 import { safeImageSrc } from "@/lib/media/media";
@@ -31,10 +32,15 @@ export function ProductPage({ store, product, buyable }: { store: PublicStore; p
         <h1 className="font-display text-h1 break-words" style={{ fontWeight: preset.displayWeight }}>
           {product.title}
         </h1>
-        {product.description && (
-          <p className="text-body-l break-words whitespace-pre-line" style={{ color: preset.muted }}>
-            {product.description}
-          </p>
+        {product.descriptionDoc ? (
+          <RichTextView doc={product.descriptionDoc} className="text-body-l" linkStyle={{ color: preset.text }} />
+        ) : (
+          // Products saved before D-049 have a plain description only.
+          product.description && (
+            <p className="text-body-l break-words whitespace-pre-line" style={{ color: preset.muted }}>
+              {product.description}
+            </p>
+          )
         )}
         <p className="font-display text-money-l">
           <PriceTag product={product} currency={store.currency} regularStyle={{ color: preset.muted }} />
