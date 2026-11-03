@@ -29,7 +29,7 @@ describe("completeSignup", () => {
     expect(await completeSignup(user, undefined)).toBe("/dashboard");
     expect(intents.takeSignupIntent).toHaveBeenCalledWith("maya@example.com", "cookie-value");
     expect(profiles.saveProfile).toHaveBeenCalledWith(userId, "maya@example.com", { fullName: "Maya Patel", phone: "+14155550100" });
-    expect(draftStore.createDraftStore).toHaveBeenCalledWith(userId, "maya-books", "Maya Patel");
+    expect(draftStore.createDraftStore).toHaveBeenCalledWith(userId, "maya-books");
     expect(cookieJar.has("signup_intent")).toBe(false);
   });
 
@@ -101,7 +101,7 @@ describe("claimUsername", () => {
     profiles.getProfile.mockResolvedValue({ fullName: "Maya Patel", phone: null });
     draftStore.createDraftStore.mockResolvedValue("created");
     expect(await redirectOf(() => claimUsername(null, formData({ username: "Maya-Books" })))).toBe("/dashboard");
-    expect(draftStore.createDraftStore).toHaveBeenCalledWith(userId, "maya-books", "Maya Patel");
+    expect(draftStore.createDraftStore).toHaveBeenCalledWith(userId, "maya-books");
   });
 
   it("saves a new name and phone", async () => {

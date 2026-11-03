@@ -169,7 +169,7 @@ export async function claimUsername(_prev: ClaimUsernameState, formData: FormDat
     return err("Couldn't save your details. Check your connection and try again.");
   }
 
-  const result = await createDraftStore(user.id, username, fullName ?? profile?.fullName ?? username);
+  const result = await createDraftStore(user.id, username);
   if (result === "taken") return err(SLUG_TAKEN_MESSAGE, "username");
   if (result === "error") return err("Couldn't create your store. Check your connection and try again.");
   redirect(DASHBOARD_PATH);

@@ -6,17 +6,17 @@ import { DEFAULT_CURRENCY } from "@/lib/config";
 import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { logger } from "@/lib/logger";
-import { STORE_NAME_MAX_LENGTH } from "@/lib/stores/schemas";
+import { storeNameFromUsername } from "@/lib/stores/store-name";
 import { DEFAULT_THEME } from "@/lib/themes";
 
 export type DraftStoreResult = "created" | "taken" | "has_store" | "error";
 
 /**
  * Creates the user's draft (unpublished) store. `ownerId` must come from the verified session.
- * The unique indexes decide taken usernames and one store per user (lib/db/mongo.ts).
+ * The unique indexes decide taken usernames and one store per user (lib/db/mongo.ts). The store
+ * name starts as the username the creator picked (D-044).
  */
-export async function createDraftStore(ownerId: string, username: string, name: string): Promise<DraftStoreResult> {
-  const storeName = name.trim().slice(0, STORE_NAME_MAX_LENGTH).trim() || username;
+export async function createDraftStore(ownerId: string, username: string): Promise<DraftStoreResult> {
   const now = new Date();
   try {
     const { stores } = await collections();
@@ -24,7 +24,7 @@ export async function createDraftStore(ownerId: string, username: string, name: 
       _id: randomUUID(),
       ownerId,
       slug: username,
-      name: storeName,
+      name: storeNameFromUsername(username),
       bio: null,
       avatarUrl: null,
       socialLinks: [],

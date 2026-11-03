@@ -33,7 +33,7 @@ export async function completeSignup(user: { id: string; email?: string | null }
     logger.warn("signup.profile_update_failed", { name: error instanceof Error ? error.name : undefined });
   }
 
-  const result = await createDraftStore(user.id, intent.username, intent.fullName);
+  const result = await createDraftStore(user.id, intent.username);
   if (result === "created" || result === "has_store") return DASHBOARD_PATH;
   if (result === "taken") return `${USERNAME_PATH}?taken=1`;
   return USERNAME_PATH;
