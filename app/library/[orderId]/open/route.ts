@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { appOriginFrom } from "@/lib/app-origin";
 import { getCurrentUser } from "@/lib/auth/guards";
 import { logger } from "@/lib/logger";
+import { openFileForDownload } from "@/lib/files/product-files";
+import { attachmentHeader } from "@/lib/files/types";
 import { grantAccess } from "@/lib/library/queries";
 import { isUuid } from "@/lib/media/media";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
@@ -27,6 +29,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const access = await grantAccess(user.email, orderId);
     if (!access.ok) return back(`?problem=${access.reason}`);
+
+    if (access.kind === "file") {
+      // Streamed from private storage to this buyer only, after the checks above (D-050).
+      const file = await openFileForDownload(access.storeId, access.fileId);
+      if (!file) return back("?problem=unavailable");
+      return new Response(file.stream, {
+        headers: {
+          "Content-Type": file.mime,
+          "Content-Length": String(file.size),
+          "Content-Disposition": attachmentHeader(file.name),
+          "Cache-Control": "private, no-store",
+          "X-Content-Type-Options": "nosniff",
+          "Content-Security-Policy": "default-src 'none'; sandbox",
+          "Referrer-Policy": "no-referrer",
+        },
+      });
+    }
 
     // The link was validated as https when the creator saved it; check again before leaving.
     const target = new URL(access.url);

@@ -1,11 +1,12 @@
 "use client";
 
-import { Archive, ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, ChevronUp, Circle, CreditCard, FileText, ImageIcon, Link2, Lock, Mail, Phone, Plus, Rocket, Settings2, ShoppingCart, Trash2, Undo2, UserRound } from "lucide-react";
+import { Archive, ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, ChevronUp, Circle, CreditCard, FileText, FileUp, ImageIcon, Link2, Lock, Mail, Phone, Plus, Rocket, Settings2, ShoppingCart, Trash2, Undo2, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 
 import { ImageUploader } from "@/components/dashboard/image-uploader";
+import { ProductFileField } from "@/components/dashboard/product-file-field";
 import { RichTextEditor } from "@/components/dashboard/rich-text-editor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PriceTag } from "@/components/store/price-tag";
@@ -28,6 +29,7 @@ import { plainTextOf, type RichDoc } from "@/lib/products/rich-text";
 import { PRODUCT_STEPS, PRODUCT_STEP_LABELS, PRODUCT_STEP_SHORT_LABELS, detailsMissing, nextStep, previousStep, stepOfField, stepsDone, type ProductStep } from "@/lib/products/editor-steps";
 import { publishProblems } from "@/lib/products/publish";
 import { PRODUCT_LIMITS } from "@/lib/products/schemas";
+import type { ProductFileInfo } from "@/lib/files/types";
 import { cn } from "@/lib/utils";
 
 export type EditorQuestion = { id: string; label: string; kind: "text" | "long_text" | "dropdown" | "checkbox"; required: boolean; options: string[] };
@@ -41,6 +43,9 @@ export type EditorProduct = {
   descriptionDoc: RichDoc;
   coverUrl: string;
   externalUrl: string;
+  /** Upload file or Redirect to URL (D-050), and the uploaded file. */
+  deliveryType: "link" | "file";
+  file: ProductFileInfo | null;
   price: string;
   /** Discount toggle and the discounted price buyers pay (D-047). */
   discountOn: boolean;
@@ -151,6 +156,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
     descriptionDoc: values.descriptionDoc,
     coverUrl: values.coverUrl,
     externalUrl: values.externalUrl,
+    deliveryType: values.deliveryType,
     price: values.price,
     discountOn: values.discountOn,
     salePrice: values.discountOn ? values.salePrice : "",
@@ -185,10 +191,18 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
   const saleHint = saving > 0 ? `Buyers pay this instead. That is ${saving}% off.` : "Buyers pay this instead of the price above.";
   const busy = pending || statusPending;
 
-  const missingDetails = detailsMissing({ title: values.title, priceValid: priceCents !== null, hasDelivery: values.externalUrl.trim() !== "" });
+  const delivered = values.deliveryType === "file" ? values.file !== null : values.externalUrl.trim() !== "";
+  const missingDetails = detailsMissing({ title: values.title, priceValid: priceCents !== null, hasDelivery: delivered });
   const done = stepsDone({ detailsOk: missingDetails.length === 0, furthest, published: values.status === "published" });
   const toPublish = publishProblems(
-    { title: values.title, priceCents: priceCents ?? 0, salePriceCents: salePriceCents ?? null, externalUrl: values.externalUrl.trim() || null },
+    {
+      title: values.title,
+      priceCents: priceCents ?? 0,
+      salePriceCents: salePriceCents ?? null,
+      externalUrl: values.externalUrl.trim() || null,
+      deliveryType: values.deliveryType,
+      fileId: values.file?.id ?? null,
+    },
     paymentsOk,
   );
   const blockers = [...new Set([...missingDetails, ...toPublish])];
@@ -294,9 +308,42 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
               </Field>
               <RichTextEditor id="descriptionDoc" label="Description (optional)" value={values.descriptionDoc} onChange={(doc) => set("descriptionDoc", doc)} error={fieldError("descriptionDoc")} />
               <ImageUploader id="coverUrl" label="Cover image (optional)" kind="cover" shape="wide" value={values.coverUrl} onChange={(value) => set("coverUrl", value)} error={fieldError("coverUrl")} hint="Shown on your store and product page. JPG, PNG, WebP or GIF, up to 5 MB." />
-              <Field id="externalUrl" label="Delivery link" error={fieldError("externalUrl")} hint="Where buyers get the product (Google Drive, Notion, Dropbox...). Only buyers see it, after paying.">
-                <Input id="externalUrl" type="url" inputMode="url" value={values.externalUrl} onChange={(event) => set("externalUrl", event.target.value)} placeholder="https://" aria-invalid={!!fieldError("externalUrl")} />
-              </Field>
+              <fieldset className="flex flex-col gap-3">
+                <legend className="mb-2 text-sm font-semibold">How buyers get it</legend>
+                <div role="radiogroup" aria-label="Delivery" className="grid grid-cols-2 gap-1 rounded-md border border-line bg-bg-subtle p-1">
+                  {(
+                    [
+                      { id: "file", label: "Upload file", icon: FileUp },
+                      { id: "link", label: "Redirect to URL", icon: Link2 },
+                    ] as const
+                  ).map(({ id, label, icon: Icon }) => {
+                    const on = values.deliveryType === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        onClick={() => set("deliveryType", id)}
+                        className={cn(
+                          "flex min-h-10 items-center justify-center gap-2 rounded-sm px-3 text-sm font-semibold transition-colors duration-(--dur-fast)",
+                          on ? "border border-blue bg-blue-soft text-ink" : "border border-transparent text-mute hover:text-ink",
+                        )}
+                      >
+                        <Icon aria-hidden="true" className="size-4" />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {values.deliveryType === "file" ? (
+                  <ProductFileField productId={values.id} file={values.file} onChange={(file) => set("file", file)} />
+                ) : (
+                  <Field id="externalUrl" label="Delivery link" error={fieldError("externalUrl")} hint="Where buyers go after paying (Google Drive, Notion, Dropbox...). Only buyers see it.">
+                    <Input id="externalUrl" type="url" inputMode="url" value={values.externalUrl} onChange={(event) => set("externalUrl", event.target.value)} placeholder="https://" aria-invalid={!!fieldError("externalUrl")} />
+                  </Field>
+                )}
+              </fieldset>
 
               <fieldset className="flex flex-col gap-4">
                 <legend className="mb-2 text-sm font-semibold">Price</legend>
@@ -684,8 +731,14 @@ function ProductPreview({ values, currency, price }: { values: EditorProduct; cu
       </div>
       <ul className="flex flex-col gap-1.5 text-sm text-mute">
         <li className="flex items-center gap-2">
-          {values.externalUrl.trim() ? <Check aria-hidden="true" className="size-4 text-mint" /> : <Link2 aria-hidden="true" className="size-4" />}
-          {values.externalUrl.trim() ? "Delivery link added" : "Add a delivery link to publish"}
+          {(values.deliveryType === "file" ? values.file : values.externalUrl.trim()) ? <Check aria-hidden="true" className="size-4 text-mint" /> : <Link2 aria-hidden="true" className="size-4" />}
+          {values.deliveryType === "file"
+            ? values.file
+              ? `File added: ${values.file.name}`
+              : "Upload a file to publish"
+            : values.externalUrl.trim()
+              ? "Delivery link added"
+              : "Add a delivery link to publish"}
         </li>
         <li className="flex items-center gap-2">
           <CreditCard aria-hidden="true" className="size-4" />

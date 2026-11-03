@@ -4,6 +4,8 @@ const db = vi.hoisted(() => ({
   ordersFindOne: vi.fn(),
   ordersUpdateOne: vi.fn(),
   productsFindOne: vi.fn(),
+  filesFindOne: vi.fn(),
+  openFile: vi.fn(),
   user: vi.fn(),
   rate: vi.fn(),
 }));
@@ -13,8 +15,10 @@ vi.mock("@/lib/db/collections", () => ({
   collections: vi.fn(async () => ({
     orders: { findOne: db.ordersFindOne, updateOne: db.ordersUpdateOne },
     products: { findOne: db.productsFindOne },
+    files: { findOne: db.filesFindOne },
   })),
 }));
+vi.mock("@/lib/files/product-files", () => ({ openFileForDownload: db.openFile }));
 vi.mock("@/lib/auth/guards", () => ({ getCurrentUser: db.user }));
 vi.mock("@/lib/env", () => ({ publicEnv: { NEXT_PUBLIC_APP_URL: "http://localhost:3000" } }));
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() } }));
@@ -35,7 +39,7 @@ describe("grantAccess (the only place the delivery link leaves the server)", () 
   });
 
   it("gives the link for a paid order of this buyer, matching the email in lowercase", async () => {
-    expect(await grantAccess(" Maya@Example.com ", ORDER)).toEqual({ ok: true, url: "https://drive.example.com/secret" });
+    expect(await grantAccess(" Maya@Example.com ", ORDER)).toEqual({ ok: true, kind: "link", url: "https://drive.example.com/secret" });
     expect(db.ordersFindOne).toHaveBeenCalledWith({ _id: ORDER, buyerEmail: "maya@example.com" }, expect.anything());
     expect(db.ordersUpdateOne.mock.calls[0]?.[0]).toMatchObject({ _id: ORDER, buyerEmail: "maya@example.com", status: "paid" });
   });
@@ -58,6 +62,23 @@ describe("grantAccess (the only place the delivery link leaves the server)", () 
     db.productsFindOne.mockResolvedValue(null);
     expect(await grantAccess("maya@example.com", ORDER)).toEqual({ ok: false, reason: "unavailable" });
     db.productsFindOne.mockResolvedValue({ externalUrl: null, downloadLimit: null });
+    expect(await grantAccess("maya@example.com", ORDER)).toEqual({ ok: false, reason: "unavailable" });
+  });
+
+  it("hands out a file through the order's own store, only when the file exists (D-050)", async () => {
+    db.productsFindOne.mockResolvedValue({ externalUrl: "https://old.example.com", deliveryType: "file", fileId: "f1", downloadLimit: null });
+    db.filesFindOne.mockResolvedValue({ _id: "f1" });
+    expect(await grantAccess("maya@example.com", ORDER)).toEqual({ ok: true, kind: "file", storeId: "s1", fileId: "f1" });
+    expect(db.filesFindOne).toHaveBeenCalledWith({ _id: "f1", storeId: "s1" }, expect.anything());
+
+    // A missing file is unavailable and does not use up a download.
+    vi.clearAllMocks();
+    db.ordersFindOne.mockResolvedValue(paid);
+    db.productsFindOne.mockResolvedValue({ deliveryType: "file", fileId: "f1", downloadLimit: 1 });
+    db.filesFindOne.mockResolvedValue(null);
+    expect(await grantAccess("maya@example.com", ORDER)).toEqual({ ok: false, reason: "unavailable" });
+    expect(db.ordersUpdateOne).not.toHaveBeenCalled();
+    db.productsFindOne.mockResolvedValue({ deliveryType: "file", fileId: null, downloadLimit: null });
     expect(await grantAccess("maya@example.com", ORDER)).toEqual({ ok: false, reason: "unavailable" });
   });
 
@@ -114,6 +135,27 @@ describe("POST /library/[orderId]/open", () => {
     expect((await call(undefined, "../etc")).headers.get("location")).toBe("http://localhost:3000/library");
     db.rate.mockResolvedValue(false);
     expect((await call()).headers.get("location")).toContain("problem=slow");
+  });
+
+  it("streams a file product as a private download with a safe name and no sniffing (D-050)", async () => {
+    db.productsFindOne.mockResolvedValue({ deliveryType: "file", fileId: "f1", downloadLimit: null });
+    db.filesFindOne.mockResolvedValue({ _id: "f1" });
+    db.openFile.mockResolvedValue({ stream: new Response("%PDF-1.7").body, size: 8, name: 'Tax "guide".pdf', mime: "application/pdf" });
+    const response = await call("http://localhost:3000");
+    expect(db.openFile).toHaveBeenCalledWith("s1", "f1");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("application/pdf");
+    expect(response.headers.get("content-disposition")).toContain('attachment; filename="Tax _guide_.pdf"');
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(await response.text()).toBe("%PDF-1.7");
+  });
+
+  it("goes back with 'unavailable' when the file cannot be opened", async () => {
+    db.productsFindOne.mockResolvedValue({ deliveryType: "file", fileId: "f1", downloadLimit: null });
+    db.filesFindOne.mockResolvedValue({ _id: "f1" });
+    db.openFile.mockResolvedValue(null);
+    expect((await call()).headers.get("location")).toContain("problem=unavailable");
   });
 
   it("does not redirect to a link that is not https", async () => {

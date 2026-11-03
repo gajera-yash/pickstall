@@ -4,6 +4,15 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-050: Product delivery is an uploaded file or a redirect link; files on private disk storage
+- **Date:** 2026-11-03
+- **Decision (founder request, storage choice "disk only for now"):** the Details step asks "How buyers get it": **Upload file** or **Redirect to URL**. `products.deliveryType` (`"link"` or `"file"`, missing = link for older products) and `products.fileId` record the choice; a product publishes only when the chosen one is there (`hasDelivery` in lib/products/publish.ts, used by the server and the editor checklist).
+- **Upload:** `PUT /api/products/[id]/file` takes the raw file (name in `X-File-Name`), only for the signed-in creator's own product (store id from the session), rate limited (20 per 10 minutes), at most 200 MB (`PRODUCT_FILE_MAX_BYTES`), checked from Content-Length first and again while streaming, so a file is never held in memory. Allowed types: PDF, ZIP, EPUB, Word, Excel, CSV, PNG, JPG, MP3, MP4; the extension AND the first bytes must match, and the stored type comes from our table, never from the browser. The shown name is cleaned (no path, control or reserved characters, 120 characters). `DELETE` removes it and goes back to link delivery. Replacing a file removes the old one; deleting a product removes its files. The editor shows upload progress, then the name, type and size with Replace and Remove.
+- **Storage:** a new `files` collection (`FileDoc`: store id, product id, uuid key, name, ext, mime, size; index on store and product) and a private folder on the server's disk, `PRODUCT_FILES_DIR` (default `.data/product-files`), separate from the public images. Files are never served by path.
+- **Buyer download:** through the existing library link (`/library/[orderId]/open`) after the same checks as links (the buyer's own paid order, not refunded, download limit counted atomically, file still present). The file is streamed by the server with `Content-Disposition: attachment`, `no-store`, `nosniff` and a sandbox CSP, instead of a separate 60-second signed link: the checked request itself is the short-lived access, and nothing is left that can be shared.
+- **Limits of this choice:** disk storage needs one server with a persistent disk; serverless hosting or several servers need a private bucket with signed URLs (PRD F3b), to decide before deploy. No virus scanning yet.
+- **Why:** founder request, 2026-11-03.
+
 ## D-049: Rich text product descriptions (Tiptap), stored as allow-listed JSON
 - **Date:** 2026-11-03
 - **Decision (founder request and choice of Tiptap):** the Details step has a text editor for the description: bold, italic, underline, two heading sizes, bullet and numbered lists, links, undo and redo, with a character count. New dependencies (founder approved): `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/pm` 3.32.2; StarterKit 3 already includes Link and Underline, so no separate link package.

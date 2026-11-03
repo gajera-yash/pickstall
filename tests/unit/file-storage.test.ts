@@ -1,0 +1,75 @@
+import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+const dir = vi.hoisted(() => ({ path: "" }));
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/env.server", () => ({
+  serverEnv: {
+    get PRODUCT_FILES_DIR() {
+      return dir.path;
+    },
+  },
+}));
+
+import { readFileStream, removeFile, writeFileStream } from "@/lib/files/storage";
+
+const KEY = "11111111-2222-4333-8444-555555555555";
+
+function streamOf(...chunks: Uint8Array[]): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(chunk);
+      controller.close();
+    },
+  });
+}
+
+async function text(stream: ReadableStream<Uint8Array>): Promise<string> {
+  return new Response(stream).text();
+}
+
+describe("private product file storage (D-050)", () => {
+  beforeAll(async () => {
+    dir.path = await mkdtemp(path.join(tmpdir(), "pickstall-files-"));
+  });
+  afterAll(async () => {
+    await rm(dir.path, { recursive: true, force: true });
+  });
+
+  it("streams a file to disk and reads it back, keeping the first bytes for the type check", async () => {
+    const result = await writeFileStream(KEY, streamOf(new TextEncoder().encode("%PDF-1.7 "), new TextEncoder().encode("hello")), 1000);
+    expect(result).toMatchObject({ ok: true, size: 14 });
+    if (result.ok) expect(new TextDecoder().decode(result.head)).toBe("%PDF-1.7 hello");
+    const file = await readFileStream(KEY);
+    expect(file?.size).toBe(14);
+    expect(await text(file!.stream)).toBe("%PDF-1.7 hello");
+  });
+
+  it("stops at the size limit and leaves nothing behind", async () => {
+    const key = "22222222-2222-4333-8444-555555555555";
+    const result = await writeFileStream(key, streamOf(new Uint8Array(600), new Uint8Array(600)), 1000);
+    expect(result).toEqual({ ok: false, reason: "too_large" });
+    expect(await readFileStream(key)).toBeNull();
+    expect((await readdir(dir.path)).some((name) => name.startsWith(key))).toBe(false);
+  });
+
+  it("refuses an empty upload", async () => {
+    const key = "33333333-2222-4333-8444-555555555555";
+    expect(await writeFileStream(key, streamOf(), 1000)).toEqual({ ok: false, reason: "empty" });
+    expect(await readFileStream(key)).toBeNull();
+  });
+
+  it("only accepts server-made uuid keys, so no path can be smuggled in", async () => {
+    await expect(writeFileStream("../escape", streamOf(new Uint8Array(1)), 1000)).rejects.toThrow("Invalid file key.");
+    await expect(readFileStream("../../etc/passwd")).rejects.toThrow("Invalid file key.");
+  });
+
+  it("reads a missing file as null and removes files", async () => {
+    expect(await readFileStream("44444444-2222-4333-8444-555555555555")).toBeNull();
+    await removeFile(KEY);
+    expect(await readFileStream(KEY)).toBeNull();
+  });
+});

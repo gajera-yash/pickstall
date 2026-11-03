@@ -29,6 +29,7 @@ const input: ProductInput = {
   descriptionDoc: null,
   coverUrl: undefined,
   externalUrl: "https://evil.example.com",
+  deliveryType: "link",
   priceCents: 1,
   salePriceCents: null,
   buttonText: undefined,

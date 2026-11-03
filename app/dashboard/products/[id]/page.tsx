@@ -5,6 +5,7 @@ import { ProductEditor, type EditorProduct } from "@/components/dashboard/produc
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { storeLink } from "@/lib/config";
+import { findProductFile } from "@/lib/files/product-files";
 import { centsToInput } from "@/lib/products/money";
 import { docFromPlainText } from "@/lib/products/rich-text";
 import { paymentsReady } from "@/lib/products/publish";
@@ -38,6 +39,9 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
     descriptionDoc: product.descriptionDoc ?? docFromPlainText(product.description),
     coverUrl: product.coverUrl ?? "",
     externalUrl: product.externalUrl ?? "",
+    // Products saved before D-050 deliver a link.
+    deliveryType: product.deliveryType ?? "link",
+    file: await findProductFile(store.id, product.fileId).catch(() => null),
     price: centsToInput(product.priceCents, store.currency),
     discountOn: product.salePriceCents != null,
     salePrice: centsToInput(product.salePriceCents ?? null, store.currency),

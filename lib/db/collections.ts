@@ -95,6 +95,13 @@ export type ProductDoc = {
   minPriceCents?: number | null;
   /** Never in public reads: delivered only after a verified payment. */
   externalUrl: string | null;
+  /**
+   * How buyers get the product (D-050): a link (externalUrl) or an uploaded file (fileId). Missing
+   * on products saved before it, which are links.
+   */
+  deliveryType?: "link" | "file";
+  /** The uploaded file in `files` when deliveryType is "file". Never in public reads. */
+  fileId?: string | null;
   buttonText: string | null;
   downloadLimit: number | null;
   status: "draft" | "published" | "archived";
@@ -177,6 +184,23 @@ export type UploadDoc = {
   createdAt: Date;
 };
 
+/**
+ * A product file buyers download (D-050). Kept in private storage under `key` (a uuid); `name` is
+ * the cleaned name buyers download as, `mime` comes from the detected type. Every read filters by
+ * `storeId` from the session or from the buyer's paid order.
+ */
+export type FileDoc = {
+  _id: string;
+  storeId: string;
+  productId: string;
+  key: string;
+  name: string;
+  ext: string;
+  mime: string;
+  size: number;
+  createdAt: Date;
+};
+
 /** Fixed-window rate-limit counter. Removed by a TTL index after `expiresAt`. */
 export type RateLimitDoc = { _id: string; count: number; expiresAt: Date };
 
@@ -185,6 +209,7 @@ export async function collections(): Promise<{
   stores: Collection<StoreDoc>;
   products: Collection<ProductDoc>;
   uploads: Collection<UploadDoc>;
+  files: Collection<FileDoc>;
   orders: Collection<OrderDoc>;
   accessTokens: Collection<AccessTokenDoc>;
   emailOutbox: Collection<EmailOutboxDoc>;
@@ -198,6 +223,7 @@ export async function collections(): Promise<{
     stores: db.collection<StoreDoc>("stores"),
     products: db.collection<ProductDoc>("products"),
     uploads: db.collection<UploadDoc>("uploads"),
+    files: db.collection<FileDoc>("files"),
     orders: db.collection<OrderDoc>("orders"),
     accessTokens: db.collection<AccessTokenDoc>("accessTokens"),
     emailOutbox: db.collection<EmailOutboxDoc>("emailOutbox"),

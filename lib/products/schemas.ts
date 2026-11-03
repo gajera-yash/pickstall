@@ -104,6 +104,8 @@ export const productInputFor = (currency: string) =>
     descriptionDoc: richDocSchema.nullable(),
     coverUrl: imageField("Cover"),
     externalUrl: httpsUrlSchema("link"),
+    /** Upload file or Redirect to URL (D-050). The file itself is uploaded separately. */
+    deliveryType: z.enum(["link", "file"], { error: "Pick how buyers get the product." }),
     price: moneyField("Price", currency),
     /** Discount toggle (D-047): when on, buyers pay `salePrice` instead of `price`. */
     discountOn: z.boolean(),

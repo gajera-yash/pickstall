@@ -80,16 +80,20 @@ export async function hasPurchases(email: string): Promise<boolean> {
   return (await orders.countDocuments({ buyerEmail: normalize(email), status: { $in: ["paid", "refunded"] } }, { limit: 1 })) > 0;
 }
 
-export type AccessResult = { ok: true; url: string } | { ok: false; reason: "not_found" | "refunded" | "unavailable" | "limit" };
+export type AccessResult =
+  | { ok: true; kind: "link"; url: string }
+  | { ok: true; kind: "file"; storeId: string; fileId: string }
+  | { ok: false; reason: "not_found" | "refunded" | "unavailable" | "limit" };
 
 /**
- * Hands out the delivery link, once every check passes: the order is this buyer's, it is paid (a
- * refund removes access), the product still has a link, and the download limit is not used up. The
- * limit is enforced by one atomic update, so two parallel requests cannot both take the last use.
+ * Hands out the delivery link or file (D-050), once every check passes: the order is this buyer's,
+ * it is paid (a refund removes access), the product still has something to deliver, and the
+ * download limit is not used up. The limit is enforced by one atomic update, so two parallel
+ * requests cannot both take the last use. A file is found through the order's own store.
  */
 export async function grantAccess(email: string, orderId: string): Promise<AccessResult> {
   if (!isUuid(orderId)) return { ok: false, reason: "not_found" };
-  const { orders, products } = await collections();
+  const { orders, products, files } = await collections();
   const buyerEmail = normalize(email);
 
   const order = await orders.findOne({ _id: orderId, buyerEmail }, { projection: { productId: 1, storeId: 1, status: 1 } });
@@ -97,8 +101,12 @@ export async function grantAccess(email: string, orderId: string): Promise<Acces
   if (order.status === "refunded") return { ok: false, reason: "refunded" };
   if (order.status !== "paid") return { ok: false, reason: "not_found" };
 
-  const product = await products.findOne({ _id: order.productId, storeId: order.storeId }, { projection: { externalUrl: 1, downloadLimit: 1 } });
-  if (!product?.externalUrl) return { ok: false, reason: "unavailable" };
+  const product = await products.findOne({ _id: order.productId, storeId: order.storeId }, { projection: { externalUrl: 1, downloadLimit: 1, deliveryType: 1, fileId: 1 } });
+  if (!product) return { ok: false, reason: "unavailable" };
+  const file = product.deliveryType === "file";
+  if (file ? !product.fileId : !product.externalUrl) return { ok: false, reason: "unavailable" };
+  // Check the file is really there before a download is counted.
+  if (file && !(await files.findOne({ _id: product.fileId as string, storeId: order.storeId }, { projection: { _id: 1 } }))) return { ok: false, reason: "unavailable" };
 
   const limit = product.downloadLimit;
   const counted = await orders.updateOne(
@@ -112,5 +120,5 @@ export async function grantAccess(email: string, orderId: string): Promise<Acces
   );
   if (counted.matchedCount === 0) return { ok: false, reason: limit ? "limit" : "not_found" };
 
-  return { ok: true, url: product.externalUrl };
+  return file ? { ok: true, kind: "file", storeId: order.storeId, fileId: product.fileId as string } : { ok: true, kind: "link", url: product.externalUrl as string };
 }

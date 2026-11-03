@@ -11,6 +11,8 @@ const queries = vi.hoisted(() => ({
   storeQueries: vi.fn(),
 }));
 vi.mock("@/lib/products/queries", () => queries);
+const productFiles = vi.hoisted(() => ({ removeFilesOfProduct: vi.fn(async () => undefined) }));
+vi.mock("@/lib/files/product-files", () => productFiles);
 
 import { changeProductStatus, createProductAndEdit, removeProduct, saveProduct } from "@/lib/products/actions";
 import { centsToInput, formatMoney, parseMoneyToCents, priceLimits, priceProblem } from "@/lib/products/money";
@@ -28,6 +30,7 @@ const valid = {
   descriptionDoc: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Everything you need." }] }] },
   coverUrl: "https://images.example.com/cover.jpg",
   externalUrl: "https://drive.example.com/file",
+  deliveryType: "link",
   price: "19.99",
   discountOn: false,
   salePrice: "",
@@ -200,7 +203,9 @@ describe("publish rules", () => {
 
   it("needs a delivery link or a file", () => {
     expect(checkPublish({ ...free, externalUrl: null }, { stripeChargesEnabled: false })).toEqual({ ok: false, problems: ["Add a link or a file to deliver."] });
-    expect(checkPublish({ ...free, externalUrl: null, fileCount: 1 }, { stripeChargesEnabled: false })).toEqual({ ok: true });
+    expect(checkPublish({ ...free, externalUrl: null, deliveryType: "file", fileId: "f1" }, { stripeChargesEnabled: false })).toEqual({ ok: true });
+    // A file product needs its file, whatever link is left over from before (D-050).
+    expect(checkPublish({ ...free, deliveryType: "file", fileId: null }, { stripeChargesEnabled: false })).toMatchObject({ ok: false });
   });
 
   it("lets free products publish without payments", () => {
@@ -301,6 +306,12 @@ describe("product actions use the session owner's store only", () => {
     queries.updateProduct.mockResolvedValue("saved");
     expect(await saveProduct(PRODUCT_ID, null, form())).toMatchObject({ ok: true, data: { published: false } });
     expect(queries.setProductStatus).not.toHaveBeenCalled();
+  });
+
+  it("removes the product's file after deleting it, through the owner's store", async () => {
+    queries.deleteProduct.mockResolvedValue(true);
+    expect(await removeProduct(PRODUCT_ID)).toMatchObject({ ok: true });
+    expect(productFiles.removeFilesOfProduct).toHaveBeenCalledWith("store-1", PRODUCT_ID);
   });
 
   it("deletes only through the owner's store and reports why a published product stays", async () => {

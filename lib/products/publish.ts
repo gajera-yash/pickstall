@@ -3,7 +3,7 @@ import { payableCents, type Priced } from "@/lib/products/pricing";
 
 export type PublishCheck = { ok: true } | { ok: false; problems: string[] };
 
-type Publishable = Pick<ProductDoc, "title" | "priceCents" | "salePriceCents" | "externalUrl"> & { fileCount?: number };
+type Publishable = Pick<ProductDoc, "title" | "priceCents" | "salePriceCents" | "externalUrl" | "deliveryType" | "fileId">;
 
 /**
  * Whether paid products may be published: the creator's Stripe account must be connected, or we
@@ -19,6 +19,11 @@ export function isPaid(product: Priced): boolean {
   return payableCents(product) > 0;
 }
 
+/** Something to deliver for the chosen delivery type (D-050): an uploaded file, or a link. */
+export function hasDelivery(product: Pick<ProductDoc, "externalUrl" | "deliveryType" | "fileId">): boolean {
+  return product.deliveryType === "file" ? Boolean(product.fileId) : Boolean(product.externalUrl);
+}
+
 /**
  * What still stops a product from being published, in the order the editor shows them (D-048).
  * Pure, so the editor's Publish step lists exactly what the server will check.
@@ -26,7 +31,7 @@ export function isPaid(product: Priced): boolean {
 export function publishProblems(product: Publishable, paymentsOk: boolean): string[] {
   const problems: string[] = [];
   if (!product.title.trim()) problems.push("Add a title.");
-  if (!product.externalUrl && !(product.fileCount && product.fileCount > 0)) problems.push("Add a link or a file to deliver.");
+  if (!hasDelivery(product)) problems.push("Add a link or a file to deliver.");
   if (isPaid(product) && !paymentsOk) problems.push("Connect payments to publish a paid product.");
   return problems;
 }

@@ -165,6 +165,10 @@ export const PASSWORD_RATE_LIMIT = { max: 10, windowMinutes: 15 } as const;
 
 /** Image uploads per creator (D-032). */
 export const UPLOAD_RATE_LIMIT = { max: 30, windowMinutes: 10 } as const;
+
+/** Product files buyers download (D-050): largest size, and uploads per creator. */
+export const PRODUCT_FILE_MAX_BYTES = 200 * 1024 * 1024;
+export const PRODUCT_FILE_UPLOAD_RATE_LIMIT = { max: 20, windowMinutes: 10 } as const;
 export const PRODUCT_RATE_LIMIT = { max: 60, windowMinutes: 10 } as const;
 
 export const PLANS = ["trial", "starter", "pro", "business"] as const;

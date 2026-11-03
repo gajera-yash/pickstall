@@ -23,7 +23,7 @@ import { setStorePublishedAction } from "@/lib/stores/actions";
 import { priceLabel, regularPriceLabel, savingPercent } from "@/lib/products/pricing";
 import { buildChecklist } from "@/lib/dashboard/checklist";
 
-const PRIVATE_KEYS = ["ownerId", "stripeAccountId", "stripeChargesEnabled", "isPublished", "externalUrl", "checkout", "afterPurchase", "storeId", "downloadLimit", "status"];
+const PRIVATE_KEYS = ["ownerId", "stripeAccountId", "stripeChargesEnabled", "isPublished", "externalUrl", "fileId", "deliveryType", "checkout", "afterPurchase", "storeId", "downloadLimit", "status"];
 
 describe("public store reads", () => {
   beforeEach(() => {
