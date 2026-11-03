@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import { collections, type OrderDoc, type ProductDoc, type StoreDoc } from "@/lib/db/collections";
 import { findPurchase, grantAccess, hasPurchases, listPurchases } from "@/lib/library/queries";
-import { countOrdersByStatus, incomeStats, listCustomers, listOrders, listPaidOrdersForExport } from "@/lib/orders/creator-queries";
+import { countOrdersByStatus, findCustomerDetail, findOrderDetail, incomeStats, listCustomers, listOrders, listOrdersForExport, listPaidOrdersForExport } from "@/lib/orders/creator-queries";
 import { loadCheckoutContext } from "@/lib/orders/queries";
 import { deleteProduct, findProduct, listProducts, setProductStatus, updateProduct } from "@/lib/products/queries";
 import type { ProductInput } from "@/lib/products/schemas";
@@ -107,14 +107,22 @@ describe("orders, customers and income are per store", () => {
   });
 
   it("shows only the store's own customers", async () => {
-    expect((await listCustomers(storeB._id)).map((c) => c.email)).toEqual(["bob@example.com"]);
-    expect(await listCustomers(storeB._id, { q: "alice" })).toEqual([]);
+    expect((await listCustomers(storeB._id)).customers.map((c) => c.email)).toEqual(["bob@example.com"]);
+    expect((await listCustomers(storeB._id, { q: "alice" })).customers).toEqual([]);
   });
 
   it("adds up only the store's own revenue", async () => {
     const stats = await incomeStats(storeA._id, "usd", 7);
     expect(stats.totalPaidOrders).toBe(1);
     expect(stats.series.revenueCents.reduce((sum, cents) => sum + cents, 0)).toBe(1900);
+  });
+
+  it("opens an order or a customer drawer only inside the store", async () => {
+    expect(await findOrderDetail(storeA._id, orderB._id)).toBeNull();
+    expect(await findCustomerDetail(storeA._id, orderB._id)).toBeNull();
+    expect((await findOrderDetail(storeB._id, orderB._id))?.buyerEmail).toBe("bob@example.com");
+    expect((await findCustomerDetail(storeB._id, orderB._id))?.orderCount).toBe(1);
+    expect((await listOrdersForExport(storeA._id)).map((o) => o.id)).toEqual([orderA._id]);
   });
 
   it("treats a search for regex characters as plain text", async () => {
@@ -135,7 +143,7 @@ describe("buyers see only their own purchases", () => {
   });
 
   it("opens the buyer's own paid order and never exposes the link in the purchase list", async () => {
-    expect(await grantAccess("alice@example.com", orderA._id)).toEqual({ ok: true, url: productA.externalUrl });
+    expect(await grantAccess("alice@example.com", orderA._id)).toEqual({ ok: true, kind: "link", url: productA.externalUrl });
     const purchase = await findPurchase("alice@example.com", orderA._id);
     expect(JSON.stringify(purchase)).not.toContain("secret-download");
   });

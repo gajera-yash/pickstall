@@ -4,7 +4,7 @@ import type { Filter } from "mongodb";
 
 import { collections, type OrderAnswerDoc, type OrderDoc } from "@/lib/db/collections";
 import { escapeRegex } from "@/lib/orders/csv";
-import type { OrderStatusFilter } from "@/lib/orders/params";
+import type { CustomerCursor, OrderStatusFilter } from "@/lib/orders/params";
 import { buildSeries, type DayRow, type Series } from "@/lib/orders/series";
 
 // Orders, customers and income for the signed-in creator. MongoDB has no row-level security, so
@@ -12,9 +12,12 @@ import { buildSeries, type DayRow, type Series } from "@/lib/orders/series";
 // id from the request. Customers are derived from paid orders, so they can never drift from them.
 
 export const PAGE_SIZE = 20;
+export const CUSTOMER_PAGE_SIZE = 25;
+const EXPORT_MAX_ROWS = 5000;
 
 export type OrderRow = {
   id: string;
+  productId: string;
   title: string;
   buyerName: string;
   buyerEmail: string;
@@ -29,6 +32,7 @@ export type OrderRow = {
 function toRow(doc: OrderDoc): OrderRow {
   return {
     id: doc._id,
+    productId: doc.productId,
     title: doc.item.title,
     buyerName: doc.buyerName,
     buyerEmail: doc.buyerEmail,
@@ -49,21 +53,61 @@ function searchFilter(q: string | undefined): Filter<OrderDoc> {
   return { $or: [{ buyerEmail: pattern }, { buyerName: pattern }] };
 }
 
+export type OrderFilters = { status?: OrderStatusFilter; q?: string; product?: string };
+
+function orderFilter(storeId: string, filters: OrderFilters): Filter<OrderDoc> {
+  return {
+    storeId,
+    ...(filters.status ? { status: filters.status } : {}),
+    ...(filters.product ? { productId: filters.product } : {}),
+    ...searchFilter(filters.q),
+  };
+}
+
 export type OrderPage = { orders: OrderRow[]; nextBefore: string | null };
 
 /** One page of this store's orders, newest first. `before` is the createdAt of the last row seen. */
-export async function listOrders(storeId: string, options: { status?: OrderStatusFilter; q?: string; before?: Date; limit?: number } = {}): Promise<OrderPage> {
+export async function listOrders(storeId: string, options: OrderFilters & { before?: Date; limit?: number } = {}): Promise<OrderPage> {
   const { orders } = await collections();
   const limit = options.limit ?? PAGE_SIZE;
-  const filter: Filter<OrderDoc> = {
-    storeId,
-    ...(options.status ? { status: options.status } : {}),
-    ...(options.before ? { createdAt: { $lt: options.before } } : {}),
-    ...searchFilter(options.q),
-  };
+  const filter: Filter<OrderDoc> = { ...orderFilter(storeId, options), ...(options.before ? { createdAt: { $lt: options.before } } : {}) };
   const docs = await orders.find(filter).sort({ createdAt: -1 }).limit(limit + 1).toArray();
   const page = docs.slice(0, limit);
   return { orders: page.map(toRow), nextBefore: docs.length > limit ? (page.at(-1)?.createdAt.toISOString() ?? null) : null };
+}
+
+/** The store's orders matching the Orders page filters, newest first, for the orders CSV. */
+export async function listOrdersForExport(storeId: string, filters: OrderFilters = {}): Promise<OrderRow[]> {
+  const { orders } = await collections();
+  const docs = await orders.find(orderFilter(storeId, filters)).sort({ createdAt: -1 }).limit(EXPORT_MAX_ROWS).toArray();
+  return docs.map(toRow);
+}
+
+export type OrderDetail = OrderRow & {
+  buyerPhone: string | null;
+  subtotalCents: number;
+  discountCents: number;
+  paidAt: Date | null;
+  accessCount: number;
+  /** The product's current download limit, or null for unlimited or a deleted product. */
+  downloadLimit: number | null;
+};
+
+/** One order of this store for the details drawer, or null when it is not this store's. */
+export async function findOrderDetail(storeId: string, orderId: string): Promise<OrderDetail | null> {
+  const { orders, products } = await collections();
+  const doc = await orders.findOne({ _id: orderId, storeId });
+  if (!doc) return null;
+  const product = await products.findOne({ _id: doc.productId, storeId }, { projection: { downloadLimit: 1 } });
+  return {
+    ...toRow(doc),
+    buyerPhone: doc.buyerPhone,
+    subtotalCents: doc.subtotalCents,
+    discountCents: doc.discountCents,
+    paidAt: doc.paidAt,
+    accessCount: doc.accessCount ?? 0,
+    downloadLimit: product?.downloadLimit ?? null,
+  };
 }
 
 export async function countOrdersByStatus(storeId: string): Promise<Record<OrderStatusFilter, number>> {
@@ -75,25 +119,47 @@ export async function countOrdersByStatus(storeId: string): Promise<Record<Order
 }
 
 export type CustomerRow = {
+  /** The id of their latest paid order: opens the drawer and pages the list, so no email goes into a URL. */
+  key: string;
   email: string;
   name: string;
   phone: string | null;
   orderCount: number;
   totalCents: number;
   lastOrderAt: Date;
-  orders: { id: string; title: string; totalCents: number; paidAt: Date | null; answers: OrderAnswerDoc[] }[];
+  /** Distinct products bought, newest first. */
+  products: string[];
+  answersCount: number;
 };
 
-type CustomerAgg = { _id: string; name: string; phone: string | null; orderCount: number; totalCents: number; lastOrderAt: Date };
+type CustomerAgg = {
+  _id: string;
+  name: string;
+  phone: string | null;
+  orderCount: number;
+  totalCents: number;
+  lastOrderAt: Date;
+  lastOrderId: string;
+  products: string[];
+  productIds: string[];
+  answersCount: number;
+};
 
-/** The store's customers (people with at least one paid order) with their totals and orders. */
-export async function listCustomers(storeId: string, options: { q?: string; limit?: number } = {}): Promise<CustomerRow[]> {
+export type CustomerPage = { customers: CustomerRow[]; next: CustomerCursor | null };
+
+/**
+ * The store's customers (people with at least one paid order) with their totals, newest buyer
+ * first. `product` keeps only people who bought that product (their totals stay complete);
+ * `after` continues from the last row of the previous page.
+ */
+export async function listCustomers(storeId: string, options: { q?: string; product?: string; after?: CustomerCursor; limit?: number } = {}): Promise<CustomerPage> {
   const { orders } = await collections();
-  const limit = options.limit ?? 50;
+  const limit = options.limit ?? CUSTOMER_PAGE_SIZE;
+  const after = options.after;
   const groups = await orders
     .aggregate<CustomerAgg>([
       { $match: { storeId, status: "paid", ...searchFilter(options.q) } },
-      { $sort: { paidAt: -1 } },
+      { $sort: { paidAt: -1, _id: -1 } },
       {
         $group: {
           _id: "$buyerEmail",
@@ -102,31 +168,75 @@ export async function listCustomers(storeId: string, options: { q?: string; limi
           orderCount: { $sum: 1 },
           totalCents: { $sum: "$totalCents" },
           lastOrderAt: { $first: "$paidAt" },
+          lastOrderId: { $first: "$_id" },
+          products: { $addToSet: "$item.title" },
+          productIds: { $addToSet: "$productId" },
+          answersCount: { $sum: { $size: { $ifNull: ["$answers", []] } } },
         },
       },
-      { $sort: { lastOrderAt: -1 } },
-      { $limit: limit },
+      ...(options.product ? [{ $match: { productIds: options.product } }] : []),
+      ...(after ? [{ $match: { $or: [{ lastOrderAt: { $lt: after.at } }, { lastOrderAt: after.at, lastOrderId: { $lt: after.id } }] } }] : []),
+      { $sort: { lastOrderAt: -1, lastOrderId: -1 } },
+      { $limit: limit + 1 },
     ])
     .toArray();
-  if (groups.length === 0) return [];
 
-  const emails = groups.map((group) => group._id);
-  const docs = await orders.find({ storeId, status: "paid", buyerEmail: { $in: emails } }).sort({ paidAt: -1 }).toArray();
-  return groups.map((group) => ({
-    email: group._id,
-    name: group.name,
-    phone: group.phone,
-    orderCount: group.orderCount,
-    totalCents: group.totalCents,
-    lastOrderAt: group.lastOrderAt,
-    orders: docs
-      .filter((doc) => doc.buyerEmail === group._id)
-      .map((doc) => ({ id: doc._id, title: doc.item.title, totalCents: doc.totalCents, paidAt: doc.paidAt, answers: doc.answers })),
-  }));
+  const page = groups.slice(0, limit);
+  const last = page.at(-1);
+  return {
+    customers: page.map((group) => ({
+      key: group.lastOrderId,
+      email: group._id,
+      name: group.name,
+      phone: group.phone,
+      orderCount: group.orderCount,
+      totalCents: group.totalCents,
+      lastOrderAt: group.lastOrderAt,
+      products: group.products,
+      answersCount: group.answersCount,
+    })),
+    next: groups.length > limit && last ? { at: last.lastOrderAt, id: last.lastOrderId } : null,
+  };
 }
 
-/** Every paid order of the store with buyer details and answers, for the CSV export. */
-export async function listPaidOrdersForExport(storeId: string, limit = 5000): Promise<OrderRow[]> {
+export type CustomerDetail = {
+  key: string;
+  email: string;
+  name: string;
+  phone: string | null;
+  orderCount: number;
+  totalCents: number;
+  firstOrderAt: Date | null;
+  lastOrderAt: Date | null;
+  orders: { id: string; title: string; totalCents: number; currency: string; paidAt: Date | null; provider: OrderDoc["provider"]; answers: OrderAnswerDoc[] }[];
+};
+
+/**
+ * A customer of this store for the details drawer, found through one of their orders (`orderId`).
+ * Only this store's orders are read, and only paid ones count; null when there are none.
+ */
+export async function findCustomerDetail(storeId: string, orderId: string): Promise<CustomerDetail | null> {
+  const { orders } = await collections();
+  const order = await orders.findOne({ _id: orderId, storeId }, { projection: { buyerEmail: 1 } });
+  if (!order) return null;
+  const docs = await orders.find({ storeId, buyerEmail: order.buyerEmail, status: "paid" }).sort({ paidAt: -1 }).limit(100).toArray();
+  const latest = docs[0];
+  if (!latest) return null;
+  return {
+    key: latest._id,
+    email: latest.buyerEmail,
+    name: latest.buyerName,
+    phone: docs.find((doc) => doc.buyerPhone)?.buyerPhone ?? null,
+    orderCount: docs.length,
+    totalCents: docs.reduce((sum, doc) => sum + doc.totalCents, 0),
+    firstOrderAt: docs.at(-1)?.paidAt ?? null,
+    lastOrderAt: latest.paidAt,
+    orders: docs.map((doc) => ({ id: doc._id, title: doc.item.title, totalCents: doc.totalCents, currency: doc.currency, paidAt: doc.paidAt, provider: doc.provider, answers: doc.answers })),
+  };
+}
+
+/** Every paid order of the store with buyer details and answers, for the customers CSV. */
+export async function listPaidOrdersForExport(storeId: string, limit = EXPORT_MAX_ROWS): Promise<OrderRow[]> {
   const { orders } = await collections();
   const docs = await orders.find({ storeId, status: "paid" }).sort({ paidAt: -1 }).limit(limit).toArray();
   return docs.map((doc) => ({ ...toRow(doc), createdAt: doc.paidAt ?? doc.createdAt }));

@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth/guards";
 import { logger } from "@/lib/logger";
-import { buildCsv } from "@/lib/orders/csv";
 import { listPaidOrdersForExport } from "@/lib/orders/creator-queries";
+import { csvResponseHeaders, ordersCsv } from "@/lib/orders/export";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { findStoreByOwner } from "@/lib/stores/queries";
 
@@ -21,30 +21,7 @@ export async function GET() {
     }
 
     const orders = await listPaidOrdersForExport(store.id);
-    // One column per distinct question label, so the answers line up in a spreadsheet.
-    const labels = [...new Set(orders.flatMap((order) => order.answers.map((answer) => answer.label)))];
-    const csv = buildCsv(
-      ["Date (UTC)", "Name", "Email", "Product", "Amount", "Currency", "Order", "Test order", ...labels],
-      orders.map((order) => [
-        order.createdAt.toISOString().slice(0, 10),
-        order.buyerName,
-        order.buyerEmail,
-        order.title,
-        (order.totalCents / 100).toFixed(2),
-        order.currency.toUpperCase(),
-        order.id,
-        order.provider === "mock" ? "yes" : "no",
-        ...labels.map((label) => order.answers.find((answer) => answer.label === label)?.value ?? ""),
-      ]),
-    );
-    return new NextResponse(csv, {
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${store.slug}-customers.csv"`,
-        "Cache-Control": "no-store",
-        "X-Content-Type-Options": "nosniff",
-      },
-    });
+    return new NextResponse(ordersCsv(orders, { withStatus: false }), { headers: csvResponseHeaders(`${store.slug}-customers.csv`) });
   } catch (error) {
     logger.error("customers.export_failed", { name: error instanceof Error ? error.name : undefined });
     return new NextResponse("Couldn't export. Try again.", { status: 500, headers: { "Cache-Control": "no-store" } });

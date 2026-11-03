@@ -4,6 +4,13 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-051: Orders and Customers as tables with a details drawer
+- **Date:** 2026-11-03
+- **Decision (founder request "Orders, customer page ni UI ekdam simple che, tene proper karvani che"):** both pages follow DESIGN 9.9 and 10.2. **Orders:** status tabs with counts, search, a product filter, Export CSV (the current filters, with a Status column), and a table (Date, Order number, Customer, Product, Status, Amount); on phones each row is a card. A row opens a right-side drawer (bottom sheet on phones) with the amount, payment breakdown (price, discount, total, paid with, paid on), customer contact with Copy email, downloads used against the limit, the checkout answers and "View customer". **Customers:** search, product filter, Export CSV, and a table (Customer, Products bought, Answers, Last order, Total spent) with "Load more"; the drawer shows totals, contact, and every order with its answers and an "Open order" link. Refunded is now a red badge (DESIGN 9.5).
+- **How:** the drawers open from the URL (`?order=` / `?customer=`), so they can be linked and Back closes them; the server renders them. A customer is opened and paged by one of their order ids, never by email, so no email goes into a URL or server log. New `/lib` queries `findOrderDetail`, `findCustomerDetail`, `listOrdersForExport` and a product filter and cursor on `listCustomers`, all filtered by the session's store id, with ownership tests (unit and cross-tenant). New shadcn `Sheet` and `Table` components on the existing `radix-ui` package (no new dependency). CSV amounts now use the currency's own decimals (a JPY 500 sale was exported as 5.00).
+- **Not in this change (founder choice):** customer notes and tags (need a new collection; later) and a refund button (with the Stripe session).
+- **Why:** founder request, 2026-11-03.
+
 ## D-050: Product delivery is an uploaded file or a redirect link; files on private disk storage
 - **Date:** 2026-11-03
 - **Decision (founder request, storage choice "disk only for now"):** the Details step asks "How buyers get it": **Upload file** or **Redirect to URL**. `products.deliveryType` (`"link"` or `"file"`, missing = link for older products) and `products.fileId` record the choice; a product publishes only when the chosen one is there (`hasDelivery` in lib/products/publish.ts, used by the server and the editor checklist).

@@ -12,6 +12,7 @@ const badgeVariants = cva("inline-flex items-center gap-1 rounded-full px-2.5 py
       soon: "bg-yellow text-on-yellow",
       example: "border border-line bg-bg-subtle text-mute",
       testMode: "bg-yellow-soft text-warning",
+      danger: "bg-danger-soft text-danger",
     },
   },
   defaultVariants: { variant: "draft" },
