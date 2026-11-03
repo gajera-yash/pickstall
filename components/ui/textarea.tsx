@@ -2,7 +2,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-// Styled like Input (DESIGN.md 9.2). Always pair with a visible <Label>.
+// shadcn/ui textarea, styled like Input (DESIGN.md 9.2). Always pair with a visible <Label>.
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea

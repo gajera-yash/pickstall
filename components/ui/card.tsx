@@ -1,7 +1,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-// DESIGN.md 9.4: surface, decorative 1px border (--line), radius lg, 20-24px padding. Border only
+// shadcn/ui card, restyled per DESIGN.md 9.4: surface, decorative 1px border (--line), radius lg, 20-24px padding. Border only
 // (no shadow) in the app; marketing cards may add shadow-hard-md. Do not nest cards.
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (

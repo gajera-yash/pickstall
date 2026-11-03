@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { AlertCircle, CheckCircle2, Info, TriangleAlert } from "lucide-react"
 
-// DESIGN.md 9.11: icon + title + text, 1px border, radius md. Place it inline above the affected form.
+// shadcn/ui alert, restyled per DESIGN.md 9.11: icon + title + text, 1px border, radius md. Place it inline above the affected form.
 const alertVariants = cva("flex items-start gap-3 rounded-md border p-4 text-ink", {
   variants: {
     variant: {

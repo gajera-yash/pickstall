@@ -1,11 +1,11 @@
 import type { ReactNode } from "react"
 
-import { FieldError, FieldHint } from "@/components/ui/field"
-import { Label } from "@/components/ui/label"
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 
 /**
- * Label above the field, then the field, then the error (or the hint when there is no error).
- * Give the input `id` and `aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}`.
+ * Label above the field, then the field, then the error (or the hint when there is no error),
+ * built from the shadcn Field parts. Give the input `id` and
+ * `aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}`.
  */
 function FormField({
   id,
@@ -21,11 +21,11 @@ function FormField({
   children: ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
+    <Field data-invalid={error ? true : undefined}>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
       {children}
-      {error ? <FieldError id={`${id}-error`}>{error}</FieldError> : hint ? <FieldHint id={`${id}-hint`}>{hint}</FieldHint> : null}
-    </div>
+      {error ? <FieldError id={`${id}-error`}>{error}</FieldError> : hint ? <FieldDescription id={`${id}-hint`}>{hint}</FieldDescription> : null}
+    </Field>
   )
 }
 

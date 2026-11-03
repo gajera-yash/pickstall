@@ -1,7 +1,9 @@
 import type { LucideIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
-// DESIGN.md 9.12: centered, 32px icon in a blue-soft circle, H3 title, one sentence, one action.
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+
+// The common empty state (DESIGN.md 9.12) put together from the shadcn Empty parts.
 function EmptyState({
   icon: Icon,
   title,
@@ -14,14 +16,16 @@ function EmptyState({
   action?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border border-line bg-surface px-5 py-10 text-center">
-      <span className="flex size-16 items-center justify-center rounded-full bg-blue-soft text-blue">
-        <Icon aria-hidden="true" className="size-8" />
-      </span>
-      <h3 className="font-display text-h3">{title}</h3>
-      <p className="max-w-sm text-sm text-mute">{children}</p>
-      {action}
-    </div>
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Icon aria-hidden="true" />
+        </EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{children}</EmptyDescription>
+      </EmptyHeader>
+      {action && <EmptyContent>{action}</EmptyContent>}
+    </Empty>
   )
 }
 

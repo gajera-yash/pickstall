@@ -1,20 +1,19 @@
 import type { LucideIcon } from "lucide-react"
 import * as React from "react"
 
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 
-// Input with a leading icon (Stan-style fields). The icon is decoration only: keep a visible <Label>.
-function IconInput({
-  icon: Icon,
-  className,
-  ...props
-}: React.ComponentProps<typeof Input> & { icon: LucideIcon }) {
+// Input with a leading icon (Stan-style fields), built on the shadcn input group. The icon is
+// decoration only: keep a visible <Label>. `end` holds a trailing control, such as a show-password button.
+function IconInput({ icon: Icon, className, end, ...props }: React.ComponentProps<"input"> & { icon: LucideIcon; end?: React.ReactNode }) {
   return (
-    <div className="relative">
-      <Icon aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-mute" />
-      <Input className={cn("pl-12", className)} {...props} />
-    </div>
+    <InputGroup className={className}>
+      <InputGroupInput {...props} />
+      <InputGroupAddon>
+        <Icon aria-hidden="true" />
+      </InputGroupAddon>
+      {end && <InputGroupAddon align="inline-end" className="pr-1">{end}</InputGroupAddon>}
+    </InputGroup>
   )
 }
 

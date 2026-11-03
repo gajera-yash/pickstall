@@ -1,10 +1,11 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
-import { Loader2 } from "lucide-react"
 import { Slot } from "radix-ui"
 
-// DESIGN.md 9.1 (white theme, D-007). One primary button per view. Focus ring comes from the global :focus-visible rule.
+import { Spinner } from "@/components/ui/spinner"
+
+// shadcn/ui button, restyled per DESIGN.md 9.1 (white theme, D-007). One primary button per view. Focus ring comes from the global :focus-visible rule.
 const buttonVariants = cva(
   [
     "inline-flex shrink-0 items-center justify-center gap-2 rounded-md px-5 text-button whitespace-nowrap select-none",
@@ -74,7 +75,7 @@ function Button({
         children
       ) : (
         <>
-          {loading && <Loader2 aria-hidden="true" className="animate-spin" />}
+          {loading && <Spinner aria-hidden="true" role={undefined} aria-label={undefined} className="size-5" />}
           {children}
         </>
       )}

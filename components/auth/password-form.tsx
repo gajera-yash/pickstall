@@ -35,30 +35,24 @@ export function CreatePasswordForm({ token, email }: { token: string; email: str
         <IconInput icon={Lock} id="email" value={email} readOnly tabIndex={-1} autoComplete="username" className="bg-bg-subtle text-mute" />
       </FormField>
       <FormField id="password" label="Create a password" error={fieldError("password")} hint={`At least ${PASSWORD_MIN_LENGTH} characters.`}>
-        <div className="relative">
-          <IconInput
-            icon={Lock}
-            id="password"
-            name="password"
-            type={type}
-            autoComplete="new-password"
-            required
-            maxLength={PASSWORD_MAX_LENGTH}
-            value={values.password}
-            onChange={(event) => setValues((current) => ({ ...current, password: event.target.value }))}
-            aria-invalid={fieldError("password") ? true : undefined}
-            aria-describedby={describedBy("password", fieldError("password"), "hint")}
-            className="pr-12"
-          />
-          <button
-            type="button"
-            onClick={() => setShow((value) => !value)}
-            aria-label={show ? "Hide passwords" : "Show passwords"}
-            className="absolute top-1/2 right-1 flex size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-mute hover:text-ink"
-          >
-            {show ? <EyeOff aria-hidden="true" className="size-5" /> : <Eye aria-hidden="true" className="size-5" />}
-          </button>
-        </div>
+        <IconInput
+          icon={Lock}
+          id="password"
+          name="password"
+          type={type}
+          autoComplete="new-password"
+          required
+          maxLength={PASSWORD_MAX_LENGTH}
+          value={values.password}
+          onChange={(event) => setValues((current) => ({ ...current, password: event.target.value }))}
+          aria-invalid={fieldError("password") ? true : undefined}
+          aria-describedby={describedBy("password", fieldError("password"), "hint")}
+          end={
+            <Button type="button" variant="ghost" size="icon-sm" onClick={() => setShow((value) => !value)} aria-label={show ? "Hide passwords" : "Show passwords"} className="text-mute">
+              {show ? <EyeOff aria-hidden="true" className="size-5" /> : <Eye aria-hidden="true" className="size-5" />}
+            </Button>
+          }
+        />
       </FormField>
       <FormField id="confirm" label="Confirm your password" error={fieldError("confirm")}>
         <IconInput

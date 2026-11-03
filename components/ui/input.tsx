@@ -1,7 +1,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-// DESIGN.md 9.2: 44px high, radius md, 1px --border-input (3:1), never use the placeholder as the label.
+// shadcn/ui input, restyled per DESIGN.md 9.2: 44px high, radius md, 1px --border-input (3:1), never use the placeholder as the label.
 // Text is 16px (text-field) so phones do not zoom in on focus.
 // Error state: set aria-invalid and aria-describedby pointing at a <FieldError>.
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {

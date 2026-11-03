@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
-// DESIGN.md 9.5: pill, Caption weight 600, always with text (never color alone).
+// shadcn/ui badge, restyled per DESIGN.md 9.5: pill, Caption weight 600, always with text (never color alone).
 const badgeVariants = cva("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap", {
   variants: {
     variant: {

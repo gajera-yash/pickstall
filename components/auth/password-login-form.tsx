@@ -45,29 +45,23 @@ export function PasswordLoginForm({ next, onUseCode }: { next: string; onUseCode
         />
       </FormField>
       <FormField id="password" label="Password" error={fieldError("password")}>
-        <div className="relative">
-          <IconInput
-            icon={Lock}
-            id="password"
-            name="password"
-            type={show ? "text" : "password"}
-            autoComplete="current-password"
-            required
-            maxLength={PASSWORD_MAX_LENGTH}
-            value={values.password}
-            onChange={(event) => setValues((current) => ({ ...current, password: event.target.value }))}
-            aria-invalid={fieldError("password") ? true : undefined}
-            className="pr-12"
-          />
-          <button
-            type="button"
-            onClick={() => setShow((value) => !value)}
-            aria-label={show ? "Hide password" : "Show password"}
-            className="absolute top-1/2 right-1 flex size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-mute hover:text-ink"
-          >
-            {show ? <EyeOff aria-hidden="true" className="size-5" /> : <Eye aria-hidden="true" className="size-5" />}
-          </button>
-        </div>
+        <IconInput
+          icon={Lock}
+          id="password"
+          name="password"
+          type={show ? "text" : "password"}
+          autoComplete="current-password"
+          required
+          maxLength={PASSWORD_MAX_LENGTH}
+          value={values.password}
+          onChange={(event) => setValues((current) => ({ ...current, password: event.target.value }))}
+          aria-invalid={fieldError("password") ? true : undefined}
+          end={
+            <Button type="button" variant="ghost" size="icon-sm" onClick={() => setShow((value) => !value)} aria-label={show ? "Hide password" : "Show password"} className="text-mute">
+              {show ? <EyeOff aria-hidden="true" className="size-5" /> : <Eye aria-hidden="true" className="size-5" />}
+            </Button>
+          }
+        />
       </FormField>
       <Button type="submit" size="lg" className="w-full" loading={pending}>
         Sign in
