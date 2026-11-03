@@ -28,8 +28,10 @@ function errorName(error: unknown): string | undefined {
 }
 
 /**
- * Saves Store setup (PRD F8, D-028): name, photo link, bio, currency, social links. The store is
- * found from the session's user id, never from a form field, so a creator can only change their own.
+ * Saves Store setup (PRD F8, D-028): name, photo link, bio, currency, social links, and in the setup
+ * wizard also the theme and accent (D-045, same rules as Page design). Everything is validated
+ * before anything is written. The store is found from the session's user id, never from a form
+ * field, so a creator can only change their own.
  */
 export async function saveStoreSetup(_prev: StoreSetupState, formData: FormData): Promise<StoreSetupState> {
   const { user } = await requireCreator(STORE_SETUP_PATH);
@@ -51,9 +53,21 @@ export async function saveStoreSetup(_prev: StoreSetupState, formData: FormData)
     return err(issue?.message ?? "Check the form and try again.", field);
   }
 
+  // The theme fields are only on the wizard's form; Settings leaves them out.
+  let design = null;
+  if (formData.has("themePreset")) {
+    const parsedDesign = pageDesignInput.safeParse({ themePreset: formData.get("themePreset"), accent: formData.get("accent") ?? "" });
+    if (!parsedDesign.success) {
+      const issue = parsedDesign.error.issues[0];
+      return err(issue?.message ?? "Check the form and try again.", typeof issue?.path[0] === "string" ? issue.path[0] : undefined);
+    }
+    design = parsedDesign.data;
+  }
+
   try {
     const saved = await updateStoreProfile(user.id, parsed.data);
     if (!saved) return err(NO_STORE);
+    if (design && !(await updateStorePageDesign(user.id, design))) return err(NO_STORE);
   } catch (error) {
     logger.error("stores.setup_save_failed", { name: errorName(error) });
     return err(SAVE_FAILED);

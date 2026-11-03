@@ -111,11 +111,33 @@ describe("saveStoreSetup", () => {
     expect(storeQueries.updateStoreProfile).toHaveBeenCalledWith(userId, { ...profile, socialLinks: profile.socialLinks });
   });
 
-  it("never passes theme, slug or publish fields to the query", async () => {
+  it("never passes theme, slug or publish fields to the profile query", async () => {
     storeQueries.updateStoreProfile.mockResolvedValue(true);
-    await saveStoreSetup(null, profileForm({ ...profileFields, slug: "taken", isPublished: "true", themePreset: "bold" }));
+    storeQueries.updateStorePageDesign.mockResolvedValue(true);
+    await saveStoreSetup(null, profileForm({ ...profileFields, slug: "taken", isPublished: "true", themePreset: "bold", accent: "#0b0d2a" }));
     const saved = storeQueries.updateStoreProfile.mock.calls[0]?.[1] as Record<string, unknown>;
     expect(Object.keys(saved).sort()).toEqual(["avatarUrl", "bio", "currency", "name", "socialLinks"]);
+  });
+
+  it("saves the wizard's theme on the session user's store, through the page design rules", async () => {
+    storeQueries.updateStoreProfile.mockResolvedValue(true);
+    storeQueries.updateStorePageDesign.mockResolvedValue(true);
+    const result = await saveStoreSetup(null, profileForm({ ...profileFields, themePreset: "soft", accent: "#c2410c", ownerId: "someone-else" }));
+    expect(result?.ok).toBe(true);
+    expect(storeQueries.updateStorePageDesign).toHaveBeenCalledWith(userId, { themePreset: "soft", accent: "#C2410C" });
+  });
+
+  it("leaves the theme alone when the form has no theme fields (Settings)", async () => {
+    storeQueries.updateStoreProfile.mockResolvedValue(true);
+    await saveStoreSetup(null, profileForm(profileFields));
+    expect(storeQueries.updateStorePageDesign).not.toHaveBeenCalled();
+  });
+
+  it("saves nothing when the wizard's accent is unreadable", async () => {
+    const result = await saveStoreSetup(null, profileForm({ ...profileFields, themePreset: "clean", accent: "#777777" }));
+    expect(result).toMatchObject({ ok: false, field: "accent" });
+    expect(storeQueries.updateStoreProfile).not.toHaveBeenCalled();
+    expect(storeQueries.updateStorePageDesign).not.toHaveBeenCalled();
   });
 
   it("points a bad social link at its row on screen, without saving", async () => {
