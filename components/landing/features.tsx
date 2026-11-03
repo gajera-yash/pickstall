@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
 import { COMING_SOON, STEPS } from "@/components/landing/content";
-import { PwywTile } from "@/components/landing/feature-tiles";
+import { DiscountTile } from "@/components/landing/feature-tiles";
 import { Container, SectionHeading } from "@/components/landing/ui";
 import { Badge } from "@/components/ui/badge";
 import { storeLink } from "@/lib/config";
@@ -127,8 +127,8 @@ export function Features() {
             <LinkInBio />
           </Tile>
 
-          <Tile icon={Sparkles} title="Pay what you want" body="A fixed price, or let fans pay more. You set the minimum." className="lg:col-span-2">
-            <PwywTile />
+          <Tile icon={Sparkles} title="Discounts that sell" body="Set a price, then add a discount. Your store shows the old price struck through." className="lg:col-span-2">
+            <DiscountTile />
           </Tile>
 
           <Tile icon={Mail} title="Purchase emails in your words" body="Write the confirmation email yourself. The secure access link is always included." className="lg:col-span-3">

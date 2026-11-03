@@ -5,9 +5,11 @@ import { Minus, Package, Plus } from "lucide-react";
 import { useId, useState } from "react";
 
 import { Frame } from "@/components/landing/ui";
+import { PriceTag } from "@/components/store/price-tag";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { cleanStallName } from "@/lib/landing/demo";
 import { formatMoney } from "@/lib/products/money";
 import { cn } from "@/lib/utils";
@@ -19,19 +21,19 @@ const STEP_CENTS = 100;
 const MIN_CENTS = 100;
 const MAX_CENTS = 20_000;
 
-type Model = "fixed" | "pwyw";
-
 export function ProductShowcase() {
   const titleId = useId();
   const buttonId = useId();
   const priceId = useId();
   const [title, setTitle] = useState("Freelancer budget workbook");
   const [buttonText, setButtonText] = useState("Get the workbook");
-  const [model, setModel] = useState<Model>("fixed");
+  const [discountOn, setDiscountOn] = useState(true);
+  const discountId = useId();
   const [cents, setCents] = useState(1900);
   const [live, setLive] = useState(true);
 
-  const priceLabel = model === "pwyw" ? `${formatMoney(cents, "usd")}+` : formatMoney(cents, "usd");
+  // The example discount is 30% off, rounded to a whole dollar and never below $1.
+  const product = { priceCents: cents, salePriceCents: discountOn ? Math.max(100, Math.round((cents * 0.7) / 100) * 100) : null };
   const step = (delta: number) => setCents((value) => Math.min(MAX_CENTS, Math.max(MIN_CENTS, value + delta)));
 
   return (
@@ -68,39 +70,9 @@ export function ProductShowcase() {
 
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-2 text-sm font-semibold">Pricing</legend>
-          <div role="radiogroup" aria-label="Price model" className="grid grid-cols-2 gap-1 rounded-md border border-line bg-bg-subtle p-1">
-            {(
-              [
-                { id: "fixed", label: "Fixed price" },
-                { id: "pwyw", label: "Pay what you want" },
-              ] as const
-            ).map((option) => {
-              const on = model === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  onClick={() => setModel(option.id)}
-                  className={cn("relative min-h-10 rounded-sm px-2 text-sm font-semibold", on ? "text-ink" : "text-mute hover:text-ink")}
-                >
-                  {on && (
-                    <m.span
-                      layoutId="price-model"
-                      aria-hidden="true"
-                      className="absolute inset-0 rounded-sm border border-line bg-surface"
-                      transition={{ type: "spring", stiffness: 420, damping: 36 }}
-                    />
-                  )}
-                  <span className="relative">{option.label}</span>
-                </button>
-              );
-            })}
-          </div>
           <div className="mt-2 flex items-center gap-3">
             <span id={priceId} className="text-sm text-mute">
-              {model === "pwyw" ? "Minimum" : "Price"}
+              Price
             </span>
             <div className="ml-auto flex items-center gap-1 rounded-md border border-input bg-surface p-1" role="group" aria-labelledby={priceId}>
               <button type="button" aria-label="Lower price" onClick={() => step(-STEP_CENTS)} className="flex size-9 items-center justify-center rounded-sm hover:bg-bg-subtle">
@@ -113,6 +85,12 @@ export function ProductShowcase() {
                 <Plus aria-hidden="true" className="size-4" />
               </button>
             </div>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <label htmlFor={discountId} className="text-sm text-mute">
+              Add a discount
+            </label>
+            <Switch id={discountId} checked={discountOn} onCheckedChange={setDiscountOn} />
           </div>
         </fieldset>
 
@@ -130,9 +108,8 @@ export function ProductShowcase() {
           </div>
           <div className="flex items-start justify-between gap-3">
             <p className="min-w-0 font-semibold break-words">{title.trim() || "Untitled product"}</p>
-            <span className="shrink-0 font-display text-money-m tabular-nums">{priceLabel}</span>
+            <PriceTag product={product} currency="usd" className="shrink-0 justify-end font-display text-money-m" regularClassName="text-mute" />
           </div>
-          {model === "pwyw" && <p className="text-xs text-mute">Pay what you want. Minimum {formatMoney(cents, "usd")}.</p>}
           <span className="rounded-md bg-blue py-2.5 text-center text-sm font-semibold text-on-blue">{buttonText.trim() || "Buy now"}</span>
         </div>
         <p className="flex items-center gap-2 text-sm" aria-live="polite">

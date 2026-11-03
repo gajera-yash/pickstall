@@ -27,7 +27,7 @@ const ACCENTS = [...new Set(THEME_PRESET_IDS.map((id) => THEME_PRESETS[id].accen
 const PRODUCTS = [
   { title: "Moody film presets", meta: "12 Lightroom presets", button: "Get the presets", price: "$15" },
   { title: "Lightroom starter guide", meta: "38-page PDF", button: "Buy the guide", price: "$12" },
-  { title: "Editing workbook", meta: "Pay what you want", button: "Name your price", price: "$5+" },
+  { title: "Editing workbook", meta: "On sale, was $9", button: "Get the workbook", price: "$5" },
 ];
 
 /** `intro` is the section heading, placed above the theme picker so it sits beside the phone. */

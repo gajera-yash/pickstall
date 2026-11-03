@@ -17,7 +17,7 @@ export const CARD_FEES_NOTE = "Stripe's card processing fees still apply.";
 export const STEPS = [
   { title: "Claim your link", body: "Pick a username. Your stall lives at one short link you can put in any bio." },
   { title: "Make it yours", body: "Photo, bio, social links, a theme and your own accent color. No code, no designer." },
-  { title: "Add what you sell", body: "Guides, templates, presets, workbooks. Set a price or let buyers pay what they want." },
+  { title: "Add what you sell", body: "Guides, templates, presets, workbooks. Set a price, and add a discount when you like." },
   { title: "Connect payments and share", body: "Buyers pay into your own Stripe account. You see every order, customer and dollar." },
 ] as const;
 
@@ -78,7 +78,7 @@ export const FAQ = [
   },
   {
     q: "What can I sell today?",
-    a: "Digital products: guides, templates, presets, workbooks and more, at a fixed price or pay what you want. Courses, coupons and order bumps are coming soon.",
+    a: "Digital products: guides, templates, presets, workbooks and more, at a price you set, with an optional discount. Courses, coupons and order bumps are coming soon.",
   },
   {
     q: "How do my buyers get their purchase?",
@@ -132,7 +132,7 @@ export const PLANS: readonly PlanCard[] = [
     items: [
       { text: "Mobile storefront at your own link" },
       { text: "Unlimited digital products" },
-      { text: "Pay what you want and custom checkout questions" },
+      { text: "Discounts and custom checkout questions" },
       { text: "Sales and customer analytics, CSV export" },
       { text: "Courses, discount codes and order bumps", soon: true },
     ],
@@ -164,7 +164,7 @@ export const PLANS: readonly PlanCard[] = [
 
 /** Live on Pickstall today. Stated about Pickstall only; no claim about what other platforms lack. */
 export const PICKSTALL_EXTRAS = [
-  "Pay what you want, with your minimum",
+  "Discounted prices, shown struck through",
   "Up to 5 custom checkout questions",
   "Purchase email written in your words",
   "Customer list with CSV export",

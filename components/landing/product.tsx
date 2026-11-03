@@ -28,7 +28,7 @@ export function StorefrontSection() {
 export function ProductsSection() {
   const points = [
     { icon: PenLine, title: "Edit and see it live", body: "Title, cover, price and button text, with a preview of exactly what buyers see." },
-    { icon: MousePointerClick, title: "Fixed or pay what you want", body: "Set a price, or a minimum and let fans pay more." },
+    { icon: MousePointerClick, title: "Price with an optional discount", body: "Set a price, then turn on a discount; buyers see the old price struck through." },
     { icon: EyeOff, title: "Draft until it's ready", body: "Publish when you're happy. Drafts stay hidden from your store." },
   ];
   return (

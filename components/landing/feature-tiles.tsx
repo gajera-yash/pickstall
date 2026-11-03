@@ -2,7 +2,8 @@
 
 import { useId, useState } from "react";
 
-import { formatMoney } from "@/lib/products/money";
+import { PriceTag } from "@/components/store/price-tag";
+import { Switch } from "@/components/ui/switch";
 import { THEME_PRESETS, THEME_PRESET_IDS, type ThemePresetId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 
@@ -73,31 +74,24 @@ export function ThemeTile() {
   );
 }
 
-/** Pay what you want: the buyer's slider changes the price chip, never below the creator's minimum. */
-export function PwywTile() {
+/** Discount (D-047): turning it on shows the discounted price with the regular one struck through. */
+export function DiscountTile() {
   const id = useId();
-  const minimum = 500;
-  const [cents, setCents] = useState(1500);
+  const [on, setOn] = useState(true);
+  const product = { priceCents: 2900, salePriceCents: on ? 1900 : null };
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <label htmlFor={id} className="text-sm font-semibold">
-          Name your price
+          Add a discount
         </label>
-        <span className="rounded-full bg-blue px-3 py-1 font-display text-sm font-extrabold text-on-blue tabular-nums">{formatMoney(cents, "usd")}</span>
+        <Switch id={id} checked={on} onCheckedChange={setOn} />
       </div>
-      <input
-        id={id}
-        type="range"
-        min={minimum}
-        max={5000}
-        step={100}
-        value={cents}
-        onChange={(event) => setCents(Number(event.target.value))}
-        aria-valuetext={formatMoney(cents, "usd")}
-        className="h-11 w-full cursor-pointer accent-blue"
-      />
-      <p className="text-xs text-mute">Minimum {formatMoney(minimum, "usd")}, set by you.</p>
+      <p className="flex items-center justify-between gap-3 rounded-md border border-line bg-bg-subtle px-3 py-2.5" aria-live="polite">
+        <span className="text-sm font-semibold">Budget workbook</span>
+        <PriceTag product={product} currency="usd" className="font-display text-money-m" regularClassName="text-mute" />
+      </p>
+      <p className="text-xs text-mute">Example. Buyers pay the discounted price.</p>
     </div>
   );
 }
