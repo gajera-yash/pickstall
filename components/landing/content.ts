@@ -6,9 +6,9 @@ import { formatWholeDollars } from "@/lib/landing/demo";
 
 export const LANDING_NAV = [
   { href: "#features", label: "Features" },
+  { href: "#product", label: "Product" },
+  { href: "#pricing", label: "Pricing" },
   { href: "#compare", label: "Vs Stan Store" },
-  { href: "#how-it-works", label: "How it works" },
-  { href: "#fees", label: "Fees" },
   { href: "#faq", label: "FAQ" },
 ] as const;
 
@@ -113,6 +113,53 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   { feature: "Email marketing and automations", stan: "Creator Pro", status: "soon", plan: "pro" },
   { feature: "Affiliate tracking", stan: "Creator Pro", status: "soon", plan: "pro" },
   { feature: "Bookings and memberships", stan: "Creator", status: "soon", plan: "pro" },
+];
+
+export type PlanCard = {
+  id: "founding" | "starter" | "pro";
+  name: string;
+  blurb: string;
+  /** What the plan includes. `soon` items are on the roadmap and shown with a Coming soon tag. */
+  items: readonly { text: string; soon?: boolean }[];
+};
+
+/** Planned plans (PRD F9). Prices come from PLANNED_PRICE_CENTS; nothing here is billed yet. */
+export const PLANS: readonly PlanCard[] = [
+  {
+    id: "starter",
+    name: "Starter",
+    blurb: "Everything you need to open and sell.",
+    items: [
+      { text: "Mobile storefront at your own link" },
+      { text: "Unlimited digital products" },
+      { text: "Pay what you want and custom checkout questions" },
+      { text: "Sales and customer analytics, CSV export" },
+      { text: "Courses, discount codes and order bumps", soon: true },
+    ],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    blurb: "The full toolkit to grow what you sell.",
+    items: [
+      { text: "Everything in Starter" },
+      { text: "Email marketing and automations", soon: true },
+      { text: "Upsells and funnels", soon: true },
+      { text: "Memberships, bookings and affiliates", soon: true },
+      { text: "Custom domain", soon: true },
+    ],
+  },
+  {
+    id: "founding",
+    name: "Founding creator",
+    blurb: "For the first 10 creators who join.",
+    items: [
+      { text: "6 months free, Pro features included" },
+      { text: "We set up your store with you" },
+      { text: "A direct line to the people building it" },
+      { text: "Your feedback shapes what we build next" },
+    ],
+  },
 ];
 
 /** Live on Pickstall today. Stated about Pickstall only; no claim about what other platforms lack. */

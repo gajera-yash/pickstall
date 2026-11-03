@@ -155,6 +155,19 @@
   box-shadow: var(--shadow-card);
 }
 
+/* Marketing landing only: a faint dot grid behind the hero and final CTA, faded out at the bottom.
+   Pattern and mask only; no color gradient (DESIGN.md 3.2). */
+@utility bg-dots {
+  background-image: radial-gradient(var(--line) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+}
+@utility mask-fade-b {
+  mask-image: linear-gradient(to bottom, var(--ink) 30%, transparent 95%);
+}
+@utility mask-fade-y {
+  mask-image: linear-gradient(to bottom, transparent, var(--ink) 20%, var(--ink) 80%, transparent);
+}
+
 /* Marketing landing only (DESIGN.md 7, D-039). Transform and opacity only; the reduced-motion rule
    at the end of this file switches all of them off. */
 @theme {

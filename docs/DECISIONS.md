@@ -59,6 +59,14 @@ Short records of product and engineering decisions. Newest first. Each entry: da
   - Success messages ("Your store is saved.", "Page design saved.", "Your account is saved.", product saved/published, username changed) hide themselves after 5 seconds (`useAutoHide`). Error messages stay until the next action.
 - **Why:** founder request, 2026-11-03 (store name = username, confirmed in chat).
 
+## D-043: Landing page redesign (premium SaaS layout, same brand)
+- **Date:** 2026-11-03
+- **Decision:** the marketing landing is rebuilt as a product tour: hero with the "Build your stall" demo in a wide frame, an honest proof strip, a bento features grid, interactive Storefront (real theme presets via `resolveTheme`), Product management, Checkout and Analytics showcases, Pricing (planned prices from `PLANNED_PRICE_CENTS`, founding plan featured, fee calculator), the Stan Store comparison, Founding creators, FAQ and the claim-link CTA. Colors, fonts and the stall motifs (awning, receipt, coupon, hard shadows) are unchanged.
+- **Dependency:** `motion` (approved by the founder, 2026-11-03), loaded through `LazyMotion` with `domAnimation` only. Content renders visible on the server; scroll entrances arm themselves only below the fold, so the page reads fine without JavaScript and under reduced motion.
+- **Honesty:** no testimonials, logos or user counts exist yet, so "Social proof" is a strip of true facts about money and access, and "Testimonials" is the Founding creators section with a note that quotes will appear only once they are real (DESIGN.md 2.5, 17).
+- **Additions:** `bg-dots`, `mask-fade-b` and `mask-fade-y` utilities (pattern and mask only, no color gradients), marketing only.
+- **Why:** founder request, 2026-11-03.
+
 ## D-042: The app recovers from a MongoDB outage without a restart
 - **Date:** 2026-11-01
 - **Problem (founder report):** signup from Antigravity showed "Couldn't check that username. Try again." The dev log showed `MongoServerSelectionError` (this PC could not reach Atlas; DNS and TCP were fine, so most likely Atlas Network Access does not list the PC's current IP), then `MongoTopologyClosedError` on every later request. The MongoDB driver (7.x) closes the topology after a failed connect but keeps it on the client; its automatic connect never replaces it, so the app stayed broken until restarted, even after the network was fixed.

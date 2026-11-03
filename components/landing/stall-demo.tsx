@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useId, useState } from "react";
 
 import { Awning, ReceiptEdge } from "@/components/landing/illustrations";
+import { Tilt } from "@/components/landing/motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,10 +42,10 @@ export function StallDemo() {
 
   return (
     <div className="relative">
-      {/* The stall: awning, hanging sign, then the counter with the phone and the controls. */}
+      {/* The stall: awning, hanging sign, then the counter with the controls, the phone and the receipt. */}
       <div className="relative z-10 px-2">
-        <Awning id="hero-awning" className="h-14 sm:h-16" />
-        <div aria-hidden="true" className="absolute top-full right-8 flex origin-top animate-sign-swing flex-col items-center sm:right-12">
+        <Awning id="hero-awning" className="h-14 sm:h-18" />
+        <div aria-hidden="true" className="absolute top-full right-8 flex origin-top animate-sign-swing flex-col items-center sm:right-14">
           <div className="flex gap-10">
             <span className="h-5 w-0.5 bg-border-strong" />
             <span className="h-5 w-0.5 bg-border-strong" />
@@ -56,17 +57,21 @@ export function StallDemo() {
         </div>
       </div>
 
-      <div className="-mt-1 rounded-b-lg border-2 border-t-0 border-border-strong bg-bg-subtle px-4 pt-6 pb-5 shadow-hard-md sm:px-6">
+      <div className="-mt-1 rounded-b-lg border-2 border-t-0 border-border-strong bg-bg-subtle px-4 pt-6 pb-6 shadow-hard-md sm:px-8 sm:pb-8 lg:shadow-hard-lg">
         {/* Room on the right for the hanging sign, so it never covers a control. */}
         <div className="mb-14 flex items-center gap-2 pr-36">
           <Badge variant="example">Demo</Badge>
-          <span className="hidden text-xs text-mute sm:inline">Nothing here is saved or sent.</span>
+          <span className="hidden text-xs text-mute sm:inline">Try it. Nothing here is saved or sent.</span>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-[minmax(0,12.5rem)_minmax(0,1fr)] sm:items-start">
-          <PhonePreview name={displayName} stocked={stocked} lastSale={lastSale} />
+        <div className="grid gap-6 sm:grid-cols-[minmax(0,12.5rem)_minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_13.5rem_minmax(0,1fr)] lg:gap-8">
+          <div className="sm:order-1 lg:order-2">
+            <Tilt>
+              <PhonePreview name={displayName} stocked={stocked} lastSale={lastSale} />
+            </Tilt>
+          </div>
 
-          <div className="flex min-w-0 flex-col gap-4">
+          <div className="flex min-w-0 flex-col gap-5 sm:order-2 lg:order-1">
             <div className="flex flex-col gap-2">
               <Label htmlFor={nameId}>1. Name your stall</Label>
               <Input
@@ -110,29 +115,30 @@ export function StallDemo() {
               </Button>
               {stocked.length === 0 && <p className="text-sm text-mute">Add something to your shelf first.</p>}
             </div>
+          </div>
 
-            <div aria-live="polite" className="flex flex-col gap-3">
-              {lastSale ? (
-                <>
-                  <Receipt key={lastSale.key} sale={lastSale} />
-                  <div className="flex items-end justify-between gap-3 rounded-md border border-line bg-surface px-4 py-3">
-                    <div>
-                      <p className="text-xs font-semibold text-mute">You kept</p>
-                      <p className="text-xs text-mute">before card processing fees</p>
-                    </div>
-                    <p className="font-display text-money-l text-mint tabular-nums">{formatMoney(keptCents, "usd")}</p>
+          <div aria-live="polite" className="flex min-w-0 flex-col gap-3 sm:order-3 sm:col-span-2 lg:col-span-1 lg:pt-6">
+            {lastSale ? (
+              <>
+                <Receipt key={lastSale.key} sale={lastSale} />
+                <div className="flex items-end justify-between gap-3 rounded-md border border-line bg-surface px-4 py-3">
+                  <div>
+                    <p className="text-xs font-semibold text-mute">You kept</p>
+                    <p className="text-xs text-mute">before card processing fees</p>
                   </div>
-                  <Link href="/signup" className="text-sm font-semibold text-blue underline underline-offset-4 hover:text-blue-hover">
-                    Like it? Claim your real stall link
-                  </Link>
-                </>
-              ) : (
-                <p className="flex items-center gap-2 rounded-md border border-dashed border-input px-4 py-3 text-sm text-mute">
-                  <ReceiptText aria-hidden="true" className="size-4 shrink-0" />
-                  Your receipt prints here.
-                </p>
-              )}
-            </div>
+                  <p className="font-display text-money-l text-mint tabular-nums">{formatMoney(keptCents, "usd")}</p>
+                </div>
+                <Link href="/signup" className="text-sm font-semibold text-blue underline underline-offset-4 hover:text-blue-hover">
+                  Like it? Claim your real stall link
+                </Link>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-2 rounded-md border border-dashed border-input px-4 py-8 text-center text-sm text-mute">
+                <ReceiptText aria-hidden="true" className="size-6" />
+                <p>Your receipt prints here.</p>
+                <p className="text-xs">Platform fee on every sale: $0.00</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

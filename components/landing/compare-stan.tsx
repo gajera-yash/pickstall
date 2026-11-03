@@ -1,7 +1,8 @@
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Scale, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { COMPARE_ROWS, PICKSTALL_EXTRAS, STAN, type CompareRow } from "@/components/landing/content";
+import { Eyebrow } from "@/components/landing/ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { APP_NAME, PLANNED_PRICE_CENTS } from "@/lib/config";
@@ -65,10 +66,10 @@ export function CompareStan() {
   return (
     <section id="compare" aria-labelledby="compare-title" className="scroll-mt-20 bg-bg-subtle py-20 sm:py-28">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 sm:px-6">
-        <div className="flex max-w-3xl flex-col gap-3">
-          <p className="text-sm font-semibold text-blue">
+        <div className="flex max-w-3xl flex-col gap-4">
+          <Eyebrow icon={Scale}>
             {APP_NAME} vs {STAN.name}
-          </p>
+          </Eyebrow>
           <h2 id="compare-title" className="text-display-l text-balance">
             {STAN.name}&apos;s Pro toolkit, planned at {money(PLANNED_PRICE_CENTS.pro)} a month instead of {money(STAN.creatorProCents)}.
           </h2>
@@ -83,7 +84,7 @@ export function CompareStan() {
           <PricePair title="Everything" theirs={STAN.creatorProCents} theirsLabel="Creator Pro" ours={PLANNED_PRICE_CENTS.pro} oursLabel="Pro" />
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-line bg-surface">
+        <div className="overflow-hidden rounded-lg border border-line bg-surface shadow-popover">
           <table className="w-full border-collapse text-left text-sm">
             <caption className="sr-only">
               Feature comparison between {STAN.name} and {APP_NAME}
@@ -103,7 +104,7 @@ export function CompareStan() {
             </thead>
             <tbody>
               {COMPARE_ROWS.map((row) => (
-                <tr key={row.feature} className="flex flex-col gap-2 border-t border-line px-4 py-4 first:border-t-0 sm:table-row sm:px-0 sm:py-0">
+                <tr key={row.feature} className="flex flex-col gap-2 border-t border-line px-4 py-4 transition-colors duration-(--dur-fast) first:border-t-0 hover:bg-bg-subtle sm:table-row sm:px-0 sm:py-0">
                   <th scope="row" className="font-semibold sm:px-5 sm:py-3.5">
                     {row.feature}
                   </th>

@@ -9,7 +9,7 @@ import { LANDING_NAV } from "@/components/landing/content";
 import { cn } from "@/lib/utils";
 
 /**
- * Sticky landing nav. It gets a border once the page scrolls; below md the links move into a
+ * Sticky landing nav. Once the page scrolls it gets a border and gets shorter; below md the links move into a
  * full-width menu. `actions` are the sign-in buttons (or "Go to dashboard"), rendered on the server.
  */
 export function LandingNav({ actions }: { actions: ReactNode }) {
@@ -32,11 +32,16 @@ export function LandingNav({ actions }: { actions: ReactNode }) {
 
   return (
     <header className={cn("sticky top-0 z-40 border-b bg-bg transition-colors duration-(--dur-base)", scrolled || open ? "border-line" : "border-transparent")}>
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-4 sm:px-6">
-        <Wordmark priority className="h-9" />
+      <div
+        className={cn(
+          "mx-auto flex w-full max-w-6xl items-center gap-4 px-4 sm:px-6",
+          scrolled ? "h-14" : "h-16",
+        )}
+      >
+        <Wordmark priority className="h-8 sm:h-9" />
         <nav aria-label="Main" className="ml-6 hidden items-center gap-1 md:flex">
           {LANDING_NAV.map((item) => (
-            <a key={item.href} href={item.href} className="rounded-md px-3 py-2 text-sm font-semibold text-ink hover:bg-bg-subtle">
+            <a key={item.href} href={item.href} className="rounded-md px-3 py-2 text-sm font-semibold text-mute transition-colors duration-(--dur-fast) hover:bg-bg-subtle hover:text-ink">
               {item.label}
             </a>
           ))}
