@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-046: Every Stripe currency, currency lock, social links from usernames
+- **Date:** 2026-11-03
+- **Currencies:** stores can pick any of the 134 presentment currencies Stripe lists for US, UK and Canadian accounts (docs.stripe.com/currencies, checked 2026-11-03), in a searchable picker with flags (euro: EU flag; shared currencies such as XOF: a globe). Names come from `Intl.DisplayNames`.
+- **Money units:** amounts are integers in the units Stripe expects: cents for two-decimal currencies, whole units for Stripe's zero-decimal list (BIF, CLP, DJF, GNF, JPY, KMF, KRW, MGA, PYG, RWF, VND, VUV, XAF, XOF, XPF), and whole units times 100 for Stripe's special cases ISK and UGX (no fractions). `parseMoneyToCents`, `centsToInput` and `formatMoney` now take the currency. Stored `...Cents` fields keep their names and mean "Stripe amount units".
+- **Price limits (founder decision):** the minimum paid price is Stripe's minimum charge where Stripe lists one (USD 0.50, GBP 0.30, JPY 50, ...), else one whole unit; the maximum is Stripe's 8-digit limit. This replaces the old USD 1.00 to 500 limits. Stripe still checks its own minimum when a checkout is created.
+- **Currency lock (founder decision):** the currency cannot change once the store has any product (archived ones too), checked on the server in `saveStoreSetup`; the picker shows it locked with the reason. Existing stores keep their currency.
+- **Social links (founder decision):** one fixed row per platform (Instagram, TikTok, Facebook, X, LinkedIn, YouTube, Email) plus Website kept as an extra row. The creator types a username; we build the link (a pasted profile link is read back to its username). Format rules from each platform's help center where it could be read (X, YouTube, Facebook, LinkedIn); Instagram and TikTok get a lenient check. It cannot check that an account exists. Email is stored as `mailto:`; everything else stays https only. Links are still stored as `{kind, url}`: no migration. One link per platform; stores with two links of one kind keep both until the creator saves the form, which keeps the first.
+- **Logos (founder decision):** brand logos copied from Simple Icons (CC0), LinkedIn from v13.0.0 because later versions dropped it; no new dependency. DESIGN.md 8 has the exception.
+- **Why:** founder request, 2026-11-03.
+
 ## D-045: Store setup wizard; My Store waits for setup
 - **Date:** 2026-11-03
 - **Decision:**

@@ -143,7 +143,7 @@ The public marketing landing page (not the app) may use the stall, receipt and c
 ---
 
 ## 8. Iconography
-`lucide-react`, 2px stroke, rounded; sizes 16 (inline), 20 (UI), 24 (nav), 32 (empty states); `currentColor`; accessible name unless decorative. Standard map: My Store `Store`, Income `Wallet`, Customers `Users`, Settings `Settings`, Product `Package`, Download `Download`, Link `Link2`, Copy `Copy`, Success `CheckCircle2`, Error `AlertCircle`, Info `Info`, Lock `Lock`, Mail `Mail`, External `ExternalLink`.
+`lucide-react`, 2px stroke, rounded; sizes 16 (inline), 20 (UI), 24 (nav), 32 (empty states); `currentColor`; accessible name unless decorative. **Exception (D-046):** social platform logos (Instagram, TikTok, Facebook, X, LinkedIn, YouTube) come from `components/brand/social-logos.tsx` (Simple Icons, CC0), only next to a link to the creator's own profile. In the dashboard they use the brand color (`lib/brand-colors.ts`, the only other file allowed raw colors); on the creator's store page they take the theme's text color. Standard map: My Store `Store`, Income `Wallet`, Customers `Users`, Settings `Settings`, Product `Package`, Download `Download`, Link `Link2`, Copy `Copy`, Success `CheckCircle2`, Error `AlertCircle`, Info `Info`, Lock `Lock`, Mail `Mail`, External `ExternalLink`.
 
 ---
 
