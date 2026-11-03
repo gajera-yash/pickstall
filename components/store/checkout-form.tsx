@@ -21,23 +21,20 @@ type Props = {
   productSlug: string;
   askPhone: boolean;
   questions: CheckoutQuestion[];
-  /** Pay-what-you-want: the suggested amount to prefill (a plain decimal). Null for a fixed price. */
-  suggestedAmount: string | null;
-  minimumLabel: string | null;
   submitLabel: string;
 };
 
 /**
- * Checkout form (PRD F4): name and email always, optional phone, the creator's questions and, for
- * pay-what-you-want, the amount. Typed values are kept after an error and focus moves to the first
- * problem. The server decides the real price; nothing here can change it.
+ * Checkout form (PRD F4): name and email always, optional phone and the creator's questions. Typed
+ * values are kept after an error and focus moves to the first problem. The price is not on this
+ * form at all: the server takes it from the product (D-047).
  */
-export function CheckoutForm({ username, productSlug, askPhone, questions, suggestedAmount, minimumLabel, submitLabel }: Props) {
+export function CheckoutForm({ username, productSlug, askPhone, questions, submitLabel }: Props) {
   const [state, action, pending] = useActionState<CheckoutState, FormData>(startCheckout.bind(null, username, productSlug), null);
   const error = state && !state.ok ? state : null;
   const fieldError = (field: string) => (error?.field === field ? error.error : null);
   const formError = error && !error.field ? error.error : null;
-  const [values, setValues] = useState<Record<string, string>>({ amount: suggestedAmount ?? "" });
+  const [values, setValues] = useState<Record<string, string>>({});
   const set = (key: string, value: string) => setValues((current) => ({ ...current, [key]: value }));
 
   useEffect(() => {
@@ -61,12 +58,6 @@ export function CheckoutForm({ username, productSlug, askPhone, questions, sugge
       </FormField>
 
       {askPhone && <PhoneField error={fieldError("phone")} />}
-
-      {suggestedAmount !== null && (
-        <FormField id="amount" label="Amount you want to pay" error={fieldError("amount")} hint={minimumLabel ?? undefined}>
-          <Input id="amount" name="amount" inputMode="decimal" value={values.amount ?? ""} onChange={(event) => set("amount", event.target.value)} aria-invalid={fieldError("amount") ? true : undefined} aria-describedby={describedBy("amount", fieldError("amount"), minimumLabel ?? undefined)} />
-        </FormField>
-      )}
 
       {questions.map((question) => {
         const field = `answer-${question.id}`;

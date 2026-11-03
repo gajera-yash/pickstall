@@ -12,7 +12,6 @@ export const buyerInput = z.object({
     .pipe(z.string().min(1, { error: "Enter your name." }).max(BUYER_NAME_MAX, { error: `Use ${BUYER_NAME_MAX} characters or fewer.` })),
   email: z.string().trim().toLowerCase().max(254).pipe(z.email({ error: "Enter a valid email address." })),
   phone: optionalPhoneSchema,
-  amount: z.string().max(12).optional(),
 });
 
 export type BuyerInput = z.infer<typeof buyerInput>;

@@ -4,6 +4,15 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-047: Price with an optional discount; pay-what-you-want removed
+- **Date:** 2026-11-03
+- **Decision (founder request):** a product has a price and, behind a "Add a discount" switch, a discounted price buyers pay instead. The store, product page, checkout, preview and product list show the discounted price with the regular one struck through (`PriceTag`; screen readers hear "was $29.00"). Pay-what-you-want is gone: no price type choice in the editor, no amount field at checkout.
+- **Rules:** the discounted price must be lower than the price, above 0, and within Stripe's limits for the store currency (D-046); a free product cannot have one. The server computes every amount from the product (`orderAmounts`): `subtotalCents` = price, `discountCents` = price minus discounted price, `totalCents` = what the buyer pays and what Stripe charges. Nothing the buyer sends changes it.
+- **Data:** products get `salePriceCents` (null without a discount); `pricingModel` and `minPriceCents` are no longer written. A product saved before this sells at its `priceCents` (its old suggested price), so the app is correct before and after `scripts/migrations/2026-11-remove-pwyw.mjs` (dry run by default, `--apply` to write, safe to repeat; tested on a throwaway database). Saving a product in the editor also clears the old fields. Founder decision: old pay-what-you-want products become fixed at their suggested price.
+- **Supersedes:** the pay-what-you-want lines in PRD F3 and F4.
+- **Follow-up:** the landing page branch (D-043) still mentions pay what you want; update its copy when merging.
+- **Why:** founder request, 2026-11-03.
+
 ## D-046: Every Stripe currency, currency lock, social links from usernames
 - **Date:** 2026-11-03
 - **Currencies:** stores can pick any of the 134 presentment currencies Stripe lists for US, UK and Canadian accounts (docs.stripe.com/currencies, checked 2026-11-03), in a searchable picker with flags (euro: EU flag; shared currencies such as XOF: a globe). Names come from `Intl.DisplayNames`.

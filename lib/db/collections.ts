@@ -78,11 +78,17 @@ export type ProductDoc = {
   slug: string;
   description: string | null;
   coverUrl: string | null;
-  pricingModel: "fixed" | "pwyw";
-  /** Fixed price, or the suggested price for pay-what-you-want. Integer cents. */
+  /** Regular price, in Stripe amount units for the store currency (D-046). 0 is free. */
   priceCents: number;
-  /** Pay-what-you-want minimum, integer cents. */
-  minPriceCents: number | null;
+  /** Discounted price buyers pay instead (D-047), lower than priceCents; null without a discount. */
+  salePriceCents: number | null;
+  /**
+   * Pay-what-you-want fields from before D-047. No longer written or read; the migration
+   * `scripts/migrations/2026-11-remove-pwyw.mjs` removes them. Until then such a product sells at
+   * priceCents (its old suggested price).
+   */
+  pricingModel?: "fixed" | "pwyw";
+  minPriceCents?: number | null;
   /** Never in public reads: delivered only after a verified payment. */
   externalUrl: string | null;
   buttonText: string | null;

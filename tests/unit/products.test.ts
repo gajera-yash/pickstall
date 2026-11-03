@@ -28,9 +28,9 @@ const valid = {
   description: "Everything you need.",
   coverUrl: "https://images.example.com/cover.jpg",
   externalUrl: "https://drive.example.com/file",
-  pricingModel: "fixed",
   price: "19.99",
-  minPrice: "",
+  discountOn: false,
+  salePrice: "",
   buttonText: "Get it",
   downloadLimit: "",
   headline: "Instant access",
@@ -135,7 +135,7 @@ describe("cleanText and guardrails (D-014)", () => {
 describe("productInput", () => {
   it("accepts a complete product and converts money to cents", () => {
     const parsed = productInput.parse(valid);
-    expect(parsed).toMatchObject({ title: "Instagram playbook", priceCents: 1999, minPriceCents: null, pricingModel: "fixed" });
+    expect(parsed).toMatchObject({ title: "Instagram playbook", priceCents: 1999, salePriceCents: null });
     expect(parsed.redirectUrl).toBeUndefined();
     expect(parsed.questions[0]).toMatchObject({ label: "Your Instagram handle?", required: true });
   });
@@ -146,8 +146,13 @@ describe("productInput", () => {
     expect(parsed.description).toBe("Nice");
   });
 
-  it("handles pay-what-you-want with a minimum", () => {
-    expect(productInput.parse({ ...valid, pricingModel: "pwyw", price: "20", minPrice: "5" })).toMatchObject({ priceCents: 2000, minPriceCents: 500 });
+  it("saves a discounted price only while the discount is on (D-047)", () => {
+    expect(productInput.parse({ ...valid, price: "29", discountOn: true, salePrice: "19" })).toMatchObject({ priceCents: 2900, salePriceCents: 1900 });
+    expect(productInput.parse({ ...valid, price: "29", discountOn: false, salePrice: "19" })).toMatchObject({ priceCents: 2900, salePriceCents: null });
+  });
+
+  it("checks the discounted price in the store currency", () => {
+    expect(productInputFor("jpy").parse({ ...valid, price: "3000", discountOn: true, salePrice: "2000" })).toMatchObject({ priceCents: 3000, salePriceCents: 2000 });
   });
 
   it.each([
@@ -155,8 +160,12 @@ describe("productInput", () => {
     ["a letter in the price", { price: "abc" }],
     ["a price above the maximum", { price: "1000000" }],
     ["a price below the paid minimum", { price: "0.49" }],
-    ["a pwyw minimum above the suggested price", { pricingModel: "pwyw", price: "5", minPrice: "10" }],
-    ["a missing pwyw minimum", { pricingModel: "pwyw", price: "5", minPrice: "" }],
+    ["a discount equal to the price", { price: "19", discountOn: true, salePrice: "19" }],
+    ["a discount above the price", { price: "19", discountOn: true, salePrice: "25" }],
+    ["a missing discounted price", { price: "19", discountOn: true, salePrice: "" }],
+    ["a discounted price of 0", { price: "19", discountOn: true, salePrice: "0" }],
+    ["a discounted price under Stripe's minimum", { price: "19", discountOn: true, salePrice: "0.49" }],
+    ["a discount on a free product", { price: "0", discountOn: true, salePrice: "0" }],
     ["an http delivery link", { externalUrl: "http://example.com/x" }],
     ["a javascript redirect", { redirectUrl: "javascript:alert(1)" }],
     ["an unknown email variable", { emailBody: "Hi {{password}}" }],
@@ -166,7 +175,7 @@ describe("productInput", () => {
     ["duplicate question ids", { questions: [{ id: "a", label: "A", kind: "text", required: false, options: [] }, { id: "a", label: "B", kind: "text", required: false, options: [] }] }],
     ["a too-long title", { title: "x".repeat(81) }],
     ["a download limit of zero", { downloadLimit: "0" }],
-    ["an unknown price type", { pricingModel: "free" }],
+    ["a discount toggle that is not a boolean", { discountOn: "yes" }],
   ])("rejects %s", (_label, override) => {
     expect(productInput.safeParse({ ...valid, ...override }).success).toBe(false);
   });
@@ -178,7 +187,7 @@ describe("productInput", () => {
 });
 
 describe("publish rules", () => {
-  const free = { title: "T", priceCents: 0, pricingModel: "fixed" as const, minPriceCents: null, externalUrl: "https://x.example.com" };
+  const free = { title: "T", priceCents: 0, salePriceCents: null, externalUrl: "https://x.example.com" };
 
   it("needs a delivery link or a file", () => {
     expect(checkPublish({ ...free, externalUrl: null }, { stripeChargesEnabled: false })).toEqual({ ok: false, problems: ["Add a link or a file to deliver."] });
@@ -197,8 +206,9 @@ describe("publish rules", () => {
   });
 
   it("knows what counts as paid and when payments are ready", () => {
-    expect(isPaid({ priceCents: 0, pricingModel: "fixed", minPriceCents: null })).toBe(false);
-    expect(isPaid({ priceCents: 1000, pricingModel: "pwyw", minPriceCents: 0 })).toBe(true);
+    expect(isPaid({ priceCents: 0, salePriceCents: null })).toBe(false);
+    expect(isPaid({ priceCents: 1000, salePriceCents: null })).toBe(true);
+    expect(isPaid({ priceCents: 1000, salePriceCents: 500 })).toBe(true);
     expect(paymentsReady({ stripeChargesEnabled: false }, "production")).toBe(false);
   });
 });
@@ -243,13 +253,13 @@ describe("product actions use the session owner's store only", () => {
   });
 
   it("refuses to publish a product that breaks the rules", async () => {
-    queries.findProduct.mockResolvedValue({ _id: PRODUCT_ID, title: "T", priceCents: 0, pricingModel: "fixed", minPriceCents: null, externalUrl: null });
+    queries.findProduct.mockResolvedValue({ _id: PRODUCT_ID, title: "T", priceCents: 0, salePriceCents: null, externalUrl: null });
     expect(await changeProductStatus(PRODUCT_ID, "published")).toEqual({ ok: false, error: "Add a link or a file to deliver." });
     expect(queries.setProductStatus).not.toHaveBeenCalled();
   });
 
   it("publishes a valid product and unpublishes without checks", async () => {
-    queries.findProduct.mockResolvedValue({ _id: PRODUCT_ID, title: "T", priceCents: 0, pricingModel: "fixed", minPriceCents: null, externalUrl: "https://x.example.com" });
+    queries.findProduct.mockResolvedValue({ _id: PRODUCT_ID, title: "T", priceCents: 0, salePriceCents: null, externalUrl: "https://x.example.com" });
     queries.setProductStatus.mockResolvedValue(true);
     expect(await changeProductStatus(PRODUCT_ID, "published")).toEqual({ ok: true, data: { status: "published" } });
     expect(queries.setProductStatus).toHaveBeenCalledWith("store-1", PRODUCT_ID, "published");

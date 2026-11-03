@@ -8,7 +8,7 @@ import { appOrigin } from "@/lib/app-origin";
 import { CHECKOUT_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { validateAnswers } from "@/lib/orders/answers";
-import { computeAmountCents } from "@/lib/orders/pricing";
+import { orderAmounts } from "@/lib/orders/pricing";
 import {
   attachProviderSession,
   canBuy,
@@ -42,8 +42,8 @@ function answersFromForm(formData: FormData): Record<string, unknown> {
 
 /**
  * Starts a checkout (PRD F4). Everything that matters is decided here on the server: the store and
- * product must be published, the amount comes from the product (a pay-what-you-want amount is only
- * range-checked), answers are checked against the product's own questions, and the order is
+ * product must be published, the amount comes from the product (its price, or its discounted price,
+ * D-047), answers are checked against the product's own questions, and the order is
  * created before the provider is asked for a payment page. A client price is never trusted.
  */
 export async function startCheckout(username: string, productSlug: string, _prev: CheckoutState, formData: FormData): Promise<CheckoutState> {
@@ -51,7 +51,6 @@ export async function startCheckout(username: string, productSlug: string, _prev
     name: formData.get("name") ?? "",
     email: formData.get("email") ?? "",
     phone: formData.get("phone") ?? "",
-    amount: typeof formData.get("amount") === "string" ? formData.get("amount") : undefined,
   });
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -69,13 +68,13 @@ export async function startCheckout(username: string, productSlug: string, _prev
     const context = await loadCheckoutContext(username, productSlug);
     if (!context) return err("This product isn't available anymore.");
 
-    const amount = computeAmountCents(context.product, buyer.amount, context.store.currency);
-    if (!amount.ok) return err(amount.error, "amount");
+    // The price comes from the product in the database, never from the form (CLAUDE.md 7, D-047).
+    const amount = orderAmounts(context.product);
 
     const answers = validateAnswers(context.product.checkout.questions, answersFromForm(formData));
     if (!answers.ok) return err(answers.error, `answer-${answers.questionId}`);
 
-    const free = amount.cents === 0;
+    const free = amount.totalCents === 0;
     const provider = free ? null : providerForStore(context.store);
     if (!free && !provider) return err("Payments aren't set up for this store yet. Please check back soon.");
     if (!free && !canBuy(context)) return err("Payments aren't set up for this store yet. Please check back soon.");
@@ -83,12 +82,14 @@ export async function startCheckout(username: string, productSlug: string, _prev
     const orderId = await createPendingOrder({
       storeId: context.store._id,
       productId: context.product.id,
-      item: { title: context.product.title, unitPriceCents: amount.cents },
+      item: { title: context.product.title, unitPriceCents: amount.subtotalCents },
       buyerEmail: buyer.email,
       buyerName: buyer.name,
       buyerPhone: buyer.phone ?? null,
       answers: answers.answers,
-      totalCents: amount.cents,
+      subtotalCents: amount.subtotalCents,
+      discountCents: amount.discountCents,
+      totalCents: amount.totalCents,
       currency: context.store.currency,
       provider: free ? "free" : provider!.name,
     });
@@ -103,7 +104,7 @@ export async function startCheckout(username: string, productSlug: string, _prev
         const session = await provider.createCheckout({
           orderId,
           title: context.product.title,
-          amountCents: amount.cents,
+          amountCents: amount.totalCents,
           currency: context.store.currency,
           buyerEmail: buyer.email,
           successUrl: `${appUrl}${base}/thank-you?order=${orderId}`,

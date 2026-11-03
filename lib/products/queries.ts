@@ -69,9 +69,8 @@ export async function createDraftProduct(storeId: string, defaults: { buttonText
       slug: attempt === 0 ? base : `${base}-${randomUUID().slice(0, 4)}`,
       description: null,
       coverUrl: null,
-      pricingModel: "fixed",
       priceCents: 0,
-      minPriceCents: null,
+      salePriceCents: null,
       externalUrl: null,
       buttonText: defaults.buttonText,
       downloadLimit: null,
@@ -105,9 +104,8 @@ export async function updateProduct(storeId: string, id: string, input: ProductI
     description: input.description ?? null,
     coverUrl: input.coverUrl ?? null,
     externalUrl: input.externalUrl ?? null,
-    pricingModel: input.pricingModel,
     priceCents: input.priceCents,
-    minPriceCents: input.minPriceCents,
+    salePriceCents: input.salePriceCents,
     buttonText: input.buttonText ?? null,
     downloadLimit: input.downloadLimit ?? null,
     checkout: { headline: input.headline ?? null, askPhone: input.askPhone, questions: input.questions },
@@ -124,7 +122,8 @@ export async function updateProduct(storeId: string, id: string, input: ProductI
   for (let attempt = 0; attempt < 5; attempt++) {
     const slug = attempt === 0 ? wantedSlug : `${wantedSlug.slice(0, 45)}-${randomUUID().slice(0, 4)}`;
     try {
-      const result = await products.updateOne({ _id: id, storeId }, { $set: { ...set, slug } });
+      // Saving also clears the pay-what-you-want fields from before D-047.
+      const result = await products.updateOne({ _id: id, storeId }, { $set: { ...set, slug }, $unset: { pricingModel: "", minPriceCents: "" } });
       return result.matchedCount === 1 ? "saved" : "not_found";
     } catch (error) {
       if (!isDuplicateKeyError(error, "slug")) throw error;

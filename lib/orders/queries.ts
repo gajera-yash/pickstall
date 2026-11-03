@@ -2,8 +2,9 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { collections, type CheckoutQuestionDoc, type OrderDoc, type ProductDoc, type StoreDoc } from "@/lib/db/collections";
+import { collections, type CheckoutQuestionDoc, type OrderDoc, type StoreDoc } from "@/lib/db/collections";
 import { providerForStore } from "@/lib/payments";
+import { payableCents } from "@/lib/products/pricing";
 
 // Reads and writes for checkout. The buyer is anonymous, so every lookup goes through the public
 // username and product slug and only finds PUBLISHED stores and products. The checkout page needs
@@ -20,9 +21,8 @@ export type CheckoutContext = {
     title: string;
     description: string | null;
     coverUrl: string | null;
-    pricingModel: ProductDoc["pricingModel"];
     priceCents: number;
-    minPriceCents: number | null;
+    salePriceCents: number | null;
     buttonText: string | null;
     checkout: { headline: string | null; askPhone: boolean; questions: CheckoutQuestionDoc[] };
     thankYou: string | null;
@@ -36,9 +36,8 @@ const PRODUCT_FIELDS = {
   title: 1,
   description: 1,
   coverUrl: 1,
-  pricingModel: 1,
   priceCents: 1,
-  minPriceCents: 1,
+  salePriceCents: 1,
   buttonText: 1,
   "checkout.headline": 1,
   "checkout.askPhone": 1,
@@ -66,9 +65,9 @@ export async function loadCheckoutContext(username: string, productSlug: string)
       title: product.title,
       description: product.description,
       coverUrl: product.coverUrl,
-      pricingModel: product.pricingModel,
       priceCents: product.priceCents,
-      minPriceCents: product.minPriceCents,
+      // Products saved before D-047 have no discount field yet.
+      salePriceCents: product.salePriceCents ?? null,
       buttonText: product.buttonText,
       checkout: product.checkout,
       thankYou: product.afterPurchase?.thankYou ?? null,
@@ -79,21 +78,22 @@ export async function loadCheckoutContext(username: string, productSlug: string)
 
 /** Can a buyer pay for this product right now? Free products always; paid ones need a payment provider. */
 export function canBuy(context: CheckoutContext): boolean {
-  const free = context.product.pricingModel === "fixed" ? context.product.priceCents === 0 : (context.product.minPriceCents ?? 0) === 0 && context.product.priceCents === 0;
+  const free = payableCents(context.product) === 0;
   return free || providerForStore(context.store) !== null;
 }
 
-export type NewOrder = Pick<OrderDoc, "storeId" | "productId" | "item" | "buyerEmail" | "buyerName" | "buyerPhone" | "answers" | "totalCents" | "currency" | "provider">;
+export type NewOrder = Pick<
+  OrderDoc,
+  "storeId" | "productId" | "item" | "buyerEmail" | "buyerName" | "buyerPhone" | "answers" | "subtotalCents" | "discountCents" | "totalCents" | "currency" | "provider"
+>;
 
-/** Creates a pending order. Totals are what the server computed; there is no discount in Phase 1. */
+/** Creates a pending order. Amounts are what the server computed from the product (lib/orders/pricing.ts). */
 export async function createPendingOrder(input: NewOrder): Promise<string> {
   const { orders } = await collections();
   const id = randomUUID();
   await orders.insertOne({
     _id: id,
     ...input,
-    subtotalCents: input.totalCents,
-    discountCents: 0,
     status: "pending",
     providerSessionId: null,
     createdAt: new Date(),

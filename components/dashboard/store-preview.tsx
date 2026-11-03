@@ -2,7 +2,7 @@ import { ImageIcon } from "lucide-react";
 
 import { SocialLogo } from "@/components/brand/social-logos";
 import { cardStyle, resolveTheme } from "@/components/store/store-theme";
-import { priceLabel } from "@/components/store/store-page";
+import { PriceTag } from "@/components/store/price-tag";
 import { APP_NAME, SOCIAL_LINK_LABELS, storeLink, type SocialLinkKind } from "@/lib/config";
 import { safeImageSrc } from "@/lib/media/media";
 import type { ThemePresetId } from "@/lib/themes";
@@ -24,9 +24,8 @@ export type PreviewProduct = {
   title: string;
   coverUrl: string | null;
   buttonText: string | null;
-  pricingModel: "fixed" | "pwyw";
   priceCents: number;
-  minPriceCents: number | null;
+  salePriceCents: number | null;
 };
 
 const MAX_PRODUCTS = 3;
@@ -34,7 +33,7 @@ const MAX_PRODUCTS = 3;
 /**
  * Live phone preview of the public store (DESIGN.md 10.3, 10.4, 11, D-045): a phone frame with the
  * creator's photo, name, bio and social icons, then their real products (up to three, priced with
- * the store page's own priceLabel), or an example card while there are none. Colors come from the
+ * the shared PriceTag (D-047)), or an example card while there are none. Colors come from the
  * theme data through resolveTheme/cardStyle, the same as the public page, never from app tokens.
  * Decorative for screen readers; the form next to it holds the real values.
  */
@@ -132,9 +131,7 @@ export function StorePreview({
                         )}
                         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <span className="truncate font-semibold">{product.title.trim() || "Untitled product"}</span>
-                          <span className="text-sm font-semibold tabular-nums" style={{ color: preset.muted }}>
-                            {priceLabel(product, currency)}
-                          </span>
+                          <PriceTag product={product} currency={currency} className="text-sm font-semibold" regularStyle={{ color: preset.muted }} />
                         </span>
                       </div>
                       <span

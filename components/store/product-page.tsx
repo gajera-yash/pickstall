@@ -1,21 +1,20 @@
 import { ArrowLeft, Lock } from "lucide-react";
 import Link from "next/link";
 
-import { StoreHeader, priceLabel } from "@/components/store/store-page";
+import { PriceTag } from "@/components/store/price-tag";
+import { StoreHeader } from "@/components/store/store-page";
 import { StoreFrame, cardStyle, resolveTheme } from "@/components/store/store-theme";
 import { safeImageSrc } from "@/lib/media/media";
-import { formatMoney } from "@/lib/products/money";
 import type { PublicProduct, PublicStore } from "@/lib/stores/public";
 
 /**
- * Public product page (PRD F4): cover, title, description, price (or the pay-what-you-want minimum)
- * and the Buy button. Checkout is built in R5, so the button is disabled and says why; nothing
+ * Public product page (PRD F4): cover, title, description, price (with the regular price struck
+ * through when discounted, D-047) and the Buy button. Checkout is built in R5, so the button is disabled and says why; nothing
  * private (delivery link, questions, email text) is on this page.
  */
 export function ProductPage({ store, product, buyable }: { store: PublicStore; product: PublicProduct; buyable: boolean }) {
   const theme = resolveTheme(store.theme);
   const { preset } = theme;
-  const minimum = product.pricingModel === "pwyw" ? (product.minPriceCents ?? 0) : 0;
 
   return (
     <StoreFrame theme={theme}>
@@ -37,15 +36,9 @@ export function ProductPage({ store, product, buyable }: { store: PublicStore; p
             {product.description}
           </p>
         )}
-        <div className="flex flex-col gap-1">
-          <p className="font-display text-money-l tabular-nums">{priceLabel(product, store.currency)}</p>
-          {product.pricingModel === "pwyw" && (
-            <p className="text-sm" style={{ color: preset.muted }}>
-              Suggested {formatMoney(product.priceCents, store.currency)}
-              {minimum > 0 ? `, minimum ${formatMoney(minimum, store.currency)}` : ", any amount"}.
-            </p>
-          )}
-        </div>
+        <p className="font-display text-money-l">
+          <PriceTag product={product} currency={store.currency} regularStyle={{ color: preset.muted }} />
+        </p>
         {buyable ? (
           <Link
             href={`/@${store.slug}/${product.slug}/checkout`}

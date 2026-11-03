@@ -20,7 +20,7 @@ vi.mock("@/lib/db/collections", () => ({
 
 import { findPublicProduct, findPublicStore, listPublicProducts } from "@/lib/stores/public";
 import { setStorePublishedAction } from "@/lib/stores/actions";
-import { priceLabel } from "@/components/store/store-page";
+import { priceLabel, regularPriceLabel, savingPercent } from "@/lib/products/pricing";
 import { buildChecklist } from "@/lib/dashboard/checklist";
 
 const PRIVATE_KEYS = ["ownerId", "stripeAccountId", "stripeChargesEnabled", "isPublished", "externalUrl", "checkout", "afterPurchase", "storeId", "downloadLimit", "status"];
@@ -76,9 +76,8 @@ describe("public store reads", () => {
       title: "Playbook",
       description: null,
       coverUrl: null,
-      pricingModel: "fixed",
       priceCents: 1900,
-      minPriceCents: null,
+      salePriceCents: null,
       buttonText: null,
       externalUrl: "https://secret.example.com",
       checkout: { questions: [] },
@@ -90,14 +89,20 @@ describe("public store reads", () => {
   });
 });
 
-describe("price label", () => {
+describe("price label (D-047)", () => {
   it.each([
-    [{ pricingModel: "fixed", priceCents: 0, minPriceCents: null }, "Free"],
-    [{ pricingModel: "fixed", priceCents: 1999, minPriceCents: null }, "$19.99"],
-    [{ pricingModel: "pwyw", priceCents: 2000, minPriceCents: 500 }, "From $5.00"],
-    [{ pricingModel: "pwyw", priceCents: 2000, minPriceCents: 0 }, "Pay what you want"],
-  ] as const)("%j is %s", (product, label) => {
+    [{ priceCents: 0, salePriceCents: null }, "Free", null],
+    [{ priceCents: 1999, salePriceCents: null }, "$19.99", null],
+    [{ priceCents: 2900, salePriceCents: 1900 }, "$19.00", "$29.00"],
+    [{ priceCents: 1900, salePriceCents: 1900 }, "$19.00", null],
+  ] as const)("%j shows %s (struck: %s)", (product, label, regular) => {
     expect(priceLabel(product, "usd")).toBe(label);
+    expect(regularPriceLabel(product, "usd")).toBe(regular);
+  });
+
+  it("rounds the saving down so a badge never overstates it", () => {
+    expect(savingPercent({ priceCents: 2900, salePriceCents: 1900 })).toBe(34);
+    expect(savingPercent({ priceCents: 2900, salePriceCents: null })).toBe(0);
   });
 });
 

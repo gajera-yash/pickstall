@@ -71,7 +71,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
   };
   const previewProducts = products
     .filter((product) => product.status === "published")
-    .map(({ _id, title, coverUrl, buttonText, pricingModel, priceCents, minPriceCents }) => ({ id: _id, title, coverUrl, buttonText, pricingModel, priceCents, minPriceCents }));
+    .map(({ _id, title, coverUrl, buttonText, priceCents, salePriceCents }) => ({ id: _id, title, coverUrl, buttonText, priceCents, salePriceCents: salePriceCents ?? null }));
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">

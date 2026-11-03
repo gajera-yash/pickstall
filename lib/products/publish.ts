@@ -1,8 +1,9 @@
 import type { ProductDoc } from "@/lib/db/collections";
+import { payableCents, type Priced } from "@/lib/products/pricing";
 
 export type PublishCheck = { ok: true } | { ok: false; problems: string[] };
 
-type Publishable = Pick<ProductDoc, "title" | "priceCents" | "pricingModel" | "minPriceCents" | "externalUrl"> & { fileCount?: number };
+type Publishable = Pick<ProductDoc, "title" | "priceCents" | "salePriceCents" | "externalUrl"> & { fileCount?: number };
 
 /**
  * Whether paid products may be published: the creator's Stripe account must be connected, or we
@@ -14,8 +15,8 @@ export function paymentsReady(store: { stripeChargesEnabled: boolean }, nodeEnv:
 }
 
 /** True when buyers can pay anything for this product. */
-export function isPaid(product: Pick<ProductDoc, "priceCents" | "pricingModel" | "minPriceCents">): boolean {
-  return product.pricingModel === "fixed" ? product.priceCents > 0 : (product.minPriceCents ?? 0) > 0 || product.priceCents > 0;
+export function isPaid(product: Priced): boolean {
+  return payableCents(product) > 0;
 }
 
 /** Publish rules (PRD F3): a title, something to deliver, a valid price and payments for paid products. */

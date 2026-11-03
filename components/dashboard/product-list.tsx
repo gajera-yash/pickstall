@@ -1,9 +1,9 @@
 import { ChevronRight, Download, ImageIcon } from "lucide-react";
 import Link from "next/link";
 
+import { PriceTag } from "@/components/store/price-tag";
 import { Badge } from "@/components/ui/badge";
 import { safeImageSrc } from "@/lib/media/media";
-import { formatMoney } from "@/lib/products/money";
 import type { CreatorProduct } from "@/lib/products/queries";
 
 const STATUS: Record<CreatorProduct["status"], { label: string; variant: "live" | "draft" }> = {
@@ -11,11 +11,6 @@ const STATUS: Record<CreatorProduct["status"], { label: string; variant: "live" 
   draft: { label: "Draft", variant: "draft" },
   archived: { label: "Archived", variant: "draft" },
 };
-
-function priceLabel(product: CreatorProduct, currency: string): string {
-  if (product.pricingModel === "pwyw") return `From ${formatMoney(product.minPriceCents ?? 0, currency)}`;
-  return product.priceCents === 0 ? "Free" : formatMoney(product.priceCents, currency);
-}
 
 /** Product rows: cover, title, type, price and status. Each row opens the editor. */
 export function ProductList({ products, currency }: { products: CreatorProduct[]; currency: string }) {
@@ -42,7 +37,7 @@ export function ProductList({ products, currency }: { products: CreatorProduct[]
                     <Download aria-hidden="true" className="size-3.5" />
                     Digital product
                   </span>
-                  <span className="tabular-nums">{priceLabel(product, currency)}</span>
+                  <PriceTag product={product} currency={currency} regularClassName="text-mute" />
                 </span>
               </span>
               <Badge variant={status.variant}>{status.label}</Badge>

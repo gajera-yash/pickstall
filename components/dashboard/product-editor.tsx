@@ -7,6 +7,7 @@ import { useActionState, useEffect, useState, useTransition } from "react";
 
 import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PriceTag } from "@/components/store/price-tag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,12 +16,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { CHECKOUT_QUESTIONS_MAX } from "@/lib/config";
 import { changeProductStatus, removeProduct, saveProduct, type SaveProductState } from "@/lib/products/actions";
 import { safeImageSrc } from "@/lib/media/media";
-import { formatMoney, parseMoneyToCents, priceDecimals } from "@/lib/products/money";
+import { parseMoneyToCents, priceDecimals } from "@/lib/products/money";
+import { savingPercent, type Priced } from "@/lib/products/pricing";
 import { PRODUCT_LIMITS } from "@/lib/products/schemas";
 import { cn } from "@/lib/utils";
 
@@ -34,9 +37,10 @@ export type EditorProduct = {
   description: string;
   coverUrl: string;
   externalUrl: string;
-  pricingModel: "fixed" | "pwyw";
   price: string;
-  minPrice: string;
+  /** Discount toggle and the discounted price buyers pay (D-047). */
+  discountOn: boolean;
+  salePrice: string;
   buttonText: string;
   downloadLimit: string;
   headline: string;
@@ -55,9 +59,8 @@ const FIELD_TAB: Record<string, Tab> = {
   description: "details",
   coverUrl: "details",
   externalUrl: "details",
-  pricingModel: "details",
   price: "details",
-  minPrice: "details",
+  salePrice: "details",
   buttonText: "details",
   headline: "checkout",
   questions: "checkout",
@@ -123,9 +126,9 @@ export function ProductEditor({ initial, currency, storeLink }: Props) {
     description: values.description,
     coverUrl: values.coverUrl,
     externalUrl: values.externalUrl,
-    pricingModel: values.pricingModel,
     price: values.price,
-    minPrice: values.pricingModel === "pwyw" ? values.minPrice : "",
+    discountOn: values.discountOn,
+    salePrice: values.discountOn ? values.salePrice : "",
     buttonText: values.buttonText,
     downloadLimit: values.downloadLimit,
     headline: values.headline,
@@ -165,6 +168,10 @@ export function ProductEditor({ initial, currency, storeLink }: Props) {
 
   const badge = STATUS_BADGE[values.status];
   const priceCents = parseMoneyToCents(values.price, currency);
+  const salePriceCents = values.discountOn ? parseMoneyToCents(values.salePrice, currency) : null;
+  const previewPrice = priceCents === null ? null : { priceCents, salePriceCents };
+  const saving = previewPrice ? savingPercent(previewPrice) : 0;
+  const saleHint = saving > 0 ? `Buyers pay this instead. That is ${saving}% off.` : "Buyers pay this instead of the price above.";
   const busy = pending || statusPending;
 
   return (
@@ -251,32 +258,25 @@ export function ProductEditor({ initial, currency, storeLink }: Props) {
                   <Input id="externalUrl" type="url" inputMode="url" value={values.externalUrl} onChange={(event) => set("externalUrl", event.target.value)} placeholder="https://" aria-invalid={!!fieldError("externalUrl")} />
                 </Field>
 
-                <fieldset className="flex flex-col gap-3">
+                <fieldset className="flex flex-col gap-4">
                   <legend className="mb-2 text-sm font-semibold">Price</legend>
-                  <div role="radiogroup" aria-label="Price type" className="grid grid-cols-2 gap-1 rounded-md border border-line bg-bg-subtle p-1">
-                    {(["fixed", "pwyw"] as const).map((model) => (
-                      <label
-                        key={model}
-                        className={cn(
-                          "flex min-h-10 cursor-pointer items-center justify-center rounded-sm px-3 text-sm font-semibold transition-colors duration-(--dur-fast) has-focus-visible:ring-2 has-focus-visible:ring-ring",
-                          values.pricingModel === model ? "border border-blue bg-blue-soft text-ink" : "border border-transparent text-mute hover:text-ink",
-                        )}
-                      >
-                        <input type="radio" name="pricingModel-ui" className="sr-only" checked={values.pricingModel === model} onChange={() => set("pricingModel", model)} />
-                        {model === "fixed" ? "Fixed price" : "Pay what you want"}
-                      </label>
-                    ))}
-                  </div>
-                  <div className={cn("grid gap-4", values.pricingModel === "pwyw" && "sm:grid-cols-2")}>
-                    <Field id="price" label={values.pricingModel === "pwyw" ? "Suggested price" : "Price"} error={fieldError("price")} hint={`In ${currency.toUpperCase()}. Use 0 for a free product.`}>
-                      <MoneyInput id="price" currency={currency} value={values.price} onChange={(value) => set("price", value)} invalid={!!fieldError("price")} />
+                  <Field id="price" label="Price" error={fieldError("price")} hint={`In ${currency.toUpperCase()}. Use 0 for a free product.`}>
+                    <MoneyInput id="price" currency={currency} value={values.price} onChange={(value) => set("price", value)} invalid={!!fieldError("price")} />
+                  </Field>
+
+                  <label className="flex min-h-11 cursor-pointer items-center justify-between gap-4 rounded-md border border-line px-4 py-3">
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-sm font-semibold">Add a discount</span>
+                      <span className="text-sm text-mute">Buyers pay a lower price; your store shows the regular price struck through.</span>
+                    </span>
+                    <Switch checked={values.discountOn} onCheckedChange={(checked) => set("discountOn", checked)} aria-label="Add a discount" />
+                  </label>
+
+                  {values.discountOn && (
+                    <Field id="salePrice" label="Discounted price" error={fieldError("salePrice")} hint={saleHint}>
+                      <MoneyInput id="salePrice" currency={currency} value={values.salePrice} onChange={(value) => set("salePrice", value)} invalid={!!fieldError("salePrice")} />
                     </Field>
-                    {values.pricingModel === "pwyw" && (
-                      <Field id="minPrice" label="Minimum price" error={fieldError("minPrice")} hint="Buyers can pay this or more.">
-                        <MoneyInput id="minPrice" currency={currency} value={values.minPrice} onChange={(value) => set("minPrice", value)} invalid={!!fieldError("minPrice")} />
-                      </Field>
-                    )}
-                  </div>
+                  )}
                 </fieldset>
 
                 <Field id="buttonText" label="Button text" error={fieldError("buttonText")} hint={`${values.buttonText.length}/${PRODUCT_LIMITS.buttonText}. Shown on your store and product page.`}>
@@ -387,7 +387,7 @@ export function ProductEditor({ initial, currency, storeLink }: Props) {
         </Card>
 
         <aside aria-label="Preview" className="xl:sticky xl:top-22 xl:self-start">
-          <ProductPreview values={values} currency={currency} priceCents={priceCents} />
+          <ProductPreview values={values} currency={currency} price={previewPrice} />
         </aside>
       </div>
     </form>
@@ -521,16 +521,7 @@ function QuestionList({ questions, onChange, errorFor, listError }: { questions:
 }
 
 /** Live card preview, drawn with our tokens (the creator's own theme applies on the store page itself). */
-function ProductPreview({ values, currency, priceCents }: { values: EditorProduct; currency: string; priceCents: number | null }) {
-  const min = values.pricingModel === "pwyw" ? parseMoneyToCents(values.minPrice, currency) : null;
-  const priceLabel =
-    priceCents === null
-      ? "Set a price"
-      : values.pricingModel === "pwyw"
-        ? `From ${formatMoney(min ?? 0, currency)}`
-        : priceCents === 0
-          ? "Free"
-          : formatMoney(priceCents, currency);
+function ProductPreview({ values, currency, price }: { values: EditorProduct; currency: string; price: Priced | null }) {
   const cover = safeImageSrc(values.coverUrl);
 
   return (
@@ -552,7 +543,7 @@ function ProductPreview({ values, currency, priceCents }: { values: EditorProduc
         <div className="flex flex-col gap-2 p-4">
           <p className="font-display text-h4 break-words">{values.title.trim() || "Untitled product"}</p>
           {values.description.trim() && <p className="line-clamp-3 text-sm whitespace-pre-line text-mute">{values.description}</p>}
-          <p className="font-display text-money-m tabular-nums">{priceLabel}</p>
+          <p className="font-display text-money-m">{price ? <PriceTag product={price} currency={currency} regularClassName="text-mute" /> : "Set a price"}</p>
           <span className="flex h-11 items-center justify-center rounded-md bg-primary text-button text-primary-foreground">{values.buttonText.trim() || "Buy now"}</span>
         </div>
       </div>

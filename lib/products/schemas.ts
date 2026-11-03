@@ -102,9 +102,10 @@ export const productInputFor = (currency: string) =>
     description: text(PRODUCT_LIMITS.description, "Description", { multiline: true }),
     coverUrl: imageField("Cover"),
     externalUrl: httpsUrlSchema("link"),
-    pricingModel: z.enum(["fixed", "pwyw"], { error: "Pick a price type." }),
     price: moneyField("Price", currency),
-    minPrice: z.string(),
+    /** Discount toggle (D-047): when on, buyers pay `salePrice` instead of `price`. */
+    discountOn: z.boolean(),
+    salePrice: z.string().max(20),
     buttonText: text(PRODUCT_LIMITS.buttonText, "Button text"),
     downloadLimit: optionalNumber(PRODUCT_LIMITS.downloadLimitMax, "Download limit"),
     headline: text(PRODUCT_LIMITS.headline, "Checkout headline"),
@@ -116,22 +117,23 @@ export const productInputFor = (currency: string) =>
     emailBody: emailText(PRODUCT_LIMITS.emailBody, "Email message", { multiline: true }),
   })
   .superRefine((input, ctx) => {
-    if (input.pricingModel === "pwyw") {
-      const min = parseMoneyToCents(input.minPrice, currency);
-      if (min === null) ctx.addIssue({ code: "custom", path: ["minPrice"], message: `Minimum: enter an amount like ${example(currency)}.` });
-      else if (min > input.price) ctx.addIssue({ code: "custom", path: ["minPrice"], message: "The minimum can't be higher than the suggested price." });
+    if (input.discountOn) {
+      const sale = parseMoneyToCents(input.salePrice, currency);
+      if (input.price === 0) ctx.addIssue({ code: "custom", path: ["salePrice"], message: "A free product can't have a discount." });
+      else if (sale === null) ctx.addIssue({ code: "custom", path: ["salePrice"], message: `Discounted price: enter an amount like ${example(currency)}.` });
+      else if (sale >= input.price) ctx.addIssue({ code: "custom", path: ["salePrice"], message: "The discounted price must be lower than the price." });
       else {
-        const problem = priceProblem(min, currency, "Minimum");
-        if (problem) ctx.addIssue({ code: "custom", path: ["minPrice"], message: problem });
+        const problem = sale === 0 ? "Discounted price: use an amount above 0, or make the product free." : priceProblem(sale, currency, "Discounted price");
+        if (problem) ctx.addIssue({ code: "custom", path: ["salePrice"], message: problem });
       }
     }
     const ids = input.questions.map((question) => question.id);
     if (new Set(ids).size !== ids.length) ctx.addIssue({ code: "custom", path: ["questions"], message: "Duplicate question." });
   })
-  .transform(({ price, minPrice, ...rest }) => ({
+  .transform(({ price, discountOn, salePrice, ...rest }) => ({
     ...rest,
     priceCents: price,
-    minPriceCents: rest.pricingModel === "pwyw" ? (parseMoneyToCents(minPrice, currency) ?? 0) : null,
+    salePriceCents: discountOn ? parseMoneyToCents(salePrice, currency) : null,
   }));
 
 export type ProductInput = z.infer<ReturnType<typeof productInputFor>>;

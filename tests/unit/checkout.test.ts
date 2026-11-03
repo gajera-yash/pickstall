@@ -46,32 +46,24 @@ vi.mock("@/lib/payments/stripe", () => ({ stripeConfigured: () => false, stripeP
 import type { CheckoutQuestionDoc } from "@/lib/db/collections";
 import { validateAnswers } from "@/lib/orders/answers";
 import { startCheckout, confirmMockPayment } from "@/lib/orders/actions";
-import { computeAmountCents } from "@/lib/orders/pricing";
+import { orderAmounts } from "@/lib/orders/pricing";
 import { buyerInput } from "@/lib/orders/schemas";
 import { mockAllowed, mockProvider, signMockBody } from "@/lib/payments/mock";
 import { handleWebhookRequest } from "@/lib/payments/process";
 
-const fixed = { pricingModel: "fixed", priceCents: 1900, minPriceCents: null } as const;
-const pwyw = { pricingModel: "pwyw", priceCents: 2000, minPriceCents: 500 } as const;
-
-describe("computeAmountCents", () => {
-  it("charges the product's fixed price whatever the client sends", () => {
-    expect(computeAmountCents(fixed, "0.01", "usd")).toEqual({ ok: true, cents: 1900 });
-    expect(computeAmountCents(fixed, undefined, "usd")).toEqual({ ok: true, cents: 1900 });
+describe("orderAmounts (D-047)", () => {
+  it("charges the regular price without a discount", () => {
+    expect(orderAmounts({ priceCents: 1900, salePriceCents: null })).toEqual({ subtotalCents: 1900, discountCents: 0, totalCents: 1900 });
   });
 
-  it("checks a pay-what-you-want amount against the minimum and the maximum", () => {
-    expect(computeAmountCents(pwyw, "", "usd")).toEqual({ ok: true, cents: 2000 });
-    expect(computeAmountCents(pwyw, "5", "usd")).toEqual({ ok: true, cents: 500 });
-    expect(computeAmountCents(pwyw, "12.50", "usd")).toEqual({ ok: true, cents: 1250 });
-    expect(computeAmountCents(pwyw, "4.99", "usd")).toMatchObject({ ok: false });
-    expect(computeAmountCents(pwyw, "0", "usd")).toMatchObject({ ok: false });
-    expect(computeAmountCents(pwyw, "1000000", "usd")).toMatchObject({ ok: false });
-    expect(computeAmountCents(pwyw, "abc", "usd")).toMatchObject({ ok: false });
-    expect(computeAmountCents(pwyw, "-5", "usd")).toMatchObject({ ok: false });
-    expect(computeAmountCents({ ...pwyw, minPriceCents: 0 }, "0.49", "usd")).toMatchObject({ ok: false });
-    // Stripe's minimum charge in USD is 0.50 (D-046).
-    expect(computeAmountCents({ ...pwyw, minPriceCents: 0 }, "0.50", "usd")).toEqual({ ok: true, cents: 50 });
+  it("charges the discounted price and records the discount", () => {
+    expect(orderAmounts({ priceCents: 2900, salePriceCents: 1900 })).toEqual({ subtotalCents: 2900, discountCents: 1000, totalCents: 1900 });
+  });
+
+  it("ignores a discount that is not lower than the price, and old pay-what-you-want fields", () => {
+    expect(orderAmounts({ priceCents: 1900, salePriceCents: 2500 })).toEqual({ subtotalCents: 1900, discountCents: 0, totalCents: 1900 });
+    // A product saved before the migration still sells at its old suggested price.
+    expect(orderAmounts({ priceCents: 2000, pricingModel: "pwyw", minPriceCents: 500 } as never)).toEqual({ subtotalCents: 2000, discountCents: 0, totalCents: 2000 });
   });
 });
 
@@ -204,9 +196,8 @@ describe("startCheckout", () => {
       id: "p1",
       slug: "playbook",
       title: "Playbook",
-      pricingModel: "fixed",
       priceCents: 1900,
-      minPriceCents: null,
+      salePriceCents: null,
       checkout: { headline: null, askPhone: false, questions: [{ id: "q1", label: "Handle", kind: "text", required: true, options: [] }] },
     },
   };
@@ -227,10 +218,19 @@ describe("startCheckout", () => {
     const url = await redirectOf(() => startCheckout("maya", "playbook", null, form({ amount: "0.01", price: "1", totalCents: "1" })));
     expect(url).toBe("/mock-pay/order-1");
     expect(hoisted.queries.createPendingOrder).toHaveBeenCalledWith(
-      expect.objectContaining({ storeId: "store-1", productId: "p1", totalCents: 1900, currency: "usd", provider: "mock", buyerEmail: "maya@example.com" }),
+      expect.objectContaining({ storeId: "store-1", productId: "p1", subtotalCents: 1900, discountCents: 0, totalCents: 1900, currency: "usd", provider: "mock", buyerEmail: "maya@example.com" }),
     );
     expect(provider.createCheckout).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 1900, orderId: "order-1" }));
     expect(hoisted.queries.attachProviderSession).toHaveBeenCalledWith("order-1", "mock_order-1");
+  });
+
+  it("charges the discounted price from the database, whatever amount the form sends (D-047)", async () => {
+    hoisted.queries.loadCheckoutContext.mockResolvedValue({ ...context, product: { ...context.product, priceCents: 2900, salePriceCents: 1900 } });
+    await redirectOf(() => startCheckout("maya", "playbook", null, form({ amount: "1", salePriceCents: "1" })));
+    expect(hoisted.queries.createPendingOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ item: { title: "Playbook", unitPriceCents: 2900 }, subtotalCents: 2900, discountCents: 1000, totalCents: 1900 }),
+    );
+    expect(provider.createCheckout).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 1900 }));
   });
 
   it("rejects missing required answers without creating an order", async () => {

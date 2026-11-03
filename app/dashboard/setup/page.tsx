@@ -7,7 +7,7 @@ import { StoreSetupForm } from "@/components/dashboard/store-setup-form";
 import { StripeConnectButtons } from "@/components/dashboard/stripe-connect-buttons";
 import { PublishButton } from "@/components/dashboard/setup/publish-step";
 import { SetupStepper } from "@/components/dashboard/setup/setup-stepper";
-import { priceLabel } from "@/components/store/store-page";
+import { priceLabel } from "@/lib/products/pricing";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -82,14 +82,13 @@ async function SetupContent({ searchParams }: { searchParams: PageProps<"/dashbo
 }
 
 function toPreview(products: CreatorProduct[]): PreviewProduct[] {
-  return products.map(({ _id, title, coverUrl, buttonText, pricingModel, priceCents, minPriceCents }) => ({
+  return products.map(({ _id, title, coverUrl, buttonText, priceCents, salePriceCents }) => ({
     id: _id,
     title,
     coverUrl,
     buttonText,
-    pricingModel,
     priceCents,
-    minPriceCents,
+    salePriceCents: salePriceCents ?? null,
   }));
 }
 

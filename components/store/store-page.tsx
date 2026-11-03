@@ -1,16 +1,11 @@
 import Link from "next/link";
 
 import { SocialLogo } from "@/components/brand/social-logos";
+import { PriceTag } from "@/components/store/price-tag";
 import { StoreFrame, cardStyle, resolveTheme } from "@/components/store/store-theme";
 import { safeImageSrc } from "@/lib/media/media";
 import { SOCIAL_LINK_LABELS } from "@/lib/config";
-import { formatMoney } from "@/lib/products/money";
 import type { PublicProduct, PublicStore } from "@/lib/stores/public";
-
-export function priceLabel(product: Pick<PublicProduct, "pricingModel" | "priceCents" | "minPriceCents">, currency: string): string {
-  if (product.pricingModel === "pwyw") return (product.minPriceCents ?? 0) === 0 ? "Pay what you want" : `From ${formatMoney(product.minPriceCents ?? 0, currency)}`;
-  return product.priceCents === 0 ? "Free" : formatMoney(product.priceCents, currency);
-}
 
 /** Avatar, name, bio and social links. Shared by the store page and the product page header. */
 export function StoreHeader({ store, linkToStore }: { store: PublicStore; linkToStore?: boolean }) {
@@ -106,7 +101,7 @@ export function StorePage({ store, products }: { store: PublicStore; products: P
                   </span>
                 )}
                 <span className="flex items-center justify-between gap-3">
-                  <span className="font-display text-money-m tabular-nums">{priceLabel(product, store.currency)}</span>
+                  <PriceTag product={product} currency={store.currency} className="font-display text-money-m" regularStyle={{ color: preset.muted }} />
                   <span
                     className="flex h-11 items-center rounded-md px-5 text-button"
                     style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}

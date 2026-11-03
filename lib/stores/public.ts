@@ -25,14 +25,14 @@ export type PublicProduct = {
   title: string;
   description: string | null;
   coverUrl: string | null;
-  pricingModel: ProductDoc["pricingModel"];
   priceCents: number;
-  minPriceCents: number | null;
+  /** Discounted price (D-047), or null. */
+  salePriceCents: number | null;
   buttonText: string | null;
 };
 
 const STORE_FIELDS = { slug: 1, name: 1, bio: 1, avatarUrl: 1, socialLinks: 1, link: 1, theme: 1, currency: 1 } as const;
-const PRODUCT_FIELDS = { slug: 1, title: 1, description: 1, coverUrl: 1, pricingModel: 1, priceCents: 1, minPriceCents: 1, buttonText: 1 } as const;
+const PRODUCT_FIELDS = { slug: 1, title: 1, description: 1, coverUrl: 1, priceCents: 1, salePriceCents: 1, buttonText: 1 } as const;
 
 const SLUG = /^[a-z0-9-]{3,30}$/;
 const PRODUCT_SLUG = /^[a-z0-9-]{1,60}$/;
@@ -55,16 +55,16 @@ export async function findPublicStore(slug: string): Promise<PublicStore | null>
   };
 }
 
-function toPublicProduct(doc: Pick<ProductDoc, "_id" | "slug" | "title" | "description" | "coverUrl" | "pricingModel" | "priceCents" | "minPriceCents" | "buttonText">): PublicProduct {
+function toPublicProduct(doc: Pick<ProductDoc, "_id" | "slug" | "title" | "description" | "coverUrl" | "priceCents" | "salePriceCents" | "buttonText">): PublicProduct {
   return {
     id: doc._id,
     slug: doc.slug,
     title: doc.title,
     description: doc.description,
     coverUrl: doc.coverUrl,
-    pricingModel: doc.pricingModel,
     priceCents: doc.priceCents,
-    minPriceCents: doc.minPriceCents,
+    // Products saved before D-047 have no discount field yet.
+    salePriceCents: doc.salePriceCents ?? null,
     buttonText: doc.buttonText,
   };
 }
