@@ -56,20 +56,22 @@ const pwyw = { pricingModel: "pwyw", priceCents: 2000, minPriceCents: 500 } as c
 
 describe("computeAmountCents", () => {
   it("charges the product's fixed price whatever the client sends", () => {
-    expect(computeAmountCents(fixed, "0.01")).toEqual({ ok: true, cents: 1900 });
-    expect(computeAmountCents(fixed, undefined)).toEqual({ ok: true, cents: 1900 });
+    expect(computeAmountCents(fixed, "0.01", "usd")).toEqual({ ok: true, cents: 1900 });
+    expect(computeAmountCents(fixed, undefined, "usd")).toEqual({ ok: true, cents: 1900 });
   });
 
   it("checks a pay-what-you-want amount against the minimum and the maximum", () => {
-    expect(computeAmountCents(pwyw, "")).toEqual({ ok: true, cents: 2000 });
-    expect(computeAmountCents(pwyw, "5")).toEqual({ ok: true, cents: 500 });
-    expect(computeAmountCents(pwyw, "12.50")).toEqual({ ok: true, cents: 1250 });
-    expect(computeAmountCents(pwyw, "4.99")).toMatchObject({ ok: false });
-    expect(computeAmountCents(pwyw, "0")).toMatchObject({ ok: false });
-    expect(computeAmountCents(pwyw, "500.01")).toMatchObject({ ok: false });
-    expect(computeAmountCents(pwyw, "abc")).toMatchObject({ ok: false });
-    expect(computeAmountCents(pwyw, "-5")).toMatchObject({ ok: false });
-    expect(computeAmountCents({ ...pwyw, minPriceCents: 0 }, "0.5")).toMatchObject({ ok: false });
+    expect(computeAmountCents(pwyw, "", "usd")).toEqual({ ok: true, cents: 2000 });
+    expect(computeAmountCents(pwyw, "5", "usd")).toEqual({ ok: true, cents: 500 });
+    expect(computeAmountCents(pwyw, "12.50", "usd")).toEqual({ ok: true, cents: 1250 });
+    expect(computeAmountCents(pwyw, "4.99", "usd")).toMatchObject({ ok: false });
+    expect(computeAmountCents(pwyw, "0", "usd")).toMatchObject({ ok: false });
+    expect(computeAmountCents(pwyw, "1000000", "usd")).toMatchObject({ ok: false });
+    expect(computeAmountCents(pwyw, "abc", "usd")).toMatchObject({ ok: false });
+    expect(computeAmountCents(pwyw, "-5", "usd")).toMatchObject({ ok: false });
+    expect(computeAmountCents({ ...pwyw, minPriceCents: 0 }, "0.49", "usd")).toMatchObject({ ok: false });
+    // Stripe's minimum charge in USD is 0.50 (D-046).
+    expect(computeAmountCents({ ...pwyw, minPriceCents: 0 }, "0.50", "usd")).toEqual({ ok: true, cents: 50 });
   });
 });
 

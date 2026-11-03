@@ -69,7 +69,7 @@ export async function startCheckout(username: string, productSlug: string, _prev
     const context = await loadCheckoutContext(username, productSlug);
     if (!context) return err("This product isn't available anymore.");
 
-    const amount = computeAmountCents(context.product, buyer.amount);
+    const amount = computeAmountCents(context.product, buyer.amount, context.store.currency);
     if (!amount.ok) return err(amount.error, "amount");
 
     const answers = validateAnswers(context.product.checkout.questions, answersFromForm(formData));

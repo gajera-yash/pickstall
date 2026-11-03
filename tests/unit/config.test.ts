@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { APP_NAME, CURRENCIES, PLAN_LIMITS, PLANS, RESERVED_SLUGS } from "@/lib/config";
+import { APP_NAME, CURRENCIES, PLAN_LIMITS, PLANS, RESERVED_SLUGS, STRIPE_MIN_CHARGE, WHOLE_UNIT_CURRENCIES, ZERO_DECIMAL_CURRENCIES } from "@/lib/config";
 
 describe("config", () => {
   it("has an app name", () => {
@@ -20,7 +20,12 @@ describe("config", () => {
   });
 
   it("supports exactly the Phase 1 currencies", () => {
-    expect([...CURRENCIES]).toEqual(["usd", "gbp", "cad"]);
+    // Stripe's presentment list (D-046): lowercase ISO codes, no duplicates, the launch markets included.
+    expect(CURRENCIES).toHaveLength(134);
+    expect(new Set(CURRENCIES).size).toBe(CURRENCIES.length);
+    expect(CURRENCIES.every((code) => /^[a-z]{3}$/.test(code))).toBe(true);
+    expect(CURRENCIES).toEqual(expect.arrayContaining(["usd", "gbp", "cad", "eur", "inr", "jpy"]));
+    for (const code of [...ZERO_DECIMAL_CURRENCIES, ...WHOLE_UNIT_CURRENCIES, ...Object.keys(STRIPE_MIN_CHARGE)]) expect(CURRENCIES).toContain(code);
   });
 
   it("defines limits for every plan", () => {

@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formData, mockSession, rateLimit, redirectOf, storeQueries, userId } from "./auth-mocks";
+import { currencyLock, formData, mockSession, rateLimit, redirectOf, storeQueries, userId } from "./auth-mocks";
 
 import { changeUsername, savePageDesign, saveStoreSetup } from "@/lib/stores/actions";
-import { pageDesignInput, socialLinkRowsFromForm, storeProfileInput } from "@/lib/stores/schemas";
+import { pageDesignInput, storeProfileInput } from "@/lib/stores/schemas";
+import { socialLinksFromForm } from "@/lib/stores/social-handles";
 import { onAccentFor } from "@/lib/themes";
 
 const profile = {
@@ -11,15 +12,13 @@ const profile = {
   bio: "Quick dinners.",
   avatarUrl: "https://images.example.com/maya.jpg",
   currency: "gbp",
-  socialLinks: [{ kind: "youtube", url: "https://youtube.com/@maya" }],
+  socialLinks: [{ kind: "youtube", url: "https://www.youtube.com/@maya" }],
 };
 
-function profileForm(values: Record<string, string>, links: [string, string][] = [["youtube", "https://youtube.com/@maya"]]): FormData {
+/** The store form: one `social-<kind>` field per platform (D-046), filled with what the creator typed. */
+function profileForm(values: Record<string, string>, social: Record<string, string> = { youtube: "maya" }): FormData {
   const form = formData(values);
-  for (const [kind, url] of links) {
-    form.append("socialKind", kind);
-    form.append("socialUrl", url);
-  }
+  for (const [kind, value] of Object.entries(social)) form.append(`social-${kind}`, value);
   return form;
 }
 
@@ -37,7 +36,8 @@ describe("storeProfileInput", () => {
   it.each([
     ["javascript image", { avatarUrl: "javascript:alert(1)" }],
     ["data image", { avatarUrl: "data:image/png;base64,AAAA" }],
-    ["unknown currency", { currency: "inr" }],
+    ["unknown currency", { currency: "xyz" }],
+    ["an upper-case currency code", { currency: "USD" }],
     ["control characters in the name", { name: "Maya\u0000" }],
     ["a too-long bio", { bio: "x".repeat(201) }],
     ["an http social link", { socialLinks: [{ kind: "website", url: "http://example.com" }] }],
@@ -46,7 +46,10 @@ describe("storeProfileInput", () => {
     ["an unknown social kind", { socialLinks: [{ kind: "myspace", url: "https://myspace.com/maya" }] }],
     ["an empty social link", { socialLinks: [{ kind: "website", url: "" }] }],
     ["the same link twice", { socialLinks: [{ kind: "website", url: "https://a.com" }, { kind: "x", url: "https://A.com" }] }],
-    ["more than 6 links", { socialLinks: Array.from({ length: 7 }, (_, i) => ({ kind: "website", url: `https://site${i}.com` })) }],
+    ["more than 8 links", { socialLinks: Array.from({ length: 9 }, (_, i) => ({ kind: "website", url: `https://site${i}.com` })) }],
+    ["two links for one platform", { socialLinks: [{ kind: "x", url: "https://x.com/a" }, { kind: "x", url: "https://x.com/b" }] }],
+    ["an email link that is not mailto", { socialLinks: [{ kind: "email", url: "https://maya@example.com" }] }],
+    ["a mailto link on a non-email row", { socialLinks: [{ kind: "website", url: "mailto:maya@example.com" }] }],
   ])("rejects %s", (_label, override) => {
     expect(storeProfileInput.safeParse({ ...profile, ...override }).success).toBe(false);
   });
@@ -66,26 +69,30 @@ describe("pageDesignInput", () => {
   });
 });
 
-describe("socialLinkRowsFromForm", () => {
-  it("drops empty rows and remembers each link's row on screen", () => {
-    const form = profileForm({}, [
-      ["website", ""],
-      ["x", "https://x.com/maya"],
-      ["tiktok", "  "],
-      ["instagram", "https://instagram.com/maya"],
-    ]);
-    expect(socialLinkRowsFromForm(form)).toEqual({
+describe("socialLinksFromForm (D-046)", () => {
+  it("builds profile links from usernames, in the fixed platform order, skipping empty rows", () => {
+    const form = profileForm({}, { youtube: "@maya", instagram: "maya.cooks", tiktok: "", email: "Maya@Example.com", website: "https://maya.com" });
+    expect(socialLinksFromForm(form)).toEqual({
+      ok: true,
       links: [
-        { kind: "x", url: "https://x.com/maya" },
-        { kind: "instagram", url: "https://instagram.com/maya" },
+        { kind: "instagram", url: "https://www.instagram.com/maya.cooks" },
+        { kind: "youtube", url: "https://www.youtube.com/@maya" },
+        { kind: "email", url: "mailto:maya@example.com" },
+        { kind: "website", url: "https://maya.com" },
       ],
-      rows: [1, 3],
     });
   });
 
-  it("never reads more rows than the limit plus one", () => {
-    const links = Array.from({ length: 50 }, (_, i): [string, string] => ["website", `https://site${i}.com`]);
-    expect(socialLinkRowsFromForm(profileForm({}, links)).links).toHaveLength(7);
+  it("points the first bad row at its field and returns no links", () => {
+    expect(socialLinksFromForm(profileForm({}, { x: "far_too_long_for_x_handles", website: "http://maya.com" }))).toEqual({
+      ok: false,
+      field: "social-x",
+      error: "Up to 15 letters, numbers or underscores.",
+    });
+  });
+
+  it("ignores fields for unknown platforms", () => {
+    expect(socialLinksFromForm(profileForm({}, { myspace: "maya" }))).toEqual({ ok: true, links: [] });
   });
 });
 
@@ -101,7 +108,29 @@ describe("saveStoreSetup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSession({ id: userId, email: "maya@example.com" });
-    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya" });
+    // The saved profile above uses GBP, so most tests keep the currency unchanged.
+    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya", currency: "gbp" });
+    currencyLock.isCurrencyLocked.mockResolvedValue(false);
+  });
+
+  it("lets a store without products change its currency", async () => {
+    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya", currency: "usd" });
+    storeQueries.updateStoreProfile.mockResolvedValue(true);
+    expect((await saveStoreSetup(null, profileForm(profileFields)))?.ok).toBe(true);
+    expect(currencyLock.isCurrencyLocked).toHaveBeenCalledWith("store-1");
+  });
+
+  it("refuses a currency change once the store has a product (D-046)", async () => {
+    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya", currency: "usd" });
+    currencyLock.isCurrencyLocked.mockResolvedValue(true);
+    expect(await saveStoreSetup(null, profileForm(profileFields))).toMatchObject({ ok: false, field: "currency" });
+    expect(storeQueries.updateStoreProfile).not.toHaveBeenCalled();
+  });
+
+  it("does not look at products when the currency stays the same", async () => {
+    storeQueries.updateStoreProfile.mockResolvedValue(true);
+    await saveStoreSetup(null, profileForm(profileFields));
+    expect(currencyLock.isCurrencyLocked).not.toHaveBeenCalled();
   });
 
   it("saves to the session user's own store only, ignoring an ownerId field", async () => {
@@ -141,11 +170,8 @@ describe("saveStoreSetup", () => {
   });
 
   it("points a bad social link at its row on screen, without saving", async () => {
-    const form = profileForm(profileFields, [
-      ["website", ""],
-      ["x", "http://x.com/maya"],
-    ]);
-    expect(await saveStoreSetup(null, form)).toMatchObject({ ok: false, field: "socialUrl-1" });
+    const form = profileForm(profileFields, { x: "maya", facebook: "abc" });
+    expect(await saveStoreSetup(null, form)).toMatchObject({ ok: false, field: "social-facebook" });
     expect(storeQueries.updateStoreProfile).not.toHaveBeenCalled();
   });
 

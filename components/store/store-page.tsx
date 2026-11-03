@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
+import { SocialLogo } from "@/components/brand/social-logos";
 import { StoreFrame, cardStyle, resolveTheme } from "@/components/store/store-theme";
 import { safeImageSrc } from "@/lib/media/media";
 import { SOCIAL_LINK_LABELS } from "@/lib/config";
@@ -49,23 +49,26 @@ export function StoreHeader({ store, linkToStore }: { store: PublicStore; linkTo
       )}
       {store.socialLinks.length > 0 && (
         <ul className="flex flex-wrap justify-center gap-2">
-          {store.socialLinks.map((link) => {
-            const Icon = SOCIAL_ICONS[link.kind];
-            return (
-              <li key={link.url}>
-                <a
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer nofollow"
-                  aria-label={`${SOCIAL_LINK_LABELS[link.kind]} (opens in a new tab)`}
-                  className="flex size-11 items-center justify-center rounded-full border"
-                  style={{ borderColor: preset.muted, color: preset.text }}
-                >
-                  <Icon aria-hidden="true" className="size-5" />
-                </a>
-              </li>
-            );
-          })}
+          {/* Saved links are https or mailto only (lib/stores/schemas.ts); anything else is skipped here too. */}
+          {store.socialLinks
+            .filter((link) => /^(https:|mailto:)/i.test(link.url))
+            .map((link) => {
+              const email = link.kind === "email";
+              return (
+                <li key={link.url}>
+                  <a
+                    href={link.url}
+                    {...(email ? {} : { target: "_blank", rel: "noopener noreferrer nofollow" })}
+                    aria-label={email ? "Email" : `${SOCIAL_LINK_LABELS[link.kind]} (opens in a new tab)`}
+                    className="flex size-11 items-center justify-center rounded-full border"
+                    style={{ borderColor: preset.muted, color: preset.text }}
+                  >
+                    {/* Theme-colored logos, so they always match the creator's page. */}
+                    <SocialLogo kind={link.kind} />
+                  </a>
+                </li>
+              );
+            })}
         </ul>
       )}
     </header>

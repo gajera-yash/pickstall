@@ -31,7 +31,8 @@ function subscribe(listener: () => void): () => void {
 }
 
 /** Country flag (SVG, never emoji: DESIGN.md 0.7). Decorative: the name or dial code is always next to it. */
-export function CountryFlag({ country, className }: { country: PhoneCountry; className?: string }) {
+/** `country` is an ISO country code (or "EU"); the currency picker passes non-phone codes too. */
+export function CountryFlag({ country, className }: { country: PhoneCountry | (string & {}); className?: string }) {
   const loaded = useSyncExternalStore(subscribe, () => flags, () => null);
   const Flag = loaded?.[country];
   return (

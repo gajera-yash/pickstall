@@ -20,7 +20,7 @@ import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { CHECKOUT_QUESTIONS_MAX } from "@/lib/config";
 import { changeProductStatus, removeProduct, saveProduct, type SaveProductState } from "@/lib/products/actions";
 import { safeImageSrc } from "@/lib/media/media";
-import { formatMoney, parseMoneyToCents } from "@/lib/products/money";
+import { formatMoney, parseMoneyToCents, priceDecimals } from "@/lib/products/money";
 import { PRODUCT_LIMITS } from "@/lib/products/schemas";
 import { cn } from "@/lib/utils";
 
@@ -164,7 +164,7 @@ export function ProductEditor({ initial, currency, storeLink }: Props) {
   };
 
   const badge = STATUS_BADGE[values.status];
-  const priceCents = parseMoneyToCents(values.price);
+  const priceCents = parseMoneyToCents(values.price, currency);
   const busy = pending || statusPending;
 
   return (
@@ -410,7 +410,16 @@ function MoneyInput({ id, currency, value, onChange, invalid }: { id: string; cu
       <span aria-hidden="true" className="flex items-center border-r border-line bg-bg-subtle px-3 text-sm font-semibold text-mute">
         {currency.toUpperCase()}
       </span>
-      <input id={id} inputMode="decimal" value={value} onChange={(event) => onChange(event.target.value)} placeholder="0.00" aria-invalid={invalid || undefined} className="min-w-0 flex-1 bg-transparent px-3 text-base text-ink outline-none tabular-nums placeholder:text-mute" />
+      {/* Whole-number currencies (JPY, ISK...) get a number keyboard and a "0" placeholder (D-046). */}
+      <input
+        id={id}
+        inputMode={priceDecimals(currency) === 0 ? "numeric" : "decimal"}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={priceDecimals(currency) === 0 ? "0" : "0.00"}
+        aria-invalid={invalid || undefined}
+        className="min-w-0 flex-1 bg-transparent px-3 text-base text-ink outline-none tabular-nums placeholder:text-mute"
+      />
     </div>
   );
 }
@@ -513,7 +522,7 @@ function QuestionList({ questions, onChange, errorFor, listError }: { questions:
 
 /** Live card preview, drawn with our tokens (the creator's own theme applies on the store page itself). */
 function ProductPreview({ values, currency, priceCents }: { values: EditorProduct; currency: string; priceCents: number | null }) {
-  const min = values.pricingModel === "pwyw" ? parseMoneyToCents(values.minPrice) : null;
+  const min = values.pricingModel === "pwyw" ? parseMoneyToCents(values.minPrice, currency) : null;
   const priceLabel =
     priceCents === null
       ? "Set a price"

@@ -1,39 +1,28 @@
 "use client";
 
-import { ArrowRight, Check, CheckCircle2, Circle, Eye, Plus, Store, Trash2 } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, Circle, Eye, Store } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
-import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
+import { CurrencyPicker } from "@/components/dashboard/currency-picker";
+import { SocialLinksFields, type SocialValues } from "@/components/dashboard/social-links-fields";
 import { StorePreview, type PreviewProduct } from "@/components/dashboard/store-preview";
 import { ThemeFields, accentReadable } from "@/components/dashboard/theme-fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
-import { FieldError } from "@/components/ui/field";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { IconInput } from "@/components/ui/icon-input";
 import { useAutoHide } from "@/components/ui/use-auto-hide";
-import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  CURRENCIES,
-  CURRENCY_LABELS,
-  SOCIAL_LINK_KINDS,
-  SOCIAL_LINK_LABELS,
-  SOCIAL_LINKS_MAX,
-  type Currency,
-  type SocialLinkKind,
-} from "@/lib/config";
+import { SOCIAL_LINK_KINDS, type Currency, type SocialLinkKind } from "@/lib/config";
 import { saveStoreSetup, type StoreSetupState } from "@/lib/stores/actions";
 import { STORE_BIO_MAX_LENGTH, STORE_NAME_MAX_LENGTH } from "@/lib/stores/schemas";
+import { checkSocialValue, displayValueFor } from "@/lib/stores/social-handles";
 import { THEME_PRESETS, type ThemePresetId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
-
-type SocialRow = { key: number; kind: SocialLinkKind; url: string };
 
 type Values = {
   name: string;
@@ -55,45 +44,51 @@ type Props = {
   mode?: "settings" | "setup";
   continueHref?: string;
   products?: PreviewProduct[];
+  /** True once the store has a product: prices are in this currency, so it cannot change (D-046). */
+  currencyLocked?: boolean;
 };
 
-const toRows = (links: Values["socialLinks"]): SocialRow[] => links.map((link, index) => ({ key: index, ...link }));
-const snapshot = (values: Omit<Values, "socialLinks">, rows: SocialRow[], design: { preset: ThemePresetId; accent: string }) =>
-  JSON.stringify([values, rows.filter((row) => row.url.trim()).map(({ kind, url }) => [kind, url.trim()]), design.preset, design.accent.toUpperCase()]);
+/** One value per platform row, filled from the saved links (usernames, email or website). */
+const toSocialValues = (links: Values["socialLinks"]): SocialValues => {
+  const values = Object.fromEntries(SOCIAL_LINK_KINDS.map((kind) => [kind, ""])) as SocialValues;
+  for (const link of links) if (values[link.kind] === "") values[link.kind] = displayValueFor(link.kind, link.url);
+  return values;
+};
+
+/** The links the rows make right now, valid ones only (for the preview and the summary). */
+const linksFrom = (social: SocialValues) =>
+  SOCIAL_LINK_KINDS.flatMap((kind) => {
+    const check = checkSocialValue(kind, social[kind]);
+    return check?.ok ? [{ kind, url: check.url }] : [];
+  });
+
+const snapshot = (values: Omit<Values, "socialLinks">, social: SocialValues, design: { preset: ThemePresetId; accent: string }) =>
+  JSON.stringify([values, SOCIAL_LINK_KINDS.map((kind) => social[kind].trim()), design.preset, design.accent.toUpperCase()]);
 
 /**
  * Store setup (PRD F8, DESIGN.md 10.3 and 9.13): profile cards in one column with a sticky live
  * preview on wide screens (behind a Preview button otherwise), social links list, unsaved-changes
  * guard, and "Saving..." then "Saved" on the button.
  */
-export function StoreSetupForm({ initial, slug, theme, mode = "settings", continueHref, products }: Props) {
+export function StoreSetupForm({ initial, slug, theme, mode = "settings", continueHref, products, currencyLocked = false }: Props) {
   const router = useRouter();
   const setup = mode === "setup";
   const [state, action, pending] = useActionState<StoreSetupState, FormData>(saveStoreSetup, null);
   const { socialLinks: initialLinks, ...initialFields } = initial;
   const [values, setValues] = useState(initialFields);
-  const [rows, setRows] = useState<SocialRow[]>(() => toRows(initialLinks));
+  const [social, setSocial] = useState<SocialValues>(() => toSocialValues(initialLinks));
   const [design, setDesign] = useState(theme);
-  const nextKey = useRef(initialLinks.length);
-  const [saved, setSaved] = useState(() => snapshot(initialFields, toRows(initialLinks), theme));
+  const [saved, setSaved] = useState(() => snapshot(initialFields, toSocialValues(initialLinks), theme));
 
-  const current = snapshot(values, rows, design);
+  const current = snapshot(values, social, design);
   const dirty = current !== saved;
   // Step 1 counts as done with a photo or a bio (lib/dashboard/checklist.ts), so the wizard asks for one.
   const personalized = Boolean(values.avatarUrl.trim() || values.bio.trim());
-  const linkCount = rows.filter((row) => row.url.trim()).length;
+  const links = linksFrom(social);
+  const linkCount = links.length;
 
   const set = <K extends keyof typeof values>(field: K, value: (typeof values)[K]) => setValues((prev) => ({ ...prev, [field]: value }));
-  const setRow = (key: number, change: Partial<SocialRow>) => setRows((prev) => prev.map((row) => (row.key === key ? { ...row, ...change } : row)));
-  const addRow = () => {
-    const used = new Set(rows.map((row) => row.kind));
-    const kind = SOCIAL_LINK_KINDS.find((candidate) => !used.has(candidate)) ?? "website";
-    const key = nextKey.current++;
-    setRows((prev) => [...prev, { key, kind, url: "" }]);
-    // Focus the new URL field once it exists.
-    requestAnimationFrame(() => document.getElementById(`socialUrl-${rows.length}`)?.focus());
-  };
-  const removeRow = (key: number) => setRows((prev) => prev.filter((row) => row.key !== key));
+  const setSocialValue = (kind: SocialLinkKind, value: string) => setSocial((prev) => ({ ...prev, [kind]: value }));
 
   const error = state && !state.ok ? state : null;
   const fieldError = (field: string) => (error?.field === field ? error.error : null);
@@ -134,7 +129,7 @@ export function StoreSetupForm({ initial, slug, theme, mode = "settings", contin
     name: values.name,
     bio: values.bio,
     avatarUrl: values.avatarUrl,
-    socialLinks: rows.filter((row) => row.url.trim()).map(({ kind, url }) => ({ kind, url })),
+    socialLinks: links,
     themePreset: design.preset,
     accent: design.accent,
   };
@@ -230,98 +225,16 @@ export function StoreSetupForm({ initial, slug, theme, mode = "settings", contin
         <Card>
           <CardHeader>
             <h2 className="font-display text-h3">Social links</h2>
-            <p className="text-sm text-mute">
-              Shown as icons under your bio. Up to {SOCIAL_LINKS_MAX}, each starting with https://
-            </p>
+            <p className="text-sm text-mute">Type just your username. We build the link and show the logo under your bio. Leave a row empty to hide it.</p>
           </CardHeader>
-
-          {rows.length > 0 && (
-            <ul className="flex flex-col gap-4">
-              {rows.map((row, index) => {
-                const Icon = SOCIAL_ICONS[row.kind];
-                const urlId = `socialUrl-${index}`;
-                const urlError = fieldError(urlId);
-                return (
-                  <li key={row.key} className="flex flex-col gap-2">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-                      <div className="relative sm:w-44 sm:shrink-0">
-                        <Icon aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 z-10 size-5 -translate-y-1/2 text-mute" />
-                        <Select
-                          name="socialKind"
-                          aria-label={`Link ${index + 1}: where it goes`}
-                          value={row.kind}
-                          onChange={(event) => setRow(row.key, { kind: event.target.value as SocialLinkKind })}
-                          className="pl-11"
-                        >
-                          {SOCIAL_LINK_KINDS.map((kind) => (
-                            <option key={kind} value={kind}>
-                              {SOCIAL_LINK_LABELS[kind]}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-                      <div className="flex min-w-0 flex-1 gap-2">
-                        <Input
-                          id={urlId}
-                          name="socialUrl"
-                          type="url"
-                          inputMode="url"
-                          placeholder="https://"
-                          aria-label={`Link ${index + 1}: ${SOCIAL_LINK_LABELS[row.kind]} address`}
-                          value={row.url}
-                          onChange={(event) => setRow(row.key, { url: event.target.value })}
-                          aria-invalid={urlError ? true : undefined}
-                          aria-describedby={urlError ? `${urlId}-error` : undefined}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Remove link ${index + 1} (${SOCIAL_LINK_LABELS[row.kind]})`}
-                          onClick={() => removeRow(row.key)}
-                        >
-                          <Trash2 aria-hidden="true" />
-                        </Button>
-                      </div>
-                    </div>
-                    {urlError && <FieldError id={`${urlId}-error`}>{urlError}</FieldError>}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {fieldError("socialLinks") && <FieldError id="socialLinks">{fieldError("socialLinks")}</FieldError>}
-
-          {rows.length < SOCIAL_LINKS_MAX ? (
-            <Button type="button" variant="secondary" className="self-start" onClick={addRow}>
-              <Plus aria-hidden="true" />
-              {rows.length === 0 ? "Add a link" : "Add another link"}
-            </Button>
-          ) : (
-            <p className="text-sm text-mute">You have added the most links a store can show.</p>
-          )}
+          <SocialLinksFields values={social} onChange={setSocialValue} fieldError={fieldError} />
         </Card>
 
         <Card>
           <CardHeader>
             <h2 className="font-display text-h3">Currency</h2>
           </CardHeader>
-          <FormField id="currency" label="Store currency" error={fieldError("currency")} hint="Prices on your store use this currency.">
-            <Select
-              id="currency"
-              name="currency"
-              value={values.currency}
-              onChange={(event) => set("currency", event.target.value as Currency)}
-              aria-invalid={fieldError("currency") ? true : undefined}
-              aria-describedby={describedBy("currency", fieldError("currency"), "hint")}
-            >
-              {CURRENCIES.map((currency) => (
-                <option key={currency} value={currency}>
-                  {CURRENCY_LABELS[currency]}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+          <CurrencyPicker value={values.currency} onChange={(currency) => set("currency", currency)} locked={currencyLocked} error={fieldError("currency")} />
         </Card>
 
         <div className="flex flex-wrap items-center gap-3">

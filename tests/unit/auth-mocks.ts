@@ -50,6 +50,7 @@ const hoisted = vi.hoisted(() => {
   const profiles = { getProfile: vi.fn(), saveProfile: vi.fn() };
   const slugs = { isSlugTaken: vi.fn(), findTakenSlugs: vi.fn() };
   const testAccount = { testSellerAccountId: vi.fn() };
+  const currencyLock = { isCurrencyLocked: vi.fn(async () => false) };
   const library = { hasPurchases: vi.fn() };
   const rateLimit = { takeRateLimit: vi.fn(), releaseRateLimit: vi.fn() };
 
@@ -66,6 +67,7 @@ const hoisted = vi.hoisted(() => {
     slugs,
     rateLimit,
     testAccount,
+    currencyLock,
     library,
   };
 });
@@ -83,6 +85,7 @@ export const {
   slugs,
   rateLimit,
   testAccount,
+  currencyLock,
   library,
 } = hoisted;
 
@@ -139,6 +142,7 @@ vi.mock("@/lib/stores/queries", () => hoisted.storeQueries);
 vi.mock("@/lib/auth/profiles", () => hoisted.profiles);
 vi.mock("@/lib/stores/slug-availability", () => hoisted.slugs);
 vi.mock("@/lib/payments/test-account", () => hoisted.testAccount);
+vi.mock("@/lib/stores/currency-lock", () => hoisted.currencyLock);
 vi.mock("@/lib/library/queries", () => hoisted.library);
 
 vi.mock("@/lib/rate-limit", () => ({

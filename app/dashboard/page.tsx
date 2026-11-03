@@ -7,7 +7,7 @@ import { KpiSection, type KpiSeries } from "@/components/dashboard/kpi-section";
 import { MyStoreTabs } from "@/components/dashboard/my-store-tabs";
 import { PageDesignForm } from "@/components/dashboard/page-design-form";
 import { ProductsEmpty } from "@/components/dashboard/products-empty";
-import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
+import { SocialLogo } from "@/components/brand/social-logos";
 import { HelpCard, StorePreviewCard } from "@/components/dashboard/store-preview-card";
 import { WelcomeHero } from "@/components/dashboard/welcome-hero";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import { loadSetupState } from "@/lib/dashboard/setup-state";
 import { MY_STORE_TABS, type MyStoreTab } from "@/lib/dashboard/nav";
 import { firstName } from "@/lib/dashboard/greeting";
 import type { SocialLink } from "@/lib/stores/schemas";
+import { displayValueFor } from "@/lib/stores/social-handles";
 
 // My Store home (D-029, D-045, reference docs/ui-reference/dashboard.webp). Until setup is done:
 // the welcome card and the setup checklist only. After: welcome card, last-30-days KPIs and the
@@ -128,20 +129,19 @@ function LinksTab({ links }: { links: SocialLink[] }) {
         <div className="flex flex-col items-center gap-2 rounded-md border border-dashed border-line px-4 py-8 text-center">
           <Link2 aria-hidden="true" className="size-6 text-mute" />
           <p className="font-semibold">No links yet</p>
-          <p className="text-sm text-mute">Add Instagram, YouTube, X or your website so buyers can find you.</p>
+          <p className="text-sm text-mute">Add your Instagram, TikTok, YouTube or other usernames so buyers can find you.</p>
         </div>
       ) : (
         <ul className="divide-y divide-line rounded-md border border-line">
           {links.map((item, index) => {
-            const Icon = SOCIAL_ICONS[item.kind];
             return (
               <li key={`${item.kind}-${index}`} className="flex items-center gap-3 px-4 py-3">
-                <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-bg-subtle text-ink">
-                  <Icon className="size-4" />
+                <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-bg-subtle">
+                  <SocialLogo kind={item.kind} colored className="size-4" />
                 </span>
                 <span className="flex min-w-0 flex-col">
                   <span className="text-sm font-semibold">{SOCIAL_LINK_LABELS[item.kind]}</span>
-                  <span className="truncate text-sm text-mute">{item.url}</span>
+                  <span className="truncate text-sm text-mute">{displayValueFor(item.kind, item.url)}</span>
                 </span>
               </li>
             );

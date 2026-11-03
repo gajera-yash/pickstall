@@ -50,7 +50,7 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
               productSlug={product.slug}
               askPhone={product.checkout.askPhone}
               questions={product.checkout.questions}
-              suggestedAmount={pwyw ? centsToInput(product.priceCents) : null}
+              suggestedAmount={pwyw ? centsToInput(product.priceCents, store.currency) : null}
               minimumLabel={pwyw ? (minimum > 0 ? `Minimum ${formatMoney(minimum, store.currency)}.` : "Any amount, including 0.") : null}
               submitLabel={product.priceCents === 0 && !pwyw ? "Get it free" : product.buttonText || "Pay now"}
             />

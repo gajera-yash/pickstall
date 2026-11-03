@@ -46,19 +46,56 @@ export const SIGNUP_RATE_LIMITS = {
   perIp: { max: 10, windowMinutes: 60 },
 } as const;
 
-/** Store currencies supported in Phase 1 (lowercase, as stored in the database). */
-export const CURRENCIES = ["usd", "gbp", "cad"] as const;
+/**
+ * Store currencies (D-046): Stripe's presentment currencies for card payments, as listed on
+ * docs.stripe.com/currencies for US, UK and Canadian accounts, checked 2026-11-03. Lowercase, as
+ * stored in the database and sent to Stripe. Stripe decides at checkout whether a creator's own
+ * account can take a currency; re-check this list before changing it.
+ */
+export const CURRENCIES = [
+  "aed", "afn", "all", "amd", "ang", "aoa", "ars", "aud", "awg", "azn", "bam", "bbd",
+  "bdt", "bif", "bmd", "bnd", "bob", "brl", "bsd", "bwp", "byn", "bzd", "cad", "cdf",
+  "chf", "clp", "cny", "cop", "crc", "cve", "czk", "djf", "dkk", "dop", "dzd", "egp",
+  "etb", "eur", "fjd", "fkp", "gbp", "gel", "gip", "gmd", "gnf", "gtq", "gyd", "hkd",
+  "hnl", "htg", "huf", "idr", "ils", "inr", "isk", "jmd", "jpy", "kes", "kgs", "khr",
+  "kmf", "krw", "kyd", "kzt", "lak", "lbp", "lkr", "lrd", "lsl", "mad", "mdl", "mga",
+  "mkd", "mmk", "mnt", "mop", "mur", "mvr", "mwk", "mxn", "myr", "mzn", "nad", "ngn",
+  "nio", "nok", "npr", "nzd", "pab", "pen", "pgk", "php", "pkr", "pln", "pyg", "qar",
+  "ron", "rsd", "rub", "rwf", "sar", "sbd", "scr", "sek", "sgd", "shp", "sle", "sos",
+  "srd", "std", "szl", "thb", "tjs", "top", "try", "ttd", "twd", "tzs", "uah", "ugx",
+  "usd", "uyu", "uzs", "vnd", "vuv", "wst", "xaf", "xcd", "xcg", "xof", "xpf", "yer",
+  "zar", "zmw",
+] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
-/** Currency of a new draft store; the creator can change it in Store setup. */
+/** Currency of a new draft store; the creator can change it in Store setup until the first product. */
 export const DEFAULT_CURRENCY: Currency = "usd";
 
-/** Shown in the currency picker. */
-export const CURRENCY_LABELS: Record<Currency, string> = {
-  usd: "USD, US dollar",
-  gbp: "GBP, British pound",
-  cad: "CAD, Canadian dollar",
+/**
+ * Zero-decimal currencies (docs.stripe.com/currencies, "Zero-decimal currencies"): the amount sent to
+ * Stripe is the whole amount (500 JPY is 500). UGX is on Stripe's list but is a special case (below).
+ */
+export const ZERO_DECIMAL_CURRENCIES: readonly Currency[] = ["bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga", "pyg", "rwf", "vnd", "vuv", "xaf", "xof", "xpf"];
+
+/**
+ * Stripe's "special cases" that are charged in whole units but still sent as two-decimal amounts
+ * ending in 00 (5 ISK is 500). Prices in these currencies have no fraction.
+ */
+export const WHOLE_UNIT_CURRENCIES: readonly Currency[] = ["isk", "ugx"];
+
+/**
+ * Stripe's minimum charge per currency (docs.stripe.com/currencies, "Minimum charge amount by
+ * currency"), in the amount units Stripe expects. Currencies not listed use one whole unit; Stripe
+ * still checks its own minimum when the checkout is created.
+ */
+export const STRIPE_MIN_CHARGE: Partial<Record<Currency, number>> = {
+  usd: 50, aed: 200, ars: 50, aud: 50, brl: 50, cad: 50, chf: 50, cop: 50, czk: 1500, dkk: 250, eur: 50,
+  gbp: 30, hkd: 400, huf: 17500, idr: 50, ils: 50, inr: 50, jpy: 50, krw: 50, mxn: 1000, myr: 200,
+  nok: 300, nzd: 50, php: 50, pln: 200, ron: 200, rub: 50, sek: 300, sgd: 50, thb: 1000, zar: 50,
 };
+
+/** Highest amount, in Stripe amount units: Stripe's 8-digit limit for most currencies and payment methods. */
+export const PRICE_MAX_UNITS = 99_999_999;
 
 /**
  * Slugs a creator may not claim, because they clash with app subdomains or routes.
@@ -92,27 +129,28 @@ export const RESERVED_SLUGS: readonly string[] = [
 /** Username changes per owner (D-028). The old link stops working at once (Phase 1). */
 export const USERNAME_CHANGE_RATE_LIMIT = { max: 3, windowMinutes: 24 * 60 } as const;
 
-/** Social links on the store page (D-028): https only, shown as icons. */
-export const SOCIAL_LINK_KINDS = ["website", "instagram", "youtube", "tiktok", "x", "linkedin", "facebook"] as const;
+/**
+ * Social links on the store page (D-028, D-046): one fixed row per platform, in this order, filled in
+ * with a username (an email address for Email, an https link for Website), shown as logos.
+ */
+export const SOCIAL_LINK_KINDS = ["instagram", "tiktok", "facebook", "x", "linkedin", "youtube", "email", "website"] as const;
 export type SocialLinkKind = (typeof SOCIAL_LINK_KINDS)[number];
 export const SOCIAL_LINK_LABELS: Record<SocialLinkKind, string> = {
-  website: "Website",
   instagram: "Instagram",
-  youtube: "YouTube",
   tiktok: "TikTok",
-  x: "X",
-  linkedin: "LinkedIn",
   facebook: "Facebook",
+  x: "X (Twitter)",
+  linkedin: "LinkedIn",
+  youtube: "YouTube",
+  email: "Email",
+  website: "Website",
 };
-export const SOCIAL_LINKS_MAX = 6;
+/** One link per platform. */
+export const SOCIAL_LINKS_MAX = SOCIAL_LINK_KINDS.length;
 
 /** Product limits (D-030). */
 export const PRODUCTS_MAX_PER_STORE = 100;
 export const CHECKOUT_QUESTIONS_MAX = 5;
-/** Highest price a buyer may enter or a creator may set, in cents. */
-export const PRICE_MAX_CENTS = 50_000;
-/** Smallest paid price in cents (Stripe's minimum charge is 50 cents; we keep a round 1.00). */
-export const PRICE_MIN_PAID_CENTS = 100;
 /** Checkout (D-033): attempts per IP address, and the longest answer a buyer may give. */
 export const CHECKOUT_RATE_LIMIT = { max: 20, windowMinutes: 10 } as const;
 export const ANSWER_MAX_CHARS = { text: 300, long_text: 2000 } as const;

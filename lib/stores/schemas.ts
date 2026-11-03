@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { AA_TEXT } from "@/lib/contrast";
+import { emailSchema } from "@/lib/auth/schemas";
 import { CURRENCIES, SOCIAL_LINK_KINDS, SOCIAL_LINKS_MAX } from "@/lib/config";
 import { safeImageSrc } from "@/lib/media/media";
 import { hasControlChar } from "@/lib/text";
@@ -68,11 +69,24 @@ export const accentSchema = z
     error: "This color is too light or too dark for button text. Pick a stronger color.",
   });
 
-/** One social link: a known kind and a required https URL. */
-export const socialLinkSchema = z.object({
-  kind: z.enum(SOCIAL_LINK_KINDS, { error: "Pick where this link goes." }),
-  url: httpsUrlSchema("link").pipe(z.string({ error: "Enter the link, or remove this row." })),
-});
+/**
+ * One stored social link: a known kind and its link. Email links are `mailto:` with a valid
+ * address; every other link is https only (D-014). The form builds these from usernames
+ * (lib/stores/social-handles.ts); this checks them again before they are saved.
+ */
+export const socialLinkSchema = z
+  .object({
+    kind: z.enum(SOCIAL_LINK_KINDS, { error: "Pick where this link goes." }),
+    url: z.string({ error: "Enter the link, or leave the row empty." }).trim().min(1).max(STORE_URL_MAX_LENGTH),
+  })
+  .superRefine((link, ctx) => {
+    if (link.kind === "email") {
+      const email = link.url.toLowerCase().startsWith("mailto:") ? link.url.slice("mailto:".length) : "";
+      if (!emailSchema.safeParse(email).success) ctx.addIssue({ code: "custom", path: ["url"], message: "Enter a valid email address." });
+      return;
+    }
+    if (!httpsUrlSchema("link").safeParse(link.url).success) ctx.addIssue({ code: "custom", path: ["url"], message: "Enter a full link that starts with https://" });
+  });
 
 export type SocialLink = z.infer<typeof socialLinkSchema>;
 
@@ -81,10 +95,13 @@ export const socialLinksSchema = z
   .max(SOCIAL_LINKS_MAX, { error: `Add up to ${SOCIAL_LINKS_MAX} links.` })
   .superRefine((links, ctx) => {
     const seen = new Set<string>();
+    const kinds = new Set<string>();
     links.forEach((link, index) => {
       const key = link.url.toLowerCase();
       if (seen.has(key)) ctx.addIssue({ code: "custom", path: [index, "url"], message: "You already added this link." });
+      if (kinds.has(link.kind)) ctx.addIssue({ code: "custom", path: [index, "kind"], message: "Add one link per platform." });
       seen.add(key);
+      kinds.add(link.kind);
     });
   });
 
@@ -106,24 +123,3 @@ export const pageDesignInput = z.object({
 });
 
 export type PageDesignInput = z.infer<typeof pageDesignInput>;
-
-/**
- * Social link rows from a form (`socialKind` and `socialUrl`, one pair per row). Rows with an
- * empty URL are dropped, so an added but unused row is not an error. `rows` maps each kept link
- * back to its row on screen, for error messages.
- */
-export function socialLinkRowsFromForm(formData: FormData): { links: { kind: unknown; url: unknown }[]; rows: number[] } {
-  const kinds = formData.getAll("socialKind");
-  const urls = formData.getAll("socialUrl");
-  const links: { kind: unknown; url: unknown }[] = [];
-  const rows: number[] = [];
-  // Never read more rows than the limit allows (plus one, so the max error can still show).
-  const count = Math.min(Math.max(kinds.length, urls.length), SOCIAL_LINKS_MAX + 1);
-  for (let row = 0; row < count; row++) {
-    const url = urls[row];
-    if (typeof url !== "string" || url.trim() === "") continue;
-    links.push({ kind: kinds[row], url });
-    rows.push(row);
-  }
-  return { links, rows };
-}

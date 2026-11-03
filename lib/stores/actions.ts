@@ -11,7 +11,9 @@ import { err, ok, type Result } from "@/lib/result";
 import { SLUG_TAKEN_MESSAGE, slugSchema } from "@/lib/slug";
 import { testSellerAccountId } from "@/lib/payments/test-account";
 import { changeStoreSlug, setStorePublished, setStoreStripeAccount, updateStorePageDesign, updateStoreProfile } from "@/lib/stores/queries";
-import { pageDesignInput, socialLinkRowsFromForm, storeProfileInput } from "@/lib/stores/schemas";
+import { pageDesignInput, storeProfileInput } from "@/lib/stores/schemas";
+import { isCurrencyLocked } from "@/lib/stores/currency-lock";
+import { socialLinksFromForm } from "@/lib/stores/social-handles";
 
 export type StoreSetupState = Result<{ savedAt: number }> | null;
 export type PageDesignState = Result<{ savedAt: number }> | null;
@@ -34,22 +36,24 @@ function errorName(error: unknown): string | undefined {
  * field, so a creator can only change their own.
  */
 export async function saveStoreSetup(_prev: StoreSetupState, formData: FormData): Promise<StoreSetupState> {
-  const { user } = await requireCreator(STORE_SETUP_PATH);
+  const { user, store } = await requireCreator(STORE_SETUP_PATH);
 
-  const { links, rows } = socialLinkRowsFromForm(formData);
+  const social = socialLinksFromForm(formData);
+  if (!social.ok) return err(social.error, social.field);
   const parsed = storeProfileInput.safeParse({
     name: formData.get("name") ?? "",
     bio: formData.get("bio") ?? "",
     avatarUrl: formData.get("avatarUrl") ?? "",
     currency: formData.get("currency"),
-    socialLinks: links,
+    socialLinks: social.links,
   });
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const [first, index] = issue?.path ?? [];
     let field = typeof first === "string" ? first : undefined;
-    // A problem with one social link points at its URL field on screen.
-    if (first === "socialLinks") field = typeof index === "number" ? `socialUrl-${rows[index] ?? index}` : "socialLinks";
+    // A problem with one social link points at that platform's row on screen.
+    const kind = typeof index === "number" ? social.links[index]?.kind : undefined;
+    if (first === "socialLinks") field = kind ? `social-${kind}` : "socialLinks";
     return err(issue?.message ?? "Check the form and try again.", field);
   }
 
@@ -65,6 +69,10 @@ export async function saveStoreSetup(_prev: StoreSetupState, formData: FormData)
   }
 
   try {
+    // Prices are stored in the currency's own units, so the currency locks with the first product (D-046).
+    if (parsed.data.currency !== store.currency && (await isCurrencyLocked(store.id))) {
+      return err("Your prices are set in your current currency, so it can't change once you have a product.", "currency");
+    }
     const saved = await updateStoreProfile(user.id, parsed.data);
     if (!saved) return err(NO_STORE);
     if (design && !(await updateStorePageDesign(user.id, design))) return err(NO_STORE);

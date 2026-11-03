@@ -1,6 +1,6 @@
 import { ImageIcon } from "lucide-react";
 
-import { SOCIAL_ICONS } from "@/components/dashboard/social-icons";
+import { SocialLogo } from "@/components/brand/social-logos";
 import { cardStyle, resolveTheme } from "@/components/store/store-theme";
 import { priceLabel } from "@/components/store/store-page";
 import { APP_NAME, SOCIAL_LINK_LABELS, storeLink, type SocialLinkKind } from "@/lib/config";
@@ -84,7 +84,6 @@ export function StorePreview({
             {data.socialLinks.length > 0 && (
               <ul className="flex flex-wrap justify-center gap-2">
                 {data.socialLinks.map((link, index) => {
-                  const Icon = SOCIAL_ICONS[link.kind];
                   return (
                     <li
                       key={`${link.kind}-${index}`}
@@ -92,7 +91,7 @@ export function StorePreview({
                       className="flex size-9 items-center justify-center rounded-full"
                       style={{ background: preset.card }}
                     >
-                      <Icon className="size-4" />
+                      <SocialLogo kind={link.kind} className="size-4" />
                     </li>
                   );
                 })}

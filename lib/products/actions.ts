@@ -8,7 +8,7 @@ import { PRODUCT_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { checkPublish } from "@/lib/products/publish";
 import { createDraftProduct, deleteProduct, findProduct, setProductStatus, updateProduct } from "@/lib/products/queries";
-import { productIdInput, productInput, productStatusInput } from "@/lib/products/schemas";
+import { productIdInput, productInputFor, productStatusInput } from "@/lib/products/schemas";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 
@@ -58,7 +58,8 @@ export async function saveProduct(productId: string, _prev: SaveProductState, fo
     return err("Check the form and try again.");
   }
 
-  const parsed = productInput.safeParse(json);
+  // Prices are read in the store's own currency (D-046).
+  const parsed = productInputFor(store.currency).safeParse(json);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const [first, index] = issue?.path ?? [];

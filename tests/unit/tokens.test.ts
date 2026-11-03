@@ -159,7 +159,8 @@ describe.each(["light", "dark"] as const)("contrast in %s mode", (mode) => {
 
 describe("no raw colors outside the token files", () => {
   // Email HTML cannot use CSS variables, so its inline colors live in lib/email/templates.ts (D-037).
-  const ALLOWED = new Set([path.normalize("styles/tokens.css"), path.normalize("lib/themes.ts"), path.normalize("lib/email/templates.ts")]);
+  // lib/brand-colors.ts: the social platforms' official colors for their logos (D-046).
+  const ALLOWED = new Set([path.normalize("styles/tokens.css"), path.normalize("lib/themes.ts"), path.normalize("lib/email/templates.ts"), path.normalize("lib/brand-colors.ts")]);
   const RAW_COLOR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|oklch)\(/;
 
   function sourceFiles(dir: string): string[] {

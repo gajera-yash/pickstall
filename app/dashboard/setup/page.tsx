@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator, type CreatorStore } from "@/lib/auth/guards";
 import { SETUP_PATH, currentStep, stepHref, type ChecklistItem } from "@/lib/dashboard/checklist";
 import { loadSetupState, paymentsConnectable } from "@/lib/dashboard/setup-state";
+import { isCurrencyLocked } from "@/lib/stores/currency-lock";
 import { createProductAndEdit } from "@/lib/products/actions";
 import type { CreatorProduct } from "@/lib/products/queries";
 import { storeLink } from "@/lib/config";
@@ -31,7 +32,7 @@ export default function SetupPage({ searchParams }: PageProps<"/dashboard/setup"
 
 async function SetupContent({ searchParams }: { searchParams: PageProps<"/dashboard/setup">["searchParams"] }) {
   const [{ store }, params] = await Promise.all([requireCreator(SETUP_PATH), searchParams]);
-  const { checklist, products } = await loadSetupState(store);
+  const [{ checklist, products }, currencyLocked] = await Promise.all([loadSetupState(store), isCurrencyLocked(store.id).catch(() => true)]);
   const step = currentStep(checklist, typeof params.step === "string" ? params.step : undefined);
   const preview = toPreview(products);
   // The publish step shows what buyers will see: published products only.
@@ -56,6 +57,7 @@ async function SetupContent({ searchParams }: { searchParams: PageProps<"/dashbo
           continueHref={continueHref}
           slug={store.slug}
           theme={store.theme}
+          currencyLocked={currencyLocked}
           products={preview}
           initial={{
             name: store.name,

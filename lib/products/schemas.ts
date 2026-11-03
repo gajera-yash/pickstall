@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { CHECKOUT_QUESTIONS_MAX, PRICE_MAX_CENTS, PRICE_MIN_PAID_CENTS } from "@/lib/config";
-import { parseMoneyToCents } from "@/lib/products/money";
+import { CHECKOUT_QUESTIONS_MAX } from "@/lib/config";
+import { parseMoneyToCents, priceDecimals, priceProblem } from "@/lib/products/money";
 import { cleanText, isSensitiveQuestion, unknownEmailVariables } from "@/lib/products/text";
 import { httpsUrlSchema, imageField } from "@/lib/stores/schemas";
 
@@ -64,19 +64,24 @@ export const questionInput = z
     options: question.kind === "dropdown" ? question.options.filter((option) => option !== "") : [],
   }));
 
-const moneyField = (label: string) =>
-  z
-    .string()
-    .transform((value, ctx) => {
-      const cents = parseMoneyToCents(value);
-      if (cents === null) {
-        ctx.addIssue({ code: "custom", message: `${label}: enter an amount like 19 or 19.99.` });
-        return z.NEVER;
-      }
-      return cents;
-    })
-    .refine((cents) => cents <= PRICE_MAX_CENTS, { error: `${label}: the highest price is ${PRICE_MAX_CENTS / 100}.` })
-    .refine((cents) => cents === 0 || cents >= PRICE_MIN_PAID_CENTS, { error: `${label}: use 0 (free) or at least ${PRICE_MIN_PAID_CENTS / 100}.` });
+/** An example amount for error messages, in the currency's own format ("19.99" or "500"). */
+const example = (currency: string) => (priceDecimals(currency) === 0 ? "500" : "19.99");
+
+/** A price typed by the creator, in this store currency's amount units (D-046), within Stripe's limits. */
+const moneyField = (label: string, currency: string) =>
+  z.string().transform((value, ctx) => {
+    const cents = parseMoneyToCents(value, currency);
+    if (cents === null) {
+      ctx.addIssue({ code: "custom", message: `${label}: enter an amount like ${example(currency)}.` });
+      return z.NEVER;
+    }
+    const problem = priceProblem(cents, currency, label);
+    if (problem) {
+      ctx.addIssue({ code: "custom", message: problem });
+      return z.NEVER;
+    }
+    return cents;
+  });
 
 const optionalNumber = (max: number, label: string) =>
   z
@@ -86,15 +91,19 @@ const optionalNumber = (max: number, label: string) =>
     .transform((value) => (value === "" ? undefined : Number(value)))
     .refine((value) => value === undefined || (value >= 1 && value <= max), { error: `${label}: use 1 to ${max}.` });
 
-/** The whole product editor form. The client sends it as one JSON payload; every field is checked again here. */
-export const productInput = z
+/**
+ * The whole product editor form for a store in `currency`. The client sends it as one JSON payload;
+ * every field is checked again here, prices in the store's currency.
+ */
+export const productInputFor = (currency: string) =>
+  z
   .object({
     title: text(PRODUCT_LIMITS.title, "Title").refine((value) => value !== undefined, { error: "Give your product a title." }),
     description: text(PRODUCT_LIMITS.description, "Description", { multiline: true }),
     coverUrl: imageField("Cover"),
     externalUrl: httpsUrlSchema("link"),
     pricingModel: z.enum(["fixed", "pwyw"], { error: "Pick a price type." }),
-    price: moneyField("Price"),
+    price: moneyField("Price", currency),
     minPrice: z.string(),
     buttonText: text(PRODUCT_LIMITS.buttonText, "Button text"),
     downloadLimit: optionalNumber(PRODUCT_LIMITS.downloadLimitMax, "Download limit"),
@@ -108,11 +117,13 @@ export const productInput = z
   })
   .superRefine((input, ctx) => {
     if (input.pricingModel === "pwyw") {
-      const min = parseMoneyToCents(input.minPrice);
-      if (min === null) ctx.addIssue({ code: "custom", path: ["minPrice"], message: "Minimum: enter an amount like 5 or 5.50." });
+      const min = parseMoneyToCents(input.minPrice, currency);
+      if (min === null) ctx.addIssue({ code: "custom", path: ["minPrice"], message: `Minimum: enter an amount like ${example(currency)}.` });
       else if (min > input.price) ctx.addIssue({ code: "custom", path: ["minPrice"], message: "The minimum can't be higher than the suggested price." });
-      else if (min !== 0 && min < PRICE_MIN_PAID_CENTS)
-        ctx.addIssue({ code: "custom", path: ["minPrice"], message: `Minimum: use 0 (free) or at least ${PRICE_MIN_PAID_CENTS / 100}.` });
+      else {
+        const problem = priceProblem(min, currency, "Minimum");
+        if (problem) ctx.addIssue({ code: "custom", path: ["minPrice"], message: problem });
+      }
     }
     const ids = input.questions.map((question) => question.id);
     if (new Set(ids).size !== ids.length) ctx.addIssue({ code: "custom", path: ["questions"], message: "Duplicate question." });
@@ -120,10 +131,10 @@ export const productInput = z
   .transform(({ price, minPrice, ...rest }) => ({
     ...rest,
     priceCents: price,
-    minPriceCents: rest.pricingModel === "pwyw" ? (parseMoneyToCents(minPrice) ?? 0) : null,
+    minPriceCents: rest.pricingModel === "pwyw" ? (parseMoneyToCents(minPrice, currency) ?? 0) : null,
   }));
 
-export type ProductInput = z.infer<typeof productInput>;
+export type ProductInput = z.infer<ReturnType<typeof productInputFor>>;
 
 export const productStatusInput = z.enum(["draft", "published", "archived"]);
 export const productIdInput = z.string().uuid();

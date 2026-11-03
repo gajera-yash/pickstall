@@ -13,9 +13,11 @@ const queries = vi.hoisted(() => ({
 vi.mock("@/lib/products/queries", () => queries);
 
 import { changeProductStatus, createProductAndEdit, removeProduct, saveProduct } from "@/lib/products/actions";
-import { centsToInput, formatMoney, parseMoneyToCents } from "@/lib/products/money";
+import { centsToInput, formatMoney, parseMoneyToCents, priceLimits, priceProblem } from "@/lib/products/money";
 import { checkPublish, isPaid, paymentsReady } from "@/lib/products/publish";
-import { productInput } from "@/lib/products/schemas";
+import { productInputFor } from "@/lib/products/schemas";
+
+const productInput = productInputFor("usd");
 import { cleanText, isSensitiveQuestion, unknownEmailVariables } from "@/lib/products/text";
 import { storeQueries } from "./auth-mocks";
 
@@ -49,17 +51,58 @@ describe("parseMoneyToCents", () => {
     ["0", 0],
     [" 5 ", 500],
   ])("reads %s as %i cents", (raw, cents) => {
-    expect(parseMoneyToCents(raw)).toBe(cents);
+    expect(parseMoneyToCents(raw, "usd")).toBe(cents);
   });
 
-  it.each(["", "abc", "-5", "1.999", "1e3", "12.", ".5", "1 000"])("rejects %j", (raw) => {
-    expect(parseMoneyToCents(raw)).toBeNull();
+  it.each(["", "abc", "-5", "1.999", "1e3", "12.", ".5"])("rejects %j", (raw) => {
+    expect(parseMoneyToCents(raw, "usd")).toBeNull();
   });
 
   it("formats cents back", () => {
-    expect(centsToInput(1999)).toBe("19.99");
-    expect(centsToInput(null)).toBe("");
+    expect(centsToInput(1999, "usd")).toBe("19.99");
+    expect(centsToInput(null, "usd")).toBe("");
     expect(formatMoney(1999, "usd")).toBe("$19.99");
+  });
+});
+
+describe("money in every Stripe currency (D-046)", () => {
+  it("keeps zero-decimal currencies in whole units, as Stripe expects", () => {
+    expect(parseMoneyToCents("500", "jpy")).toBe(500);
+    expect(parseMoneyToCents("1,500", "krw")).toBe(1500);
+    expect(parseMoneyToCents("500.00", "jpy")).toBe(500);
+    expect(parseMoneyToCents("500.5", "jpy")).toBeNull();
+    expect(formatMoney(500, "jpy")).toBe("¥500");
+    expect(centsToInput(500, "jpy")).toBe("500");
+  });
+
+  it("sends ISK and UGX as two-decimal amounts ending in 00, with no fractions allowed", () => {
+    expect(parseMoneyToCents("5", "isk")).toBe(500);
+    expect(parseMoneyToCents("5.50", "isk")).toBeNull();
+    expect(centsToInput(500, "isk")).toBe("5");
+    expect(priceProblem(550, "isk")).toMatch(/whole amount/);
+  });
+
+  it("keeps two decimals for other currencies, upper or lower case", () => {
+    expect(parseMoneyToCents("12.5", "EUR")).toBe(1250);
+    expect(formatMoney(1250, "EUR")).toBe("€12.50");
+    expect(formatMoney(123456, "inr")).toBe("₹1,234.56");
+  });
+
+  it("uses Stripe's minimum charge where Stripe lists one, else one whole unit", () => {
+    expect(priceLimits("usd").minPaid).toBe(50);
+    expect(priceLimits("gbp").minPaid).toBe(30);
+    expect(priceLimits("jpy").minPaid).toBe(50);
+    expect(priceLimits("huf").minPaid).toBe(17500);
+    expect(priceLimits("vnd").minPaid).toBe(1);
+    expect(priceLimits("kes").minPaid).toBe(100);
+    expect(priceLimits("usd").max).toBe(99_999_999);
+  });
+
+  it("allows free, refuses amounts under the minimum or over the 8-digit limit", () => {
+    expect(priceProblem(0, "usd")).toBeNull();
+    expect(priceProblem(49, "usd")).toMatch(/at least \$0\.50/);
+    expect(priceProblem(50, "usd")).toBeNull();
+    expect(priceProblem(100_000_000, "usd")).toMatch(/highest/);
   });
 });
 
@@ -110,8 +153,8 @@ describe("productInput", () => {
   it.each([
     ["no title", { title: "  " }],
     ["a letter in the price", { price: "abc" }],
-    ["a price above the maximum", { price: "501" }],
-    ["a price below the paid minimum", { price: "0.50" }],
+    ["a price above the maximum", { price: "1000000" }],
+    ["a price below the paid minimum", { price: "0.49" }],
     ["a pwyw minimum above the suggested price", { pricingModel: "pwyw", price: "5", minPrice: "10" }],
     ["a missing pwyw minimum", { pricingModel: "pwyw", price: "5", minPrice: "" }],
     ["an http delivery link", { externalUrl: "http://example.com/x" }],

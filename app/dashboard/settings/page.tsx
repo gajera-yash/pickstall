@@ -6,6 +6,7 @@ import { UsernameCard } from "@/components/dashboard/username-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { storeLink } from "@/lib/config";
+import { isCurrencyLocked } from "@/lib/stores/currency-lock";
 
 // Settings > Store (PRD F8, D-028, D-045): publish status and link, username with Change, then the
 // profile editor with a live preview.
@@ -19,6 +20,7 @@ export default function StoreSettingsPage() {
 
 async function StoreSettingsContent() {
   const { store } = await requireCreator("/dashboard/settings");
+  const currencyLocked = await isCurrencyLocked(store.id).catch(() => true);
   return (
     <>
       <StoreLinkCard link={storeLink(store.slug)} isPublished={store.isPublished} showCustomize={false} title="Store status" />
@@ -27,6 +29,7 @@ async function StoreSettingsContent() {
       <StoreSetupForm
         slug={store.slug}
         theme={store.theme}
+        currencyLocked={currencyLocked}
         initial={{
           name: store.name,
           bio: store.bio ?? "",

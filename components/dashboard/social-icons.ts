@@ -1,9 +1,9 @@
-import { AtSign, BriefcaseBusiness, Camera, Globe, Music2, PlaySquare, ThumbsUp, type LucideIcon } from "lucide-react";
+import { AtSign, BriefcaseBusiness, Camera, Globe, Mail, Music2, PlaySquare, ThumbsUp, type LucideIcon } from "lucide-react";
 
 import type { SocialLinkKind } from "@/lib/config";
 
-// lucide-react has no brand logos, so each kind gets a plain icon; the kind name is always the
-// accessible label next to it.
+// Plain lucide stand-ins for each kind. The dashboard and store pages show the real logos
+// (components/brand/social-logos.tsx, D-046); these remain for small marketing mockups.
 export const SOCIAL_ICONS: Record<SocialLinkKind, LucideIcon> = {
   website: Globe,
   instagram: Camera,
@@ -12,4 +12,5 @@ export const SOCIAL_ICONS: Record<SocialLinkKind, LucideIcon> = {
   x: AtSign,
   linkedin: BriefcaseBusiness,
   facebook: ThumbsUp,
+  email: Mail,
 };
