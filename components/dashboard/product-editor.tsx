@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FieldError, FieldHint } from "@/components/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -249,13 +250,14 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
               const active = id === step;
               return (
                 <li key={id}>
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
                     onClick={() => open(id)}
                     aria-current={active ? "step" : undefined}
                     className={cn(
-                      "flex min-h-14 w-full flex-col items-center gap-1.5 rounded-md border px-2 py-2 text-center transition-colors duration-(--dur-fast) sm:flex-row sm:gap-3 sm:px-3 sm:text-left",
-                      active ? "border-blue bg-blue-soft" : "border-line bg-surface hover:bg-bg-subtle",
+                      "h-auto min-h-14 w-full flex-col items-center justify-center gap-1.5 px-2 py-2 text-center font-normal whitespace-normal sm:flex-row sm:justify-start sm:gap-3 sm:px-3 sm:text-left",
+                      active ? "border-blue bg-blue-soft not-disabled:hover:bg-blue-soft" : "border-line",
                     )}
                   >
                     <span
@@ -277,7 +279,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
                       <span className={cn("hidden text-xs sm:block", done[id] ? "text-mint" : "text-mute")}>{done[id] ? "Done" : active ? "In progress" : "To do"}</span>
                     </span>
                     <span className="sr-only">{done[id] ? "(done)" : "(not done)"}</span>
-                  </button>
+                  </Button>
                 </li>
               );
             })}
@@ -583,21 +585,21 @@ function Field({ id, label, error, hint, children }: { id: string; label: string
 
 function MoneyInput({ id, currency, value, onChange, invalid }: { id: string; currency: string; value: string; onChange: (value: string) => void; invalid: boolean }) {
   return (
-    <div className={cn("flex h-11 items-stretch overflow-hidden rounded-sm border bg-surface focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2", invalid ? "border-danger" : "border-input")}>
-      <span aria-hidden="true" className="flex items-center border-r border-line bg-bg-subtle px-3 text-sm font-semibold text-mute">
+    <InputGroup className={cn("overflow-hidden", invalid && "border-danger")}>
+      <InputGroupAddon aria-hidden="true" className="h-full self-stretch border-r border-line bg-bg-subtle px-3 font-semibold">
         {currency.toUpperCase()}
-      </span>
+      </InputGroupAddon>
       {/* Whole-number currencies (JPY, ISK...) get a number keyboard and a "0" placeholder (D-046). */}
-      <input
+      <InputGroupInput
         id={id}
         inputMode={priceDecimals(currency) === 0 ? "numeric" : "decimal"}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={priceDecimals(currency) === 0 ? "0" : "0.00"}
         aria-invalid={invalid || undefined}
-        className="min-w-0 flex-1 bg-transparent px-3 text-base text-ink outline-none tabular-nums placeholder:text-mute"
+        className="px-3 tabular-nums"
       />
-    </div>
+    </InputGroup>
   );
 }
 

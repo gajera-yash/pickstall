@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import type { MyStoreTab } from "@/lib/dashboard/nav";
@@ -48,17 +49,19 @@ export function MyStoreTabs({ initialTab, products, design, links, analytics, pr
           </TabsTrigger>
         </TabsList>
         <div className="flex items-center gap-2 pb-3 lg:py-2">
-          <label className="relative flex min-w-0 flex-1 lg:w-56 lg:flex-none">
-            <span className="sr-only">Search products</span>
-            <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-mute" />
-            <input
+          <InputGroup className="h-10 min-w-0 flex-1 lg:w-56 lg:flex-none">
+            <InputGroupInput
               type="search"
+              aria-label="Search products"
               placeholder="Search products..."
               disabled={productCount === 0}
               title={productCount === 0 ? "Add a product first" : undefined}
-              className="h-10 w-full rounded-md border border-line bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-mute disabled:cursor-not-allowed disabled:bg-bg-subtle"
+              className="text-sm"
             />
-          </label>
+            <InputGroupAddon>
+              <Search aria-hidden="true" className="size-4" />
+            </InputGroupAddon>
+          </InputGroup>
           <Button asChild size="sm" className="h-10 shrink-0">
             <Link href="/dashboard/products/new">
               <Plus aria-hidden="true" className="size-4" />

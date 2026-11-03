@@ -4,8 +4,10 @@ import { Check, ChevronDown } from "lucide-react";
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { CountryFlag } from "@/components/auth/country-flag";
+import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { FieldError, FieldHint } from "@/components/ui/field";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -63,24 +65,19 @@ export function PhoneField({ error, defaultValue }: { error?: string | null; def
         Phone <span className="font-normal text-mute">(optional)</span>
       </Label>
       <input type="hidden" name="phone" value={composePhone(country, national)} />
-      <div
-        className={cn(
-          "flex h-11 w-full min-w-0 items-stretch overflow-hidden rounded-md border bg-surface",
-          "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-          error ? "border-danger" : "border-input",
-        )}
-      >
+      <InputGroup className={cn("overflow-hidden", error && "border-danger")}>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
-            <button
+            <Button
               type="button"
+              variant="ghost"
               aria-label={`Country code: ${current?.name ?? country} +${current?.dial ?? ""}. Change`}
-              className="flex shrink-0 items-center gap-2 border-r border-line pr-3 pl-3 outline-none hover:bg-bg-subtle focus-visible:bg-blue-soft"
+              className="order-first h-full shrink-0 gap-2 rounded-none border-r border-line px-3 focus-visible:bg-blue-soft"
             >
               <CountryFlag country={country} />
               <span className="text-field font-medium text-ink tabular-nums">+{current?.dial}</span>
               <ChevronDown aria-hidden="true" className={cn("size-4 text-mute transition-transform duration-(--dur-fast)", open && "rotate-180")} />
-            </button>
+            </Button>
           </PopoverTrigger>
           <PopoverContent
             align="start"
@@ -126,7 +123,7 @@ export function PhoneField({ error, defaultValue }: { error?: string | null; def
             </Command>
           </PopoverContent>
         </Popover>
-        <input
+        <InputGroupInput
           ref={numberRef}
           id="phone"
           type="tel"
@@ -137,9 +134,9 @@ export function PhoneField({ error, defaultValue }: { error?: string | null; def
           onChange={(event) => setNational(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className="min-w-0 flex-1 bg-transparent px-3 text-field text-ink outline-none placeholder:text-mute"
+          className="px-3"
         />
-      </div>
+      </InputGroup>
       {error ? <FieldError id="phone-error">{error}</FieldError> : <FieldHint id="phone-hint">{PHONE_HINT}</FieldHint>}
     </div>
   );

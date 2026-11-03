@@ -7,6 +7,7 @@ import { useId, useState } from "react";
 import { Frame } from "@/components/landing/ui";
 import { PriceTag } from "@/components/store/price-tag";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -44,23 +45,10 @@ export function ProductShowcase() {
             <Package aria-hidden="true" className="size-5 text-blue" />
             Edit product
           </p>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={live}
-            onClick={() => setLive((value) => !value)}
-            className="flex min-h-11 items-center gap-2 rounded-full px-1 text-sm font-semibold"
-          >
-            <span className={cn("relative h-6 w-10 rounded-full border transition-colors duration-(--dur-fast)", live ? "border-mint bg-mint" : "border-input bg-bg-subtle")}>
-              <m.span
-                aria-hidden="true"
-                className="absolute top-0.5 left-0.5 size-[1.125rem] rounded-full bg-surface shadow-popover"
-                animate={{ x: live ? 16 : 0 }}
-                transition={{ type: "spring", stiffness: 500, damping: 32 }}
-              />
-            </span>
+          <Label className="min-h-11 cursor-pointer gap-2 text-sm">
+            <Switch checked={live} onCheckedChange={setLive} />
             {live ? "Published" : "Draft"}
-          </button>
+          </Label>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -75,15 +63,15 @@ export function ProductShowcase() {
               Price
             </span>
             <div className="ml-auto flex items-center gap-1 rounded-md border border-input bg-surface p-1" role="group" aria-labelledby={priceId}>
-              <button type="button" aria-label="Lower price" onClick={() => step(-STEP_CENTS)} className="flex size-9 items-center justify-center rounded-sm hover:bg-bg-subtle">
+              <Button type="button" variant="ghost" size="icon-sm" aria-label="Lower price" onClick={() => step(-STEP_CENTS)}>
                 <Minus aria-hidden="true" className="size-4" />
-              </button>
+              </Button>
               <output aria-live="polite" className="w-20 text-center font-display text-money-m tabular-nums">
                 {formatMoney(cents, "usd")}
               </output>
-              <button type="button" aria-label="Raise price" onClick={() => step(STEP_CENTS)} className="flex size-9 items-center justify-center rounded-sm hover:bg-bg-subtle">
+              <Button type="button" variant="ghost" size="icon-sm" aria-label="Raise price" onClick={() => step(STEP_CENTS)}>
                 <Plus aria-hidden="true" className="size-4" />
-              </button>
+              </Button>
             </div>
           </div>
           <div className="mt-2 flex items-center justify-between gap-3">

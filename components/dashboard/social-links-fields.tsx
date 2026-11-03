@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { SocialLogo } from "@/components/brand/social-logos";
 import { FieldError, FieldHint } from "@/components/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { SOCIAL_LINK_KINDS, SOCIAL_LINK_LABELS, type SocialLinkKind } from "@/lib/config";
 import { HANDLE_RULES, checkSocialValue, isHandleKind, socialFieldName } from "@/lib/stores/social-handles";
 import { cn } from "@/lib/utils";
@@ -63,19 +64,13 @@ function SocialRow({ kind, value, onChange, serverError }: { kind: SocialLinkKin
       </label>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <div
-          className={cn(
-            "flex h-11 w-full min-w-0 items-stretch overflow-hidden rounded-md border bg-surface",
-            "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-            problem ? "border-danger" : valid ? "border-mint" : "border-input",
-          )}
-        >
+        <InputGroup className={cn("overflow-hidden", problem ? "border-danger" : valid && "border-mint")}>
           {rule && (
-            <span aria-hidden="true" className="hidden shrink-0 items-center border-r border-line bg-bg-subtle px-3 text-sm text-mute sm:flex">
+            <InputGroupAddon aria-hidden="true" className="hidden h-full self-stretch border-r border-line bg-bg-subtle px-3 font-normal sm:flex">
               {rule.prefix}
-            </span>
+            </InputGroupAddon>
           )}
-          <input
+          <InputGroupInput
             id={id}
             name={id}
             type={kind === "email" ? "email" : kind === "website" ? "url" : "text"}
@@ -90,12 +85,12 @@ function SocialRow({ kind, value, onChange, serverError }: { kind: SocialLinkKin
             onBlur={() => setChecked(value)}
             aria-invalid={problem ? true : undefined}
             aria-describedby={`${id}-status`}
-            className="min-w-0 flex-1 bg-transparent px-3 text-field text-ink outline-none placeholder:text-mute"
+            className="px-3"
           />
-          <span aria-hidden="true" className="flex shrink-0 items-center pr-3">
+          <InputGroupAddon align="inline-end" aria-hidden="true" className="pr-3">
             {valid ? <CheckCircle2 className="size-5 fill-mint text-surface" /> : problem ? <AlertCircle className="size-5 fill-danger text-surface" /> : null}
-          </span>
-        </div>
+          </InputGroupAddon>
+        </InputGroup>
         <div id={`${id}-status`} aria-live="polite">
           {problem ? (
             <FieldError>{problem}</FieldError>

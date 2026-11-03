@@ -99,18 +99,19 @@ export function ProductFileField({ productId, file, onChange }: { productId: str
           </Button>
         </div>
       ) : (
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
-          className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-input bg-surface px-4 py-6 text-center transition-colors duration-(--dur-fast) hover:bg-bg-subtle disabled:cursor-not-allowed disabled:opacity-60"
+          className="h-auto min-h-28 w-full flex-col gap-2 border-dashed px-4 py-6 text-center whitespace-normal"
         >
           <FileUp aria-hidden="true" className="size-6 text-blue" />
           <span className="font-semibold">Choose a file to upload</span>
           <span className="text-xs text-mute">
             {PRODUCT_FILE_LABELS}. Up to {PRODUCT_FILE_MAX_BYTES / 1024 / 1024} MB.
           </span>
-        </button>
+        </Button>
       )}
       {progress !== null && (
         <div className="flex flex-col gap-1" role="status" aria-live="polite">

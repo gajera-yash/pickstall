@@ -4,6 +4,7 @@ import { Check, ChevronDown, Globe, Lock } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { CountryFlag } from "@/components/auth/country-flag";
+import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { FieldError, FieldHint } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
@@ -59,16 +60,13 @@ export function CurrencyPicker({
       <input type="hidden" name="currency" value={value} />
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button
+          <Button
             id="currency"
             type="button"
+            variant="secondary"
             disabled={locked}
             aria-describedby={hintId}
-            className={cn(
-              "flex h-11 w-full min-w-0 items-center gap-3 rounded-md border bg-surface px-3 text-left text-field text-ink",
-              "hover:bg-bg-subtle disabled:cursor-not-allowed disabled:bg-bg-subtle disabled:hover:bg-bg-subtle",
-              error ? "border-danger" : "border-input",
-            )}
+            className={cn("w-full min-w-0 justify-start gap-3 px-3 text-left text-field font-normal disabled:bg-bg-subtle disabled:opacity-100", error && "border-danger")}
           >
             <Flag option={current} />
             <span className="font-semibold uppercase tabular-nums">{value}</span>
@@ -78,7 +76,7 @@ export function CurrencyPicker({
             ) : (
               <ChevronDown aria-hidden="true" className={cn("size-4 shrink-0 text-mute transition-transform duration-(--dur-fast)", open && "rotate-180")} />
             )}
-          </button>
+          </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-[min(24rem,calc(100vw-2rem))] p-0">
           <Command filter={currencyFilter}>

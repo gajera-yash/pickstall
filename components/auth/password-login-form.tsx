@@ -68,9 +68,9 @@ export function PasswordLoginForm({ next, onUseCode }: { next: string; onUseCode
       </Button>
       <p className="text-center text-sm text-mute">
         Forgot your password?{" "}
-        <button type="button" onClick={onUseCode} className="cursor-pointer font-semibold text-blue underline underline-offset-4 hover:text-blue-hover">
+        <Button type="button" variant="link" onClick={onUseCode} className="h-auto text-sm font-semibold">
           Get an email code instead
-        </button>
+        </Button>
       </p>
     </form>
   );

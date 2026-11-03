@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { IconInput } from "@/components/ui/icon-input";
 import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { sendEmailCode, type SendCodeState } from "@/lib/auth/actions";
 import { OTP_LENGTH } from "@/lib/config";
 
@@ -39,19 +40,10 @@ export function LoginForm({ next, notice, googleEnabled }: Props) {
   }
 
   const modeTabs = (
-    <div role="group" aria-label="How to sign in" className="grid grid-cols-2 gap-1 rounded-md border border-line bg-bg-subtle p-1">
-      {(["code", "password"] as const).map((value) => (
-        <button
-          key={value}
-          type="button"
-          aria-pressed={mode === value}
-          onClick={() => setMode(value)}
-          className={`min-h-10 cursor-pointer rounded-sm text-sm font-semibold ${mode === value ? "border border-blue bg-blue-soft text-ink" : "border border-transparent text-mute hover:text-ink"}`}
-        >
-          {value === "code" ? "Email code" : "Password"}
-        </button>
-      ))}
-    </div>
+    <ToggleGroup type="single" variant="segment" aria-label="How to sign in" value={mode} onValueChange={(value) => value && setMode(value as typeof mode)} className="grid w-full grid-cols-2">
+      <ToggleGroupItem value="code">Email code</ToggleGroupItem>
+      <ToggleGroupItem value="password">Password</ToggleGroupItem>
+    </ToggleGroup>
   );
 
   if (mode === "password") {

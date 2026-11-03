@@ -2,6 +2,8 @@
 
 import { useId, useState } from "react";
 
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { PLANNED_PRICE_CENTS } from "@/lib/config";
 import { CALCULATOR, compareFees, formatWholeDollars, snapSales } from "@/lib/landing/demo";
 
@@ -16,22 +18,19 @@ export function FeeCalculator() {
   return (
     <div className="flex flex-col gap-6 rounded-lg border-2 border-border-strong bg-surface p-5 shadow-hard-md sm:p-7 lg:shadow-hard-lg">
       <div className="flex flex-col gap-3">
-        <label htmlFor={sliderId} className="text-sm font-semibold">
+        <Label id={sliderId} className="text-sm">
           Your monthly sales
-        </label>
-        <output htmlFor={sliderId} className="font-display text-display-l tabular-nums">
+        </Label>
+        <output className="font-display text-display-l tabular-nums">
           {formatWholeDollars(salesCents)}
         </output>
-        <input
-          id={sliderId}
-          type="range"
+        <Slider
           min={CALCULATOR.minCents}
           max={CALCULATOR.maxCents}
           step={CALCULATOR.stepCents}
-          value={salesCents}
-          onChange={(event) => setSalesCents(snapSales(Number(event.target.value)))}
-          aria-valuetext={`${formatWholeDollars(salesCents)} a month`}
-          className="h-11 w-full cursor-pointer accent-blue"
+          value={[salesCents]}
+          onValueChange={([next]) => next !== undefined && setSalesCents(snapSales(next))}
+          thumb={{ "aria-labelledby": sliderId, "aria-valuetext": `${formatWholeDollars(salesCents)} a month` }}
         />
         <div className="flex justify-between text-xs text-mute tabular-nums">
           <span>{formatWholeDollars(CALCULATOR.minCents)}</span>

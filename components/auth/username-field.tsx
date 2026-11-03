@@ -1,10 +1,13 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, LoaderCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { ROOT_DOMAIN, storeLink } from "@/lib/config";
 import { SLUG_MIN_LENGTH, normalizeSlugInput } from "@/lib/slug";
 import { checkUsername, type UsernameCheck } from "@/lib/stores/username-check";
@@ -61,23 +64,14 @@ export function UsernameField({ value, onChange, serverError, autoFocus }: Props
   return (
     <div className="flex flex-col gap-2">
       <Label htmlFor="username">Username</Label>
-      <div
-        className={cn(
-          "flex h-11 w-full min-w-0 items-stretch overflow-hidden rounded-md border bg-surface transition-colors duration-(--dur-fast)",
-          "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-          problem ? "border-danger" : available ? "border-mint" : "border-input",
-        )}
-      >
-        <span
+      <InputGroup className={cn("overflow-hidden", problem ? "border-danger" : available && "border-mint")}>
+        <InputGroupAddon
           aria-hidden="true"
-          className={cn(
-            "flex shrink-0 items-center border-r px-3 text-sm text-mute sm:px-4 sm:text-base",
-            problem ? "border-danger bg-danger-soft" : "border-line bg-bg-subtle",
-          )}
+          className={cn("h-full self-stretch border-r px-3 text-sm font-normal sm:px-4 sm:text-base", problem ? "border-danger bg-danger-soft" : "border-line bg-bg-subtle")}
         >
           {ROOT_DOMAIN}/@
-        </span>
-        <input
+        </InputGroupAddon>
+        <InputGroupInput
           id="username"
           name="username"
           autoComplete="off"
@@ -91,18 +85,18 @@ export function UsernameField({ value, onChange, serverError, autoFocus }: Props
           onChange={(event) => onChange(normalizeSlugInput(event.target.value))}
           aria-invalid={problem ? true : undefined}
           aria-describedby={hintId}
-          className="min-w-0 flex-1 bg-transparent px-3 text-field text-ink outline-none placeholder:text-mute"
+          className="px-3"
         />
-        <span aria-hidden="true" className="flex shrink-0 items-center pr-3">
+        <InputGroupAddon align="inline-end" aria-hidden="true" className="pr-3">
           {checking ? (
-            <LoaderCircle className="size-5 animate-spin text-mute motion-reduce:animate-none" />
+            <Spinner aria-hidden="true" role={undefined} aria-label={undefined} className="size-5 text-mute" />
           ) : available ? (
             <CheckCircle2 className="size-5 fill-mint text-surface" />
           ) : problem ? (
             <AlertCircle className="size-5 fill-danger text-surface" />
           ) : null}
-        </span>
-      </div>
+        </InputGroupAddon>
+      </InputGroup>
 
       <div id={hintId} aria-live="polite" className="flex flex-col gap-2">
         {problem ? (
@@ -125,14 +119,9 @@ export function UsernameField({ value, onChange, serverError, autoFocus }: Props
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-mute">Try:</span>
           {suggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              onClick={() => onChange(suggestion)}
-              className="rounded-full border border-line bg-bg-subtle px-3 py-1.5 text-sm font-medium text-ink transition-colors duration-(--dur-fast) hover:border-blue hover:bg-blue-soft"
-            >
+            <Button key={suggestion} type="button" variant="secondary" size="sm" onClick={() => onChange(suggestion)} className="rounded-full font-medium">
               {suggestion}
-            </button>
+            </Button>
           ))}
         </div>
       )}

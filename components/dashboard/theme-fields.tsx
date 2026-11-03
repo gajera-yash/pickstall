@@ -81,12 +81,12 @@ export function ThemeFields({ themePreset, accent, onThemePreset, onAccent, fiel
         <Label htmlFor="accent">Accent color</Label>
         <p className="-mt-1 text-sm text-mute">Used for your buttons. We check that the button text stays easy to read.</p>
         <div className="flex items-center gap-3">
-          <input
+          <Input
             type="color"
             aria-label="Pick accent color"
             value={(accentValid ? accent : THEME_PRESETS[themePreset].accent).toLowerCase()}
             onChange={(event) => onAccent(event.target.value.toUpperCase())}
-            className="h-11 w-14 shrink-0 cursor-pointer rounded-md border border-input bg-surface p-1"
+            className="w-14 shrink-0 cursor-pointer p-1"
           />
           <Input
             id="accent"

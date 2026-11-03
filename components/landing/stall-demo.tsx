@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DEFAULT_STALL_NAME, DEMO_PRODUCTS, STALL_NAME_MAX, cleanStallName, initialsOf, nextSale, type DemoProduct } from "@/lib/landing/demo";
 import { formatMoney } from "@/lib/products/money";
 import { cn } from "@/lib/utils";
@@ -85,26 +86,17 @@ export function StallDemo() {
 
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-2 text-xs font-semibold">2. Stock your shelf</legend>
-              <div className="flex flex-wrap gap-2">
+              <ToggleGroup type="multiple" variant="outline" value={stockedIds} onValueChange={setStockedIds} className="flex-wrap gap-2">
                 {DEMO_PRODUCTS.map((product) => {
                   const on = stockedIds.includes(product.id);
                   return (
-                    <button
-                      key={product.id}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => toggle(product.id)}
-                      className={cn(
-                        "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-(--dur-fast)",
-                        on ? "border-blue bg-blue-soft text-ink" : "border-input bg-surface text-ink hover:bg-bg-subtle",
-                      )}
-                    >
+                    <ToggleGroupItem key={product.id} value={product.id} className="min-h-11 gap-1.5 rounded-full px-3">
                       {on ? <Check aria-hidden="true" className="size-4 text-blue" /> : <Plus aria-hidden="true" className="size-4 text-mute" />}
                       {product.title} {formatMoney(product.priceCents, "usd")}
-                    </button>
+                    </ToggleGroupItem>
                   );
                 })}
-              </div>
+              </ToggleGroup>
             </fieldset>
 
             <div className="flex flex-col gap-2">

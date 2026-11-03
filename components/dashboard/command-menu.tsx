@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { SECTION_ICONS } from "@/components/dashboard/dashboard-nav";
+import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
@@ -42,26 +43,19 @@ export function CommandMenu({ storeUrl }: { storeUrl: string }) {
   return (
     <>
       {/* Desktop: a search box. Phones: an icon, because the box would not fit next to the logo. */}
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={() => setOpen(true)}
-        className={cn(
-          "hidden h-11 w-full max-w-lg min-w-0 cursor-pointer items-center gap-3 rounded-md border border-line bg-bg-subtle px-3 text-left text-sm text-mute md:flex",
-          "transition-colors duration-(--dur-fast) hover:border-input hover:bg-surface",
-        )}
+        className="hidden w-full max-w-lg min-w-0 justify-start gap-3 border-line bg-bg-subtle px-3 text-left text-sm font-normal text-mute not-disabled:hover:border-input not-disabled:hover:bg-surface md:flex"
       >
         <Search aria-hidden="true" className="size-5 shrink-0" />
         <span className="flex-1 truncate">Search products, orders, customers...</span>
         <Kbd className="shrink-0 bg-surface">{mac ? "⌘" : "Ctrl"} K</Kbd>
-      </button>
-      <button
-        type="button"
-        aria-label="Search"
-        onClick={() => setOpen(true)}
-        className="flex size-11 cursor-pointer items-center justify-center rounded-full text-ink hover:bg-bg-subtle md:hidden"
-      >
-        <Search aria-hidden="true" className="size-5" />
-      </button>
+      </Button>
+      <Button type="button" variant="ghost" size="icon" aria-label="Search" onClick={() => setOpen(true)} className="rounded-full md:hidden">
+        <Search aria-hidden="true" />
+      </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-xl sm:p-0 [&>button:last-child]:hidden">
