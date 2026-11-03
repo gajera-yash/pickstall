@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowRight, Mail, User } from "lucide-react";
+import { ArrowRight, User } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 
 import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
 import { CodeStep } from "@/components/auth/code-step";
+import { EmailField } from "@/components/auth/email-field";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { PhoneField } from "@/components/auth/phone-field";
 import { useResendCooldown } from "@/components/auth/use-resend-cooldown";
@@ -112,25 +113,7 @@ export function SignupFlow({ googleNext, initialUsername = "" }: { googleNext: s
               />
             </FormField>
 
-            <FormField id="email" label="Email" error={fieldError("email")}>
-              <IconInput
-                icon={Mail}
-                id="email"
-                name="email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="maya@example.com"
-                required
-                value={values.email}
-                onChange={(event) => set("email", event.target.value)}
-                aria-invalid={fieldError("email") ? true : undefined}
-                aria-describedby={describedBy("email", fieldError("email"))}
-              />
-            </FormField>
+            <EmailField value={values.email} onChange={(email) => set("email", email)} serverError={fieldError("email")} />
 
             <PhoneField error={fieldError("phone")} />
 
