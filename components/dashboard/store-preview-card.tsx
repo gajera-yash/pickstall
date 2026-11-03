@@ -1,7 +1,7 @@
 import { LifeBuoy, Mail, Palette } from "lucide-react";
 import Link from "next/link";
 
-import { StorePreview, type StorePreviewData } from "@/components/dashboard/store-preview";
+import { StorePreview, type PreviewProduct, type StorePreviewData } from "@/components/dashboard/store-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,14 +11,24 @@ import { SUPPORT_EMAIL } from "@/lib/config";
  * Right column of My Store (reference docs/ui-reference/dashboard.webp): a live phone preview of the
  * public store with its status and "Customize design", then the help card.
  */
-export function StorePreviewCard({ data, isPublished }: { data: StorePreviewData; isPublished: boolean }) {
+export function StorePreviewCard({
+  data,
+  products,
+  currency,
+  isPublished,
+}: {
+  data: StorePreviewData;
+  products?: PreviewProduct[];
+  currency?: string;
+  isPublished: boolean;
+}) {
   return (
     <Card id="store-preview" className="scroll-mt-24 gap-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-display text-h3">Store preview</h2>
         {isPublished ? <Badge variant="live">Live</Badge> : <Badge variant="draft">Draft</Badge>}
       </div>
-      <StorePreview data={data} className="max-w-[300px] [&>div]:min-h-[480px]" />
+      <StorePreview data={data} products={products} currency={currency} className="max-w-[300px]" />
       <Button asChild variant="secondary" size="lg" className="border-blue text-blue not-disabled:hover:bg-blue-soft">
         <Link href="/dashboard?tab=design">
           <Palette aria-hidden="true" className="size-5" />
