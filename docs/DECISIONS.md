@@ -4,6 +4,13 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-052: Every UI control comes from shadcn/ui
+- **Date:** 2026-11-04
+- **Decision (founder request "aapda platform ma 21st.dev ane shadcn sivay na koi component use na thava joye"):** all controls are shadcn/ui components in `components/ui`, restyled to the DESIGN tokens; screens no longer hand-build buttons, inputs, checkboxes, radios, toggles or accordions. **E1:** Field, Empty, Input Group, Native Select and Spinner from shadcn; FormField, EmptyState, IconInput and Select keep their props and are built from them; the other primitives already followed shadcn (cva, Radix, `data-slot`). **E2:** new Checkbox, Radio Group, Toggle, Toggle Group (the DESIGN 9.3 segmented control), Accordion, Avatar, Input OTP, Tooltip and Kbd. **E3:** the remaining raw controls moved to Button, Input Group, Toggle Group, Switch and a new Slider. The only raw inputs left are hidden ones (form values, and file pickers opened by a Button).
+- **New dependency (founder approved):** `input-otp` 1.5, which shadcn's Input OTP is built on; the login code box now uses it (paste, one-time-code autofill and arrow keys come from the package; pasted text is still cleaned to digits). The old per-box helpers were removed. Everything else uses the existing `radix-ui` package.
+- **Not in this change (founder choice):** the dashboard sidebar moves to shadcn Sidebar later, as its own task. 21st.dev was not needed: shadcn had a component for every control.
+- **Why:** founder request, 2026-11-03.
+
 ## D-051: Orders and Customers as tables with a details drawer
 - **Date:** 2026-11-03
 - **Decision (founder request "Orders, customer page ni UI ekdam simple che, tene proper karvani che"):** both pages follow DESIGN 9.9 and 10.2. **Orders:** status tabs with counts, search, a product filter, Export CSV (the current filters, with a Status column), and a table (Date, Order number, Customer, Product, Status, Amount); on phones each row is a card. A row opens a right-side drawer (bottom sheet on phones) with the amount, payment breakdown (price, discount, total, paid with, paid on), customer contact with Copy email, downloads used against the limit, the checkout answers and "View customer". **Customers:** search, product filter, Export CSV, and a table (Customer, Products bought, Answers, Last order, Total spent) with "Load more"; the drawer shows totals, contact, and every order with its answers and an "Open order" link. Refunded is now a red badge (DESIGN 9.5).
