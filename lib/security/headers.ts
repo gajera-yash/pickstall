@@ -20,7 +20,8 @@ export function contentSecurityPolicy(isDev: boolean): string {
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "data:", "blob:", "https:"],
     "font-src": ["'self'", "data:"],
-    "connect-src": ["'self'", ...(isDev ? ["ws:", "wss:"] : [])],
+    // video.bunnycdn.com: browser uploads course videos straight to Bunny via TUS (D-055).
+    "connect-src": ["'self'", "https://video.bunnycdn.com", ...(isDev ? ["ws:", "wss:"] : [])],
     "media-src": ["'self'"],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],

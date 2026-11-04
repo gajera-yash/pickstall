@@ -16,7 +16,10 @@ function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimi
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
-      className={cn("flex gap-6 overflow-x-auto border-b border-line", className)}
+      className={cn(
+        "flex gap-6 overflow-x-auto overflow-y-hidden border-b border-line [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+        className
+      )}
       {...props}
     />
   )
@@ -27,9 +30,9 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "-mb-px inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 border-b-2 border-transparent text-base font-semibold whitespace-nowrap text-mute",
+        "inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 border-b-2 border-transparent text-sm font-medium whitespace-nowrap text-mute",
         "transition-colors duration-(--dur-fast) hover:text-ink",
-        "data-[state=active]:border-blue data-[state=active]:text-ink",
+        "data-[state=active]:border-blue data-[state=active]:font-semibold data-[state=active]:text-ink",
         "[&_svg]:size-4 [&_svg]:shrink-0",
         className
       )}

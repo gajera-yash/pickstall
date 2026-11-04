@@ -29,6 +29,9 @@ const nextConfig: NextConfig = {
     ];
   },
   partialPrefetching: true,
+  experimental: {
+    turbopackPluginRuntimeStrategy: "childProcesses",
+  },
   turbopack: {
     rules: {
       "*.css": {

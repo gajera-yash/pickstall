@@ -28,28 +28,28 @@ export function MyStoreTabs({ initialTab, products, design, links, analytics, pr
   };
 
   return (
-    <Tabs defaultValue={initialTab} onValueChange={remember} className="gap-0 overflow-hidden rounded-lg border border-line bg-surface">
-      <div className="flex flex-col gap-3 border-b border-line px-4 pt-2 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
-        <TabsList aria-label="My Store" className="border-b-0">
-          <TabsTrigger value="products">
+    <Tabs defaultValue={initialTab} onValueChange={remember} className="gap-0 overflow-hidden rounded-xl border border-line bg-surface">
+      <div className="flex flex-col border-b border-line px-4 sm:px-6 lg:h-14 lg:flex-row lg:items-center lg:justify-between">
+        <TabsList aria-label="My Store" className="border-b-0 lg:h-full">
+          <TabsTrigger value="products" className="lg:h-full">
             <Package aria-hidden="true" />
             Products
           </TabsTrigger>
-          <TabsTrigger value="design">
+          <TabsTrigger value="design" className="lg:h-full">
             <Palette aria-hidden="true" />
             Store design
           </TabsTrigger>
-          <TabsTrigger value="links">
+          <TabsTrigger value="links" className="lg:h-full">
             <Link2 aria-hidden="true" />
             Links
           </TabsTrigger>
-          <TabsTrigger value="analytics">
+          <TabsTrigger value="analytics" className="lg:h-full">
             <BarChart3 aria-hidden="true" />
             Analytics
           </TabsTrigger>
         </TabsList>
-        <div className="flex items-center gap-2 pb-3 lg:py-2">
-          <InputGroup className="h-10 min-w-0 flex-1 lg:w-56 lg:flex-none">
+        <div className="flex items-center gap-2.5 py-3 lg:py-0">
+          <InputGroup className="h-9 min-w-0 flex-1 sm:w-60 lg:w-64 lg:flex-none">
             <InputGroupInput
               type="search"
               aria-label="Search products"
@@ -58,11 +58,11 @@ export function MyStoreTabs({ initialTab, products, design, links, analytics, pr
               title={productCount === 0 ? "Add a product first" : undefined}
               className="text-sm"
             />
-            <InputGroupAddon>
-              <Search aria-hidden="true" className="size-4" />
+            <InputGroupAddon align="inline-start" className="pl-3 pr-0">
+              <Search aria-hidden="true" className="size-4 text-mute" />
             </InputGroupAddon>
           </InputGroup>
-          <Button asChild size="sm" className="h-10 shrink-0">
+          <Button asChild size="sm" className="h-9 shrink-0 gap-1.5 px-3.5">
             <Link href="/dashboard/products/new">
               <Plus aria-hidden="true" className="size-4" />
               Add product

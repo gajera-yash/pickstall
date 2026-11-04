@@ -137,14 +137,23 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
     if (state && !state.ok) {
       const target = courseStepOfField(state.field);
       if (target) setStep(target);
-    } else if (state?.ok && publishAfterSave) {
-      changeStatus("published");
     } else if (state?.ok && goAfterSave) {
       open(goAfterSave);
     }
     setGoAfterSave(null);
-    setPublishAfterSave(false);
   }
+
+  // "Save and publish": run after the form save completes, outside of rendering so that
+  // startTransition (inside changeStatus) is not called while the component is rendering.
+  useEffect(() => {
+    if (state?.ok && publishAfterSave) {
+      setPublishAfterSave(false);
+      changeStatus("published");
+    }
+  // changeStatus captures router/values in its closure but is redefined every render, so
+  // the dependency list stays minimal to avoid spurious retriggers.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, publishAfterSave]);
 
   useEffect(() => {
     if (state && !state.ok && state.field) document.getElementById(state.field)?.focus();
