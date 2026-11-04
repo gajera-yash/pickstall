@@ -4,6 +4,12 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-070: Library as a card grid with course progress (H6c)
+- **Date:** 2026-11-04
+- **Decision (founder OK for the extra read):** the buyer library shows purchases as cards (2 per row from `sm`): cover, a Course / Digital product badge, Refunded / Unavailable / Access ended when they apply, title, store and date, and for a course a progress bar with "N of M lessons done". The card's action says what happens next: Start course, Continue, Review course, Open, or View details. An open course goes straight to the player; anything else to its library page as before. The loading state is a card-shaped skeleton; the empty state is unchanged.
+- **Data:** `listPurchases` / `findPurchase` now return `progress` for courses: the buyer's completed lessons that still exist, out of the course's current lessons. Read-only; the orders are already matched to the buyer's verified email, and lessons are read by the order's own store and product. No schema or index change.
+- **Why:** founder request, 2026-11-04 (H6).
+
 ## D-069: Checkout with an order summary; a clearer thank-you page (H6b)
 - **Date:** 2026-11-04
 - **Decision:** both pages keep the creator's theme. **Checkout:** an order summary card (cover, title, "by <store>", regular price and discount when there is one, total) comes first on a phone and sits on the right, staying in view, on wide pages (`@3xl`); the form card is on the left with the creator's headline and "Sold by <store>. Payments are handled securely by the payment provider." The form keeps the app's own field colors on every theme. Its footer note now speaks to buyers ("Card details are entered on the payment provider's secure page, never here.") instead of mentioning Pickstall's fee. **Thank-you:** a status icon, the creator's message, the product, and for a paid order three numbered next steps (check your email, create your password if new, open your library) with an "Open your library" button; a pending order gets a Refresh button and a failed one "Try again".

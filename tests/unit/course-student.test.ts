@@ -9,7 +9,7 @@ import { mockSession, rateLimit, userId } from "./auth-mocks";
 
 const db = vi.hoisted(() => {
   const coll = () => ({ find: vi.fn(), findOne: vi.fn(), updateOne: vi.fn(), deleteOne: vi.fn() });
-  return { orders: coll(), products: coll(), stores: coll(), lessonProgress: coll() };
+  return { orders: coll(), products: coll(), stores: coll(), lessonProgress: coll(), lessons: coll() };
 });
 vi.mock("@/lib/db/collections", () => ({ collections: vi.fn(async () => db) }));
 const player = vi.hoisted(() => ({ loadPlayerCourse: vi.fn(), buildOutline: vi.fn() }));
@@ -144,10 +144,32 @@ describe("library entries", () => {
         { _id: "p2", type: "digital", deliveryType: "file", fileId: FILE, externalUrl: null },
       ],
     });
+    db.lessons.find.mockReturnValue({ toArray: async () => [] });
     // The shared auth mocks replace the library module; this checks the real one.
     const { listPurchases } = await vi.importActual<typeof import("@/lib/library/queries")>("@/lib/library/queries");
     const [first, second] = await listPurchases("s@e.co");
     expect(first).toMatchObject({ kind: "course", available: true, accessEndsAt: new Date("2026-11-04T00:00:00Z"), accessEnded: true });
-    expect(second).toMatchObject({ kind: "digital", available: true, accessEndsAt: null, accessEnded: false });
+    expect(second).toMatchObject({ kind: "digital", available: true, accessEndsAt: null, accessEnded: false, progress: null });
+  });
+
+  it("counts a course's completed lessons that still exist, through the order's own store (D-070)", async () => {
+    db.orders.find.mockReturnValue({ sort: () => ({ limit: () => ({ toArray: async () => [order()] }) }) });
+    db.stores.find.mockReturnValue({ toArray: async () => [{ _id: "store-1", name: "Maya", slug: "maya" }] });
+    db.products.find.mockReturnValue({ toArray: async () => [{ _id: COURSE, type: "course", course: { accessDays: null } }] });
+    db.lessons.find.mockReturnValue({ toArray: async () => [1, 2, 3].map((n) => ({ _id: `l${n}`, storeId: "store-1", productId: COURSE })) });
+    // l9 was deleted from the course since; another order's progress is not counted.
+    db.lessonProgress.find.mockReturnValue({
+      toArray: async () => [
+        { orderId: ORDER, lessonId: "l1" },
+        { orderId: ORDER, lessonId: "l2" },
+        { orderId: ORDER, lessonId: "l9" },
+        { orderId: "other", lessonId: "l3" },
+      ],
+    });
+    const { listPurchases } = await vi.importActual<typeof import("@/lib/library/queries")>("@/lib/library/queries");
+    const [first] = await listPurchases("s@e.co");
+    expect(first?.progress).toEqual({ done: 2, total: 3 });
+    expect(db.lessons.find.mock.calls[0]?.[0]).toEqual({ $or: [{ storeId: "store-1", productId: COURSE }] });
+    expect(db.lessonProgress.find.mock.calls[0]?.[0]).toEqual({ orderId: { $in: [ORDER] } });
   });
 });
