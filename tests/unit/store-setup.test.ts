@@ -61,7 +61,7 @@ describe("pageDesignInput", () => {
   });
 
   it.each([
-    ["unknown theme", { themePreset: "neon", accent: "#0056FF" }],
+    ["unknown theme", { themePreset: "not-a-theme", accent: "#0056FF" }],
     ["a mid-gray accent that fails with white and ink", { themePreset: "clean", accent: "#777777" }],
     ["a malformed accent", { themePreset: "clean", accent: "red" }],
   ])("rejects %s", (_label, input) => {
