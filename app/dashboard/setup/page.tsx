@@ -1,10 +1,10 @@
-import { ArrowRight, CheckCircle2, CircleDashed, ExternalLink, Package, Plus } from "lucide-react";
+import { ArrowRight, ExternalLink, Package, Plus } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { StorePreview, type PreviewProduct } from "@/components/dashboard/store-preview";
 import { StoreSetupForm } from "@/components/dashboard/store-setup-form";
-import { StripeConnectButtons } from "@/components/dashboard/stripe-connect-buttons";
+import { StripeStatus, stripeOutcomeOf, type StripeOutcome } from "@/components/dashboard/stripe-status";
 import { PublishButton } from "@/components/dashboard/setup/publish-step";
 import { SetupStepper } from "@/components/dashboard/setup/setup-stepper";
 import { priceLabel } from "@/lib/products/pricing";
@@ -14,7 +14,8 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator, type CreatorStore } from "@/lib/auth/guards";
 import { SETUP_PATH, currentStep, stepHref, type ChecklistItem } from "@/lib/dashboard/checklist";
-import { loadSetupState, paymentsConnectable } from "@/lib/dashboard/setup-state";
+import { loadSetupState } from "@/lib/dashboard/setup-state";
+import { liveKey } from "@/lib/payments/test-account";
 import { isCurrencyLocked } from "@/lib/stores/currency-lock";
 import { createProductAndEdit } from "@/lib/products/actions";
 import type { CreatorProduct } from "@/lib/products/queries";
@@ -69,7 +70,7 @@ async function SetupContent({ searchParams }: { searchParams: PageProps<"/dashbo
         />
       )}
       {step.id === "first-product" && <ProductStep step={step} products={products} currency={store.currency} />}
-      {step.id === "connect-payments" && <PaymentsStep step={step} connected={store.stripeChargesEnabled} />}
+      {step.id === "connect-payments" && <PaymentsStep step={step} store={store} outcome={stripeOutcomeOf(params.stripe)} />}
       {step.id === "publish" && <PublishStep
           store={store}
           products={published}
@@ -140,32 +141,20 @@ function ProductStep({ step, products, currency }: { step: ChecklistItem; produc
   );
 }
 
-function PaymentsStep({ step, connected }: { step: ChecklistItem; connected: boolean }) {
+function PaymentsStep({ step, store, outcome }: { step: ChecklistItem; store: CreatorStore; outcome: StripeOutcome | null }) {
+  const connected = store.stripeChargesEnabled;
   return (
     <Card className="gap-6">
       <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-display text-h3">Connect payments</h2>
           {/* Stripe test mode until the founder approves live mode (CLAUDE.md section 9). */}
-          <Badge variant="testMode">Test mode</Badge>
+          {!liveKey() && <Badge variant="testMode">Test mode</Badge>}
         </div>
         <p className="text-sm text-mute">Buyers pay you directly through your own Stripe account. Pickstall never holds your money and takes 0% of your sales.</p>
       </CardHeader>
 
-      <div className="flex flex-col gap-4 rounded-md border border-line p-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="flex items-center gap-3">
-          {connected ? (
-            <CheckCircle2 aria-hidden="true" className="size-5 shrink-0 fill-mint text-surface" />
-          ) : (
-            <CircleDashed aria-hidden="true" className="size-5 shrink-0 text-mute" />
-          )}
-          <span className="flex flex-col">
-            <span className="font-semibold">Stripe</span>
-            <span className="text-sm text-mute">{connected ? "Connected. You can take payments." : "Not connected yet."}</span>
-          </span>
-        </p>
-        <StripeConnectButtons connected={connected} testAvailable={paymentsConnectable()} continueHref={SETUP_PATH} />
-      </div>
+      <StripeStatus store={store} returnTo="setup" continueHref={SETUP_PATH} outcome={outcome} />
 
       {!step.available && (
         <p className="text-sm text-mute">

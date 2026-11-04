@@ -125,6 +125,7 @@ describe("an event only pays its own order", () => {
 
   it("refunds only a paid order of the same provider", async () => {
     const paid = await seedOrder(product);
+    await (await collections()).orders.updateOne({ _id: paid._id }, { $set: { providerPaymentId: `mockpay_${paid._id}` } });
     const refund = mockEvent(paid._id, "payment.refunded");
     await handleWebhookRequest("mock", refund.body, refund.signature);
     expect((await order(paid._id))?.status).toBe("refunded");

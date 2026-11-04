@@ -38,6 +38,9 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("signupIntents").createIndex({ email: 1 }, { unique: true, name: "signup_intents_email_unique" }),
     db.collection("signupIntents").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "signup_intents_ttl" }),
     db.collection("signupIntents").createIndex({ ipHash: 1, createdAt: 1 }, { name: "signup_intents_ip" }),
+    db.collection("connectStates").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "connect_states_ttl" }),
+    // Connect webhooks find the store(s) of a Stripe account (account.updated, deauthorization).
+    db.collection("stores").createIndex({ stripeAccountId: 1 }, { partialFilterExpression: { stripeAccountId: { $type: "string" } }, name: "stores_stripe_account" }),
     db.collection("rateLimits").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "rate_limits_ttl" }),
     // Better Auth collections (it does not create indexes for MongoDB itself).
     db.collection("user").createIndex({ email: 1 }, { unique: true, name: "user_email_unique" }),

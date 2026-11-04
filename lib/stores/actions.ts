@@ -4,13 +4,15 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireCreator } from "@/lib/auth/guards";
-import { USERNAME_CHANGE_RATE_LIMIT } from "@/lib/config";
+import { STRIPE_CONNECT_RATE_LIMIT, USERNAME_CHANGE_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { rateLimitKey, releaseRateLimit, takeRateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import { SLUG_TAKEN_MESSAGE, slugSchema } from "@/lib/slug";
 import { testSellerAccountId } from "@/lib/payments/test-account";
-import { changeStoreSlug, setStorePublished, setStoreStripeAccount, updateStorePageDesign, updateStoreProfile } from "@/lib/stores/queries";
+import { connectAuthorizeUrl, connectAvailable } from "@/lib/payments/connect";
+import { changeStoreSlug, setStorePublished, setStoreStripeConnection, updateStorePageDesign, updateStoreProfile } from "@/lib/stores/queries";
+import { CONNECT_RETURN_PATHS, connectRedirectUri, createConnectState, releaseAccount } from "@/lib/stores/stripe-connect";
 import { pageDesignInput, storeProfileInput } from "@/lib/stores/schemas";
 import { isCurrencyLocked } from "@/lib/stores/currency-lock";
 import { socialLinksFromForm } from "@/lib/stores/social-handles";
@@ -148,16 +150,44 @@ export async function changeUsername(_prev: ChangeUsernameState, formData: FormD
   return ok({ username });
 }
 
+const connectReturnInput = z.enum(["settings", "setup"]);
+
+/**
+ * Starts Stripe Connect OAuth (D-053): returns the Stripe page to open. The state is bound to this
+ * user and used once by the callback. Rate limited.
+ */
+export async function startStripeConnect(returnTo: "settings" | "setup"): Promise<Result<{ url: string }>> {
+  const { user } = await requireCreator(CONNECT_RETURN_PATHS.settings);
+  const target = connectReturnInput.safeParse(returnTo);
+  if (!target.success) return err(SAVE_FAILED);
+  if (!connectAvailable()) return err("Connecting Stripe isn't switched on for this server yet.");
+  try {
+    const { max, windowMinutes } = STRIPE_CONNECT_RATE_LIMIT;
+    if (!(await takeRateLimit(rateLimitKey("stripe-connect", user.id), max, windowMinutes))) return err("Too many attempts. Wait a few minutes, then try again.");
+    const state = await createConnectState(user.id, target.data);
+    return ok({ url: connectAuthorizeUrl({ state, redirectUri: connectRedirectUri(), email: user.email }) });
+  } catch (error) {
+    logger.error("stores.stripe_connect_start_failed", { name: errorName(error) });
+    return err("Couldn't open Stripe. Check your connection and try again.");
+  }
+}
+
 /**
  * Test mode only (D-034): uses the founder's own Stripe test account as this store's seller account,
- * so real Stripe Checkout can be tried before Connect OAuth exists. Refused with a live key.
+ * so real Stripe Checkout can be tried without a second Stripe account. Refused with a live key.
  */
 export async function connectStripeTestAccount(): Promise<Result<{ connected: true }>> {
-  const { user } = await requireCreator("/dashboard/settings/payments");
+  const { user } = await requireCreator(CONNECT_RETURN_PATHS.settings);
   const accountId = testSellerAccountId();
   if (!accountId) return err("Test Stripe isn't set up on this server.");
   try {
-    if (!(await setStoreStripeAccount(user.id, accountId))) return err(NO_STORE);
+    const saved = await setStoreStripeConnection(user.id, {
+      accountId,
+      livemode: false,
+      status: { chargesEnabled: true, payoutsEnabled: true, detailsSubmitted: true },
+    });
+    if (!saved) return err(NO_STORE);
+    if (saved.previousAccountId && saved.previousAccountId !== accountId) await releaseAccount(user.id, saved.previousAccountId);
   } catch (error) {
     logger.error("stores.stripe_connect_failed", { name: errorName(error) });
     return err(SAVE_FAILED);
@@ -166,11 +196,16 @@ export async function connectStripeTestAccount(): Promise<Result<{ connected: tr
   return ok({ connected: true });
 }
 
-/** Disconnects Stripe from the creator's own store. Paid products stay, but cannot be bought until connected again. */
+/**
+ * Disconnects Stripe from the creator's own store, and from our platform on Stripe's side. Paid
+ * products are unpublished (PRD 5.6 A); free ones stay.
+ */
 export async function disconnectStripe(): Promise<Result<{ connected: false }>> {
-  const { user } = await requireCreator("/dashboard/settings/payments");
+  const { user } = await requireCreator(CONNECT_RETURN_PATHS.settings);
   try {
-    if (!(await setStoreStripeAccount(user.id, null))) return err(NO_STORE);
+    const saved = await setStoreStripeConnection(user.id, null);
+    if (!saved) return err(NO_STORE);
+    if (saved.previousAccountId) await releaseAccount(user.id, saved.previousAccountId);
   } catch (error) {
     logger.error("stores.stripe_disconnect_failed", { name: errorName(error) });
     return err(SAVE_FAILED);

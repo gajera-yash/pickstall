@@ -168,7 +168,11 @@ describe("handleWebhookRequest (the only way an order becomes paid)", () => {
   it("marks a paid order refunded on a refund event, and only a paid one", async () => {
     const body = JSON.stringify({ id: "evt-refund", type: "payment.refunded", orderId: "order-1" });
     expect(await handleWebhookRequest("mock", body, signMockBody(body))).toEqual({ status: 200, body: "ok" });
-    expect(hoisted.orders.updateOne).toHaveBeenCalledWith({ _id: "order-1", provider: "mock", status: "paid" }, { $set: { status: "refunded" } });
+    expect(hoisted.orders.findOne).toHaveBeenCalledWith({ providerPaymentId: "mockpay_order-1", provider: "mock" }, expect.anything());
+    expect(hoisted.orders.updateOne).toHaveBeenCalledWith(
+      { _id: "order-1", status: "paid" },
+      { $set: { status: "refunded", refundedAt: expect.any(Date) }, $max: { amountRefundedCents: 1900 } },
+    );
   });
 
   it("refuses a bad signature with 400 and touches nothing", async () => {

@@ -91,6 +91,11 @@ export type OrderDetail = OrderRow & {
   accessCount: number;
   /** The product's current download limit, or null for unlimited or a deleted product. */
   downloadLimit: number | null;
+  /** Refunds (D-053): a refund can be asked for a paid order taken by a provider (not a free one). */
+  refundable: boolean;
+  refundRequestedAt: Date | null;
+  refundedAt: Date | null;
+  amountRefundedCents: number;
 };
 
 /** One order of this store for the details drawer, or null when it is not this store's. */
@@ -107,7 +112,31 @@ export async function findOrderDetail(storeId: string, orderId: string): Promise
     paidAt: doc.paidAt,
     accessCount: doc.accessCount ?? 0,
     downloadLimit: product?.downloadLimit ?? null,
+    refundable: doc.status === "paid" && doc.provider !== "free" && Boolean(doc.providerPaymentId),
+    refundRequestedAt: doc.refundRequestedAt ?? null,
+    refundedAt: doc.refundedAt ?? null,
+    amountRefundedCents: doc.amountRefundedCents ?? 0,
   };
+}
+
+/** A paid order of THIS store that a provider took, for the refund action. Null when it is not refundable. */
+export async function findRefundableOrder(
+  storeId: string,
+  orderId: string,
+): Promise<{ id: string; provider: "stripe" | "mock"; providerPaymentId: string; totalCents: number } | null> {
+  const { orders } = await collections();
+  const doc = await orders.findOne(
+    { _id: orderId, storeId, status: "paid", provider: { $in: ["stripe", "mock"] }, providerPaymentId: { $type: "string" } },
+    { projection: { provider: 1, providerPaymentId: 1, totalCents: 1 } },
+  );
+  if (!doc || (doc.provider !== "stripe" && doc.provider !== "mock") || !doc.providerPaymentId) return null;
+  return { id: doc._id, provider: doc.provider, providerPaymentId: doc.providerPaymentId, totalCents: doc.totalCents };
+}
+
+/** Notes that the creator asked for a refund. The order stays paid until the provider's refund event arrives. */
+export async function markRefundRequested(storeId: string, orderId: string): Promise<void> {
+  const { orders } = await collections();
+  await orders.updateOne({ _id: orderId, storeId }, { $set: { refundRequestedAt: new Date() } });
 }
 
 export async function countOrdersByStatus(storeId: string): Promise<Record<OrderStatusFilter, number>> {

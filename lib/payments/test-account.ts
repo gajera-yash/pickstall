@@ -2,6 +2,11 @@ import "server-only";
 
 import { serverEnv } from "@/lib/env.server";
 
+/** True with a live key (`sk_live_` or a restricted `rk_live_`). Events and accounts of the other mode are refused (D-053). */
+export function liveKey(key: string | undefined = serverEnv.STRIPE_SECRET_KEY): boolean {
+  return Boolean(key && (key.startsWith("sk_live_") || key.startsWith("rk_live_")));
+}
+
 /** True with a test-mode key (`sk_test_`). Live keys never get the shortcuts that use this. */
 export function testMode(): boolean {
   return Boolean(serverEnv.STRIPE_SECRET_KEY?.startsWith("sk_test_"));

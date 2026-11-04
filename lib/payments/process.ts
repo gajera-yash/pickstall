@@ -5,29 +5,36 @@ import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { logger } from "@/lib/logger";
 import { providerByName } from "@/lib/payments";
 import { scheduleOrderConfirmation } from "@/lib/orders/confirmation";
-import type { PaymentEvent, PaymentProvider } from "@/lib/payments/types";
+import type { PaymentEvent, PaymentProvider, WebhookEndpoint } from "@/lib/payments/types";
+import { applyStripeAccountStatus, detachStripeAccount, stripeAccountOfStore } from "@/lib/stores/queries";
 
-// The one place an order becomes paid or refunded. Stripe's webhook route and the development-only
-// mock both come through here, so no provider has a shortcut (CLAUDE.md 7). Access is never granted
-// from the success page; only a verified event gets here.
+// The one place an order becomes paid, failed or refunded. Stripe's webhook routes and the
+// development-only mock all come through here, so no provider has a shortcut (CLAUDE.md 7). Access
+// is never granted from the success page; only a verified event gets here.
 
 export type WebhookResult = { status: 200 | 400 | 404 | 500; body: string };
 
-/** Verifies a raw webhook, makes it idempotent (event id inserted first) and applies it to the order. */
-export async function handleWebhookRequest(providerName: string, rawBody: string, signature: string | null): Promise<WebhookResult> {
+/** Verifies a raw webhook, makes it idempotent (event id inserted first) and applies it. */
+export async function handleWebhookRequest(
+  providerName: string,
+  rawBody: string,
+  signature: string | null,
+  endpoint: WebhookEndpoint = "connect",
+): Promise<WebhookResult> {
   const provider = providerByName(providerName);
   if (!provider) return { status: 404, body: "not found" };
 
-  const outcome = await provider.handleWebhook(rawBody, signature);
+  const outcome = await provider.handleWebhook(rawBody, signature, endpoint);
   if (!outcome.ok) return { status: 400, body: outcome.reason };
   if (!outcome.event) return { status: 200, body: "ignored" };
 
   const { event } = outcome;
   const { webhookEvents } = await collections();
   const key = `${provider.name}:${event.eventId}`;
+  const orderId = "orderId" in event ? event.orderId : null;
 
   try {
-    await webhookEvents.insertOne({ _id: key, source: provider.name, type: event.type, orderId: event.orderId ?? null, processedAt: new Date() });
+    await webhookEvents.insertOne({ _id: key, source: provider.name, type: event.type, orderId, processedAt: new Date() });
   } catch (error) {
     if (isDuplicateKeyError(error)) return { status: 200, body: "duplicate" };
     logger.error("webhook.record_failed", { name: error instanceof Error ? error.name : undefined });
@@ -45,44 +52,88 @@ export async function handleWebhookRequest(providerName: string, rawBody: string
   }
 }
 
+/**
+ * The event must come from the seller account of the order's store. Without this, a creator could
+ * send events from their own Stripe account that name another store's order (R9). The mock has no
+ * accounts (`undefined`), so there is nothing to compare.
+ */
+async function fromStoreAccount(event: { account?: string | null }, storeId: string): Promise<boolean> {
+  if (event.account === undefined) return true;
+  const expected = await stripeAccountOfStore(storeId);
+  return expected !== null && event.account === expected;
+}
+
+/**
+ * Runs once per order when it becomes paid. Fulfilment of a digital product is the buyer library
+ * (it reads paid orders) plus the confirmation email. Other order kinds (courses) add their own
+ * idempotent step here, keyed by the order id.
+ */
+function onOrderPaid(orderId: string): void {
+  scheduleOrderConfirmation(orderId); // a replay is safe: one outbox row per order
+}
+
 async function applyEvent(providerName: PaymentProvider["name"], event: PaymentEvent): Promise<void> {
   const { orders } = await collections();
 
-  // A refund may only know the provider's payment id; find our order through it. Only an order of
-  // this provider can be refunded by its events.
-  if (event.type === "payment.refunded") {
-    const match = event.orderId ? { _id: event.orderId } : event.providerPaymentId ? { providerPaymentId: event.providerPaymentId } : null;
-    if (!match) return;
-    await orders.updateOne({ ...match, provider: providerName, status: "paid" }, { $set: { status: "refunded" } });
-    return;
-  }
-  if (!event.orderId) return;
+  switch (event.type) {
+    case "account.updated":
+      await applyStripeAccountStatus(event.account, event.status);
+      return;
 
-  if (event.type === "payment.succeeded") {
-    // The event must belong to the checkout session we created for this order (R9). Without this, a
-    // connected creator could pay a session on their own Stripe account with another store's order id
-    // in its metadata and unlock that store's product.
-    if (!event.providerSessionId) return;
-    const binding = { _id: event.orderId, provider: providerName, providerSessionId: event.providerSessionId };
-    const order = await orders.findOne(binding, { projection: { totalCents: 1, currency: 1, status: 1 } });
-    if (!order) {
-      logger.error("webhook.session_mismatch", { orderId: event.orderId });
+    case "account.deauthorized":
+      await detachStripeAccount(event.account);
+      return;
+
+    case "payment.succeeded": {
+      // The event must belong to the checkout session we created for this order (R9).
+      const binding = { _id: event.orderId, provider: providerName, providerSessionId: event.providerSessionId };
+      const order = await orders.findOne(binding, { projection: { storeId: 1, totalCents: 1, currency: 1 } });
+      if (!order || !(await fromStoreAccount(event, order.storeId))) {
+        logger.error("webhook.session_mismatch", { orderId: event.orderId });
+        return;
+      }
+      const mismatch =
+        (event.amountCents !== undefined && event.amountCents !== order.totalCents) ||
+        (event.currency !== undefined && event.currency.toLowerCase() !== order.currency.toLowerCase());
+      if (mismatch) {
+        logger.error("webhook.amount_mismatch", { orderId: event.orderId });
+        return; // never mark an order paid for a different amount
+      }
+      // Only a pending order becomes paid; a second delivery changes nothing. A failed (expired)
+      // order cannot be paid by its session any more, so only "pending" is accepted.
+      await orders.updateOne(
+        { ...binding, status: "pending" },
+        { $set: { status: "paid", paidAt: new Date(), ...(event.providerPaymentId ? { providerPaymentId: event.providerPaymentId } : {}) } },
+      );
+      // Also on a retried delivery after a failure: every step after "paid" is idempotent per order.
+      onOrderPaid(event.orderId);
       return;
     }
-    const mismatch =
-      (event.amountCents !== undefined && event.amountCents !== order.totalCents) ||
-      (event.currency !== undefined && event.currency.toLowerCase() !== order.currency.toLowerCase());
-    if (mismatch) {
-      logger.error("webhook.amount_mismatch", { orderId: event.orderId });
-      return; // never mark an order paid for a different amount
+
+    case "payment.failed": {
+      const match = { provider: providerName, providerSessionId: event.providerSessionId, ...(event.orderId ? { _id: event.orderId } : {}) };
+      const order = await orders.findOne(match, { projection: { storeId: 1 } });
+      if (!order || !(await fromStoreAccount(event, order.storeId))) return;
+      await orders.updateOne({ _id: order._id, status: "pending" }, { $set: { status: "failed" } });
+      return;
     }
-    // Only a pending order becomes paid; a second delivery changes nothing.
-    await orders.updateOne(
-      { ...binding, status: "pending" },
-      { $set: { status: "paid", paidAt: new Date(), ...(event.providerPaymentId ? { providerPaymentId: event.providerPaymentId } : {}) } },
-    );
-    // The order email goes out after the response; a replay is safe (one outbox row per order).
-    scheduleOrderConfirmation(event.orderId);
+
+    case "payment.refunded": {
+      // Found through the payment id we saved when the order was paid; only an order of this provider.
+      const match = event.providerPaymentId ? { providerPaymentId: event.providerPaymentId } : event.orderId ? { _id: event.orderId } : null;
+      if (!match) return;
+      const order = await orders.findOne({ ...match, provider: providerName }, { projection: { storeId: 1, totalCents: 1 } });
+      if (!order || !(await fromStoreAccount(event, order.storeId))) return;
+      const refunded = event.amountRefundedCents ?? order.totalCents;
+      // $max: events can arrive out of order; the refunded amount never goes down.
+      await orders.updateOne(
+        { _id: order._id, status: "paid" },
+        event.fullyRefunded
+          ? { $set: { status: "refunded", refundedAt: new Date() }, $max: { amountRefundedCents: refunded } }
+          : { $max: { amountRefundedCents: refunded } },
+      );
+      return;
+    }
   }
 }
 
@@ -90,5 +141,5 @@ async function applyEvent(providerName: PaymentProvider["name"], event: PaymentE
 export async function markFreeOrderPaid(orderId: string): Promise<void> {
   const { orders } = await collections();
   const result = await orders.updateOne({ _id: orderId, status: "pending", provider: "free", totalCents: 0 }, { $set: { status: "paid", paidAt: new Date() } });
-  if (result.matchedCount === 1) scheduleOrderConfirmation(orderId);
+  if (result.matchedCount === 1) onOrderPaid(orderId);
 }

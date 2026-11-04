@@ -21,6 +21,8 @@ export type CreatorStore = {
   currency: StoreProfileInput["currency"];
   theme: { preset: PageDesignInput["themePreset"]; accent: string };
   stripeChargesEnabled: boolean;
+  /** Connected Stripe account details (D-053), for Settings > Payments. Never sent to buyers. */
+  stripe: { connected: boolean; payoutsEnabled: boolean; detailsSubmitted: boolean };
   isPublished: boolean;
 };
 
@@ -40,6 +42,12 @@ export async function findStoreByOwner(ownerId: string): Promise<CreatorStore | 
     currency: doc.currency,
     theme: doc.theme,
     stripeChargesEnabled: doc.stripeChargesEnabled,
+    stripe: {
+      connected: doc.stripeAccountId !== null,
+      // Stores connected before D-053 only have `stripeChargesEnabled`.
+      payoutsEnabled: doc.stripePayoutsEnabled ?? doc.stripeChargesEnabled,
+      detailsSubmitted: doc.stripeDetailsSubmitted ?? doc.stripeChargesEnabled,
+    },
     isPublished: doc.isPublished,
   };
 }
@@ -93,14 +101,77 @@ export async function changeStoreSlug(ownerId: string, slug: string): Promise<Ch
   }
 }
 
-/** Sets the store's Stripe seller account and whether it can take charges. `null` disconnects. */
-export async function setStoreStripeAccount(ownerId: string, accountId: string | null): Promise<boolean> {
+export type StripeConnection = {
+  accountId: string;
+  livemode: boolean;
+  status: { chargesEnabled: boolean; payoutsEnabled: boolean; detailsSubmitted: boolean };
+};
+
+/** A product buyers pay for: a price above 0 and no discount down to 0 (lib/products/pricing.ts). */
+const PAID_PRODUCT = { priceCents: { $gt: 0 }, salePriceCents: { $ne: 0 } } as const;
+
+/**
+ * Sets the owner's Stripe seller account (D-053), or disconnects it with `null`. Disconnecting
+ * unpublishes the store's paid products (PRD 5.6 A): they could not be bought any more. Returns
+ * the account that was connected before (so the caller can deauthorize it), or false without a store.
+ */
+export async function setStoreStripeConnection(ownerId: string, connection: StripeConnection | null): Promise<{ previousAccountId: string | null } | false> {
+  const { stores, products } = await collections();
+  const now = new Date();
+  const set = connection
+    ? {
+        stripeAccountId: connection.accountId,
+        stripeChargesEnabled: connection.status.chargesEnabled,
+        stripePayoutsEnabled: connection.status.payoutsEnabled,
+        stripeDetailsSubmitted: connection.status.detailsSubmitted,
+        stripeLivemode: connection.livemode,
+        stripeConnectedAt: now,
+        updatedAt: now,
+      }
+    : { stripeAccountId: null, stripeChargesEnabled: false, stripePayoutsEnabled: false, stripeDetailsSubmitted: false, stripeConnectedAt: null, updatedAt: now };
+  const before = await stores.findOneAndUpdate({ ownerId }, { $set: set }, { projection: { _id: 1, stripeAccountId: 1 } });
+  if (!before) return false;
+  if (!connection) await products.updateMany({ storeId: before._id, status: "published", ...PAID_PRODUCT }, { $set: { status: "draft", updatedAt: now } });
+  return { previousAccountId: before.stripeAccountId };
+}
+
+/** How many OTHER stores sell through this Stripe account (then it must not be deauthorized). */
+export async function countOtherStoresWithAccount(ownerId: string, accountId: string): Promise<number> {
   const { stores } = await collections();
-  const result = await stores.updateOne(
-    { ownerId },
-    { $set: { stripeAccountId: accountId, stripeChargesEnabled: accountId !== null, updatedAt: new Date() } },
+  return stores.countDocuments({ stripeAccountId: accountId, ownerId: { $ne: ownerId } });
+}
+
+// The next two are called ONLY from a verified Stripe Connect webhook (lib/payments/process.ts):
+// the account id comes from Stripe's signed event, not from a client, and selects the store(s).
+
+/** Keeps a connected account's status fresh (account.updated). */
+export async function applyStripeAccountStatus(accountId: string, status: StripeConnection["status"]): Promise<void> {
+  const { stores } = await collections();
+  await stores.updateMany(
+    { stripeAccountId: accountId },
+    { $set: { stripeChargesEnabled: status.chargesEnabled, stripePayoutsEnabled: status.payoutsEnabled, stripeDetailsSubmitted: status.detailsSubmitted, updatedAt: new Date() } },
   );
-  return result.matchedCount === 1;
+}
+
+/** The creator removed Pickstall in their Stripe Dashboard: disconnect and unpublish paid products (PRD 5.6 A). */
+export async function detachStripeAccount(accountId: string): Promise<void> {
+  const { stores, products } = await collections();
+  const affected = await stores.find({ stripeAccountId: accountId }, { projection: { _id: 1 } }).toArray();
+  if (affected.length === 0) return;
+  const ids = affected.map((store) => store._id);
+  const now = new Date();
+  await stores.updateMany(
+    { _id: { $in: ids }, stripeAccountId: accountId },
+    { $set: { stripeAccountId: null, stripeChargesEnabled: false, stripePayoutsEnabled: false, stripeDetailsSubmitted: false, stripeConnectedAt: null, updatedAt: now } },
+  );
+  await products.updateMany({ storeId: { $in: ids }, status: "published", ...PAID_PRODUCT }, { $set: { status: "draft", updatedAt: now } });
+}
+
+/** The connected account of a store, for checks in the webhook path. */
+export async function stripeAccountOfStore(storeId: string): Promise<string | null> {
+  const { stores } = await collections();
+  const doc = await stores.findOne({ _id: storeId }, { projection: { stripeAccountId: 1 } });
+  return doc?.stripeAccountId ?? null;
 }
 
 /** Publishes or unpublishes the owner's store page. Returns false if they have no store. */

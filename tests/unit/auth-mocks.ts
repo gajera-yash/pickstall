@@ -45,13 +45,25 @@ const hoisted = vi.hoisted(() => {
     updateStorePageDesign: vi.fn(),
     changeStoreSlug: vi.fn(),
     setStorePublished: vi.fn(),
-    setStoreStripeAccount: vi.fn(),
+    setStoreStripeConnection: vi.fn(),
+    countOtherStoresWithAccount: vi.fn(async () => 0),
   };
   const profiles = { getProfile: vi.fn(), saveProfile: vi.fn() };
   const slugs = { isSlugTaken: vi.fn(), findTakenSlugs: vi.fn() };
   const testAccount = { testSellerAccountId: vi.fn() };
   const currencyLock = { isCurrencyLocked: vi.fn(async () => false) };
   const library = { hasPurchases: vi.fn() };
+  // Stripe Connect (D-053): the OAuth helpers and our state flow, so no Stripe or database is needed.
+  const stripeConnect = {
+    connectAvailable: vi.fn(() => true),
+    connectAuthorizeUrl: vi.fn(() => "https://connect.stripe.com/oauth/authorize?state=abc"),
+  };
+  const connectFlow = {
+    CONNECT_RETURN_PATHS: { settings: "/dashboard/settings/payments", setup: "/dashboard/setup" },
+    connectRedirectUri: () => "http://localhost:3000/api/connect/stripe/callback",
+    createConnectState: vi.fn(async () => "state-abc"),
+    releaseAccount: vi.fn(async () => undefined),
+  };
   const rateLimit = { takeRateLimit: vi.fn(), releaseRateLimit: vi.fn() };
 
   return {
@@ -69,6 +81,8 @@ const hoisted = vi.hoisted(() => {
     testAccount,
     currencyLock,
     library,
+    stripeConnect,
+    connectFlow,
   };
 });
 
@@ -87,6 +101,8 @@ export const {
   testAccount,
   currencyLock,
   library,
+  stripeConnect,
+  connectFlow,
 } = hoisted;
 
 vi.mock("server-only", () => ({}));
@@ -144,6 +160,8 @@ vi.mock("@/lib/stores/slug-availability", () => hoisted.slugs);
 vi.mock("@/lib/payments/test-account", () => hoisted.testAccount);
 vi.mock("@/lib/stores/currency-lock", () => hoisted.currencyLock);
 vi.mock("@/lib/library/queries", () => hoisted.library);
+vi.mock("@/lib/payments/connect", () => hoisted.stripeConnect);
+vi.mock("@/lib/stores/stripe-connect", () => hoisted.connectFlow);
 
 vi.mock("@/lib/rate-limit", () => ({
   rateLimitKey: (scope: string, value: string) => `${scope}:${value}`,

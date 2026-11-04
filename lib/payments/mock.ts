@@ -1,9 +1,9 @@
 import "server-only";
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
 import { serverEnv } from "@/lib/env.server";
-import type { CheckoutInput, PaymentEvent, PaymentProvider, WebhookOutcome } from "@/lib/payments/types";
+import type { CheckoutInput, PaymentProvider, RefundInput, WebhookOutcome } from "@/lib/payments/types";
 
 /** The mock exists for development only and refuses to run in production (CLAUDE.md 7). */
 export function mockAllowed(nodeEnv: string | undefined = process.env.NODE_ENV): boolean {
@@ -49,14 +49,23 @@ export const mockProvider: PaymentProvider = {
       return { ok: false, reason: "bad_payload" };
     }
     const body = json as Partial<{ id: string; type: string; orderId: string }>;
-    if (typeof body.id !== "string" || typeof body.orderId !== "string" || (body.type !== "payment.succeeded" && body.type !== "payment.refunded")) {
-      return { ok: false, reason: "bad_payload" };
+    if (typeof body.id !== "string" || typeof body.orderId !== "string") return { ok: false, reason: "bad_payload" };
+    if (body.type === "payment.succeeded") {
+      return { ok: true, event: { eventId: body.id, type: "payment.succeeded", orderId: body.orderId, providerSessionId: `mock_${body.orderId}`, providerPaymentId: `mockpay_${body.orderId}` } };
     }
-    const event: PaymentEvent = { eventId: body.id, type: body.type, orderId: body.orderId, providerSessionId: `mock_${body.orderId}`, providerPaymentId: `mockpay_${body.orderId}` };
-    return { ok: true, event };
+    if (body.type === "payment.refunded") {
+      return { ok: true, event: { eventId: body.id, type: "payment.refunded", orderId: body.orderId, providerPaymentId: `mockpay_${body.orderId}`, fullyRefunded: true } };
+    }
+    return { ok: false, reason: "bad_payload" };
   },
 
-  async refund() {
+  /** "Refunds" by sending a signed refund event through the same webhook handler Stripe uses. */
+  async refund(input: RefundInput) {
     guard();
+    const body = JSON.stringify({ id: `evt_${randomUUID()}`, type: "payment.refunded", orderId: input.orderId });
+    // Imported here: process.ts imports this file through lib/payments/index.ts.
+    const { handleWebhookRequest } = await import("@/lib/payments/process");
+    const result = await handleWebhookRequest("mock", body, signMockBody(body));
+    if (result.status !== 200) throw new Error("The mock refund was not applied.");
   },
 };

@@ -41,6 +41,12 @@ export type StoreDoc = {
   /** Written only by the Stripe OAuth callback and the Connect webhook (Block D). */
   stripeAccountId: string | null;
   stripeChargesEnabled: boolean;
+  /** Stripe account status from Connect (Block D, D-053). Optional: missing on stores connected before D-053. */
+  stripePayoutsEnabled?: boolean;
+  stripeDetailsSubmitted?: boolean;
+  /** True when the account was connected with a live key. Events in the other mode are ignored. */
+  stripeLivemode?: boolean;
+  stripeConnectedAt?: Date | null;
   isPublished: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -136,6 +142,11 @@ export type OrderDoc = {
   providerSessionId: string | null;
   /** The provider's payment id, saved when the order is paid; a refund event finds the order through it. */
   providerPaymentId?: string | null;
+  /** Refunds (D-053). Only the verified refund webhook sets `refundedAt` and `amountRefundedCents`. */
+  refundRequestedAt?: Date | null;
+  refundedAt?: Date | null;
+  /** Stripe amount units refunded so far; a partial refund keeps the order paid (and access). */
+  amountRefundedCents?: number;
   /** How many times the buyer opened the delivery link (R7), checked against the product's download limit. */
   accessCount?: number;
   createdAt: Date;
@@ -201,6 +212,13 @@ export type FileDoc = {
   createdAt: Date;
 };
 
+/**
+ * A pending Stripe Connect OAuth start (D-053). `_id` is the random `state` sent to Stripe; it is
+ * bound to the user who started it, used once (deleted before the code is exchanged) and removed by
+ * a TTL index after `expiresAt`.
+ */
+export type ConnectStateDoc = { _id: string; userId: string; returnTo: "settings" | "setup"; createdAt: Date; expiresAt: Date };
+
 /** Fixed-window rate-limit counter. Removed by a TTL index after `expiresAt`. */
 export type RateLimitDoc = { _id: string; count: number; expiresAt: Date };
 
@@ -216,6 +234,7 @@ export async function collections(): Promise<{
   webhookEvents: Collection<WebhookEventDoc>;
   signupIntents: Collection<SignupIntentDoc>;
   rateLimits: Collection<RateLimitDoc>;
+  connectStates: Collection<ConnectStateDoc>;
 }> {
   const db = await getDb();
   return {
@@ -230,5 +249,6 @@ export async function collections(): Promise<{
     webhookEvents: db.collection<WebhookEventDoc>("webhookEvents"),
     signupIntents: db.collection<SignupIntentDoc>("signupIntents"),
     rateLimits: db.collection<RateLimitDoc>("rateLimits"),
+    connectStates: db.collection<ConnectStateDoc>("connectStates"),
   };
 }

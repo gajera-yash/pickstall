@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { CopyButton, DetailsSheet } from "@/components/dashboard/details-sheet";
 import { Answers, DetailList, DetailSection, ListCard, ListToolbar, OrderBadges, formatDateTime, formatDay, orderNumber } from "@/components/dashboard/orders-ui";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { RefundButton } from "@/components/dashboard/refund-button";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -228,8 +229,16 @@ async function OrderDrawer({ storeId, orderId, closeHref }: { storeId: string; o
             { label: "Total", value: money(order.totalCents), numeric: true },
             { label: "Paid with", value: PAID_WITH[order.provider] },
             { label: "Paid on", value: order.paidAt ? formatDateTime(order.paidAt) : "Not paid" },
+            ...(order.refundedAt ? [{ label: "Refunded on", value: formatDateTime(order.refundedAt) }] : []),
+            ...(order.amountRefundedCents > 0 ? [{ label: "Refunded", value: money(order.amountRefundedCents), numeric: true }] : []),
           ]}
         />
+        {order.refundable &&
+          (order.refundRequestedAt ? (
+            <p className="text-sm text-mute">Refund requested. It shows here as refunded once Stripe confirms it, usually within a minute.</p>
+          ) : (
+            <RefundButton orderId={order.id} amount={money(order.totalCents)} />
+          ))}
       </DetailSection>
 
       <DetailSection title="Customer">

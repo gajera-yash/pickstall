@@ -30,6 +30,8 @@ const child = spawn(process.execPath, [next, "dev", "--port", String(PORT)], {
     EMAIL_FROM: "",
     STRIPE_SECRET_KEY: "",
     STRIPE_CONNECT_WEBHOOK_SECRET: "",
+    STRIPE_PLATFORM_WEBHOOK_SECRET: "",
+    STRIPE_CONNECT_CLIENT_ID: "",
     STRIPE_PLATFORM_ACCOUNT_ID: "",
     GOOGLE_CLIENT_ID: "",
     GOOGLE_CLIENT_SECRET: "",

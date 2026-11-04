@@ -153,6 +153,12 @@ export const PRODUCTS_MAX_PER_STORE = 100;
 export const CHECKOUT_QUESTIONS_MAX = 5;
 /** Checkout (D-033): attempts per IP address, and the longest answer a buyer may give. */
 export const CHECKOUT_RATE_LIMIT = { max: 20, windowMinutes: 10 } as const;
+
+/** Starting Stripe Connect OAuth, per creator (D-053). */
+export const STRIPE_CONNECT_RATE_LIMIT = { max: 10, windowMinutes: 15 } as const;
+
+/** Refund requests from the order drawer, per creator (D-053). */
+export const REFUND_RATE_LIMIT = { max: 20, windowMinutes: 60 } as const;
 export const ANSWER_MAX_CHARS = { text: 300, long_text: 2000 } as const;
 export const BUYER_NAME_MAX = 80;
 

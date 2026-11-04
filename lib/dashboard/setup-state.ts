@@ -1,16 +1,17 @@
 import "server-only";
 
 import { buildChecklist, type Checklist } from "@/lib/dashboard/checklist";
+import { connectAvailable } from "@/lib/payments/connect";
 import { testSellerAccountId } from "@/lib/payments/test-account";
 import { listProducts, type CreatorProduct } from "@/lib/products/queries";
 import type { CreatorStore } from "@/lib/stores/queries";
 
 /**
- * True when this server can connect a store to Stripe (D-045). Today that is the test-mode seller
- * account (D-034); Connect OAuth adds itself here later, and the setup flow stays the same.
+ * True when this server can connect a store to Stripe (D-045): Connect OAuth (D-053), or the
+ * test-mode seller account (D-034). The setup flow is the same either way.
  */
 export function paymentsConnectable(): boolean {
-  return testSellerAccountId() !== null;
+  return connectAvailable() || testSellerAccountId() !== null;
 }
 
 export type SetupState = {
