@@ -42,6 +42,14 @@ async function ensureIndexes(db: Db): Promise<void> {
     // Connect webhooks find the store(s) of a Stripe account (account.updated, deauthorization).
     db.collection("stores").createIndex({ stripeAccountId: 1 }, { partialFilterExpression: { stripeAccountId: { $type: "string" } }, name: "stores_stripe_account" }),
     db.collection("rateLimits").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "rate_limits_ttl" }),
+    // Course curriculum (D-055): every read filters by store and course, in order.
+    db.collection("courseModules").createIndex({ storeId: 1, productId: 1, sortOrder: 1 }, { name: "course_modules_store_course" }),
+    db.collection("lessons").createIndex({ storeId: 1, productId: 1, moduleId: 1, sortOrder: 1 }, { name: "lessons_store_course_module" }),
+    // The Bunny webhook finds a lesson by its video id.
+    db.collection("lessons").createIndex({ "video.videoId": 1 }, { partialFilterExpression: { "video.kind": "bunny" }, name: "lessons_bunny_video" }),
+    db.collection("files").createIndex({ storeId: 1, lessonId: 1 }, { partialFilterExpression: { lessonId: { $type: "string" } }, name: "files_store_lesson" }),
+    // A student's progress is read per order (D-057).
+    db.collection("lessonProgress").createIndex({ orderId: 1 }, { name: "lesson_progress_order" }),
     // Better Auth collections (it does not create indexes for MongoDB itself).
     db.collection("user").createIndex({ email: 1 }, { unique: true, name: "user_email_unique" }),
     db.collection("session").createIndex({ token: 1 }, { unique: true, name: "session_token_unique" }),

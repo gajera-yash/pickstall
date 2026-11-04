@@ -29,6 +29,13 @@ export const serverEnvSchema = publicEnvSchema.extend({
   UPLOAD_DIR: optional(z.string().min(1)),
   // Where product files buyers download are saved (D-050). Private: never served as-is. Default: .data/product-files.
   PRODUCT_FILES_DIR: optional(z.string().min(1)),
+  // Bunny Stream for course videos (D-055). All four are needed to turn video upload on.
+  BUNNY_STREAM_LIBRARY_ID: optional(z.string().regex(/^\d{1,12}$/, { error: "Must be the numeric library id" })),
+  BUNNY_STREAM_API_KEY: optional(z.string().min(8)),
+  // Token authentication key (Security page): signs playback links. Not the API key.
+  BUNNY_STREAM_TOKEN_KEY: optional(z.string().min(8)),
+  // Read-only API key: Bunny signs its webhooks with it (HMAC-SHA256).
+  BUNNY_STREAM_READONLY_KEY: optional(z.string().min(8)),
   // Stripe (test mode until the founder approves live mode). Server only; never logged.
   STRIPE_SECRET_KEY: optional(z.string().min(1)),
   STRIPE_CONNECT_WEBHOOK_SECRET: optional(z.string().min(1)),

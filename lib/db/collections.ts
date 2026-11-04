@@ -5,6 +5,7 @@ import type { Collection } from "mongodb";
 
 import { getDb } from "@/lib/db/mongo";
 import type { Currency, SocialLinkKind } from "@/lib/config";
+import type { CourseCategory } from "@/lib/courses/settings";
 import type { ThemePresetId } from "@/lib/themes";
 
 // Document shapes of the app's own collections (D-024). Better Auth owns `user`, `session`,
@@ -76,10 +77,24 @@ export type CheckoutQuestionDoc = {
 };
 
 /** A product (D-030). Phase 1 has one type, `digital`. Every query filters by `storeId` of the session owner. */
+/** A course's own settings (course flow G1, D-054). Only on products with type "course". */
+export type CourseSettingsDoc = {
+  category: CourseCategory | null;
+  /** Up to 5 short tags, cleaned, unique ignoring case. */
+  tags: string[];
+  /** How long a buyer keeps access after buying, in days; null is lifetime. */
+  accessDays: number | null;
+  /** Drip (D-056): modules open on their own day after purchase. Missing or false: all open at once. */
+  drip?: boolean;
+};
+
 export type ProductDoc = {
   _id: string;
   storeId: string;
-  type: "digital";
+  /** "digital" (Phase 1) or "course" (course flow, D-054). */
+  type: "digital" | "course";
+  /** Course settings, only when type is "course". */
+  course?: CourseSettingsDoc;
   title: string;
   /** Unique per store (index `products_store_slug_unique`). */
   slug: string;
@@ -204,6 +219,8 @@ export type FileDoc = {
   _id: string;
   storeId: string;
   productId: string;
+  /** Set on a course lesson's attachment (D-055); missing on a digital product's file. */
+  lessonId?: string;
   key: string;
   name: string;
   ext: string;
@@ -218,6 +235,53 @@ export type FileDoc = {
  * a TTL index after `expiresAt`.
  */
 export type ConnectStateDoc = { _id: string; userId: string; returnTo: "settings" | "setup"; createdAt: Date; expiresAt: Date };
+
+/** A module of a course (D-055): an ordered group of lessons. `productId` is the course. */
+export type CourseModuleDoc = {
+  _id: string;
+  storeId: string;
+  productId: string;
+  title: string;
+  sortOrder: number;
+  /** Drip (G3): days after purchase when the module unlocks; null opens it right away. */
+  dripDays: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
+ * A lesson's video (D-055): uploaded to Bunny Stream (status kept fresh by the verified Bunny
+ * webhook), or a YouTube / Vimeo video kept as its id only. Never in public reads.
+ */
+export type LessonVideoDoc =
+  | { kind: "bunny"; videoId: string; status: "uploading" | "processing" | "ready" | "failed" }
+  | { kind: "youtube"; id: string }
+  | { kind: "vimeo"; id: string; hash: string | null };
+
+/** An extra link on a lesson (a Figma file, a doc), https only. */
+export type LessonLinkDoc = { label: string; url: string };
+
+/** A lesson of a course module (D-055). Content is never public: students get it after access checks (G4). */
+export type LessonDoc = {
+  _id: string;
+  storeId: string;
+  productId: string;
+  moduleId: string;
+  title: string;
+  sortOrder: number;
+  video: LessonVideoDoc | null;
+  /** Written notes, as allow-listed rich text (D-049). */
+  bodyDoc: RichDoc | null;
+  links: LessonLinkDoc[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
+ * A lesson a student marked complete (D-057). `_id` is "orderId:lessonId", so marking twice is one
+ * document. Progress belongs to the order, which belongs to the buyer's verified email.
+ */
+export type LessonProgressDoc = { _id: string; orderId: string; storeId: string; productId: string; lessonId: string; completedAt: Date };
 
 /** Fixed-window rate-limit counter. Removed by a TTL index after `expiresAt`. */
 export type RateLimitDoc = { _id: string; count: number; expiresAt: Date };
@@ -235,6 +299,9 @@ export async function collections(): Promise<{
   signupIntents: Collection<SignupIntentDoc>;
   rateLimits: Collection<RateLimitDoc>;
   connectStates: Collection<ConnectStateDoc>;
+  courseModules: Collection<CourseModuleDoc>;
+  lessons: Collection<LessonDoc>;
+  lessonProgress: Collection<LessonProgressDoc>;
 }> {
   const db = await getDb();
   return {
@@ -250,5 +317,8 @@ export async function collections(): Promise<{
     signupIntents: db.collection<SignupIntentDoc>("signupIntents"),
     rateLimits: db.collection<RateLimitDoc>("rateLimits"),
     connectStates: db.collection<ConnectStateDoc>("connectStates"),
+    courseModules: db.collection<CourseModuleDoc>("courseModules"),
+    lessons: db.collection<LessonDoc>("lessons"),
+    lessonProgress: db.collection<LessonProgressDoc>("lessonProgress"),
   };
 }

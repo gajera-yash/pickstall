@@ -1,12 +1,15 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { collections, type OrderDoc, type ProductDoc, type StoreDoc } from "@/lib/db/collections";
+import { addLesson, addModule, deleteLesson, deleteModule, loadCurriculum, renameModule, saveLayout, updateLesson } from "@/lib/courses/curriculum";
+import { updateCourseDetails, updateCourseRelease } from "@/lib/courses/queries";
+import { completedLessons, courseAccess, setLessonComplete } from "@/lib/courses/student";
 import { findPurchase, grantAccess, hasPurchases, listPurchases } from "@/lib/library/queries";
 import { countOrdersByStatus, findCustomerDetail, findOrderDetail, incomeStats, listCustomers, listOrders, listOrdersForExport, listPaidOrdersForExport } from "@/lib/orders/creator-queries";
 import { loadCheckoutContext } from "@/lib/orders/queries";
 import { deleteProduct, findProduct, listProducts, setProductStatus, updateProduct } from "@/lib/products/queries";
 import type { ProductInput } from "@/lib/products/schemas";
-import { findPublicProduct, findPublicStore, listPublicProducts } from "@/lib/stores/public";
+import { findPublicCurriculum, findPublicProduct, findPublicStore, listPublicProducts } from "@/lib/stores/public";
 import { findStoreByOwner, setStorePublished, updateStorePageDesign, updateStoreProfile } from "@/lib/stores/queries";
 
 import { seedOrder, seedProduct, seedStore } from "./fixtures";
@@ -79,6 +82,52 @@ describe("products: creator B cannot touch creator A's products", () => {
   });
 });
 
+describe("courses: creator A cannot touch creator B's course (D-054)", () => {
+  const details = { title: "Taken over", description: null, descriptionDoc: null, coverUrl: null, priceCents: 100, salePriceCents: null, course: { category: null, tags: [], accessDays: null } };
+
+  it("saves a course only in its own store, and never a digital product", async () => {
+    const courseB = await seedProduct(storeB._id, { type: "course", title: "B's course", status: "draft", course: { category: "design", tags: [], accessDays: null } });
+    expect(await updateCourseDetails(storeA._id, courseB._id, details)).toBe("not_found");
+    expect(((await findProduct(storeB._id, courseB._id)) as ProductDoc).title).toBe("B's course");
+    expect(await updateCourseDetails(storeA._id, productA._id, details)).toBe("not_found");
+    expect(await updateCourseDetails(storeB._id, courseB._id, { ...details, title: "B renamed" })).toBe("saved");
+    expect(await updateProduct(storeB._id, courseB._id, {} as ProductInput)).toBe("not_found");
+  });
+});
+
+describe("course curriculum: creator A cannot read or change creator B's lessons (D-055)", () => {
+  it("keeps every curriculum read and write inside the owner's course", async () => {
+    const courseB = await seedProduct(storeB._id, { type: "course", title: "B's course", status: "draft", course: { category: null, tags: [], accessDays: null } });
+    expect(await addModule(storeB._id, courseB._id, "Intro")).toBe("ok");
+    const [moduleB] = (await loadCurriculum(storeB._id, courseB._id))?.modules ?? [];
+    expect(await addLesson(storeB._id, courseB._id, moduleB!.id, "Welcome")).toBe("ok");
+    const lessonB = (await loadCurriculum(storeB._id, courseB._id))!.modules[0]!.lessons[0]!;
+
+    expect(await loadCurriculum(storeA._id, courseB._id)).toBeNull();
+    expect(await addModule(storeA._id, courseB._id, "Hijack")).toBe("not_found");
+    expect(await addLesson(storeA._id, courseB._id, moduleB!.id, "Hijack")).toBe("not_found");
+    expect(await renameModule(storeA._id, courseB._id, moduleB!.id, "Hijack")).toBe("not_found");
+    expect(await updateLesson(storeA._id, courseB._id, lessonB.id, { title: "Hijack", bodyDoc: null, links: [], video: null })).toBe("not_found");
+    expect(await saveLayout(storeA._id, courseB._id, { moduleIds: [moduleB!.id], lessons: [{ moduleId: moduleB!.id, lessonIds: [lessonB.id] }] })).toBe("not_found");
+    expect(await deleteLesson(storeA._id, courseB._id, lessonB.id)).toBeNull();
+    expect(await deleteModule(storeA._id, courseB._id, moduleB!.id)).toBeNull();
+    // A digital product is not a course: no curriculum can hang off it.
+    expect(await addModule(storeA._id, productA._id, "Nope")).toBe("not_found");
+
+    // Release settings and the public outline (D-056).
+    expect(await updateCourseRelease(storeA._id, courseB._id, { drip: true, modules: [{ id: moduleB!.id, dripDays: 9 }] })).toBe("not_found");
+    expect(await findPublicCurriculum(storeB._id, courseB._id)).toBeNull();
+    await setProductStatus(storeB._id, courseB._id, "published");
+    expect(await findPublicCurriculum(storeA._id, courseB._id)).toBeNull();
+    const outline = await findPublicCurriculum(storeB._id, courseB._id);
+    expect(outline).toEqual({ modules: [{ title: "Intro", lessons: [{ title: "Welcome", hasVideo: false }] }] });
+
+    const after = await loadCurriculum(storeB._id, courseB._id);
+    expect(after?.modules.map((module) => module.title)).toEqual(["Intro"]);
+    expect(after?.modules[0]?.lessons.map((lesson) => lesson.title)).toEqual(["Welcome"]);
+  });
+});
+
 describe("stores: writes go only to the owner's own store", () => {
   it("finds a store only by its owner", async () => {
     expect((await findStoreByOwner(storeA.ownerId))?.id).toBe(storeA._id);
@@ -127,6 +176,28 @@ describe("orders, customers and income are per store", () => {
 
   it("treats a search for regex characters as plain text", async () => {
     expect((await listOrders(storeA._id, { q: ".*" })).orders).toEqual([]);
+  });
+});
+
+describe("students open only their own courses (D-057)", () => {
+  it("gives course access and progress to the buyer's own order only", async () => {
+    const course = await seedProduct(storeA._id, { type: "course", title: "A's course", status: "published", course: { category: null, tags: [], accessDays: 30 } });
+    const order = await seedOrder(course, { buyerEmail: "carol@example.com", buyerName: "Carol", status: "paid", paidAt: new Date() });
+
+    expect(await courseAccess("bob@example.com", order._id)).toEqual({ ok: false, reason: "not_found" });
+    const access = await courseAccess("CAROL@example.com", order._id);
+    expect(access).toMatchObject({ ok: true, storeId: storeA._id, courseId: course._id });
+    // A digital product's order is not a course.
+    expect(await courseAccess("alice@example.com", orderA._id)).toMatchObject({ ok: false });
+
+    if (!access.ok) throw new Error("expected access");
+    await setLessonComplete(access, "lesson-1", true);
+    await setLessonComplete(access, "lesson-1", true);
+    expect(await completedLessons(order._id)).toEqual(["lesson-1"]);
+    expect(await completedLessons(orderB._id)).toEqual([]);
+
+    // Past the access period, access ends.
+    expect(await courseAccess("carol@example.com", order._id, new Date(Date.now() + 31 * 24 * 60 * 60 * 1000))).toEqual({ ok: false, reason: "expired" });
   });
 });
 

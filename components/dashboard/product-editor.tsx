@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 
+import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { ProductFileField } from "@/components/dashboard/product-file-field";
 import { RichTextEditor } from "@/components/dashboard/rich-text-editor";
@@ -15,10 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FieldError, FieldHint } from "@/components/ui/field";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,7 +26,7 @@ import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { CHECKOUT_QUESTIONS_MAX } from "@/lib/config";
 import { changeProductStatus, removeProduct, saveProduct, type SaveProductState } from "@/lib/products/actions";
 import { safeImageSrc } from "@/lib/media/media";
-import { parseMoneyToCents, priceDecimals } from "@/lib/products/money";
+import { parseMoneyToCents } from "@/lib/products/money";
 import { savingPercent, type Priced } from "@/lib/products/pricing";
 import { plainTextOf, type RichDoc } from "@/lib/products/rich-text";
 import { PRODUCT_STEPS, PRODUCT_STEP_LABELS, PRODUCT_STEP_SHORT_LABELS, detailsMissing, nextStep, previousStep, stepOfField, stepsDone, type ProductStep } from "@/lib/products/editor-steps";
@@ -561,45 +560,6 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
         </aside>
       </div>
     </form>
-  );
-}
-
-function StepHeading({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <h2 className="font-display text-h3">{title}</h2>
-      <p className="text-sm text-mute">{body}</p>
-    </div>
-  );
-}
-
-function Field({ id, label, error, hint, children }: { id: string; label: string; error?: string | null; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {error ? <FieldError id={`${id}-error`}>{error}</FieldError> : hint ? <FieldHint id={`${id}-hint`}>{hint}</FieldHint> : null}
-    </div>
-  );
-}
-
-function MoneyInput({ id, currency, value, onChange, invalid }: { id: string; currency: string; value: string; onChange: (value: string) => void; invalid: boolean }) {
-  return (
-    <InputGroup className={cn("overflow-hidden", invalid && "border-danger")}>
-      <InputGroupAddon aria-hidden="true" className="h-full self-stretch border-r border-line bg-bg-subtle px-3 font-semibold">
-        {currency.toUpperCase()}
-      </InputGroupAddon>
-      {/* Whole-number currencies (JPY, ISK...) get a number keyboard and a "0" placeholder (D-046). */}
-      <InputGroupInput
-        id={id}
-        inputMode={priceDecimals(currency) === 0 ? "numeric" : "decimal"}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={priceDecimals(currency) === 0 ? "0" : "0.00"}
-        aria-invalid={invalid || undefined}
-        className="px-3 tabular-nums"
-      />
-    </InputGroup>
   );
 }
 

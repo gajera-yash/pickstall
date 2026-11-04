@@ -50,7 +50,7 @@ describe("product files (D-050)", () => {
     db.products.findOne.mockResolvedValue(null);
     const before = await readdir(env.dir);
     expect(await saveProductFile("store-b", PRODUCT, "guide.pdf", pdf())).toMatchObject({ ok: false, status: 404 });
-    expect(db.products.findOne).toHaveBeenCalledWith({ _id: PRODUCT, storeId: "store-b" }, expect.anything());
+    expect(db.products.findOne).toHaveBeenCalledWith({ _id: PRODUCT, storeId: "store-b", type: { $ne: "course" } }, expect.anything());
     expect(db.files.insertOne).not.toHaveBeenCalled();
     expect(await readdir(env.dir)).toEqual(before);
   });

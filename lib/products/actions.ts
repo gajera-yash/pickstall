@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { requireCreator } from "@/lib/auth/guards";
 import { PRODUCT_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
+import { removeCourseContent } from "@/lib/courses/cleanup";
+import { countLessonsWithContent } from "@/lib/courses/curriculum";
 import { removeFilesOfProduct } from "@/lib/files/product-files";
 import { checkPublish } from "@/lib/products/publish";
 import { createDraftProduct, deleteProduct, findProduct, setProductStatus, updateProduct } from "@/lib/products/queries";
@@ -109,7 +111,9 @@ export async function changeProductStatus(productId: string, status: string): Pr
     if (!product) return err(NOT_FOUND);
 
     if (next.data === "published") {
-      const check = checkPublish(product, store);
+      // A course is checked with its lessons (D-056).
+      const courseLessons = product.type === "course" ? await countLessonsWithContent(store.id, id.data) : undefined;
+      const check = checkPublish({ ...product, courseLessons }, store);
       if (!check.ok) return err(check.problems.join(" "));
     }
     if (!(await setProductStatus(store.id, id.data, next.data))) return err(NOT_FOUND);
@@ -133,6 +137,8 @@ export async function removeProduct(productId: string): Promise<Result<{ deleted
     if (!(await deleteProduct(store.id, id.data))) return err("Only draft or archived products can be deleted. Archive it first.");
     // The product is gone; its file goes too (a failure here only leaves an orphan file behind).
     await removeFilesOfProduct(store.id, id.data).catch((error: unknown) => logger.warn("products.file_cleanup_failed", { name: errorName(error) }));
+    // A course also loses its modules, lessons and Bunny videos (D-055).
+    await removeCourseContent(store.id, id.data).catch((error: unknown) => logger.warn("courses.cleanup_failed", { name: errorName(error) }));
   } catch (error) {
     logger.error("products.delete_failed", { name: errorName(error) });
     return err(SAVE_FAILED);

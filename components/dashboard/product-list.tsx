@@ -1,4 +1,4 @@
-import { ChevronRight, Download, ImageIcon } from "lucide-react";
+import { ChevronRight, Download, ImageIcon, PlayCircle } from "lucide-react";
 import Link from "next/link";
 
 import { PriceTag } from "@/components/store/price-tag";
@@ -33,10 +33,17 @@ export function ProductList({ products, currency }: { products: CreatorProduct[]
               <span className="flex min-w-0 flex-1 flex-col gap-1">
                 <span className="truncate font-semibold">{product.title}</span>
                 <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-mute">
-                  <span className="inline-flex items-center gap-1">
-                    <Download aria-hidden="true" className="size-3.5" />
-                    Digital product
-                  </span>
+                  {product.type === "course" ? (
+                    <span className="inline-flex items-center gap-1">
+                      <PlayCircle aria-hidden="true" className="size-3.5" />
+                      Course
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1">
+                      <Download aria-hidden="true" className="size-3.5" />
+                      Digital product
+                    </span>
+                  )}
                   <PriceTag product={product} currency={currency} regularClassName="text-mute" />
                 </span>
               </span>

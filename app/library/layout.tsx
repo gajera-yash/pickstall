@@ -20,7 +20,8 @@ export default function LibraryLayout({ children }: LayoutProps<"/library">) {
           <Who />
         </Suspense>
       </header>
-      <main id="main" className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-8 md:px-6">
+      {/* A course player (D-057) marks itself data-layout="wide" for the room of two columns. */}
+      <main id="main" className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-8 has-[[data-layout=wide]]:max-w-6xl md:px-6">
         {children}
       </main>
     </div>

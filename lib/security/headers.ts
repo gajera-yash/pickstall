@@ -26,7 +26,9 @@ export function contentSecurityPolicy(isDev: boolean): string {
     "base-uri": ["'self'"],
     "form-action": ["'self'", "https:"],
     "frame-ancestors": ["'none'"],
-    "frame-src": ["'none'"],
+    // Course lesson players only (D-056): Bunny Stream, YouTube (no-cookie) and Vimeo. Embed URLs are
+    // always built by the server from checked video ids, never taken from creator text.
+    "frame-src": ["https://player.mediadelivery.net", "https://www.youtube-nocookie.com", "https://player.vimeo.com"],
     "worker-src": ["'self'", "blob:"],
     "manifest-src": ["'self'"],
   };
