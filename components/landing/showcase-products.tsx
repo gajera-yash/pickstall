@@ -1,6 +1,5 @@
 "use client";
 
-import { m } from "motion/react";
 import { Minus, Package, Plus } from "lucide-react";
 import { useId, useState } from "react";
 
@@ -13,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cleanStallName } from "@/lib/landing/demo";
 import { formatMoney } from "@/lib/products/money";
-import { cn } from "@/lib/utils";
 
 // Product management (D-039): a cut-down product editor whose live preview updates as you type,
 // like the real editor. Client-side only; text is cleaned and capped, money is integer cents.

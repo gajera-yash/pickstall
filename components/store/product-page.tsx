@@ -5,6 +5,7 @@ import { PriceTag } from "@/components/store/price-tag";
 import { RichTextView } from "@/components/store/rich-text";
 import { StoreHeader } from "@/components/store/store-page";
 import { StoreFrame, cardStyle, resolveTheme } from "@/components/store/store-theme";
+import { Button } from "@/components/ui/button";
 import { safeImageSrc } from "@/lib/media/media";
 import type { PublicProduct, PublicStore } from "@/lib/stores/public";
 
@@ -46,24 +47,16 @@ export function ProductPage({ store, product, buyable }: { store: PublicStore; p
           <PriceTag product={product} currency={store.currency} regularStyle={{ color: preset.muted }} />
         </p>
         {buyable ? (
-          <Link
-            href={`/@${store.slug}/${product.slug}/checkout`}
-            className="flex h-13 w-full items-center justify-center gap-2 text-button"
-            style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}
-          >
-            {product.buttonText || "Buy now"}
-          </Link>
+          // The creator's theme colors (theme data) override the button's own.
+          <Button asChild size="lg" className="w-full" style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}>
+            <Link href={`/@${store.slug}/${product.slug}/checkout`}>{product.buttonText || "Buy now"}</Link>
+          </Button>
         ) : (
           <>
-            <button
-              type="button"
-              disabled
-              className="flex h-13 w-full cursor-not-allowed items-center justify-center gap-2 text-button opacity-60"
-              style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}
-            >
+            <Button type="button" size="lg" disabled className="w-full" style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}>
               <Lock aria-hidden="true" className="size-4" />
               {product.buttonText || "Buy now"}
-            </button>
+            </Button>
             <p className="text-center text-sm" style={{ color: preset.muted }}>
               Payments aren&apos;t set up for this store yet. Please check back soon.
             </p>

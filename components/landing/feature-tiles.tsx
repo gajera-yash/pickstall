@@ -6,7 +6,6 @@ import { PriceTag } from "@/components/store/price-tag";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { THEME_PRESETS, THEME_PRESET_IDS, type ThemePresetId } from "@/lib/themes";
-import { cn } from "@/lib/utils";
 
 // Small live UIs inside the landing feature tiles. Example content only.
 

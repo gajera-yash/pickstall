@@ -13,7 +13,6 @@ import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DEFAULT_STALL_NAME, DEMO_PRODUCTS, STALL_NAME_MAX, cleanStallName, initialsOf, nextSale, type DemoProduct } from "@/lib/landing/demo";
 import { formatMoney } from "@/lib/products/money";
-import { cn } from "@/lib/utils";
 
 type Sale = { key: number; product: DemoProduct };
 
@@ -31,10 +30,6 @@ export function StallDemo() {
   const displayName = name.trim() || "Your stall";
   const keptCents = sales.reduce((sum, sale) => sum + sale.product.priceCents, 0);
   const lastSale = sales.at(-1) ?? null;
-
-  function toggle(id: string) {
-    setStockedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
-  }
 
   function makeSale() {
     const product = nextSale(stocked, sales.length);

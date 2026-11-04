@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { createProductAndEdit } from "@/lib/products/actions";
@@ -45,12 +46,13 @@ async function TypePicker() {
         <li key={id}>
           {live ? (
             <form action={createProductAndEdit} className="h-full">
-              <button
+              <Button
                 type="submit"
-                className="flex h-full w-full cursor-pointer flex-col gap-3 rounded-lg border border-blue bg-surface p-5 text-left ring-1 ring-blue transition-colors duration-(--dur-fast) hover:bg-blue-soft"
+                variant="secondary"
+                className="h-full w-full flex-col items-stretch justify-start gap-3 rounded-lg border-blue p-5 text-left font-normal whitespace-normal ring-1 ring-blue not-disabled:hover:bg-blue-soft"
               >
                 <TypeCardBody title={title} description={description} Icon={Icon} live badge="Start" />
-              </button>
+              </Button>
             </form>
           ) : (
             <div className="flex h-full flex-col gap-3 rounded-lg border border-line bg-surface p-5 opacity-80">
