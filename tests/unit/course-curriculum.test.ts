@@ -23,6 +23,8 @@ vi.mock("@/lib/db/collections", () => ({ collections: vi.fn(async () => db) }));
 const bunny = vi.hoisted(() => ({ bunnyConfig: vi.fn(), fetchVideoStatus: vi.fn() }));
 vi.mock("@/lib/video/bunny", () => bunny);
 vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
+const notifications = vi.hoisted(() => ({ notify: vi.fn(async () => undefined) }));
+vi.mock("@/lib/notifications/queries", () => notifications);
 
 import { refreshPendingVideos } from "@/lib/courses/video-status";
 import { addLesson, deleteModule, loadCurriculum, saveLayout, setBunnyVideoStatus, setLessonUpload, updateLesson } from "@/lib/courses/curriculum";
@@ -124,6 +126,18 @@ describe("saving the layout", () => {
   });
 });
 
+describe("video notifications (D-061)", () => {
+  it("tells the creator once when a lesson video is ready, and not while it processes", async () => {
+    db.lessons.find.mockReturnValue(cursor([{ _id: L1, storeId: "store-1", productId: "course-1", title: "Welcome" }]));
+    db.lessons.updateMany.mockResolvedValue({ modifiedCount: 1 });
+    await setBunnyVideoStatus(VIDEO, "ready");
+    expect(notifications.notify).toHaveBeenCalledWith(expect.objectContaining({ storeId: "store-1", kind: "video_ready", dedupeKey: `video:${VIDEO}:ready`, href: "/dashboard/products/course-1" }));
+    notifications.notify.mockClear();
+    await setBunnyVideoStatus(VIDEO, "processing");
+    expect(notifications.notify).not.toHaveBeenCalled();
+  });
+});
+
 describe("Bunny status updates", () => {
   it("never moves a ready video back", async () => {
     db.lessons.updateMany.mockResolvedValue({ modifiedCount: 0 });
@@ -139,7 +153,8 @@ describe("asking Bunny about pending videos", () => {
     bunny.bunnyConfig.mockReturnValue({ libraryId: "759", apiKey: "k", tokenKey: null, readOnlyKey: null });
     bunny.fetchVideoStatus.mockResolvedValue("ready");
     db.lessons.updateMany.mockResolvedValue({ modifiedCount: 1 });
-    db.lessons.find.mockReturnValue({ limit: () => ({ toArray: async () => [{ _id: L1, video: { kind: "bunny", videoId: VIDEO, status: "processing" } }] }) });
+    const pending = [{ _id: L1, storeId: "store-1", productId: "course-1", title: "Welcome", video: { kind: "bunny", videoId: VIDEO, status: "processing" } }];
+    db.lessons.find.mockReturnValue({ limit: () => ({ toArray: async () => pending }), toArray: async () => pending });
     await refreshPendingVideos("store-1", "course-1");
     expect(db.lessons.find.mock.calls[0]?.[0]).toEqual({ storeId: "store-1", productId: "course-1", "video.kind": "bunny", "video.status": { $in: ["uploading", "processing"] } });
     expect(bunny.fetchVideoStatus).toHaveBeenCalledWith(expect.anything(), VIDEO);

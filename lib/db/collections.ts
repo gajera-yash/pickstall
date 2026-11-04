@@ -288,6 +288,28 @@ export type LessonDoc = {
  */
 export type LessonProgressDoc = { _id: string; orderId: string; storeId: string; productId: string; lessonId: string; completedAt: Date };
 
+/**
+ * A dashboard notification for a store (D-061): a sale, a refund, a lesson video that finished or
+ * failed. `dedupeKey` is unique (for example "sale:<orderId>"), so a replayed webhook never makes a
+ * second one. Old ones are removed by a TTL index after 90 days.
+ */
+export type NotificationDoc = {
+  _id: string;
+  storeId: string;
+  kind: "sale" | "refund" | "video_ready" | "video_failed";
+  dedupeKey: string;
+  title: string;
+  body: string;
+  /** A dashboard path, never a full URL. */
+  href: string;
+  amountCents: number | null;
+  currency: string | null;
+  /** A development test order (mock payment). */
+  test: boolean;
+  createdAt: Date;
+  readAt: Date | null;
+};
+
 /** Fixed-window rate-limit counter. Removed by a TTL index after `expiresAt`. */
 export type RateLimitDoc = { _id: string; count: number; expiresAt: Date };
 
@@ -307,6 +329,7 @@ export async function collections(): Promise<{
   courseModules: Collection<CourseModuleDoc>;
   lessons: Collection<LessonDoc>;
   lessonProgress: Collection<LessonProgressDoc>;
+  notifications: Collection<NotificationDoc>;
 }> {
   const db = await getDb();
   return {
@@ -325,5 +348,6 @@ export async function collections(): Promise<{
     courseModules: db.collection<CourseModuleDoc>("courseModules"),
     lessons: db.collection<LessonDoc>("lessons"),
     lessonProgress: db.collection<LessonProgressDoc>("lessonProgress"),
+    notifications: db.collection<NotificationDoc>("notifications"),
   };
 }

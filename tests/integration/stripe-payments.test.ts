@@ -45,6 +45,11 @@ import { setStoreStripeConnection } from "@/lib/stores/queries";
 
 import { seedOrder, seedProduct, seedStore } from "./fixtures";
 
+async function notificationsOf(storeId: string) {
+  const { notifications } = await collections();
+  return notifications.find({ storeId }).toArray();
+}
+
 const CONNECT_SECRET = "whsec_connect_integration";
 const PLATFORM_SECRET = "whsec_platform_integration";
 
@@ -111,6 +116,10 @@ describe("Connect webhook: paying an order", () => {
     expect(paid?.status).toBe("paid");
     expect(paid?.providerPaymentId).toBe(`pi_${o._id.slice(0, 8)}`);
     expect(sent.emails).toHaveLength(1);
+    // One "New sale" for the creator, however often Stripe delivers (D-061).
+    const notes = await notificationsOf(o.storeId);
+    expect(notes.filter((note) => note.kind === "sale")).toHaveLength(1);
+    expect(notes[0]).toMatchObject({ dedupeKey: `sale:${o._id}`, href: `/dashboard/orders?order=${o._id}`, readAt: null });
   });
 
   it("rejects a bad signature with 400 and leaves the order pending", async () => {
@@ -199,6 +208,10 @@ describe("Connect webhook: refunds", () => {
 
     await deliver(stripeEvent("charge.refunded", { ...charge, amount_refunded: o.totalCents, refunded: true }, "acct_refunds"));
     expect(await order(o._id)).toMatchObject({ status: "refunded", amountRefundedCents: o.totalCents });
+    // A partial and a full refund: two notifications; another delivery of the same refund adds none.
+    await deliver(stripeEvent("charge.refunded", { ...charge, amount_refunded: o.totalCents, refunded: true }, "acct_refunds"));
+    const refunds = (await notificationsOf(o.storeId)).filter((note) => note.kind === "refund");
+    expect(refunds.map((note) => note.title).sort()).toHaveLength(2);
   });
 
   it("ignores a refund event from another account", async () => {

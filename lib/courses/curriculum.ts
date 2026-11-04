@@ -8,6 +8,7 @@ import { COURSE_LIMITS } from "@/lib/courses/settings";
 import { lessonHasContent, type Curriculum } from "@/lib/courses/curriculum-types";
 import { collections, type CourseModuleDoc, type LessonDoc, type LessonLinkDoc, type LessonVideoDoc } from "@/lib/db/collections";
 import { PRODUCT_FILE_TYPES } from "@/lib/files/types";
+import { notify } from "@/lib/notifications/queries";
 import type { RichDoc } from "@/lib/products/rich-text";
 
 // Course curriculum reads and writes for the signed-in creator (D-055). Every query filters by the
@@ -192,9 +193,19 @@ export async function setBunnyVideoStatus(videoId: string, status: "processing" 
     failed: ["uploading", "processing"],
     ready: ["uploading", "processing", "failed"],
   };
-  const result = await lessons.updateMany(
-    { "video.kind": "bunny", "video.videoId": videoId, "video.status": { $in: from[status] } },
-    { $set: { "video.status": status, updatedAt: new Date() } },
-  );
+  const filter = { "video.kind": "bunny" as const, "video.videoId": videoId, "video.status": { $in: from[status] } };
+  // The lessons about to change, for the creator's "video ready / failed" notification (D-061).
+  const changing = status === "processing" ? [] : await lessons.find(filter, { projection: { storeId: 1, productId: 1, title: 1 } }).toArray();
+  const result = await lessons.updateMany(filter, { $set: { "video.status": status, updatedAt: new Date() } });
+  for (const lesson of changing) {
+    await notify({
+      storeId: lesson.storeId,
+      kind: status === "ready" ? "video_ready" : "video_failed",
+      dedupeKey: `video:${videoId}:${status}`,
+      title: status === "ready" ? "Video ready" : "Video upload failed",
+      body: status === "ready" ? `${lesson.title} can be watched now.` : `${lesson.title}: upload the video again.`,
+      href: `/dashboard/products/${lesson.productId}`,
+    });
+  }
   return result.modifiedCount;
 }

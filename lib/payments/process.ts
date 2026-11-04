@@ -4,6 +4,7 @@ import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { logger } from "@/lib/logger";
 import { providerByName } from "@/lib/payments";
+import { notifyOrderPaid, notifyRefund } from "@/lib/notifications/queries";
 import { scheduleOrderConfirmation } from "@/lib/orders/confirmation";
 import type { PaymentEvent, PaymentProvider, WebhookEndpoint } from "@/lib/payments/types";
 import { applyStripeAccountStatus, detachStripeAccount, stripeAccountOfStore } from "@/lib/stores/queries";
@@ -68,8 +69,9 @@ async function fromStoreAccount(event: { account?: string | null }, storeId: str
  * (it reads paid orders) plus the confirmation email. Other order kinds (courses) add their own
  * idempotent step here, keyed by the order id.
  */
-function onOrderPaid(orderId: string): void {
+async function onOrderPaid(orderId: string): Promise<void> {
   scheduleOrderConfirmation(orderId); // a replay is safe: one outbox row per order
+  await notifyOrderPaid(orderId); // one "New sale" per order (dedupe key); never throws (D-061)
 }
 
 async function applyEvent(providerName: PaymentProvider["name"], event: PaymentEvent): Promise<void> {
@@ -106,7 +108,7 @@ async function applyEvent(providerName: PaymentProvider["name"], event: PaymentE
         { $set: { status: "paid", paidAt: new Date(), ...(event.providerPaymentId ? { providerPaymentId: event.providerPaymentId } : {}) } },
       );
       // Also on a retried delivery after a failure: every step after "paid" is idempotent per order.
-      onOrderPaid(event.orderId);
+      await onOrderPaid(event.orderId);
       return;
     }
 
@@ -126,12 +128,14 @@ async function applyEvent(providerName: PaymentProvider["name"], event: PaymentE
       if (!order || !(await fromStoreAccount(event, order.storeId))) return;
       const refunded = event.amountRefundedCents ?? order.totalCents;
       // $max: events can arrive out of order; the refunded amount never goes down.
-      await orders.updateOne(
+      const changed = await orders.updateOne(
         { _id: order._id, status: "paid" },
         event.fullyRefunded
           ? { $set: { status: "refunded", refundedAt: new Date() }, $max: { amountRefundedCents: refunded } }
           : { $max: { amountRefundedCents: refunded } },
       );
+      // Only when this event changed the order, so a replay does not notify again (D-061).
+      if (changed.modifiedCount === 1) await notifyRefund(order._id, refunded, Boolean(event.fullyRefunded));
       return;
     }
   }
@@ -141,5 +145,5 @@ async function applyEvent(providerName: PaymentProvider["name"], event: PaymentE
 export async function markFreeOrderPaid(orderId: string): Promise<void> {
   const { orders } = await collections();
   const result = await orders.updateOne({ _id: orderId, status: "pending", provider: "free", totalCents: 0 }, { $set: { status: "paid", paidAt: new Date() } });
-  if (result.matchedCount === 1) onOrderPaid(orderId);
+  if (result.matchedCount === 1) await onOrderPaid(orderId);
 }

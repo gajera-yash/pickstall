@@ -4,6 +4,14 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-061: Live notifications in the dashboard bell
+- **Date:** 2026-11-04
+- **Decision (founder choices: new sale, refund, video ready/failed, browser pop-up):** the dashboard bell shows the store's latest 20 notifications with an unread count; opening it marks them read. It checks every 20 seconds while the dashboard is visible, every minute in a hidden tab, and right away when the tab comes back. With the creator's permission ("Turn on" in the bell), news that arrives while the tab is hidden also shows as a desktop pop-up (Notification API); clicking it opens the order or course.
+- **What makes one:** an order becoming paid ("New sale: $49.00 / Maya bought ..."; a free order is "New sign-up"; mock orders carry a Test badge), a refund that raised the refunded amount ("Partly refunded" / "Refunded"), and a lesson video turning ready or failed (from the Bunny webhook or the builder's status check).
+- **Safety:** notifications live in a new `notifications` collection with a unique `dedupeKey` (`sale:<order>`, `refund:<order>:<amount>`, `video:<id>:<status>`), so a replayed webhook never adds a second one; a TTL index removes them after 90 days. Writing one never throws and never changes the payment: it runs after the order update in `onOrderPaid` (shared by Stripe, the dev mock and free orders) and after a refund that changed the order. Reads and "mark read" filter by the session's store; links are dashboard paths only.
+- **Not in this change:** email or phone push notifications, per-type settings, a full notifications page.
+- **Why:** founder request, 2026-11-04.
+
 ## D-060: Smoother course building: new lessons open at once, video upload on each lesson row
 - **Date:** 2026-11-04
 - **Decision (founder: "too many clicks per lesson", "video upload is hidden"):** "Add lesson" now opens the new lesson's editor straight away. Each lesson row has an **Upload video** button (Replace when it already has one) and accepts a video **dropped onto the row** from the computer (a lesson being dragged to reorder is a pointer drag and does not trigger it); the row shows the upload progress, or the error with Dismiss. Uploads are held by the builder (`useVideoUploads`), so the row and the lesson panel show the same upload, the panel can be closed while it runs, and the browser asks before leaving the page during an upload. Only video files start an upload (MP4, MOV, WebM, MKV, M4V, AVI). Upload buttons appear only when Bunny is set up (D-058).

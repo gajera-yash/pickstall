@@ -50,6 +50,10 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("files").createIndex({ storeId: 1, lessonId: 1 }, { partialFilterExpression: { lessonId: { $type: "string" } }, name: "files_store_lesson" }),
     // A student's progress is read per order (D-057).
     db.collection("lessonProgress").createIndex({ orderId: 1 }, { name: "lesson_progress_order" }),
+    // Dashboard notifications (D-061): newest first per store, one per event, gone after 90 days.
+    db.collection("notifications").createIndex({ storeId: 1, createdAt: -1 }, { name: "notifications_store_created" }),
+    db.collection("notifications").createIndex({ dedupeKey: 1 }, { unique: true, name: "notifications_dedupe_unique" }),
+    db.collection("notifications").createIndex({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60, name: "notifications_ttl" }),
     // Better Auth collections (it does not create indexes for MongoDB itself).
     db.collection("user").createIndex({ email: 1 }, { unique: true, name: "user_email_unique" }),
     db.collection("session").createIndex({ token: 1 }, { unique: true, name: "session_token_unique" }),
