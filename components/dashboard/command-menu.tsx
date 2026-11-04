@@ -10,7 +10,6 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
 import { DASHBOARD_SECTIONS } from "@/lib/dashboard/nav";
-import { cn } from "@/lib/utils";
 
 const noSubscribe = () => () => {};
 const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform);

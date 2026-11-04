@@ -18,7 +18,8 @@ export type CurriculumWrite = "ok" | "not_found" | "limit";
 
 async function ownsCourse(storeId: string, courseId: string): Promise<boolean> {
   const { products } = await collections();
-  return (await products.countDocuments({ _id: courseId, storeId, type: "course" }, { limit: 1 })) === 1;
+  // A deleted course (D-059) can no longer be edited; its students still see it through the player.
+  return (await products.countDocuments({ _id: courseId, storeId, type: "course", deletedAt: null }, { limit: 1 })) === 1;
 }
 
 /** The whole curriculum of one of this store's courses, in order, or null when it is not theirs. */

@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-059: Softer form fields; Edit and Delete for published products
+- **Date:** 2026-11-04
+- **Decision (founder request; choices "soft but accessible" and "hide, keep buyer access"):**
+  - **Fields:** text inputs, text areas, selects, input groups, the code boxes, checkboxes and radios use a softer border token `--border-field` (#8b91a7: 3.1:1 on white, 3.05:1 on the new faint fill `--field`, so DESIGN.md's 3:1 rule still holds), a hairline `shadow-field`, a slightly darker border on hover, and on focus a blue border with a soft 4px glow (`--focus-glow`) instead of the hard 3px outline. Buttons keep `--border-input`. The fill is the Tailwind color `input-fill`, not `field`, because `text-field` is already a font size.
+  - **Product actions:** every product row has a "..." menu: Edit, View on store (published), Publish or Unpublish (same server rules as the editor), Delete (asks first). The editors show Delete on published products too.
+  - **Delete:** a product (or course) without any order is removed for good, with its files, lessons and Bunny videos. One with orders is hidden instead: `deletedAt` is set, it is archived and its link freed, so it leaves the store, the product list and the editor, while its buyers keep their library access (downloads, links and the course player) and the creator keeps the orders. Every creator-side product and course query skips hidden products; the buyer library and course player deliberately do not.
+- **Also fixed:** after commit d4ebfeb, a failed "Save and publish" left the publish request on, so a later plain Save could publish; the request is now cleared on every save result. Removed a console.error from the video upload and an unused import (lint).
+- **Data:** `ProductDoc.deletedAt` (optional). No migration: missing means not deleted.
+- **Why:** founder request, 2026-11-04.
+
 ## D-058: Bunny video upload works with the library id and API key; status is checked with Bunny
 - **Date:** 2026-11-04
 - **Decision (founder connected the Bunny library):** video upload now turns on with just `BUNNY_STREAM_LIBRARY_ID` and `BUNNY_STREAM_API_KEY` (checked against Bunny's API: it answers 200). The other two keys are needed only for their own jobs: `BUNNY_STREAM_TOKEN_KEY` signs playback links and is **required in production** (without it a Bunny video shows as unavailable there; in development it plays unsigned, so token authentication must stay off in Bunny until the key is set), and `BUNNY_STREAM_READONLY_KEY` verifies the webhook (without it the webhook accepts nothing).

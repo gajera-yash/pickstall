@@ -13,7 +13,7 @@ function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxP
     <CheckboxPrimitive.Root
       data-slot="checkbox"
       className={cn(
-        "peer size-5 shrink-0 cursor-pointer rounded-sm border border-input bg-surface transition-colors duration-(--dur-fast)",
+        "peer size-5 shrink-0 cursor-pointer rounded-sm border border-field-border bg-input-fill transition-[border-color,box-shadow,background-color] duration-(--dur-fast) hover:border-input focus-visible:border-blue focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-glow",
         "data-[state=checked]:border-blue data-[state=checked]:bg-blue data-[state=checked]:text-primary-foreground",
         "disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger",
         className

@@ -126,6 +126,11 @@ export type ProductDoc = {
   buttonText: string | null;
   downloadLimit: number | null;
   status: "draft" | "published" | "archived";
+  /**
+   * Set when the creator deletes a product that has orders (D-059): it leaves the store and the
+   * dashboard, but its buyers keep access in their library. Missing or null on every other product.
+   */
+  deletedAt?: Date | null;
   checkout: { headline: string | null; askPhone: boolean; questions: CheckoutQuestionDoc[] };
   afterPurchase: { thankYou: string | null; redirectUrl: string | null; emailSubject: string | null; emailBody: string | null };
   sortOrder: number;

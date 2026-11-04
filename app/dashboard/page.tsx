@@ -83,7 +83,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
         <MyStoreTabs
           initialTab={initialTab}
           productCount={productCount}
-          products={products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} />}
+          products={products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} storeSlug={store.slug} />}
           design={
             <PageDesignForm
               initial={{ themePreset: store.theme.preset, accent: store.theme.accent }}

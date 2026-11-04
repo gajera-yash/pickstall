@@ -15,10 +15,10 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="input-group"
       role="group"
       className={cn(
-        "group/input-group relative flex h-11 w-full min-w-0 items-center rounded-md border border-input bg-surface text-ink transition-colors duration-(--dur-fast)",
+        "group/input-group relative flex h-11 w-full min-w-0 items-center rounded-md border border-field-border bg-input-fill text-ink shadow-field transition-[border-color,box-shadow] duration-(--dur-fast) hover:border-input",
         "has-[>[data-align=inline-start]]:[&>input]:pl-2 has-[>[data-align=inline-end]]:[&>input]:pr-2",
-        // The focus ring sits on the group, not on the bare input inside it.
-        "has-[[data-slot=input-group-control]:focus-visible]:outline-3 has-[[data-slot=input-group-control]:focus-visible]:outline-offset-2 has-[[data-slot=input-group-control]:focus-visible]:outline-blue",
+        // The soft focus glow sits on the group, not on the bare input inside it (D-059).
+        "has-[[data-slot=input-group-control]:focus-visible]:border-blue has-[[data-slot=input-group-control]:focus-visible]:ring-4 has-[[data-slot=input-group-control]:focus-visible]:ring-focus-glow",
         "has-[[data-slot][aria-invalid=true]]:border-danger",
         "has-[[data-slot=input-group-control]:disabled]:opacity-50",
         className
@@ -65,7 +65,7 @@ function InputGroupInput({ className, ...props }: React.ComponentProps<"input">)
   return (
     <Input
       data-slot="input-group-control"
-      className={cn("h-full flex-1 rounded-none border-0 bg-transparent text-inherit focus-visible:outline-none", className)}
+      className={cn("h-full flex-1 rounded-none border-0 bg-transparent text-inherit shadow-none focus-visible:border-0 focus-visible:ring-0 focus-visible:outline-none", className)}
       {...props}
     />
   )

@@ -26,7 +26,7 @@ export const cn = createCn({
   extend: {
     classGroups: {
       "font-size": [{ text: [...CUSTOM_FONT_SIZES] }],
-      shadow: [{ shadow: ["hard-sm", "hard-md", "hard-lg", "popover", "card"] }],
+      shadow: [{ shadow: ["hard-sm", "hard-md", "hard-lg", "popover", "card", "field"] }],
     },
   },
 });

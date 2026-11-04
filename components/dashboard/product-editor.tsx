@@ -498,10 +498,9 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
                         Restore as draft
                       </Button>
                     )}
-                    {values.status !== "published" &&
-                      (confirmDelete ? (
+                    {confirmDelete ? (
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-medium">Delete &ldquo;{values.title.trim() || "Untitled product"}&rdquo; for good?</span>
+                          <span className="text-sm font-medium">Delete &ldquo;{values.title.trim() || "Untitled product"}&rdquo;? Anyone who bought it keeps access.</span>
                           <Button type="button" variant="destructive" onClick={remove} loading={statusPending}>
                             Yes, delete
                           </Button>
@@ -514,7 +513,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
                           <Trash2 aria-hidden="true" className="size-4" />
                           Delete
                         </Button>
-                      ))}
+                      )}
                   </div>
                   </AccordionContent>
                 </AccordionItem>

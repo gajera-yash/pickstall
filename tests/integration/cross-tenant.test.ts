@@ -72,7 +72,7 @@ describe("products: creator B cannot touch creator A's products", () => {
     expect(await updateProduct(storeB._id, productA._id, input)).toBe("not_found");
     expect(await setProductStatus(storeB._id, productA._id, "archived")).toBe(false);
     expect(await setProductStatus(storeB._id, draftA._id, "published")).toBe(false);
-    expect(await deleteProduct(storeB._id, draftA._id)).toBe(false);
+    expect(await deleteProduct(storeB._id, draftA._id)).toBe("not_found");
 
     const after = (await reload("products", productA._id)) as ProductDoc;
     expect(after.title).toBe("A's guide");
@@ -125,6 +125,34 @@ describe("course curriculum: creator A cannot read or change creator B's lessons
     const after = await loadCurriculum(storeB._id, courseB._id);
     expect(after?.modules.map((module) => module.title)).toEqual(["Intro"]);
     expect(after?.modules[0]?.lessons.map((lesson) => lesson.title)).toEqual(["Welcome"]);
+  });
+});
+
+describe("deleting a product with buyers hides it and keeps their access (D-059)", () => {
+  it("hides a sold product from the creator and the store, while the buyer can still open it", async () => {
+    // Its own store, so the orders below do not change the other tests' totals.
+    const storeC = await seedStore({ name: "Store C" });
+    const sold = await seedProduct(storeC._id, { title: "Sold guide", status: "published" });
+    await seedOrder(sold, { buyerEmail: "dana@example.com", buyerName: "Dana", status: "paid", paidAt: new Date() });
+    const unsold = await seedProduct(storeC._id, { title: "Never sold", status: "published" });
+
+    expect(await deleteProduct(storeA._id, sold._id)).toBe("not_found");
+    expect(await deleteProduct(storeC._id, unsold._id)).toBe("deleted");
+    expect(await reload("products", unsold._id)).toBeNull();
+
+    expect(await deleteProduct(storeC._id, sold._id)).toBe("hidden");
+    const hidden = (await reload("products", sold._id)) as ProductDoc;
+    expect(hidden).toMatchObject({ status: "archived" });
+    expect(hidden.deletedAt).toBeInstanceOf(Date);
+    expect(hidden.slug).not.toBe(sold.slug);
+    expect(await findProduct(storeC._id, sold._id)).toBeNull();
+    expect((await listProducts(storeC._id)).map((product) => product._id)).not.toContain(sold._id);
+    expect(await setProductStatus(storeC._id, sold._id, "published")).toBe(false);
+    expect(await findPublicProduct(storeC._id, sold.slug)).toBeNull();
+
+    const [purchase] = await listPurchases("dana@example.com");
+    expect(purchase).toMatchObject({ title: "Sold guide", available: true });
+    expect(await grantAccess("dana@example.com", purchase!.orderId)).toMatchObject({ ok: true });
   });
 });
 

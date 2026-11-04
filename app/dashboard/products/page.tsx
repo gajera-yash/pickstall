@@ -53,7 +53,7 @@ async function ProductsContent({ searchParams }: Pick<PageProps<"/dashboard/prod
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <Card className="p-2 sm:p-3">{products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} />}</Card>
+      <Card className="p-2 sm:p-3">{products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} storeSlug={store.slug} />}</Card>
     </>
   );
 }

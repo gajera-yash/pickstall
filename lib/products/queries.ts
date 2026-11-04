@@ -35,21 +35,24 @@ export function slugFromTitle(title: string): string {
   return slug || "product";
 }
 
+/** Not deleted by the creator (D-059). Matches a missing or null `deletedAt`. */
+const NOT_DELETED = { deletedAt: null };
+
 export async function listProducts(storeId: string): Promise<CreatorProduct[]> {
   const { products } = await collections();
-  const docs = await products.find({ storeId }).sort({ sortOrder: 1, createdAt: -1 }).limit(PRODUCTS_MAX_PER_STORE).toArray();
+  const docs = await products.find({ storeId, ...NOT_DELETED }).sort({ sortOrder: 1, createdAt: -1 }).limit(PRODUCTS_MAX_PER_STORE).toArray();
   return docs.map(toCreatorProduct);
 }
 
 export async function countProducts(storeId: string, status?: ProductDoc["status"]): Promise<number> {
   const { products } = await collections();
-  return products.countDocuments(status ? { storeId, status } : { storeId, status: { $ne: "archived" } });
+  return products.countDocuments(status ? { storeId, status, ...NOT_DELETED } : { storeId, status: { $ne: "archived" }, ...NOT_DELETED });
 }
 
 /** One product of this store, or null (also for another store's product: no way to tell them apart). */
 export async function findProduct(storeId: string, id: string): Promise<CreatorProduct | null> {
   const { products } = await collections();
-  const doc = await products.findOne({ _id: id, storeId });
+  const doc = await products.findOne({ _id: id, storeId, ...NOT_DELETED });
   return doc ? toCreatorProduct(doc) : null;
 }
 
@@ -68,7 +71,7 @@ export function isUnnamedDraft(product: Pick<ProductDoc, "status" | "title" | "t
  */
 export async function createDraftProduct(storeId: string, defaults: { buttonText: string; type?: ProductDoc["type"] }): Promise<CreateProductResult> {
   const { products } = await collections();
-  if ((await products.countDocuments({ storeId })) >= PRODUCTS_MAX_PER_STORE) return "limit";
+  if ((await products.countDocuments({ storeId, ...NOT_DELETED })) >= PRODUCTS_MAX_PER_STORE) return "limit";
 
   const type = defaults.type ?? "digital";
   const now = new Date();
@@ -114,7 +117,7 @@ export type SaveProductResult = "saved" | "not_found";
 export async function updateProduct(storeId: string, id: string, input: ProductInput): Promise<SaveProductResult> {
   const { products } = await collections();
   // The digital editor never writes a course (courses save through lib/courses/queries.ts).
-  const current = await products.findOne({ _id: id, storeId, type: { $ne: "course" } }, { projection: { status: 1, slug: 1, title: 1 } });
+  const current = await products.findOne({ _id: id, storeId, type: { $ne: "course" }, ...NOT_DELETED }, { projection: { status: 1, slug: 1, title: 1 } });
   if (!current) return "not_found";
 
   const set: Partial<ProductDoc> = {
@@ -139,7 +142,7 @@ export async function updateProduct(storeId: string, id: string, input: ProductI
   };
 
   // Saving also clears the pay-what-you-want fields from before D-047.
-  return saveWithSlug({ _id: id, storeId, type: { $ne: "course" } }, current, input.title ?? current.title, set, { pricingModel: "", minPriceCents: "" });
+  return saveWithSlug({ _id: id, storeId, type: { $ne: "course" }, ...NOT_DELETED }, current, input.title ?? current.title, set, { pricingModel: "", minPriceCents: "" });
 }
 
 /**
@@ -171,13 +174,30 @@ export async function saveWithSlug(
 /** Changes the status of one of this store's products. Publish rules are checked by the caller. */
 export async function setProductStatus(storeId: string, id: string, status: ProductDoc["status"]): Promise<boolean> {
   const { products } = await collections();
-  const result = await products.updateOne({ _id: id, storeId }, { $set: { status, updatedAt: new Date() } });
+  const result = await products.updateOne({ _id: id, storeId, ...NOT_DELETED }, { $set: { status, updatedAt: new Date() } });
   return result.matchedCount === 1;
 }
 
-/** Deletes a draft or archived product of this store. A published product must be archived first. */
-export async function deleteProduct(storeId: string, id: string): Promise<boolean> {
-  const { products } = await collections();
-  const result = await products.deleteOne({ _id: id, storeId, status: { $ne: "published" } });
-  return result.deletedCount === 1;
+export type DeleteProductResult = "deleted" | "hidden" | "not_found";
+
+/**
+ * Deletes one of this store's products (D-059). Without any order it is removed for good (the
+ * caller then removes its files and lessons). With orders it is hidden instead: archived, marked
+ * `deletedAt` and its link freed, so it leaves the store and the dashboard while its buyers keep
+ * their library access and the creator keeps the orders.
+ */
+export async function deleteProduct(storeId: string, id: string): Promise<DeleteProductResult> {
+  const { products, orders } = await collections();
+  const product = await products.findOne({ _id: id, storeId, ...NOT_DELETED }, { projection: { slug: 1 } });
+  if (!product) return "not_found";
+  if ((await orders.countDocuments({ storeId, productId: id }, { limit: 1 })) === 0) {
+    const result = await products.deleteOne({ _id: id, storeId, ...NOT_DELETED });
+    return result.deletedCount === 1 ? "deleted" : "not_found";
+  }
+  const now = new Date();
+  const result = await products.updateOne(
+    { _id: id, storeId, ...NOT_DELETED },
+    { $set: { deletedAt: now, status: "archived", slug: `${product.slug.slice(0, 40)}-deleted-${randomUUID().slice(0, 6)}`, updatedAt: now } },
+  );
+  return result.matchedCount === 1 ? "hidden" : "not_found";
 }

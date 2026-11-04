@@ -25,6 +25,12 @@ describe("cn with design tokens", () => {
     expect(cn("shadow-hard-sm text-ink")).toBe("shadow-hard-sm text-ink");
   });
 
+  it("lets an error or valid border win over the soft field border (D-059)", () => {
+    expect(cn("border border-field-border bg-input-fill shadow-field", "border-danger")).toBe("border bg-input-fill shadow-field border-danger");
+    expect(cn("border-field-border", "border-mint")).toBe("border-mint");
+    expect(cn("shadow-field", "shadow-none")).toBe("shadow-none");
+  });
+
   it("registers every custom text size defined in globals.css", () => {
     const css = readFileSync("app/globals.css", "utf8");
     const defined = [...css.matchAll(/--text-([a-z0-9]+(?:-[a-z0-9]+)*):/g)].map((match) => match[1] as string);

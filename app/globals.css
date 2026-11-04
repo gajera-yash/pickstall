@@ -65,6 +65,9 @@
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-field-border: var(--border-field);
+  --color-input-fill: var(--field);
+  --color-focus-glow: var(--focus-glow);
   --color-ring: var(--ring);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -150,6 +153,9 @@
 }
 @utility shadow-popover {
   box-shadow: var(--shadow-popover);
+}
+@utility shadow-field {
+  box-shadow: var(--shadow-field);
 }
 @utility shadow-card {
   box-shadow: var(--shadow-card);

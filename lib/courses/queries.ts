@@ -11,7 +11,7 @@ import { saveWithSlug, type SaveProductResult } from "@/lib/products/queries";
 /** Saves the Basic and Pricing steps. The slug follows the title until the course is published. */
 export async function updateCourseDetails(storeId: string, id: string, input: CourseDetailsInput): Promise<SaveProductResult> {
   const { products } = await collections();
-  const filter = { _id: id, storeId, type: "course" as const };
+  const filter = { _id: id, storeId, type: "course" as const, deletedAt: null };
   const current = await products.findOne(filter, { projection: { status: 1, slug: 1 } });
   if (!current) return "not_found";
 
@@ -36,7 +36,7 @@ export type ReleaseInput = { drip: boolean; modules: { id: string; dripDays: num
  */
 export async function updateCourseRelease(storeId: string, courseId: string, input: ReleaseInput): Promise<SaveProductResult> {
   const { products, courseModules } = await collections();
-  const result = await products.updateOne({ _id: courseId, storeId, type: "course" }, { $set: { "course.drip": input.drip, updatedAt: new Date() } });
+  const result = await products.updateOne({ _id: courseId, storeId, type: "course", deletedAt: null }, { $set: { "course.drip": input.drip, updatedAt: new Date() } });
   if (result.matchedCount !== 1) return "not_found";
   if (input.modules.length > 0) {
     const now = new Date();

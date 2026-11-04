@@ -1,6 +1,7 @@
 import { ChevronRight, Download, ImageIcon, PlayCircle } from "lucide-react";
 import Link from "next/link";
 
+import { ProductRowActions } from "@/components/dashboard/product-row-actions";
 import { PriceTag } from "@/components/store/price-tag";
 import { Badge } from "@/components/ui/badge";
 import { safeImageSrc } from "@/lib/media/media";
@@ -12,15 +13,15 @@ const STATUS: Record<CreatorProduct["status"], { label: string; variant: "live" 
   archived: { label: "Archived", variant: "draft" },
 };
 
-/** Product rows: cover, title, type, price and status. Each row opens the editor. */
-export function ProductList({ products, currency }: { products: CreatorProduct[]; currency: string }) {
+/** Product rows: cover, title, type, price and status. Each row opens the editor; "..." holds Edit, View, Publish/Unpublish and Delete (D-059). */
+export function ProductList({ products, currency, storeSlug }: { products: CreatorProduct[]; currency: string; storeSlug: string }) {
   return (
     <ul className="divide-y divide-line">
       {products.map((product) => {
         const status = STATUS[product.status];
         return (
-          <li key={product._id}>
-            <Link href={`/dashboard/products/${product._id}`} className="flex min-h-[72px] items-center gap-4 px-2 py-3 transition-colors duration-(--dur-fast) hover:bg-bg-subtle sm:px-3">
+          <li key={product._id} className="flex items-center gap-1 pr-1 transition-colors duration-(--dur-fast) hover:bg-bg-subtle">
+            <Link href={`/dashboard/products/${product._id}`} className="flex min-h-[72px] min-w-0 flex-1 items-center gap-4 px-2 py-3 sm:px-3">
               <span aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-blue-soft text-blue">
                 {safeImageSrc(product.coverUrl) ? (
                   // A creator's own https image on any host, so next/image (fixed remote hosts) cannot load it.
@@ -48,8 +49,9 @@ export function ProductList({ products, currency }: { products: CreatorProduct[]
                 </span>
               </span>
               <Badge variant={status.variant}>{status.label}</Badge>
-              <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-mute" />
+              <ChevronRight aria-hidden="true" className="hidden size-5 shrink-0 text-mute sm:block" />
             </Link>
+            <ProductRowActions product={{ id: product._id, title: product.title, status: product.status, publicPath: `/@${storeSlug}/${product.slug}` }} />
           </li>
         );
       })}

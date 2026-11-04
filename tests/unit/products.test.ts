@@ -310,16 +310,22 @@ describe("product actions use the session owner's store only", () => {
     expect(queries.setProductStatus).not.toHaveBeenCalled();
   });
 
-  it("removes the product's file after deleting it, through the owner's store", async () => {
-    queries.deleteProduct.mockResolvedValue(true);
-    expect(await removeProduct(PRODUCT_ID)).toMatchObject({ ok: true });
+  it("removes the product's file after deleting it for good, through the owner's store", async () => {
+    queries.deleteProduct.mockResolvedValue("deleted");
+    expect(await removeProduct(PRODUCT_ID)).toMatchObject({ ok: true, data: { kept: false } });
+    expect(queries.deleteProduct).toHaveBeenCalledWith("store-1", PRODUCT_ID);
     expect(productFiles.removeFilesOfProduct).toHaveBeenCalledWith("store-1", PRODUCT_ID);
   });
 
-  it("deletes only through the owner's store and reports why a published product stays", async () => {
-    queries.deleteProduct.mockResolvedValue(false);
+  it("keeps the files of a product with orders, which is only hidden (D-059)", async () => {
+    queries.deleteProduct.mockResolvedValue("hidden");
+    expect(await removeProduct(PRODUCT_ID)).toMatchObject({ ok: true, data: { kept: true } });
+    expect(productFiles.removeFilesOfProduct).not.toHaveBeenCalled();
+  });
+
+  it("answers 'not found' for another store's product", async () => {
+    queries.deleteProduct.mockResolvedValue("not_found");
     expect(await removeProduct(PRODUCT_ID)).toMatchObject({ ok: false });
-    expect(queries.deleteProduct).toHaveBeenCalledWith("store-1", PRODUCT_ID);
   });
 
   it("is rate limited", async () => {

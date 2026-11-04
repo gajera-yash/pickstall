@@ -3,7 +3,7 @@
 import { ArrowLeft, ArrowRight, BookOpen, CalendarClock, Check, CheckCircle2, Circle, Clock, CreditCard, Eye, FileText, ImageIcon, Infinity as InfinityIcon, ListTree, Plus, Rocket, Tag, Trash2, Undo2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
 import { CurriculumBuilder } from "@/components/dashboard/curriculum-builder";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
@@ -100,14 +100,14 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [goAfterSave, setGoAfterSave] = useState<CourseStep | null>(null);
   // "Save and publish": the details are saved first, then the course is published.
-  const [publishAfterSave, setPublishAfterSave] = useState(false);
+  const publishAfterSave = useRef(false);
   const [statusPending, startStatus] = useTransition();
   const [success, setSuccess] = useState<string | null>(null);
   const showSuccess = useAutoHide(success);
 
   const changeStatus = (status: EditorCourse["status"]) => {
-    setNotice(null);
     startStatus(async () => {
+      setNotice(null);
       const result = await changeProductStatus(values.id, status);
       if (!result.ok) {
         setNotice(result.error);
@@ -143,17 +143,15 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
     setGoAfterSave(null);
   }
 
-  // "Save and publish": run after the form save completes, outside of rendering so that
-  // startTransition (inside changeStatus) is not called while the component is rendering.
+  // "Save and publish": publish once that save comes back fine, after rendering (changeStatus starts
+  // a transition). Any save result clears the request, so a failed one never publishes later.
   useEffect(() => {
-    if (state?.ok && publishAfterSave) {
-      setPublishAfterSave(false);
-      changeStatus("published");
-    }
-  // changeStatus captures router/values in its closure but is redefined every render, so
-  // the dependency list stays minimal to avoid spurious retriggers.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, publishAfterSave]);
+    if (!state || !publishAfterSave.current) return;
+    publishAfterSave.current = false;
+    if (state.ok) changeStatus("published");
+    // changeStatus is redefined every render; only a new save result may trigger this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   useEffect(() => {
     if (state && !state.ok && state.field) document.getElementById(state.field)?.focus();
@@ -463,11 +461,10 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
                 </Link>
               </Button>
 
-              {values.status !== "published" && (
-                <div className="flex flex-wrap items-center gap-2 border-t border-line pt-5">
+              <div className="flex flex-wrap items-center gap-2 border-t border-line pt-5">
                   {confirmDelete ? (
                     <>
-                      <span className="text-sm font-medium">Delete &ldquo;{values.title.trim() || "Untitled course"}&rdquo; for good?</span>
+                      <span className="text-sm font-medium">Delete &ldquo;{values.title.trim() || "Untitled course"}&rdquo;? Students who bought it keep access.</span>
                       <Button type="button" variant="destructive" onClick={remove} loading={removing}>
                         Yes, delete
                       </Button>
@@ -481,8 +478,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
                       Delete course
                     </Button>
                   )}
-                </div>
-              )}
+              </div>
             </>
           )}
 
@@ -506,7 +502,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
                 Unpublish
               </Button>
             ) : (
-              <Button type="submit" loading={busy} disabled={blockers.length > 0 || values.status === "archived"} onClick={() => setPublishAfterSave(true)}>
+              <Button type="submit" loading={busy} disabled={blockers.length > 0 || values.status === "archived"} onClick={() => (publishAfterSave.current = true)}>
                 <Rocket aria-hidden="true" className="size-4" />
                 Save and publish
               </Button>

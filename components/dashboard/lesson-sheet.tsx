@@ -107,8 +107,7 @@ export function LessonSheet({
       },
       metadata: { filetype: file.type || "video/mp4", title: title || file.name },
       onProgress: (sent, total) => setUpload({ percent: total > 0 ? Math.round((sent / total) * 100) : 0 }),
-      onError: (error) => {
-        console.error("TUS video upload error:", error);
+      onError: () => {
         setUpload(null);
         setUploadProblem("The upload stopped. Check your connection and try again.");
       },
