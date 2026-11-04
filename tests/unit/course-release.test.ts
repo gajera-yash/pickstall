@@ -132,7 +132,7 @@ describe("saving how lessons open", () => {
 
   it("writes the course and its modules with store and course in every filter", async () => {
     await updateCourseRelease("store-1", COURSE, { drip: true, modules: [{ id: M1, dripDays: 7 }] });
-    expect(db.products.updateOne.mock.calls[0]?.[0]).toEqual({ _id: COURSE, storeId: "store-1", type: "course" });
+    expect(db.products.updateOne.mock.calls[0]?.[0]).toEqual({ _id: COURSE, storeId: "store-1", type: "course", deletedAt: null });
     expect(db.products.updateOne.mock.calls[0]?.[1]).toMatchObject({ $set: { "course.drip": true } });
     const ops = db.courseModules.bulkWrite.mock.calls[0]?.[0] as { updateOne: { filter: unknown } }[];
     expect(ops[0]?.updateOne.filter).toEqual({ _id: M1, storeId: "store-1", productId: COURSE });

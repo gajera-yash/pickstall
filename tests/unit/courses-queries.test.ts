@@ -31,9 +31,9 @@ describe("course queries (ownership)", () => {
   it("saves only a course of the session's store", async () => {
     db.products.findOne.mockResolvedValue({ status: "draft", slug: "untitled-course" });
     expect(await updateCourseDetails("store-1", "c1", input)).toBe("saved");
-    expect(db.products.findOne.mock.calls[0]?.[0]).toEqual({ _id: "c1", storeId: "store-1", type: "course" });
+    expect(db.products.findOne.mock.calls[0]?.[0]).toEqual({ _id: "c1", storeId: "store-1", type: "course", deletedAt: null });
     const [filter, update] = db.products.updateOne.mock.calls[0] ?? [];
-    expect(filter).toEqual({ _id: "c1", storeId: "store-1", type: "course" });
+    expect(filter).toEqual({ _id: "c1", storeId: "store-1", type: "course", deletedAt: null });
     expect(update).toMatchObject({ $set: { slug: "design-basics", priceCents: 2900, "course.accessDays": 30, "course.category": "design" } });
     expect(update).not.toHaveProperty("$set.course");
   });
@@ -53,7 +53,7 @@ describe("course queries (ownership)", () => {
   it("never lets the digital editor write a course", async () => {
     db.products.findOne.mockResolvedValue(null);
     await updateProduct("store-1", "c1", {} as Parameters<typeof updateProduct>[2]);
-    expect(db.products.findOne.mock.calls[0]?.[0]).toEqual({ _id: "c1", storeId: "store-1", type: { $ne: "course" } });
+    expect(db.products.findOne.mock.calls[0]?.[0]).toEqual({ _id: "c1", storeId: "store-1", type: { $ne: "course" }, deletedAt: null });
   });
 
   it("creates a draft course with lifetime access", async () => {

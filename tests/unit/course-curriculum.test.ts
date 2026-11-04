@@ -48,7 +48,7 @@ describe("loading the curriculum", () => {
   it("is only for a course of the session's store", async () => {
     db.products.countDocuments.mockResolvedValue(0);
     expect(await loadCurriculum("store-2", "course-1")).toBeNull();
-    expect(db.products.countDocuments.mock.calls[0]?.[0]).toEqual({ _id: "course-1", storeId: "store-2", type: "course" });
+    expect(db.products.countDocuments.mock.calls[0]?.[0]).toEqual({ _id: "course-1", storeId: "store-2", type: "course", deletedAt: null });
     expect(db.lessons.find).not.toHaveBeenCalled();
   });
 
