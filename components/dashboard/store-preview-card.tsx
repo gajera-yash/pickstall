@@ -34,11 +34,11 @@ export function StorePreviewCard({ store, products, isPublished }: { store: Publ
       </div>
       <LiveStorePreview store={shown} products={products} maxHeight={560} />
       <div className="flex flex-col gap-2 sm:flex-row xl:flex-col">
-        <Button type="button" variant="secondary" onClick={() => setExpanded(true)} className="flex-1">
+        <Button type="button" variant="secondary" onClick={() => setExpanded(true)} className="sm:flex-1 xl:flex-none">
           <Expand aria-hidden="true" className="size-4" />
           Expand preview
         </Button>
-        <Button asChild variant="secondary" className="flex-1 border-blue text-blue not-disabled:hover:bg-blue-soft">
+        <Button asChild variant="secondary" className="border-blue text-blue sm:flex-1 xl:flex-none not-disabled:hover:bg-blue-soft">
           <Link href="/dashboard?tab=design">
             <Palette aria-hidden="true" className="size-4" />
             Customize design
