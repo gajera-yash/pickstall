@@ -78,6 +78,8 @@ export type CourseSettingsDoc = {
   tags: string[];
   /** How long a buyer keeps access after buying, in days; null is lifetime. */
   accessDays: number | null;
+  /** Drip (D-056): modules open on their own day after purchase. Missing or false: all open at once. */
+  drip?: boolean;
 };
 
 export type ProductDoc = {

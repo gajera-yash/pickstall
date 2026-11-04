@@ -50,6 +50,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
       salePrice: centsToInput(product.salePriceCents ?? null, store.currency),
       access: product.course?.accessDays ? "days" : "lifetime",
       accessDays: product.course?.accessDays ? String(product.course.accessDays) : "",
+      drip: product.course?.drip ?? false,
     };
     const curriculum = (await loadCurriculum(store.id, product._id)) ?? { modules: [] };
     return <CourseEditor initial={course} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} curriculum={curriculum} videoUploadReady={bunnyConfig() !== null} />;

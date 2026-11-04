@@ -3,7 +3,11 @@ import { payableCents, type Priced } from "@/lib/products/pricing";
 
 export type PublishCheck = { ok: true } | { ok: false; problems: string[] };
 
-type Publishable = Pick<ProductDoc, "title" | "priceCents" | "salePriceCents" | "externalUrl" | "deliveryType" | "fileId"> & { type?: ProductDoc["type"] };
+type Publishable = Pick<ProductDoc, "title" | "priceCents" | "salePriceCents" | "externalUrl" | "deliveryType" | "fileId"> & {
+  type?: ProductDoc["type"];
+  /** For a course: how many lessons have something for students (a video, notes, a file or a link). */
+  courseLessons?: number;
+};
 
 /**
  * Whether paid products may be published: the creator's Stripe account must be connected, or we
@@ -31,8 +35,10 @@ export function hasDelivery(product: Pick<ProductDoc, "externalUrl" | "deliveryT
 export function publishProblems(product: Publishable, paymentsOk: boolean): string[] {
   const problems: string[] = [];
   if (!product.title.trim()) problems.push("Add a title.");
-  // A course delivers its lessons; publishing courses opens with drip and the student preview (G3).
-  if (product.type === "course") problems.push("Publishing courses arrives in the next update, with drip and the student preview.");
+  // A course delivers its lessons (D-056): at least one must have something for students.
+  if (product.type === "course") {
+    if (!(product.courseLessons && product.courseLessons > 0)) problems.push("Add at least one lesson with a video, notes or a file.");
+  }
   else if (!hasDelivery(product)) problems.push("Add a link or a file to deliver.");
   if (isPaid(product) && !paymentsOk) problems.push("Connect payments to publish a paid product.");
   return problems;

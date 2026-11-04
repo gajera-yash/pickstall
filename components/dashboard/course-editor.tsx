@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, Circle, Clock, CreditCard, FileText, ImageIcon, Infinity as InfinityIcon, ListTree, Plus, Rocket, Tag, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, CalendarClock, Check, CheckCircle2, Circle, Clock, CreditCard, Eye, FileText, ImageIcon, Infinity as InfinityIcon, ListTree, Plus, Rocket, Tag, Trash2, Undo2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
@@ -20,8 +20,9 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutoHide } from "@/components/ui/use-auto-hide";
-import { saveCourseDetails, type SaveCourseState } from "@/lib/courses/actions";
-import { lessonCount, lessonHasContent, type Curriculum } from "@/lib/courses/curriculum-types";
+import { saveCourseDetails, saveCourseRelease, type SaveCourseState } from "@/lib/courses/actions";
+import { lessonCount, lessonHasContent, type Curriculum, type EditorModule } from "@/lib/courses/curriculum-types";
+import { DRIP_DAYS_MAX, unlockLabel } from "@/lib/courses/drip";
 import {
   COURSE_STEPS,
   COURSE_STEP_LABELS,
@@ -35,7 +36,7 @@ import {
 } from "@/lib/courses/editor-steps";
 import { COURSE_CATEGORIES, COURSE_CATEGORY_LABELS, COURSE_LIMITS, accessLabel, type CourseCategory } from "@/lib/courses/settings";
 import { safeImageSrc } from "@/lib/media/media";
-import { removeProduct } from "@/lib/products/actions";
+import { changeProductStatus, removeProduct } from "@/lib/products/actions";
 import { parseMoneyToCents } from "@/lib/products/money";
 import { savingPercent, type Priced } from "@/lib/products/pricing";
 import { publishProblems } from "@/lib/products/publish";
@@ -57,6 +58,8 @@ export type EditorCourse = {
   salePrice: string;
   access: "lifetime" | "days";
   accessDays: string;
+  /** Drip (D-056): modules open N days after purchase instead of all at once. */
+  drip: boolean;
 };
 
 const STATUS_BADGE: Record<EditorCourse["status"], { label: string; variant: "live" | "draft" }> = {
@@ -96,6 +99,25 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [goAfterSave, setGoAfterSave] = useState<CourseStep | null>(null);
+  // "Save and publish": the details are saved first, then the course is published.
+  const [publishAfterSave, setPublishAfterSave] = useState(false);
+  const [statusPending, startStatus] = useTransition();
+  const [success, setSuccess] = useState<string | null>(null);
+  const showSuccess = useAutoHide(success);
+
+  const changeStatus = (status: EditorCourse["status"]) => {
+    setNotice(null);
+    startStatus(async () => {
+      const result = await changeProductStatus(values.id, status);
+      if (!result.ok) {
+        setNotice(result.error);
+        return;
+      }
+      set("status", status);
+      setSuccess(status === "published" ? "Published. Students can buy it once your store page is live." : "Back to draft. It is hidden from your store.");
+      router.refresh();
+    });
+  };
 
   const set = <K extends keyof EditorCourse>(key: K, value: EditorCourse[K]) => setValues((current) => ({ ...current, [key]: value }));
   const open = (target: CourseStep) => {
@@ -115,10 +137,13 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
     if (state && !state.ok) {
       const target = courseStepOfField(state.field);
       if (target) setStep(target);
+    } else if (state?.ok && publishAfterSave) {
+      changeStatus("published");
     } else if (state?.ok && goAfterSave) {
       open(goAfterSave);
     }
     setGoAfterSave(null);
+    setPublishAfterSave(false);
   }
 
   useEffect(() => {
@@ -156,11 +181,17 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
     curriculum: curriculum.modules.some((module) => module.lessons.some(lessonHasContent)),
     publish: values.status === "published",
   };
+  const readyLessons = curriculum.modules.reduce((sum, item) => sum + item.lessons.filter(lessonHasContent).length, 0);
+  const processing = curriculum.modules.some((item) => item.lessons.some((lesson) => lesson.video?.kind === "bunny" && lesson.video.status !== "ready"));
+  const busy = pending || statusPending || removing;
   const blockers = [
     ...new Set([
       ...missingBasics,
       ...missingPricing,
-      ...publishProblems({ type: "course", title: values.title, priceCents: priceCents ?? 0, salePriceCents, externalUrl: null, deliveryType: "link", fileId: null }, paymentsOk),
+      ...publishProblems(
+        { type: "course", courseLessons: readyLessons, title: values.title, priceCents: priceCents ?? 0, salePriceCents, externalUrl: null, deliveryType: "link", fileId: null },
+        paymentsOk,
+      ),
     ]),
   ];
   const next = nextCourseStep(step);
@@ -265,6 +296,11 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
       {notice && (
         <Alert variant="error">
           <AlertDescription>{notice}</AlertDescription>
+        </Alert>
+      )}
+      {success && showSuccess && (
+        <Alert variant="success">
+          <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
 
@@ -388,7 +424,8 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
 
           {step === "publish" && (
             <>
-              <StepHeading title="Publish" body="A last check, then your course goes live on your store." />
+              <StepHeading title="Publish" body="How the course opens for students, a look at the student view, then publish." />
+              <ReleaseSection courseId={values.id} drip={values.drip} modules={curriculum.modules} onSaved={(drip, modules) => (set("drip", drip), setCurriculum({ modules }))} />
               <section aria-labelledby="ready-title" className={cn("flex flex-col gap-3 rounded-md border p-4", blockers.length === 0 ? "border-mint/40 bg-mint-soft" : "border-line")}>
                 <h3 id="ready-title" className="font-display text-h4">
                   {values.status === "published" ? "This course is live" : blockers.length === 0 ? "Ready to publish" : "Before you publish"}
@@ -409,7 +446,13 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
                   )}
                 </ul>
               </section>
-              <p className="text-sm text-mute">Drip schedules, a student preview and publishing arrive in the next update.</p>
+              {processing && <p className="text-sm text-mute">Some videos are still being processed. Students see them as soon as Bunny finishes.</p>}
+              <Button asChild variant="secondary" className="self-start">
+                <Link href={`/dashboard/products/${values.id}/preview`} target="_blank" rel="noopener">
+                  <Eye aria-hidden="true" className="size-4" />
+                  Preview as a student
+                </Link>
+              </Button>
 
               {values.status !== "published" && (
                 <div className="flex flex-wrap items-center gap-2 border-t border-line pt-5">
@@ -443,10 +486,20 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
             ) : (
               <span />
             )}
-            {next && (
-              <Button type="submit" loading={pending && goAfterSave !== null} disabled={removing} onClick={() => setGoAfterSave(next)}>
+            {next ? (
+              <Button type="submit" loading={pending && goAfterSave !== null} disabled={removing || statusPending} onClick={() => setGoAfterSave(next)}>
                 Save and continue
                 <ArrowRight aria-hidden="true" className="size-4" />
+              </Button>
+            ) : values.status === "published" ? (
+              <Button type="button" variant="secondary" onClick={() => changeStatus("draft")} loading={statusPending} disabled={busy}>
+                <Undo2 aria-hidden="true" className="size-4" />
+                Unpublish
+              </Button>
+            ) : (
+              <Button type="submit" loading={busy} disabled={blockers.length > 0 || values.status === "archived"} onClick={() => setPublishAfterSave(true)}>
+                <Rocket aria-hidden="true" className="size-4" />
+                Save and publish
               </Button>
             )}
           </div>
@@ -551,5 +604,98 @@ function CoursePreview({ values, currency, price, lessons, modules }: { values: 
         </li>
       </ul>
     </Card>
+  );
+}
+
+/** All lessons at once, or drip: each module opens a set number of days after purchase (D-056). */
+function ReleaseSection({ courseId, drip: savedDrip, modules, onSaved }: { courseId: string; drip: boolean; modules: EditorModule[]; onSaved: (drip: boolean, modules: EditorModule[]) => void }) {
+  const [drip, setDrip] = useState(savedDrip);
+  const [days, setDays] = useState<Record<string, string>>(() => Object.fromEntries(modules.map((item) => [item.id, String(item.dripDays ?? 0)])));
+  const [saving, setSaving] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [saved, setSaved] = useState<{ at: number } | null>(null);
+  const showSaved = useAutoHide(saved);
+
+  const dayOf = (id: string) => {
+    const value = Number(days[id] ?? "0");
+    return Number.isInteger(value) ? value : NaN;
+  };
+  const changed = drip !== savedDrip || modules.some((item) => dayOf(item.id) !== (item.dripDays ?? 0));
+
+  const save = async () => {
+    setSaving(true);
+    setProblem(null);
+    const result = await saveCourseRelease(courseId, { drip, modules: modules.map((item) => ({ id: item.id, dripDays: dayOf(item.id) })) });
+    setSaving(false);
+    if (!result.ok) {
+      setProblem(result.error);
+      return;
+    }
+    setSaved({ at: result.data.savedAt });
+    onSaved(drip, modules.map((item) => ({ ...item, dripDays: dayOf(item.id) })));
+  };
+
+  return (
+    <section aria-labelledby="release-title" className="flex flex-col gap-3 rounded-md border border-line p-4">
+      <h3 id="release-title" className="font-display text-h4">
+        How lessons open
+      </h3>
+      <ToggleGroup type="single" variant="segment" aria-label="How lessons open" value={drip ? "drip" : "all"} onValueChange={(value) => value && setDrip(value === "drip")} className="grid w-full grid-cols-2">
+        <ToggleGroupItem value="all">
+          <BookOpen aria-hidden="true" />
+          All at once
+        </ToggleGroupItem>
+        <ToggleGroupItem value="drip">
+          <CalendarClock aria-hidden="true" />
+          Drip
+        </ToggleGroupItem>
+      </ToggleGroup>
+      {!drip ? (
+        <p className="text-sm text-mute">Students get every lesson as soon as they buy.</p>
+      ) : modules.length === 0 ? (
+        <p className="text-sm text-mute">Add modules in the Curriculum step, then set when each one opens.</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-line rounded-md border border-line">
+          {modules.map((item) => {
+            const value = dayOf(item.id);
+            return (
+              <li key={item.id} className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate text-sm font-semibold">{item.title}</span>
+                  <span className="text-xs text-mute">{Number.isNaN(value) ? "Enter a number of days" : unlockLabel(true, value)}</span>
+                </span>
+                <InputGroup className="h-10 w-36 shrink-0">
+                  <InputGroupAddon className="text-xs">Day</InputGroupAddon>
+                  <InputGroupInput
+                    aria-label={`Days after purchase when ${item.title} opens`}
+                    inputMode="numeric"
+                    value={days[item.id] ?? "0"}
+                    onChange={(event) => setDays((current) => ({ ...current, [item.id]: event.target.value.replace(/\D/g, "").slice(0, 3) }))}
+                    className="px-2 tabular-nums"
+                  />
+                </InputGroup>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {drip && <p className="text-xs text-mute">Day 0 opens right away. Days count from each student&apos;s purchase, up to {DRIP_DAYS_MAX}.</p>}
+      {problem && (
+        <Alert variant="error">
+          <AlertDescription>{problem}</AlertDescription>
+        </Alert>
+      )}
+      <div className="flex items-center gap-3">
+        <Button type="button" variant="secondary" size="sm" onClick={save} loading={saving} disabled={!changed}>
+          Save how lessons open
+        </Button>
+        {saved && showSaved && (
+          <span className="flex items-center gap-1 text-sm text-mint" role="status">
+            <Check aria-hidden="true" className="size-4" />
+            Saved
+          </span>
+        )}
+      </div>
+    </section>
   );
 }

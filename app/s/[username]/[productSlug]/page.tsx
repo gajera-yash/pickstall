@@ -6,7 +6,7 @@ import { APP_NAME } from "@/lib/config";
 import { publicEnv } from "@/lib/env";
 import { absoluteImageUrl } from "@/lib/media/media";
 import { canBuy, loadCheckoutContext } from "@/lib/orders/queries";
-import { findPublicProduct, findPublicStore } from "@/lib/stores/public";
+import { findPublicCurriculum, findPublicProduct, findPublicStore } from "@/lib/stores/public";
 
 // Public product page at /@username/product-slug (rewrite in next.config.ts). Only a published
 // product of a published store is shown; anything else is a real 404.
@@ -35,6 +35,6 @@ export default async function PublicProductPage({ params }: PageProps<"/s/[usern
   if (!store) notFound();
   const product = await findPublicProduct(store.id, productSlug);
   if (!product) notFound();
-  const context = await loadCheckoutContext(username, productSlug);
-  return <ProductPage store={store} product={product} buyable={context ? canBuy(context) : false} />;
+  const [context, curriculum] = await Promise.all([loadCheckoutContext(username, productSlug), product.type === "course" ? findPublicCurriculum(store.id, product.id) : null]);
+  return <ProductPage store={store} product={product} buyable={context ? canBuy(context) : false} curriculum={curriculum} />;
 }

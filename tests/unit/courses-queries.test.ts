@@ -34,7 +34,8 @@ describe("course queries (ownership)", () => {
     expect(db.products.findOne.mock.calls[0]?.[0]).toEqual({ _id: "c1", storeId: "store-1", type: "course" });
     const [filter, update] = db.products.updateOne.mock.calls[0] ?? [];
     expect(filter).toEqual({ _id: "c1", storeId: "store-1", type: "course" });
-    expect(update).toMatchObject({ $set: { slug: "design-basics", priceCents: 2900, course: { accessDays: 30 } } });
+    expect(update).toMatchObject({ $set: { slug: "design-basics", priceCents: 2900, "course.accessDays": 30, "course.category": "design" } });
+    expect(update).not.toHaveProperty("$set.course");
   });
 
   it("returns not_found for another store's course or a digital product", async () => {

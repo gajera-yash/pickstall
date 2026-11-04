@@ -117,8 +117,15 @@ describe("course editor steps", () => {
 describe("course publish rule", () => {
   const course = { type: "course" as const, title: "Course", priceCents: 0, salePriceCents: null, externalUrl: null, deliveryType: "link" as const, fileId: null };
 
-  it("keeps a course unpublished until publishing opens (G3)", () => {
-    expect(publishProblems(course, true)).toEqual(["Publishing courses arrives in the next update, with drip and the student preview."]);
+  it("needs at least one lesson with content (D-056)", () => {
+    expect(publishProblems(course, true)).toEqual(["Add at least one lesson with a video, notes or a file."]);
+    expect(publishProblems({ ...course, courseLessons: 0 }, true)).toHaveLength(1);
+    expect(publishProblems({ ...course, courseLessons: 2 }, true)).toEqual([]);
+  });
+
+  it("needs payments for a paid course, like a product", () => {
+    expect(publishProblems({ ...course, courseLessons: 1, priceCents: 4900 }, false)).toEqual(["Connect payments to publish a paid product."]);
+    expect(publishProblems({ ...course, courseLessons: 1, priceCents: 0 }, false)).toEqual([]);
   });
 
   it("leaves the digital product rules as they were", () => {

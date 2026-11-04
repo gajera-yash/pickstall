@@ -2,10 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import { requireCreator } from "@/lib/auth/guards";
 import { PRODUCT_RATE_LIMIT } from "@/lib/config";
-import { updateCourseDetails } from "@/lib/courses/queries";
+import { DRIP_DAYS_MAX } from "@/lib/courses/drip";
+import { updateCourseDetails, updateCourseRelease } from "@/lib/courses/queries";
+import { COURSE_LIMITS } from "@/lib/courses/settings";
 import { courseDetailsInputFor } from "@/lib/courses/schemas";
 import { logger } from "@/lib/logger";
 import { createDraftProduct } from "@/lib/products/queries";
@@ -72,6 +75,35 @@ export async function saveCourseDetails(courseId: string, _prev: SaveCourseState
     return err("Couldn't save your course. Check your connection and try again.");
   }
 
+  revalidatePath("/dashboard", "layout");
+  return ok({ savedAt: Date.now() });
+}
+
+const releaseInput = z.object({
+  drip: z.boolean(),
+  modules: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        dripDays: z.number().int({ error: "Use whole days." }).min(0, { error: "Use 0 or more days." }).max(DRIP_DAYS_MAX, { error: `Use ${DRIP_DAYS_MAX} days or fewer.` }),
+      }),
+    )
+    .max(COURSE_LIMITS.modulesMax),
+});
+
+/** Saves how the course opens (D-056): all lessons at once, or each module N days after purchase. */
+export async function saveCourseRelease(courseId: string, input: unknown): Promise<Result<{ savedAt: number }>> {
+  const { user, store } = await requireCreator(`/dashboard/products/${courseId}`);
+  if (!productIdInput.safeParse(courseId).success) return err(NOT_FOUND);
+  const parsed = releaseInput.safeParse(input);
+  if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Check the unlock days.", "drip");
+  if (!(await allowed(user.id))) return err("Slow down a little, then try again.");
+  try {
+    if ((await updateCourseRelease(store.id, courseId, parsed.data)) === "not_found") return err(NOT_FOUND);
+  } catch (error) {
+    logger.error("courses.release_failed", { name: errorName(error) });
+    return err("Couldn't save. Check your connection and try again.");
+  }
   revalidatePath("/dashboard", "layout");
   return ok({ savedAt: Date.now() });
 }

@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import type { AnyBulkWriteOperation } from "mongodb";
 
 import { COURSE_LIMITS } from "@/lib/courses/settings";
-import type { Curriculum } from "@/lib/courses/curriculum-types";
+import { lessonHasContent, type Curriculum } from "@/lib/courses/curriculum-types";
 import { collections, type CourseModuleDoc, type LessonDoc, type LessonLinkDoc, type LessonVideoDoc } from "@/lib/db/collections";
 import { PRODUCT_FILE_TYPES } from "@/lib/files/types";
 import type { RichDoc } from "@/lib/products/rich-text";
@@ -50,6 +50,12 @@ export async function loadCurriculum(storeId: string, courseId: string): Promise
         })),
     })),
   };
+}
+
+/** How many lessons of this store's course have something for students (the publish rule). */
+export async function countLessonsWithContent(storeId: string, courseId: string): Promise<number> {
+  const curriculum = await loadCurriculum(storeId, courseId);
+  return curriculum ? curriculum.modules.reduce((sum, item) => sum + item.lessons.filter(lessonHasContent).length, 0) : 0;
 }
 
 export async function addModule(storeId: string, courseId: string, title: string): Promise<CurriculumWrite> {

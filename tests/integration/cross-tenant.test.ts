@@ -2,13 +2,13 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import { collections, type OrderDoc, type ProductDoc, type StoreDoc } from "@/lib/db/collections";
 import { addLesson, addModule, deleteLesson, deleteModule, loadCurriculum, renameModule, saveLayout, updateLesson } from "@/lib/courses/curriculum";
-import { updateCourseDetails } from "@/lib/courses/queries";
+import { updateCourseDetails, updateCourseRelease } from "@/lib/courses/queries";
 import { findPurchase, grantAccess, hasPurchases, listPurchases } from "@/lib/library/queries";
 import { countOrdersByStatus, findCustomerDetail, findOrderDetail, incomeStats, listCustomers, listOrders, listOrdersForExport, listPaidOrdersForExport } from "@/lib/orders/creator-queries";
 import { loadCheckoutContext } from "@/lib/orders/queries";
 import { deleteProduct, findProduct, listProducts, setProductStatus, updateProduct } from "@/lib/products/queries";
 import type { ProductInput } from "@/lib/products/schemas";
-import { findPublicProduct, findPublicStore, listPublicProducts } from "@/lib/stores/public";
+import { findPublicCurriculum, findPublicProduct, findPublicStore, listPublicProducts } from "@/lib/stores/public";
 import { findStoreByOwner, setStorePublished, updateStorePageDesign, updateStoreProfile } from "@/lib/stores/queries";
 
 import { seedOrder, seedProduct, seedStore } from "./fixtures";
@@ -112,6 +112,14 @@ describe("course curriculum: creator A cannot read or change creator B's lessons
     expect(await deleteModule(storeA._id, courseB._id, moduleB!.id)).toBeNull();
     // A digital product is not a course: no curriculum can hang off it.
     expect(await addModule(storeA._id, productA._id, "Nope")).toBe("not_found");
+
+    // Release settings and the public outline (D-056).
+    expect(await updateCourseRelease(storeA._id, courseB._id, { drip: true, modules: [{ id: moduleB!.id, dripDays: 9 }] })).toBe("not_found");
+    expect(await findPublicCurriculum(storeB._id, courseB._id)).toBeNull();
+    await setProductStatus(storeB._id, courseB._id, "published");
+    expect(await findPublicCurriculum(storeA._id, courseB._id)).toBeNull();
+    const outline = await findPublicCurriculum(storeB._id, courseB._id);
+    expect(outline).toEqual({ modules: [{ title: "Intro", lessons: [{ title: "Welcome", hasVideo: false }] }] });
 
     const after = await loadCurriculum(storeB._id, courseB._id);
     expect(after?.modules.map((module) => module.title)).toEqual(["Intro"]);
