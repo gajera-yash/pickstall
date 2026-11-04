@@ -66,6 +66,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-field-border: var(--border-field);
+  --color-input-soft: var(--field-soft);
   --color-input-fill: var(--field);
   --color-focus-glow: var(--focus-glow);
   --color-ring: var(--ring);

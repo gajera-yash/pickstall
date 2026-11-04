@@ -10,7 +10,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
       type={type}
       data-slot="input"
       className={cn(
-        "h-11 w-full min-w-0 rounded-md border border-field-border bg-input-fill px-4 text-field text-ink shadow-field",
+        "h-11 w-full min-w-0 rounded-md border border-line bg-input-soft px-4 text-field text-ink shadow-field",
         "placeholder:text-mute selection:bg-primary selection:text-primary-foreground",
         // Soft field (D-059): a darker border on hover, a blue border and soft glow on focus.
         "transition-[border-color,box-shadow] duration-(--dur-fast) not-disabled:hover:border-input",

@@ -12,7 +12,7 @@ function NativeSelect({ className, size = "default", ...props }: Omit<React.Comp
         data-slot="native-select"
         data-size={size}
         className={cn(
-          "h-11 w-full min-w-0 appearance-none rounded-md border border-field-border bg-input-fill pr-12 pl-4 text-field text-ink shadow-field data-[size=sm]:h-10 data-[size=sm]:text-sm",
+          "h-11 w-full min-w-0 appearance-none rounded-md border border-line bg-input-soft pr-12 pl-4 text-field text-ink shadow-field data-[size=sm]:h-10 data-[size=sm]:text-sm",
           "transition-[border-color,box-shadow] duration-(--dur-fast) not-disabled:hover:border-input",
           "focus-visible:border-blue focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-glow",
           "disabled:cursor-not-allowed",

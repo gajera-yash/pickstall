@@ -25,6 +25,10 @@
      (3.1:1 on white, 3.05:1 on --field), a faint fill, a hairline shadow and a soft focus glow. */
   --border-field: #8b91a7;
   --field: #fcfcfd;
+  /* Text fields, selects and code boxes (D-067, founder choice): the light card border (--line) plus
+     this light gray fill, so a field stands out from the white card by its fill; hover darkens the
+     border and focus turns it blue. Small controls (checkbox, radio) keep --border-field. */
+  --field-soft: #f3f4f7;
   --focus-glow: rgb(0 86 255 / 0.16);
   --shadow-field: 0 1px 2px rgb(11 13 42 / 0.04);
   --border-strong: #0b0d2a; /* emphasis outlines only: coupons, receipts, highlight button */
@@ -95,6 +99,7 @@
   --border-input: #6068a0;
   --border-field: #6068a0;
   --field: #171a3a;
+  --field-soft: #1f2249;
   --focus-glow: rgb(125 136 255 / 0.28);
   --shadow-field: none;
   --border-strong: #6b76c4;
@@ -126,6 +131,8 @@
     --border-input: #6068a0;
     --border-field: #6068a0;
     --field: #171a3a;
+    --field-soft: #1f2249;
+  --field-soft: #1f2249;
     --focus-glow: rgb(125 136 255 / 0.28);
     --shadow-field: none;
     --border-strong: #6b76c4;

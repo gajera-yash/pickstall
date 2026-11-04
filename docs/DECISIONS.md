@@ -4,6 +4,12 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-067: Text fields use the card border plus a light fill
+- **Date:** 2026-11-04
+- **Decision (founder choice "card border + fill"):** text inputs, input groups, text areas, selects and code boxes use the light card border (`--line`) and a light gray fill (`--field-soft`), instead of the 3:1 gray border from D-059. On hover the border darkens (`--border-input`), on focus it turns blue with the soft glow, and errors stay red. Checkboxes and radios keep the D-059 border, because a small control needs a visible edge.
+- **Trade-off (told to the founder):** the resting border no longer meets the WCAG 1.4.11 3:1 non-text contrast on its own; the fill, labels, hover and focus states carry it. Supersedes the field border part of D-059.
+- **Why:** founder request, 2026-11-04 (fields should look as soft as the cards).
+
 ## D-066: Desktop layout for Clean, Bold and Soft (H5)
 - **Date:** 2026-11-04
 - **Decision:** the three original themes keep their phone look exactly. On a wide page (container `@3xl` and up) the page grows to about 1024px: the profile becomes a left-aligned banner (photo beside the name, bio and social links below, a thin rule under it) and the products form a grid of 2 cards, 3 on very wide pages (`@5xl`), with price and button lined up at the bottom of each card. Colors, borders, shadows and corners are unchanged. `StoreHeader` gains an `align="banner"` option; the product page header is unchanged.
