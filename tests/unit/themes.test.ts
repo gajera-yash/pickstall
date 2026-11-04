@@ -21,7 +21,7 @@ describe("contrastRatio", () => {
 
 describe("storefront theme presets (DESIGN.md section 11)", () => {
   it("has the presets, keyed by id (the first three keep their order for existing stores)", () => {
-    expect([...THEME_PRESET_IDS]).toEqual(["clean", "bold", "soft", "studio", "academy"]);
+    expect([...THEME_PRESET_IDS]).toEqual(["clean", "bold", "soft", "studio", "academy", "editorial", "neon"]);
     for (const id of THEME_PRESET_IDS) expect(THEME_PRESETS[id].id).toBe(id);
   });
 

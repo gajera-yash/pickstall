@@ -4,6 +4,14 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-064: Editorial Luxury and Neon Bento themes (H4c)
+- **Date:** 2026-11-04
+- **Decision (founder's theme choice, D-062):**
+  - **Editorial Luxury** (layout "editorial", serif headlines): cream paper (#FAF6EE), dark brown ink, a bronze accent (#7A4E24), sharp corners. A centered masthead between thin rules (store name in the serif, bio, social links), the first product as a wide "Featured" story, then "More from <store>" as a list with thin dividers, small covers and prices.
+  - **Neon Bento** (layout "bento", dark): near-black page (#0B0B12), dark tiles, a cyan accent (#22D3EE) with dark-ink button text. The profile is the first tile, the first product a big tile, the rest fill a grid. Tiles glow in the creator's accent. Text always sits on the solid tile color, never on a picture.
+  - All text pairs pass 4.5:1 (lowest 5.9:1). New card options: border "soft" (the theme's own text color at 14%, for dark themes) and shadow "glow" (two halos mixed from the accent), built from theme values, no new raw colors.
+- **Why:** founder request, 2026-11-04.
+
 ## D-063: Studio and Academy themes (H4b)
 - **Date:** 2026-11-04
 - **Decision (founder's theme choice, D-062):** two new themes in the picker, each with its own layout:

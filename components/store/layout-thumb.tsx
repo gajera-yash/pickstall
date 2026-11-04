@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 
+import { borderColor } from "@/components/store/store-theme";
 import type { ThemePreset } from "@/lib/themes";
 
 /**
@@ -10,7 +11,7 @@ export function LayoutThumb({ preset, className }: { preset: ThemePreset; classN
   const card: CSSProperties = {
     background: preset.card,
     borderRadius: Math.min(preset.radiusPx / 3, 6),
-    border: preset.border.widthPx ? `1px solid ${preset.border.color === "ink" ? preset.text : "var(--line)"}` : "none",
+    border: preset.border.widthPx ? `1px solid ${borderColor(preset)}` : "none",
   };
   const dot: CSSProperties = { background: preset.accent, borderRadius: 999 };
 
@@ -34,6 +35,28 @@ export function LayoutThumb({ preset, className }: { preset: ThemePreset; classN
             <span style={card} />
             <span style={card} />
           </span>
+        </span>
+      )}
+      {preset.layout === "editorial" && (
+        <>
+          <span style={{ width: "70%", height: 4, borderTop: `1px solid ${preset.text}`, borderBottom: `1px solid ${preset.text}` }} />
+          <span style={{ display: "flex", gap: 3, width: "100%", height: 16 }}>
+            <span style={{ ...card, flex: 1.4 }} />
+            <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, justifyContent: "center" }}>
+              <span style={{ height: 3, background: preset.text, borderRadius: 2 }} />
+              <span style={{ ...dot, height: 3, width: "60%" }} />
+            </span>
+          </span>
+          <span style={{ width: "100%", height: 3, borderTop: `1px solid ${preset.muted}` }} />
+          <span style={{ width: "100%", height: 3, borderTop: `1px solid ${preset.muted}` }} />
+        </>
+      )}
+      {preset.layout === "bento" && (
+        <span style={{ flex: 1, width: "100%", display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 3 }}>
+          <span style={{ ...card, gridRow: "span 2", boxShadow: `0 0 4px ${preset.accent}` }} />
+          <span style={card} />
+          <span style={card} />
+          <span style={{ ...card, gridColumn: "span 2" }} />
         </span>
       )}
       {preset.layout === "academy" && (

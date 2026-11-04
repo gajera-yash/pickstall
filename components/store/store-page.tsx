@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 
 import { AcademyLayout } from "@/components/store/layouts/academy";
+import { BentoLayout } from "@/components/store/layouts/bento";
+import { EditorialLayout } from "@/components/store/layouts/editorial";
 import { SplitLayout } from "@/components/store/layouts/split";
 import { StackLayout } from "@/components/store/layouts/stack";
 import type { StoreLayoutProps } from "@/components/store/layouts/types";
@@ -22,4 +24,6 @@ const STORE_LAYOUT_COMPONENTS: Record<StoreLayout, (props: StoreLayoutProps) => 
   stack: StackLayout,
   split: SplitLayout,
   academy: AcademyLayout,
+  editorial: EditorialLayout,
+  bento: BentoLayout,
 };

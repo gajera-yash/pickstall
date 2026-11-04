@@ -18,13 +18,26 @@ export function resolveTheme(theme: { preset: keyof typeof THEME_PRESETS; accent
   return { preset, accent, onAccent: onAccentFor(accent).color };
 }
 
-/** Card look of a preset: radius, border and shadow. */
-export function cardStyle({ preset }: StoreTheme): CSSProperties {
+/** The color of a preset's card border (D-064: "soft" is its own text color, faintly). */
+export function borderColor(preset: ThemePreset): string {
+  if (preset.border.color === "ink") return preset.text;
+  if (preset.border.color === "soft") return `color-mix(in srgb, ${preset.text} 14%, transparent)`;
+  return "var(--line)";
+}
+
+/** Card look of a preset: radius, border and shadow (the neon glow uses the creator's accent). */
+export function cardStyle({ preset, accent }: StoreTheme): CSSProperties {
+  const shadows = {
+    none: "none",
+    hard: `4px 4px 0 ${preset.text}`,
+    soft: "var(--shadow-popover)",
+    glow: `0 0 0 1px color-mix(in srgb, ${accent} 30%, transparent), 0 8px 32px color-mix(in srgb, ${accent} 22%, transparent)`,
+  };
   return {
     background: preset.card,
     borderRadius: preset.radiusPx,
-    border: preset.border.widthPx ? `${preset.border.widthPx}px solid ${preset.border.color === "ink" ? preset.text : "var(--line)"}` : "none",
-    boxShadow: preset.shadow === "hard" ? `4px 4px 0 ${preset.text}` : preset.shadow === "soft" ? "var(--shadow-popover)" : "none",
+    border: preset.border.widthPx ? `${preset.border.widthPx}px solid ${borderColor(preset)}` : "none",
+    boxShadow: shadows[preset.shadow],
   };
 }
 

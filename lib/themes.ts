@@ -4,7 +4,7 @@ import { contrastRatio } from "@/lib/contrast";
 // means adding an entry here. Raw color values are allowed in this file only (and styles/tokens.css).
 // Every pair below is contrast-tested in tests/unit/themes.test.ts.
 
-export const THEME_PRESET_IDS = ["clean", "bold", "soft", "studio", "academy"] as const;
+export const THEME_PRESET_IDS = ["clean", "bold", "soft", "studio", "academy", "editorial", "neon"] as const;
 export type ThemePresetId = (typeof THEME_PRESET_IDS)[number];
 
 /** The classic one-column themes, which the landing page demos draw (they do not draw the newer layouts). */
@@ -14,7 +14,7 @@ export const CLASSIC_THEME_IDS = ["clean", "bold", "soft"] as const satisfies re
  * How a theme arranges the store page (H4, D-062). "stack" is the original single column; the new
  * themes bring their own layouts (split, editorial, bento, academy, ...) in components/store/layouts.
  */
-export const STORE_LAYOUTS = ["stack", "split", "academy"] as const;
+export const STORE_LAYOUTS = ["stack", "split", "academy", "editorial", "bento"] as const;
 export type StoreLayout = (typeof STORE_LAYOUTS)[number];
 
 export type ThemePreset = {
@@ -28,8 +28,10 @@ export type ThemePreset = {
   onAccent: string;
   card: string;
   radiusPx: number;
-  border: { widthPx: 0 | 1 | 2; color: "line" | "ink" | "none" };
-  shadow: "none" | "hard" | "soft";
+  /** "soft" is a faint line in the theme's own text color, for dark themes (D-064). */
+  border: { widthPx: 0 | 1 | 2; color: "line" | "ink" | "soft" | "none" };
+  /** "glow" is a neon halo in the accent color (D-064). */
+  shadow: "none" | "hard" | "soft" | "glow";
   displayWeight: 600 | 800;
   /** The page structure (D-062). */
   layout: StoreLayout;
@@ -118,6 +120,41 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePreset> = {
     shadow: "soft",
     displayWeight: 800,
     layout: "academy",
+    displayFont: "sans",
+  },
+  // Editorial Luxury (D-064): minimalist luxury. Cream paper, serif headlines, thin rules, a
+  // featured product, then the rest as a list.
+  editorial: {
+    id: "editorial",
+    name: "Editorial Luxury",
+    background: "#FAF6EE",
+    text: "#1F1A14",
+    muted: "#6B5D4C",
+    accent: "#7A4E24",
+    onAccent: "#FFFFFF",
+    card: "#FFFDF8",
+    radiusPx: 2,
+    border: { widthPx: 1, color: "line" },
+    shadow: "none",
+    displayWeight: 600,
+    layout: "editorial",
+    displayFont: "serif",
+  },
+  // Neon Bento (D-064): cyberpunk / dark neon. A near-black page, mixed-size tiles, a glowing accent.
+  neon: {
+    id: "neon",
+    name: "Neon Bento",
+    background: "#0B0B12",
+    text: "#F5F5FA",
+    muted: "#A6A6BC",
+    accent: "#22D3EE",
+    onAccent: "#0B0D2A",
+    card: "#15151F",
+    radiusPx: 18,
+    border: { widthPx: 1, color: "soft" },
+    shadow: "glow",
+    displayWeight: 800,
+    layout: "bento",
     displayFont: "sans",
   },
 };

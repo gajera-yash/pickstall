@@ -81,3 +81,26 @@ describe("Studio and Academy (D-063)", () => {
     expect(db.lessons.aggregate).not.toHaveBeenCalled();
   });
 });
+
+describe("Editorial Luxury and Neon Bento (D-064)", () => {
+  const second: PublicProduct = { ...product, id: "p3", slug: "workbook", title: "Brand workbook", type: "digital", course: null };
+  const render = (preset: "editorial" | "neon", preview = false) =>
+    renderToStaticMarkup(createElement(StorePage, { store: { ...store, theme: { preset, accent: THEME_PRESETS[preset].accent } }, products: [product, second], preview }));
+
+  it("Editorial features the first product, lists the rest, and uses the serif", () => {
+    const page = render("editorial");
+    expect(page).toContain("Featured");
+    expect(page).toContain("More from Maya");
+    expect(page.indexOf("UI course")).toBeLessThan(page.indexOf("Brand workbook"));
+    expect(page).toContain("--font-bricolage:var(--font-store-serif)");
+    expect(render("editorial", true)).not.toContain("<main");
+  });
+
+  it("Neon Bento makes the first product a big tile and glows in the accent", () => {
+    const page = render("neon");
+    expect(page).toContain("@4xl:row-span-2");
+    expect(page).toContain("background:#0B0B12");
+    expect(page).toContain(`color-mix(in srgb, ${THEME_PRESETS.neon.accent} 22%, transparent)`);
+    expect(render("neon", true)).not.toContain("<main");
+  });
+});
