@@ -194,7 +194,7 @@ D. **Worker, in one MongoDB transaction:** mark order `paid`, upsert `customers`
 E. **Library download:** check entitlement and limit, atomic `downloadCount` increment, return presigned URL.
 
 ### 5.7 Video (Phase 2)
-Mux direct upload, webhook-driven status, signed playback tokens issued after an entitlement check (details in `docs/DATABASE.md` `lessons`).
+Bunny.net Stream (founder decision 2026-11-04, D-055, replacing Mux): the server creates the video and signs a TUS upload, the browser uploads straight to Bunny, the signed Bunny webhook keeps the status fresh, and signed playback links (token + expiry) are issued only after an access check. YouTube and Vimeo links are also accepted; only their video id is stored and the embed URL is rebuilt from it.
 
 ### 5.8 API and server rules
 Strict Zod on every input; typed `Result` outputs; no internal error leakage; pagination by cursor; idempotent webhooks and jobs.
@@ -257,7 +257,7 @@ Each block ends with: runs locally, lint, typecheck and tests green, security ch
 
 | Phase | Time (rough) | Features |
 |---|---|---|
-| **2. Core** | Week 2 | Courses (modules, lessons, Mux video, progress), coupons, order bumps, legal pages, cookie banner |
+| **2. Core** | Week 2 | Courses (modules, lessons, Bunny.net video, progress), coupons, order bumps, legal pages, cookie banner |
 | **3. Growth** | Weeks 3-5 | Email list and lead magnets, broadcasts and basic automation, abandoned cart, pixels, upsell, custom domain, block-based page editor, import (Gumroad API, Stan CSV) and export, platform billing and plan limits |
 | **4. Advanced selling** | Weeks 6-9 | Funnels, memberships, payment plans, bookings, affiliate tracking, quizzes and certificates, reviews, license keys, multi-currency, attribution analytics |
 | **5. Moat** | Months 3-4 | Instagram AutoDM, community, A/B tests, AI assistant, API and webhooks, team roles, creator PWA, template library |

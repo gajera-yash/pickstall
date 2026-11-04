@@ -117,8 +117,8 @@ describe("course editor steps", () => {
 describe("course publish rule", () => {
   const course = { type: "course" as const, title: "Course", priceCents: 0, salePriceCents: null, externalUrl: null, deliveryType: "link" as const, fileId: null };
 
-  it("keeps a course unpublished until it has lessons (G3)", () => {
-    expect(publishProblems(course, true)).toEqual(["Add lessons to your course. The curriculum builder comes next."]);
+  it("keeps a course unpublished until publishing opens (G3)", () => {
+    expect(publishProblems(course, true)).toEqual(["Publishing courses arrives in the next update, with drip and the student preview."]);
   });
 
   it("leaves the digital product rules as they were", () => {
@@ -165,5 +165,18 @@ describe("course actions use the session owner's store only", () => {
     rateLimit.takeRateLimit.mockResolvedValue(false);
     expect(await saveCourseDetails(COURSE_ID, null, form())).toMatchObject({ ok: false });
     expect(courseQueries.updateCourseDetails).not.toHaveBeenCalled();
+  });
+});
+
+describe("curriculum helpers (D-055)", () => {
+  it("counts lessons and knows when a lesson has something for students", async () => {
+    const { lessonCount, lessonHasContent } = await import("@/lib/courses/curriculum-types");
+    const empty = { video: null, bodyDoc: null, links: [], attachments: [] };
+    expect(lessonHasContent(empty)).toBe(false);
+    expect(lessonHasContent({ ...empty, bodyDoc: { type: "doc", content: [] } })).toBe(false);
+    expect(lessonHasContent({ ...empty, video: { kind: "youtube", id: "dQw4w9WgXcQ" } })).toBe(true);
+    expect(lessonHasContent({ ...empty, links: [{ label: "Figma", url: "https://figma.com" }] })).toBe(true);
+    const lesson = { id: "l", title: "L", ...empty };
+    expect(lessonCount({ modules: [{ id: "a", title: "A", dripDays: null, lessons: [lesson, lesson] }, { id: "b", title: "B", dripDays: null, lessons: [lesson] }] })).toBe(3);
   });
 });

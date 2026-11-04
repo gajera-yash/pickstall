@@ -6,12 +6,14 @@ import { ProductEditor, type EditorProduct } from "@/components/dashboard/produc
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { storeLink } from "@/lib/config";
+import { loadCurriculum } from "@/lib/courses/curriculum";
 import { findProductFile } from "@/lib/files/product-files";
 import { centsToInput } from "@/lib/products/money";
 import { docFromPlainText } from "@/lib/products/rich-text";
 import { paymentsReady } from "@/lib/products/publish";
 import { findProduct, isUnnamedDraft } from "@/lib/products/queries";
 import { productIdInput } from "@/lib/products/schemas";
+import { bunnyConfig } from "@/lib/video/bunny";
 
 // Product editor (R3), or the course editor for a course (D-054). The product is looked up with the session owner's store id, so another
 // creator's product id shows the same 404 as one that does not exist.
@@ -49,7 +51,8 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
       access: product.course?.accessDays ? "days" : "lifetime",
       accessDays: product.course?.accessDays ? String(product.course.accessDays) : "",
     };
-    return <CourseEditor initial={course} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} />;
+    const curriculum = (await loadCurriculum(store.id, product._id)) ?? { modules: [] };
+    return <CourseEditor initial={course} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} curriculum={curriculum} videoUploadReady={bunnyConfig() !== null} />;
   }
 
   const initial: EditorProduct = {

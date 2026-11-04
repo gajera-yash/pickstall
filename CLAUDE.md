@@ -8,7 +8,7 @@ You are helping a solo founder build **Pickstall**, a Stan Store-style platform 
 2. **Plan first.** For any task touching more than 2 files, the database, auth, or payments, write a short plan (files to change, approach, risks) and wait for approval before coding.
 3. **Small, reviewable changes.** Prefer several small commits over one giant change. Commit message format: `feat(scope): summary`, `fix(scope): summary`.
 4. **Ask before**: changing the database schema, adding a new dependency, changing auth or payment logic, or deleting files.
-5. **Never invent.** If a requirement, API behavior or library detail is unclear, say so and ask, or check the official docs. Do not guess Stripe, Mux, MongoDB, Better Auth or Resend API shapes.
+5. **Never invent.** If a requirement, API behavior or library detail is unclear, say so and ask, or check the official docs. Do not guess Stripe, Bunny.net, MongoDB, Better Auth or Resend API shapes.
 6. After finishing a task, report: what changed, how to run/test it, what was NOT done, and any security-relevant decisions.
 7. Keep answers to the founder in simple English or Hinglish; keep code, comments, commit messages and docs in English.
 
@@ -35,7 +35,7 @@ Rules: do not paste or re-read whole files into the chat; reference file paths a
 - Tailwind CSS + shadcn/ui + lucide-react
 - MongoDB (official `mongodb` driver, no ORM) + **Better Auth** (email 6-digit code, Google, sessions) (D-024). File storage for avatars and product files is not decided yet; ask the founder before adding one
 - Stripe (Connect **Standard** + Checkout **direct charges**; Billing for platform plans), accessed only through a provider-agnostic `PaymentProvider` interface (a PayPal adapter may be added later, only when the founder asks)
-- Mux (video, signed playback), Resend + React Email, Inngest (background jobs)
+- Bunny.net Stream (course video: direct TUS upload, signed playback; D-055) plus YouTube/Vimeo links, Resend + React Email, Inngest (background jobs)
 - Zod (validation), Vitest (unit), Playwright (e2e), PostHog, Sentry
 - Package manager: `pnpm`
 
@@ -82,7 +82,7 @@ Business logic lives in `/lib`, not inside components or route files. Route hand
 - Data model changes go in `lib/db/collections.ts` (document types) and `lib/db/mongo.ts` (indexes). Uniqueness is enforced by unique indexes, never by check-then-insert. A change that needs existing documents rewritten needs a written migration script and the founder's approval.
 - **MongoDB has no row-level security.** All database access goes through `/lib` data-access functions (for example `lib/stores/queries.ts`); components and routes never query collections directly. Every query on creator data filters by the owner id taken from the verified session (`requireCreator`), never from client input. Buyers see only their own enrollments and progress.
 - Better Auth owns the `user`, `session`, `account` and `verification` collections; app code never writes to them directly.
-- Public reads expose only public columns (no `stripe_account_id`, no Mux ids, no emails).
+- Public reads expose only public columns (no `stripe_account_id`, no Bunny video ids, no emails).
 - `MONGODB_URI` and `BETTER_AUTH_SECRET` are server-only: used only in `lib/db/mongo.ts` and `lib/auth/auth.ts`, never imported by client components, never logged.
 - Add a test for each new data-access function: creator A cannot read or write creator B's documents (the owner filter is applied).
 
@@ -147,11 +147,10 @@ STRIPE_SECRET_KEY                    # server only
 STRIPE_PLATFORM_WEBHOOK_SECRET       # server only
 STRIPE_CONNECT_WEBHOOK_SECRET        # server only
 STRIPE_CONNECT_CLIENT_ID
-MUX_TOKEN_ID                         # server only
-MUX_TOKEN_SECRET                     # server only
-MUX_SIGNING_KEY_ID                   # server only
-MUX_SIGNING_PRIVATE_KEY              # server only
-MUX_WEBHOOK_SECRET                   # server only
+BUNNY_STREAM_LIBRARY_ID              # server only
+BUNNY_STREAM_API_KEY                 # server only
+BUNNY_STREAM_TOKEN_KEY               # server only (signs playback links)
+BUNNY_STREAM_READONLY_KEY            # server only (verifies Bunny webhooks)
 RESEND_API_KEY                       # server only
 INNGEST_EVENT_KEY / INNGEST_SIGNING_KEY
 NEXT_PUBLIC_POSTHOG_KEY
@@ -181,4 +180,4 @@ Affiliate payouts, application fees, marketplace, community, live classes, mobil
 
 ## 13. First task template
 
-When the founder says "start M0", do this: propose the plan, then set up the repo (Next.js + TypeScript strict + Tailwind + shadcn + ESLint + Vitest), the `.env.example`, `lib/config.ts`, CI workflow, and a README with run instructions. Do not touch Stripe, Mux or the database yet.
+When the founder says "start M0", do this: propose the plan, then set up the repo (Next.js + TypeScript strict + Tailwind + shadcn + ESLint + Vitest), the `.env.example`, `lib/config.ts`, CI workflow, and a README with run instructions. Do not touch Stripe, video or the database yet.

@@ -85,6 +85,11 @@ async function run(courseId: string, work: (storeId: string) => Promise<Curricul
   }
 }
 
+/** The curriculum as it is now (the builder checks video processing with it). */
+export async function getCourseCurriculum(courseId: string): Promise<CurriculumResult> {
+  return run(courseId, async (storeId) => after(storeId, courseId, "ok"));
+}
+
 export async function addCourseModule(courseId: string, rawTitle: string): Promise<CurriculumResult> {
   const title = moduleTitle.safeParse(rawTitle);
   if (!title.success) return err(title.error.issues[0]?.message ?? "Check the title.", "moduleTitle");

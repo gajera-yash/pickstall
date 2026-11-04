@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 
+import { CurriculumBuilder } from "@/components/dashboard/curriculum-builder";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { RichTextEditor } from "@/components/dashboard/rich-text-editor";
@@ -13,7 +14,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/select";
@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { saveCourseDetails, type SaveCourseState } from "@/lib/courses/actions";
+import { lessonCount, lessonHasContent, type Curriculum } from "@/lib/courses/curriculum-types";
 import {
   COURSE_STEPS,
   COURSE_STEP_LABELS,
@@ -73,6 +74,9 @@ type Props = {
   paymentsOk: boolean;
   /** A course that was just created opens on step 1 with nothing checked yet. */
   isNew: boolean;
+  /** Modules and lessons (D-055), and whether Bunny video upload is set up. */
+  curriculum: Curriculum;
+  videoUploadReady: boolean;
 };
 
 /**
@@ -80,9 +84,10 @@ type Props = {
  * 2 Pricing, 3 Curriculum, 4 Publish, beside a live card preview. Steps 1 and 2 save as one JSON
  * payload that the server checks again; the curriculum builder (G2) and publishing (G3) follow.
  */
-export function CourseEditor({ initial, currency, paymentsOk, isNew }: Props) {
+export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum: initialCurriculum, videoUploadReady }: Props) {
   const router = useRouter();
   const [values, setValues] = useState(initial);
+  const [curriculum, setCurriculum] = useState(initialCurriculum);
   const [step, setStep] = useState<CourseStep>("basic");
   const [furthest, setFurthest] = useState<CourseStep>(isNew ? "basic" : "publish");
   const [state, action, pending] = useActionState<SaveCourseState, FormData>(saveCourseDetails.bind(null, initial.id), null);
@@ -148,7 +153,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew }: Props) {
   const done: Record<CourseStep, boolean> = {
     basic: missingBasics.length === 0,
     pricing: missingBasics.length === 0 && missingPricing.length === 0 && COURSE_STEPS.indexOf(furthest) > COURSE_STEPS.indexOf("pricing"),
-    curriculum: false,
+    curriculum: curriculum.modules.some((module) => module.lessons.some(lessonHasContent)),
     publish: values.status === "published",
   };
   const blockers = [
@@ -377,15 +382,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew }: Props) {
           {step === "curriculum" && (
             <>
               <StepHeading title="Curriculum" body="Modules and lessons: videos, attachments and written notes." />
-              <Empty className="border-dashed">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <ListTree aria-hidden="true" />
-                  </EmptyMedia>
-                  <EmptyTitle>The curriculum builder is coming next</EmptyTitle>
-                  <EmptyDescription>Here you will add modules and lessons, upload videos or paste YouTube and Vimeo links, attach files and reorder everything by dragging.</EmptyDescription>
-                </EmptyHeader>
-              </Empty>
+              <CurriculumBuilder courseId={values.id} curriculum={curriculum} videoUploadReady={videoUploadReady} onChange={setCurriculum} />
             </>
           )}
 
@@ -412,7 +409,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew }: Props) {
                   )}
                 </ul>
               </section>
-              <p className="text-sm text-mute">Drip schedules, a student preview and publishing arrive together with the curriculum builder.</p>
+              <p className="text-sm text-mute">Drip schedules, a student preview and publishing arrive in the next update.</p>
 
               {values.status !== "published" && (
                 <div className="flex flex-wrap items-center gap-2 border-t border-line pt-5">
@@ -456,7 +453,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew }: Props) {
         </Card>
 
         <aside aria-label="Preview" className="xl:sticky xl:top-22 xl:self-start">
-          <CoursePreview values={values} currency={currency} price={previewPrice} />
+          <CoursePreview values={values} currency={currency} price={previewPrice} lessons={lessonCount(curriculum)} modules={curriculum.modules.length} />
         </aside>
       </div>
     </form>
@@ -515,7 +512,7 @@ function TagsField({ tags, onChange, error }: { tags: string[]; onChange: (tags:
 }
 
 /** Live course card preview, drawn with our tokens (the creator's own theme applies on the store). */
-function CoursePreview({ values, currency, price }: { values: EditorCourse; currency: string; price: Priced | null }) {
+function CoursePreview({ values, currency, price, lessons, modules }: { values: EditorCourse; currency: string; price: Priced | null; lessons: number; modules: number }) {
   const cover = safeImageSrc(values.coverUrl);
   const description = plainTextOf(values.descriptionDoc);
   const days = Number(values.accessDays);
@@ -546,7 +543,7 @@ function CoursePreview({ values, currency, price }: { values: EditorCourse; curr
       <ul className="flex flex-col gap-1.5 text-sm text-mute">
         <li className="flex items-center gap-2">
           <ListTree aria-hidden="true" className="size-4" />
-          No lessons yet
+          {lessons === 0 ? "No lessons yet" : `${modules} ${modules === 1 ? "module" : "modules"}, ${lessons} ${lessons === 1 ? "lesson" : "lessons"}`}
         </li>
         <li className="flex items-center gap-2">
           <Clock aria-hidden="true" className="size-4" />

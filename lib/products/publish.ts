@@ -31,8 +31,8 @@ export function hasDelivery(product: Pick<ProductDoc, "externalUrl" | "deliveryT
 export function publishProblems(product: Publishable, paymentsOk: boolean): string[] {
   const problems: string[] = [];
   if (!product.title.trim()) problems.push("Add a title.");
-  // A course delivers its lessons; publishing it opens with the curriculum builder (course flow G3).
-  if (product.type === "course") problems.push("Add lessons to your course. The curriculum builder comes next.");
+  // A course delivers its lessons; publishing courses opens with drip and the student preview (G3).
+  if (product.type === "course") problems.push("Publishing courses arrives in the next update, with drip and the student preview.");
   else if (!hasDelivery(product)) problems.push("Add a link or a file to deliver.");
   if (isPaid(product) && !paymentsOk) problems.push("Connect payments to publish a paid product.");
   return problems;
