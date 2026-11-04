@@ -4,6 +4,12 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-068: Product page redesign with a buy box (H6a)
+- **Date:** 2026-11-04
+- **Decision:** the public product page keeps the creator's theme and gets a clearer structure. At the top, a back link with the creator's photo and name (the full profile block at the bottom is gone). Then the cover, kind ("Course · 12 lessons" / "Digital product") and title; a **buy box** with the price, the Buy button, what the buyer gets (lessons and modules and access period for a course; email delivery and library for a digital product) and "Secure checkout. Sold by <store>."; then the description and course content. On a wide page (`@3xl`) the buy box sits on the right and stays in view while scrolling. On a phone, once the Buy button has scrolled away, a **buy bar** with the price and button slides up at the bottom (only when the store can take payments).
+- **Not changed:** prices are still shown as information and recomputed at checkout; nothing private is on the page; no data or route changes.
+- **Why:** founder request, 2026-11-04 (H6: redesign the buyer-side pages).
+
 ## D-067: Text fields use the card border plus a light fill
 - **Date:** 2026-11-04
 - **Decision (founder choice "card border + fill"):** text inputs, input groups, text areas, selects and code boxes use the light card border (`--line`) and a light gray fill (`--field-soft`), instead of the 3:1 gray border from D-059. On hover the border darkens (`--border-input`), on focus it turns blue with the soft glow, and errors stay red. Checkboxes and radios keep the D-059 border, because a small control needs a visible edge.
