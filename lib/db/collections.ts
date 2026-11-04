@@ -259,6 +259,12 @@ export type LessonDoc = {
   updatedAt: Date;
 };
 
+/**
+ * A lesson a student marked complete (D-057). `_id` is "orderId:lessonId", so marking twice is one
+ * document. Progress belongs to the order, which belongs to the buyer's verified email.
+ */
+export type LessonProgressDoc = { _id: string; orderId: string; storeId: string; productId: string; lessonId: string; completedAt: Date };
+
 /** Fixed-window rate-limit counter. Removed by a TTL index after `expiresAt`. */
 export type RateLimitDoc = { _id: string; count: number; expiresAt: Date };
 
@@ -276,6 +282,7 @@ export async function collections(): Promise<{
   rateLimits: Collection<RateLimitDoc>;
   courseModules: Collection<CourseModuleDoc>;
   lessons: Collection<LessonDoc>;
+  lessonProgress: Collection<LessonProgressDoc>;
 }> {
   const db = await getDb();
   return {
@@ -292,5 +299,6 @@ export async function collections(): Promise<{
     rateLimits: db.collection<RateLimitDoc>("rateLimits"),
     courseModules: db.collection<CourseModuleDoc>("courseModules"),
     lessons: db.collection<LessonDoc>("lessons"),
+    lessonProgress: db.collection<LessonProgressDoc>("lessonProgress"),
   };
 }

@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, ImageIcon } from "lucide-react";
+import { ArrowLeft, ExternalLink, ImageIcon, PlayCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -22,7 +22,8 @@ const PROBLEMS: Record<string, string> = {
 };
 
 // One purchase (PRD F13): details and the button that opens the delivery link. The link itself is
-// only handed out by the POST route after every check; it is never in this page.
+// only handed out by the POST route after every check; it is never in this page. A course opens in
+// the course player instead (D-057), which checks access again on every load.
 export default function PurchasePage({ params, searchParams }: PageProps<"/library/[orderId]">) {
   return (
     <>
@@ -79,6 +80,20 @@ async function PurchaseContent({ params, searchParams }: Pick<PageProps<"/librar
         <p className="rounded-md bg-bg-subtle px-4 py-3 text-mute">This purchase was refunded, so access has been removed.</p>
       ) : !purchase.available ? (
         <p className="rounded-md bg-bg-subtle px-4 py-3 text-mute">This product isn&apos;t available right now. Contact the creator.</p>
+      ) : purchase.kind === "course" ? (
+        purchase.accessEnded && purchase.accessEndsAt ? (
+          <p className="rounded-md bg-bg-subtle px-4 py-3 text-mute">Your access to this course ended on {formatDay(purchase.accessEndsAt)}. Contact the creator if you need more time.</p>
+        ) : (
+          <div className="flex flex-col items-start gap-2">
+            <Button asChild size="lg">
+              <Link href={`/library/${purchase.orderId}/learn`}>
+                <PlayCircle aria-hidden="true" className="size-5" />
+                Open course
+              </Link>
+            </Button>
+            <p className="text-sm text-mute">{purchase.accessEndsAt ? `Access until ${formatDay(purchase.accessEndsAt)}` : "Lifetime access"}</p>
+          </div>
+        )
       ) : (
         <form action={`/library/${purchase.orderId}/open`} method="post" className="flex flex-col items-start gap-2">
           <Button type="submit" size="lg">

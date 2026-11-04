@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-057: Courses (part G4): the student view, progress and lesson downloads
+- **Date:** 2026-11-04
+- **Decision (founder spec "student view"):** a bought course opens from the buyer library ("Open course") at `/library/[orderId]/learn`: the lessons on the left (below the lesson on phones), the video player and the lesson on the right, a **Mark as complete** button, and a progress bar with the completion %. Without a lesson chosen it opens the first open lesson not done yet. The library lists a course with a "Course" badge, its access period ("Lifetime access" or "Access until ...") and "Access ended" when it is over.
+- **Access (checked on every page load, download and progress change, `lib/courses/student.ts`):** the order belongs to the signed-in, verified email; it is paid (a refund removes access; a partly refunded order stays paid, D-053); the product is a course of the order's own store; the access period, counted from the payment, has not ended. A lesson in a module that drip has not opened cannot be shown, downloaded or marked, whatever the URL says (the same `buildOutline` rule as the preview). Bunny videos play through the one-hour signed link of D-056.
+- **Progress:** a new `lessonProgress` collection, one document per order and lesson (`_id` "orderId:lessonId", so marking twice is one document), read by order. "Mark as complete" toggles it after the checks above.
+- **Lesson files:** `/library/[orderId]/files/[fileId]` streams the file from private storage as an attachment (no-store, nosniff, sandbox CSP), only for a file of an open lesson of the student's course.
+- **Fix found on the way (D-050 follow-up):** the library marked a product "available" only when it had a link, so products delivered as an uploaded file showed "Unavailable". It now uses the same `hasDelivery` rule as publishing.
+- **Not in this change:** course completion emails or certificates, quizzes, comments; a student account page beyond the library. Real payments come with the Stripe branch (D-053).
+- **Why:** founder request, 2026-11-04.
+
 ## D-056: Courses (part G3): drip, student preview, publishing and the public course page
 - **Date:** 2026-11-04
 - **Decision (founder spec step 4, founder choice of drip by days after purchase):** Step 4 of the course editor holds **How lessons open**: All at once, or Drip, where each module opens a set day after the student's purchase (day 0 = right away, up to 365; saved with `saveCourseRelease`, checked on the server, written only to this store's course and modules). The rule lives in one pure file, `lib/courses/drip.ts`, which the student view (G4) uses too. Saving steps 1–2 now writes dotted course fields, so it never resets the drip setting.

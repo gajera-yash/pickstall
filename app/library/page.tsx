@@ -59,7 +59,14 @@ async function LibraryContent() {
                   {purchase.storeName} · {formatDay(purchase.paidAt)}
                 </span>
               </span>
-              {purchase.status === "refunded" ? <Badge variant="draft">Refunded</Badge> : !purchase.available ? <Badge variant="testMode">Unavailable</Badge> : null}
+              {purchase.status === "refunded" ? (
+                <Badge variant="draft">Refunded</Badge>
+              ) : !purchase.available ? (
+                <Badge variant="testMode">Unavailable</Badge>
+              ) : purchase.kind === "course" ? (
+                // A course whose access period is over says so; an open one is labelled as a course.
+                purchase.accessEnded ? <Badge variant="draft">Access ended</Badge> : <Badge variant="live">Course</Badge>
+              ) : null}
               <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-mute" />
             </Link>
           </li>

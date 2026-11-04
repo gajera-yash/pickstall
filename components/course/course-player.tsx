@@ -49,7 +49,7 @@ export function CoursePlayer({
   const next = nextId && !lockedIds.has(nextId) ? nextId : undefined;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div data-layout="wide" className="flex flex-col gap-4">
       {banner}
       <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside aria-label="Course content" className="order-2 flex flex-col gap-4 lg:order-1 lg:sticky lg:top-22 lg:self-start">
@@ -114,7 +114,7 @@ export function CoursePlayer({
           </Card>
         </aside>
 
-        <main className="order-1 flex min-w-0 flex-col gap-5 lg:order-2">
+        <div className="order-1 flex min-w-0 flex-col gap-5 lg:order-2">
           {!lesson ? (
             <Empty>
               <EmptyHeader>
@@ -195,7 +195,7 @@ export function CoursePlayer({
               </div>
             </>
           )}
-        </main>
+        </div>
       </div>
     </div>
   );

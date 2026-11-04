@@ -45,6 +45,8 @@ async function ensureIndexes(db: Db): Promise<void> {
     // The Bunny webhook finds a lesson by its video id.
     db.collection("lessons").createIndex({ "video.videoId": 1 }, { partialFilterExpression: { "video.kind": "bunny" }, name: "lessons_bunny_video" }),
     db.collection("files").createIndex({ storeId: 1, lessonId: 1 }, { partialFilterExpression: { lessonId: { $type: "string" } }, name: "files_store_lesson" }),
+    // A student's progress is read per order (D-057).
+    db.collection("lessonProgress").createIndex({ orderId: 1 }, { name: "lesson_progress_order" }),
     // Better Auth collections (it does not create indexes for MongoDB itself).
     db.collection("user").createIndex({ email: 1 }, { unique: true, name: "user_email_unique" }),
     db.collection("session").createIndex({ token: 1 }, { unique: true, name: "session_token_unique" }),

@@ -1,7 +1,9 @@
 import "server-only";
 
 import { collections, type OrderDoc } from "@/lib/db/collections";
+import { accessEndsAt } from "@/lib/courses/access";
 import { isUuid } from "@/lib/media/media";
+import { hasDelivery } from "@/lib/products/publish";
 
 // The buyer's library (R7). A buyer is identified by the verified email of their session (they
 // proved it with the 6-digit code), and sees only paid or refunded orders placed with that email.
@@ -18,19 +20,25 @@ export type Purchase = {
   status: OrderDoc["status"];
   /** The product still exists and has something to open. */
   available: boolean;
+  /** A course opens in the course player (D-057); anything else through `grantAccess`. */
+  kind: "digital" | "course";
+  /** When a course's access period ends; null for lifetime access and for digital products. */
+  accessEndsAt: Date | null;
+  /** True once that period is over (the course player refuses it too). */
+  accessEnded: boolean;
   downloadLimit: number | null;
   accessCount: number;
 };
 
 const normalize = (email: string) => email.trim().toLowerCase();
 
-async function loadDetails(orders: OrderDoc[]): Promise<Purchase[]> {
+async function loadDetails(orders: OrderDoc[], now: Date = new Date()): Promise<Purchase[]> {
   const { stores, products } = await collections();
   const storeIds = [...new Set(orders.map((order) => order.storeId))];
   const productIds = [...new Set(orders.map((order) => order.productId))];
   const [storeDocs, productDocs] = await Promise.all([
     stores.find({ _id: { $in: storeIds } }, { projection: { name: 1, slug: 1 } }).toArray(),
-    products.find({ _id: { $in: productIds } }, { projection: { slug: 1, coverUrl: 1, externalUrl: 1, downloadLimit: 1, status: 1 } }).toArray(),
+    products.find({ _id: { $in: productIds } }, { projection: { slug: 1, coverUrl: 1, externalUrl: 1, downloadLimit: 1, status: 1, type: 1, deliveryType: 1, fileId: 1, "course.accessDays": 1 } }).toArray(),
   ]);
   const storeById = new Map(storeDocs.map((doc) => [doc._id, doc]));
   const productById = new Map(productDocs.map((doc) => [doc._id, doc]));
@@ -38,6 +46,7 @@ async function loadDetails(orders: OrderDoc[]): Promise<Purchase[]> {
   return orders.map((order) => {
     const store = storeById.get(order.storeId);
     const product = productById.get(order.productId);
+    const endsAt = product?.type === "course" && order.paidAt ? accessEndsAt(order.paidAt, product.course?.accessDays) : null;
     return {
       orderId: order._id,
       title: order.item.title,
@@ -47,7 +56,11 @@ async function loadDetails(orders: OrderDoc[]): Promise<Purchase[]> {
       coverUrl: product?.coverUrl ?? null,
       paidAt: order.paidAt,
       status: order.status,
-      available: Boolean(product?.externalUrl),
+      // A course always has its lessons; a digital product needs its link or its file (D-050).
+      available: product ? product.type === "course" || hasDelivery(product) : false,
+      kind: product?.type === "course" ? "course" : "digital",
+      accessEndsAt: endsAt,
+      accessEnded: endsAt !== null && now.getTime() >= endsAt.getTime(),
       downloadLimit: product?.downloadLimit ?? null,
       accessCount: order.accessCount ?? 0,
     };

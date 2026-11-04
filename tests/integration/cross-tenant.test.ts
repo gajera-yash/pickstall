@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { collections, type OrderDoc, type ProductDoc, type StoreDoc } from "@/lib/db/collections";
 import { addLesson, addModule, deleteLesson, deleteModule, loadCurriculum, renameModule, saveLayout, updateLesson } from "@/lib/courses/curriculum";
 import { updateCourseDetails, updateCourseRelease } from "@/lib/courses/queries";
+import { completedLessons, courseAccess, setLessonComplete } from "@/lib/courses/student";
 import { findPurchase, grantAccess, hasPurchases, listPurchases } from "@/lib/library/queries";
 import { countOrdersByStatus, findCustomerDetail, findOrderDetail, incomeStats, listCustomers, listOrders, listOrdersForExport, listPaidOrdersForExport } from "@/lib/orders/creator-queries";
 import { loadCheckoutContext } from "@/lib/orders/queries";
@@ -175,6 +176,28 @@ describe("orders, customers and income are per store", () => {
 
   it("treats a search for regex characters as plain text", async () => {
     expect((await listOrders(storeA._id, { q: ".*" })).orders).toEqual([]);
+  });
+});
+
+describe("students open only their own courses (D-057)", () => {
+  it("gives course access and progress to the buyer's own order only", async () => {
+    const course = await seedProduct(storeA._id, { type: "course", title: "A's course", status: "published", course: { category: null, tags: [], accessDays: 30 } });
+    const order = await seedOrder(course, { buyerEmail: "carol@example.com", buyerName: "Carol", status: "paid", paidAt: new Date() });
+
+    expect(await courseAccess("bob@example.com", order._id)).toEqual({ ok: false, reason: "not_found" });
+    const access = await courseAccess("CAROL@example.com", order._id);
+    expect(access).toMatchObject({ ok: true, storeId: storeA._id, courseId: course._id });
+    // A digital product's order is not a course.
+    expect(await courseAccess("alice@example.com", orderA._id)).toMatchObject({ ok: false });
+
+    if (!access.ok) throw new Error("expected access");
+    await setLessonComplete(access, "lesson-1", true);
+    await setLessonComplete(access, "lesson-1", true);
+    expect(await completedLessons(order._id)).toEqual(["lesson-1"]);
+    expect(await completedLessons(orderB._id)).toEqual([]);
+
+    // Past the access period, access ends.
+    expect(await courseAccess("carol@example.com", order._id, new Date(Date.now() + 31 * 24 * 60 * 60 * 1000))).toEqual({ ok: false, reason: "expired" });
   });
 });
 
