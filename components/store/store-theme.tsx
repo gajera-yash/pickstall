@@ -1,7 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import { Wordmark } from "@/components/brand/wordmark";
+import { storeSerif } from "@/components/store/fonts";
 import { THEME_PRESETS, onAccentFor, type ThemePreset } from "@/lib/themes";
+import { cn } from "@/lib/utils";
 
 /** The creator's theme as plain values. Colors come from theme data in lib/themes.ts, never from app tokens. */
 export type StoreTheme = {
@@ -26,13 +28,29 @@ export function cardStyle({ preset }: StoreTheme): CSSProperties {
   };
 }
 
-/** Full-page frame of a public store page: the creator's background and text color, a narrow column, a Pickstall footer. */
-export function StoreFrame({ theme, children }: { theme: StoreTheme; children: ReactNode }) {
+/** The page style of a theme: its colors, and the serif headline font for themes that use it (D-062). */
+export function frameStyle({ preset }: StoreTheme): { className: string; style: CSSProperties } {
+  const serif = preset.displayFont === "serif";
+  return {
+    className: serif ? storeSerif.variable : "",
+    // font-display reads --font-bricolage (globals.css); a serif theme points it at its serif, on its own page only.
+    style: { background: preset.background, color: preset.text, ...(serif ? ({ "--font-bricolage": "var(--font-store-serif)" } as CSSProperties) : {}) },
+  };
+}
+
+/**
+ * Full-page frame of a public store page: the creator's background and text color, a column
+ * (narrow, or wide for layouts that use the desktop width), a Pickstall footer. With `preview` it
+ * renders as a plain block for the dashboard's live preview (no page height, no second <main>).
+ */
+export function StoreFrame({ theme, children, wide = false, preview = false }: { theme: StoreTheme; children: ReactNode; wide?: boolean; preview?: boolean }) {
+  const frame = frameStyle(theme);
+  const Body = preview ? "div" : "main";
   return (
-    <div className="flex min-h-dvh flex-col items-center px-4 py-8 sm:py-12" style={{ background: theme.preset.background, color: theme.preset.text }}>
-      <main id="main" className="flex w-full max-w-xl flex-1 flex-col items-center gap-6">
+    <div className={cn("flex flex-col items-center px-4 py-8 sm:py-12", !preview && "min-h-dvh", frame.className)} style={frame.style}>
+      <Body {...(preview ? {} : { id: "main" })} className={cn("flex w-full flex-1 flex-col items-center gap-6", wide ? "max-w-6xl" : "max-w-xl")}>
         {children}
-      </main>
+      </Body>
       <footer className="flex items-center gap-2 pt-10 text-xs" style={{ color: theme.preset.muted }}>
         Powered by
         <Wordmark className="h-5" />

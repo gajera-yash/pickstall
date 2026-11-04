@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { ChecklistCard } from "@/components/dashboard/checklist-card";
 import { KpiSection, type KpiSeries } from "@/components/dashboard/kpi-section";
 import { MyStoreTabs } from "@/components/dashboard/my-store-tabs";
+import { DesignDraftProvider } from "@/components/dashboard/design-draft";
 import { PageDesignForm } from "@/components/dashboard/page-design-form";
 import { ProductsEmpty } from "@/components/dashboard/products-empty";
 import { SocialLogo } from "@/components/brand/social-logos";
@@ -21,6 +22,7 @@ import { SOCIAL_LINK_LABELS, storeLink } from "@/lib/config";
 import { loadSetupState } from "@/lib/dashboard/setup-state";
 import { MY_STORE_TABS, type MyStoreTab } from "@/lib/dashboard/nav";
 import { firstName } from "@/lib/dashboard/greeting";
+import type { PublicProduct, PublicStore } from "@/lib/stores/public";
 import type { SocialLink } from "@/lib/stores/schemas";
 import { displayValueFor } from "@/lib/stores/social-handles";
 
@@ -62,18 +64,35 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
   const productCount = products.length;
   // Real numbers from paid orders; days without sales (or an unreachable database) are zeros.
   const series: KpiSeries = stats ? stats.series : { revenueCents: zeros(), orders: zeros(), customers: zeros() };
-  const preview = {
+  // The live preview draws the real public page from the same public fields (D-062).
+  const previewStore: PublicStore = {
+    id: store.id,
     slug: store.slug,
     name: store.name,
-    bio: store.bio ?? "",
-    avatarUrl: store.avatarUrl ?? "",
+    bio: store.bio,
+    avatarUrl: store.avatarUrl,
     socialLinks: store.socialLinks,
+    theme: store.theme,
+    currency: store.currency,
   };
-  const previewProducts = products
+  const previewProducts: PublicProduct[] = products
     .filter((product) => product.status === "published")
-    .map(({ _id, title, coverUrl, buttonText, priceCents, salePriceCents }) => ({ id: _id, title, coverUrl, buttonText, priceCents, salePriceCents: salePriceCents ?? null }));
+    .map((product) => ({
+      id: product._id,
+      slug: product.slug,
+      title: product.title,
+      description: product.description,
+      descriptionDoc: product.descriptionDoc ?? null,
+      coverUrl: product.coverUrl,
+      priceCents: product.priceCents,
+      salePriceCents: product.salePriceCents ?? null,
+      buttonText: product.buttonText,
+      type: product.type,
+      course: product.type === "course" ? { category: product.course?.category ?? null, accessDays: product.course?.accessDays ?? null } : null,
+    }));
 
   return (
+    <DesignDraftProvider saved={{ themePreset: store.theme.preset, accent: store.theme.accent }}>
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="flex min-w-0 flex-col gap-6">
         <WelcomeHero name={name} storeUrl={`https://${link}`} ready publicPath={store.isPublished ? `/@${store.slug}` : null} />
@@ -85,12 +104,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
           productCount={productCount}
           products={products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} storeSlug={store.slug} />}
           design={
-            <PageDesignForm
-              initial={{ themePreset: store.theme.preset, accent: store.theme.accent }}
-              preview={preview}
-              products={previewProducts}
-              currency={store.currency}
-            />
+            <PageDesignForm initial={{ themePreset: store.theme.preset, accent: store.theme.accent }} />
           }
           links={<LinksTab links={store.socialLinks} />}
           analytics={<AnalyticsTab isPublished={store.isPublished} />}
@@ -98,15 +112,11 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
       </div>
 
       <aside aria-label="Store preview and help" className="flex flex-col gap-6 xl:sticky xl:top-22 xl:self-start">
-        <StorePreviewCard
-          data={{ ...preview, themePreset: store.theme.preset, accent: store.theme.accent }}
-          products={previewProducts}
-          currency={store.currency}
-          isPublished={store.isPublished}
-        />
+        <StorePreviewCard store={previewStore} products={previewProducts} isPublished={store.isPublished} />
         <HelpCard />
       </aside>
     </div>
+    </DesignDraftProvider>
   );
 }
 

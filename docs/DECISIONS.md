@@ -4,6 +4,14 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-062: Store themes get layouts; one live preview on My Store (H4a)
+- **Date:** 2026-11-04
+- **Decision (founder request; 6 new themes chosen: Studio, Editorial Luxury, Neon Bento, Academy, Neo-Brutalist, Frosted Glass; Clean, Bold and Soft stay):** a theme is now a layout plus a style, not only colors. `ThemePreset` gains `layout` (`STORE_LAYOUTS`) and `displayFont` ("sans" or "serif"). `StorePage` draws the theme's layout from a registry (`components/store/layouts/*`); the original page is the "stack" layout used by Clean, Bold and Soft, unchanged. New themes add a preset, a layout component and a picker sketch (H4b-H4d).
+- **Serif:** Fraunces through `next/font/google` (self-hosted at build time, like the app's fonts, `preload: false` so stores on other themes never fetch it). A serif theme points `--font-bricolage` (behind `font-display`) at it on its own page only. Approved by the founder.
+- **One preview:** the Page design tab no longer has its own phone preview. The Store preview on the right of My Store is the only preview: it renders the real `StorePage` (not a copy) at phone or desktop width, scaled to fit, inert so links do not navigate, with "Expand preview" for a large view. While Page design is being edited it shows the unsaved theme and accent ("Unsaved changes"), through a small client context (`DesignDraftProvider`); a good save makes them the saved ones. `StoreFrame` has a preview mode without a page height or a second `<main>`. The theme picker shows a sketch of each theme's layout in its colors.
+- **Not changed:** the setup wizard keeps its phone preview for now; buyer-facing data and its safety rules are the same in every layout (public fields only, no raw HTML).
+- **Why:** founder request, 2026-11-04.
+
 ## D-061: Live notifications in the dashboard bell
 - **Date:** 2026-11-04
 - **Decision (founder choices: new sale, refund, video ready/failed, browser pop-up):** the dashboard bell shows the store's latest 20 notifications with an unread count; opening it marks them read. It checks every 20 seconds while the dashboard is visible, every minute in a hidden tab, and right away when the tab comes back. With the creator's permission ("Turn on" in the bell), news that arrives while the tab is hidden also shows as a desktop pop-up (Notification API); clicking it opens the order or course.

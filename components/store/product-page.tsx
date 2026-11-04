@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { PriceTag } from "@/components/store/price-tag";
 import { RichTextView } from "@/components/store/rich-text";
-import { StoreHeader } from "@/components/store/store-page";
+import { StoreHeader } from "@/components/store/store-header";
 import { StoreFrame, cardStyle, resolveTheme } from "@/components/store/store-theme";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";

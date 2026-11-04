@@ -7,6 +7,13 @@ import { contrastRatio } from "@/lib/contrast";
 export const THEME_PRESET_IDS = ["clean", "bold", "soft"] as const;
 export type ThemePresetId = (typeof THEME_PRESET_IDS)[number];
 
+/**
+ * How a theme arranges the store page (H4, D-062). "stack" is the original single column; the new
+ * themes bring their own layouts (split, editorial, bento, academy, ...) in components/store/layouts.
+ */
+export const STORE_LAYOUTS = ["stack"] as const;
+export type StoreLayout = (typeof STORE_LAYOUTS)[number];
+
 export type ThemePreset = {
   id: ThemePresetId;
   name: string;
@@ -21,6 +28,10 @@ export type ThemePreset = {
   border: { widthPx: 0 | 1 | 2; color: "line" | "ink" | "none" };
   shadow: "none" | "hard" | "soft";
   displayWeight: 600 | 800;
+  /** The page structure (D-062). */
+  layout: StoreLayout;
+  /** Headline font: our sans, or the serif loaded only for themes that use it. */
+  displayFont: "sans" | "serif";
 };
 
 export const THEME_PRESETS: Record<ThemePresetId, ThemePreset> = {
@@ -37,6 +48,8 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePreset> = {
     border: { widthPx: 1, color: "line" },
     shadow: "none",
     displayWeight: 800,
+    layout: "stack",
+    displayFont: "sans",
   },
   bold: {
     id: "bold",
@@ -51,6 +64,8 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePreset> = {
     border: { widthPx: 2, color: "ink" },
     shadow: "hard",
     displayWeight: 800,
+    layout: "stack",
+    displayFont: "sans",
   },
   soft: {
     id: "soft",
@@ -65,6 +80,8 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePreset> = {
     border: { widthPx: 0, color: "none" },
     shadow: "soft",
     displayWeight: 600,
+    layout: "stack",
+    displayFont: "sans",
   },
 };
 

@@ -4,6 +4,7 @@ import { CheckCircle2 } from "lucide-react";
 import { FieldError, FieldHint } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LayoutThumb } from "@/components/store/layout-thumb";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AA_TEXT } from "@/lib/contrast";
 import { THEME_PRESETS, THEME_PRESET_IDS, onAccentFor, type ThemePresetId } from "@/lib/themes";
@@ -60,14 +61,8 @@ export function ThemeFields({ themePreset, accent, onThemePreset, onAccent, fiel
                   "has-data-[state=checked]:border-blue has-data-[state=checked]:bg-blue-soft",
                 )}
               >
-                {/* Swatch in the preset's own colors (theme data, lib/themes.ts). */}
-                <span
-                  aria-hidden="true"
-                  className="flex size-10 shrink-0 items-center justify-center rounded-sm border border-line text-xs font-bold"
-                  style={{ background: preset.background, color: preset.text }}
-                >
-                  Aa
-                </span>
+                {/* The theme's layout, sketched in its own colors (theme data, lib/themes.ts). */}
+                <LayoutThumb preset={preset} />
                 <span className="flex-1 font-semibold">{preset.name}</span>
                 <RadioGroupItem id={id === THEME_PRESET_IDS[0] ? "themePreset" : undefined} value={id} aria-label={preset.name} />
               </label>

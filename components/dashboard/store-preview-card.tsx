@@ -1,40 +1,60 @@
-import { LifeBuoy, Mail, Palette } from "lucide-react";
-import Link from "next/link";
+"use client";
 
-import { StorePreview, type PreviewProduct, type StorePreviewData } from "@/components/dashboard/store-preview";
+import { Expand, LifeBuoy, Mail, Palette } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+
+import { useDesignDraft } from "@/components/dashboard/design-draft";
+import { LiveStorePreview } from "@/components/dashboard/live-store-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SUPPORT_EMAIL } from "@/lib/config";
+import type { PublicProduct, PublicStore } from "@/lib/stores/public";
 
 /**
- * Right column of My Store (reference docs/ui-reference/dashboard.webp): a live phone preview of the
- * public store with its status and "Customize design", then the help card.
+ * Right column of My Store (reference docs/ui-reference/dashboard.webp, D-062): the one live preview
+ * of the public store, at phone or desktop size. While the creator edits Page design it shows the
+ * unsaved design ("Unsaved changes"); "Expand" opens it large.
  */
-export function StorePreviewCard({
-  data,
-  products,
-  currency,
-  isPublished,
-}: {
-  data: StorePreviewData;
-  products?: PreviewProduct[];
-  currency?: string;
-  isPublished: boolean;
-}) {
+export function StorePreviewCard({ store, products, isPublished }: { store: PublicStore; products: PublicProduct[]; isPublished: boolean }) {
+  const draft = useDesignDraft();
+  const [expanded, setExpanded] = useState(false);
+  const shown: PublicStore = draft ? { ...store, theme: { preset: draft.design.themePreset, accent: draft.design.accent } } : store;
+
   return (
     <Card id="store-preview" className="scroll-mt-24 gap-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-display text-h3">Store preview</h2>
-        {isPublished ? <Badge variant="live">Live</Badge> : <Badge variant="draft">Draft</Badge>}
+        <div className="flex items-center gap-1.5">
+          {draft?.unsaved && <Badge variant="testMode">Unsaved changes</Badge>}
+          {isPublished ? <Badge variant="live">Live</Badge> : <Badge variant="draft">Draft</Badge>}
+        </div>
       </div>
-      <StorePreview data={data} products={products} currency={currency} className="max-w-[300px]" />
-      <Button asChild variant="secondary" size="lg" className="border-blue text-blue not-disabled:hover:bg-blue-soft">
-        <Link href="/dashboard?tab=design">
-          <Palette aria-hidden="true" className="size-5" />
-          Customize design
-        </Link>
-      </Button>
+      <LiveStorePreview store={shown} products={products} maxHeight={560} />
+      <div className="flex flex-col gap-2 sm:flex-row xl:flex-col">
+        <Button type="button" variant="secondary" onClick={() => setExpanded(true)} className="flex-1">
+          <Expand aria-hidden="true" className="size-4" />
+          Expand preview
+        </Button>
+        <Button asChild variant="secondary" className="flex-1 border-blue text-blue not-disabled:hover:bg-blue-soft">
+          <Link href="/dashboard?tab=design">
+            <Palette aria-hidden="true" className="size-4" />
+            Customize design
+          </Link>
+        </Button>
+      </div>
+
+      <Dialog open={expanded} onOpenChange={setExpanded}>
+        <DialogContent className="sm:max-w-[min(1100px,calc(100vw-4rem))]">
+          <DialogHeader>
+            <DialogTitle>Store preview</DialogTitle>
+            <DialogDescription>{draft?.unsaved ? "Your unsaved design. Save it in Page design to publish it." : "How your store page looks to visitors."}</DialogDescription>
+          </DialogHeader>
+          <LiveStorePreview store={shown} products={products} maxHeight={640} />
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
