@@ -76,7 +76,9 @@ export function playerVideoOf(video: LessonDoc["video"], now: Date): PlayerVideo
   if (video.status === "uploading" || video.status === "processing") return { kind: "processing" };
   const config = bunnyConfig();
   if (video.status !== "ready" || !config) return { kind: "unavailable" };
-  return { kind: "embed", url: playbackUrl(config, video.videoId, Math.floor(now.getTime() / 1000) + PLAYBACK_SECONDS), provider: "bunny" };
+  // Null in production without a token key: an unsigned link would be shareable.
+  const url = playbackUrl(config, video.videoId, Math.floor(now.getTime() / 1000) + PLAYBACK_SECONDS);
+  return url ? { kind: "embed", url, provider: "bunny" } : { kind: "unavailable" };
 }
 
 /** One lesson of the course, ready to show. The caller has already checked access and the lock. */

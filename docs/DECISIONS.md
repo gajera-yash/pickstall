@@ -4,6 +4,13 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-058: Bunny video upload works with the library id and API key; status is checked with Bunny
+- **Date:** 2026-11-04
+- **Decision (founder connected the Bunny library):** video upload now turns on with just `BUNNY_STREAM_LIBRARY_ID` and `BUNNY_STREAM_API_KEY` (checked against Bunny's API: it answers 200). The other two keys are needed only for their own jobs: `BUNNY_STREAM_TOKEN_KEY` signs playback links and is **required in production** (without it a Bunny video shows as unavailable there; in development it plays unsigned, so token authentication must stay off in Bunny until the key is set), and `BUNNY_STREAM_READONLY_KEY` verifies the webhook (without it the webhook accepts nothing).
+- **Status without the webhook:** Bunny cannot call localhost, so while the curriculum builder waits it asks Bunny's Get Video API about this course's videos still uploading or processing (at most 10 per check) and saves the result. Get Video numbers its states differently from the webhook (bunny.net/docs/reference/video_getvideo, checked 2026-11-04): 4 Finished = ready, 5 Error and 6 UploadFailed = failed, 1/2/3/7/8 = processing, 0 Created = no change. A late "processing" still never undoes "ready".
+- **Secrets:** the values live only in `.env.local`, which git ignores.
+- **Why:** founder request, 2026-11-04.
+
 ## D-057: Courses (part G4): the student view, progress and lesson downloads
 - **Date:** 2026-11-04
 - **Decision (founder spec "student view"):** a bought course opens from the buyer library ("Open course") at `/library/[orderId]/learn`: the lessons on the left (below the lesson on phones), the video player and the lesson on the right, a **Mark as complete** button, and a progress bar with the completion %. Without a lesson chosen it opens the first open lesson not done yet. The library lists a course with a "Course" badge, its access period ("Lifetime access" or "Access until ...") and "Access ended" when it is over.

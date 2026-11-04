@@ -20,7 +20,11 @@ const db = vi.hoisted(() => {
 });
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/db/collections", () => ({ collections: vi.fn(async () => db) }));
+const bunny = vi.hoisted(() => ({ bunnyConfig: vi.fn(), fetchVideoStatus: vi.fn() }));
+vi.mock("@/lib/video/bunny", () => bunny);
+vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
+import { refreshPendingVideos } from "@/lib/courses/video-status";
 import { addLesson, deleteModule, loadCurriculum, saveLayout, setBunnyVideoStatus, setLessonUpload, updateLesson } from "@/lib/courses/curriculum";
 
 const cursor = (rows: unknown[]) => ({ sort: () => ({ toArray: async () => rows }), toArray: async () => rows });
@@ -127,5 +131,24 @@ describe("Bunny status updates", () => {
     await setBunnyVideoStatus(VIDEO, "failed");
     expect(db.lessons.updateMany.mock.calls[0]?.[0]).toMatchObject({ "video.videoId": VIDEO, "video.status": { $in: ["uploading"] } });
     expect(db.lessons.updateMany.mock.calls[1]?.[0]).toMatchObject({ "video.status": { $in: ["uploading", "processing"] } });
+  });
+});
+
+describe("asking Bunny about pending videos", () => {
+  it("checks only this store's course videos that are still waiting, and saves what Bunny says", async () => {
+    bunny.bunnyConfig.mockReturnValue({ libraryId: "759", apiKey: "k", tokenKey: null, readOnlyKey: null });
+    bunny.fetchVideoStatus.mockResolvedValue("ready");
+    db.lessons.updateMany.mockResolvedValue({ modifiedCount: 1 });
+    db.lessons.find.mockReturnValue({ limit: () => ({ toArray: async () => [{ _id: L1, video: { kind: "bunny", videoId: VIDEO, status: "processing" } }] }) });
+    await refreshPendingVideos("store-1", "course-1");
+    expect(db.lessons.find.mock.calls[0]?.[0]).toEqual({ storeId: "store-1", productId: "course-1", "video.kind": "bunny", "video.status": { $in: ["uploading", "processing"] } });
+    expect(bunny.fetchVideoStatus).toHaveBeenCalledWith(expect.anything(), VIDEO);
+    expect(db.lessons.updateMany.mock.calls[0]?.[1]).toMatchObject({ $set: { "video.status": "ready" } });
+  });
+
+  it("does nothing without Bunny settings", async () => {
+    bunny.bunnyConfig.mockReturnValue(null);
+    await refreshPendingVideos("store-1", "course-1");
+    expect(bunny.fetchVideoStatus).not.toHaveBeenCalled();
   });
 });

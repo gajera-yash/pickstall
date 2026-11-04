@@ -24,7 +24,8 @@ export type WebhookResponse = { status: number; body: string };
 
 export async function handleBunnyWebhook(rawBody: Buffer, signature: string | null): Promise<WebhookResponse> {
   const config = bunnyConfig();
-  if (!config) return { status: 404, body: "Not configured." };
+  // Without the read-only key nothing can be verified, so nothing is accepted.
+  if (!config?.readOnlyKey) return { status: 404, body: "Not configured." };
   if (!verifyWebhookSignature(config, rawBody, signature)) return { status: 401, body: "Bad signature." };
 
   let json: unknown;

@@ -29,7 +29,7 @@ export const serverEnvSchema = publicEnvSchema.extend({
   UPLOAD_DIR: optional(z.string().min(1)),
   // Where product files buyers download are saved (D-050). Private: never served as-is. Default: .data/product-files.
   PRODUCT_FILES_DIR: optional(z.string().min(1)),
-  // Bunny Stream for course videos (D-055). All four are needed to turn video upload on.
+  // Bunny Stream for course videos (D-055, D-058). Library id + API key turn upload on.
   BUNNY_STREAM_LIBRARY_ID: optional(z.string().regex(/^\d{1,12}$/, { error: "Must be the numeric library id" })),
   BUNNY_STREAM_API_KEY: optional(z.string().min(8)),
   // Token authentication key (Security page): signs playback links. Not the API key.

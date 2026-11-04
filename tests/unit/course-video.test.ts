@@ -23,7 +23,7 @@ vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: 
 
 import { handleBunnyWebhook } from "@/lib/courses/bunny-webhook";
 import { embedUrlFor, parseVideoLink, watchUrlFor } from "@/lib/courses/video-links";
-import { bunnyConfig, playbackUrl, statusFromWebhook, uploadSignature, verifyWebhookSignature } from "@/lib/video/bunny";
+import { bunnyConfig, fetchVideoStatus, playbackUrl, statusFromVideoApi, statusFromWebhook, uploadSignature, verifyWebhookSignature } from "@/lib/video/bunny";
 
 const VIDEO = "eb1c4f77-0cda-46be-b47d-1118ad7c2ffe";
 const sha = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -31,12 +31,40 @@ const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 describe("Bunny signing", () => {
   const config = bunnyConfig()!;
 
-  it("reads all four settings, and is off when one is missing", () => {
+  it("needs only the library id and API key; the other two keys are optional", () => {
     expect(config).toEqual({ libraryId: "759", apiKey: "api-key-123", tokenKey: "token-key-456", readOnlyKey: "readonly-key-789" });
-    const saved = env.serverEnv.BUNNY_STREAM_TOKEN_KEY;
+    const saved = { ...env.serverEnv };
     env.serverEnv.BUNNY_STREAM_TOKEN_KEY = undefined;
+    env.serverEnv.BUNNY_STREAM_READONLY_KEY = undefined;
+    expect(bunnyConfig()).toEqual({ libraryId: "759", apiKey: "api-key-123", tokenKey: null, readOnlyKey: null });
+    env.serverEnv.BUNNY_STREAM_API_KEY = undefined;
     expect(bunnyConfig()).toBeNull();
-    env.serverEnv.BUNNY_STREAM_TOKEN_KEY = saved;
+    Object.assign(env.serverEnv, saved);
+  });
+
+  it("plays unsigned only in development when there is no token key", () => {
+    const noToken = { libraryId: "759", tokenKey: null };
+    expect(playbackUrl(noToken, VIDEO, 1, "development")).toBe(`https://player.mediadelivery.net/embed/759/${VIDEO}`);
+    expect(playbackUrl(noToken, VIDEO, 1, "production")).toBeNull();
+  });
+
+  it("maps the Get Video statuses, which differ from the webhook's", () => {
+    expect(statusFromVideoApi(4)).toBe("ready");
+    expect(statusFromVideoApi(3)).toBe("processing");
+    expect(statusFromVideoApi(1)).toBe("processing");
+    expect(statusFromVideoApi(5)).toBe("failed");
+    expect(statusFromVideoApi(6)).toBe("failed");
+    expect(statusFromVideoApi(0)).toBeNull();
+  });
+
+  it("asks Bunny for a video's status with the API key, and treats a missing video as failed", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(JSON.stringify({ status: 4, encodeProgress: 100 }), { status: 200 }));
+    expect(await fetchVideoStatus(config, VIDEO)).toBe("ready");
+    expect(fetchMock).toHaveBeenCalledWith(`https://video.bunnycdn.com/library/759/videos/${VIDEO}`, expect.objectContaining({ headers: expect.objectContaining({ AccessKey: "api-key-123" }) }));
+    fetchMock.mockResolvedValueOnce(new Response("", { status: 404 }));
+    expect(await fetchVideoStatus(config, VIDEO)).toBe("failed");
+    expect(await fetchVideoStatus(config, "../evil")).toBeNull();
+    fetchMock.mockRestore();
   });
 
   it("signs a TUS upload as SHA256(libraryId + apiKey + expires + videoId)", () => {
@@ -80,6 +108,14 @@ describe("Bunny webhook", () => {
     db.webhookEvents.insertOne.mockResolvedValue({});
     db.webhookEvents.deleteOne.mockResolvedValue({});
     curriculum.setBunnyVideoStatus.mockResolvedValue(1);
+  });
+
+  it("accepts nothing without the read-only key", async () => {
+    const saved = env.serverEnv.BUNNY_STREAM_READONLY_KEY;
+    env.serverEnv.BUNNY_STREAM_READONLY_KEY = undefined;
+    expect((await send(event)).status).toBe(404);
+    env.serverEnv.BUNNY_STREAM_READONLY_KEY = saved;
+    expect(db.webhookEvents.insertOne).not.toHaveBeenCalled();
   });
 
   it("refuses a bad signature without touching the database", async () => {

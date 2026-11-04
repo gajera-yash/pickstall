@@ -19,6 +19,7 @@ import {
 } from "@/lib/courses/curriculum";
 import type { Curriculum } from "@/lib/courses/curriculum-types";
 import { COURSE_LIMITS } from "@/lib/courses/settings";
+import { refreshPendingVideos } from "@/lib/courses/video-status";
 import { parseVideoLink } from "@/lib/courses/video-links";
 import { logger } from "@/lib/logger";
 import { richDocSchemaWith, isEmptyDoc } from "@/lib/products/rich-text";
@@ -85,9 +86,12 @@ async function run(courseId: string, work: (storeId: string) => Promise<Curricul
   }
 }
 
-/** The curriculum as it is now (the builder checks video processing with it). */
+/** The curriculum as it is now, after asking Bunny about videos still processing (the builder polls this). */
 export async function getCourseCurriculum(courseId: string): Promise<CurriculumResult> {
-  return run(courseId, async (storeId) => after(storeId, courseId, "ok"));
+  return run(courseId, async (storeId) => {
+    await refreshPendingVideos(storeId, courseId);
+    return after(storeId, courseId, "ok");
+  });
 }
 
 export async function addCourseModule(courseId: string, rawTitle: string): Promise<CurriculumResult> {

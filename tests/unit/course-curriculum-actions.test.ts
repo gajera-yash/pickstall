@@ -19,8 +19,10 @@ vi.mock("@/lib/courses/curriculum", () => curriculum);
 vi.mock("@/lib/courses/attachments", () => ({ removeAttachmentsOfLessons: vi.fn(async () => undefined), removeLessonAttachment: vi.fn() }));
 const bunny = vi.hoisted(() => ({ bunnyConfig: vi.fn(), createVideo: vi.fn(), deleteVideo: vi.fn(async () => undefined), uploadSignature: vi.fn(() => "sig"), BUNNY_TUS_ENDPOINT: "https://video.bunnycdn.com/tusupload" }));
 vi.mock("@/lib/video/bunny", () => bunny);
+const videoStatus = vi.hoisted(() => ({ refreshPendingVideos: vi.fn(async () => undefined) }));
+vi.mock("@/lib/courses/video-status", () => videoStatus);
 
-import { addCourseModule, saveCourseLayout, saveCourseLesson, startLessonVideoUpload } from "@/lib/courses/curriculum-actions";
+import { addCourseModule, getCourseCurriculum, saveCourseLayout, saveCourseLesson, startLessonVideoUpload } from "@/lib/courses/curriculum-actions";
 
 const COURSE = "5b0c6d2e-0000-4000-8000-000000000001";
 const LESSON = "bbbbbbbb-0000-4000-8000-000000000001";
@@ -91,5 +93,10 @@ describe("curriculum actions", () => {
     bunny.bunnyConfig.mockReturnValue({ libraryId: "759", apiKey: "k", tokenKey: "t", readOnlyKey: "r" });
     expect(await startLessonVideoUpload(COURSE, "bbbbbbbb-0000-4000-8000-000000000009", "x")).toMatchObject({ ok: false });
     expect(bunny.createVideo).not.toHaveBeenCalled();
+  });
+
+  it("asks Bunny about pending videos when the builder refreshes, for the session's store", async () => {
+    expect(await getCourseCurriculum(COURSE)).toMatchObject({ ok: true });
+    expect(videoStatus.refreshPendingVideos).toHaveBeenCalledWith("store-1", COURSE);
   });
 });
