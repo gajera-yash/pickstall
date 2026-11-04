@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { AcademyLayout } from "@/components/store/layouts/academy";
+import { SplitLayout } from "@/components/store/layouts/split";
 import { StackLayout } from "@/components/store/layouts/stack";
 import type { StoreLayoutProps } from "@/components/store/layouts/types";
 import { resolveTheme } from "@/components/store/store-theme";
@@ -18,4 +20,6 @@ export function StorePage({ store, products, preview = false }: { store: PublicS
 
 const STORE_LAYOUT_COMPONENTS: Record<StoreLayout, (props: StoreLayoutProps) => ReactNode> = {
   stack: StackLayout,
+  split: SplitLayout,
+  academy: AcademyLayout,
 };

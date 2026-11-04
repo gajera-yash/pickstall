@@ -22,7 +22,7 @@ import { SOCIAL_LINK_LABELS, storeLink } from "@/lib/config";
 import { loadSetupState } from "@/lib/dashboard/setup-state";
 import { MY_STORE_TABS, type MyStoreTab } from "@/lib/dashboard/nav";
 import { firstName } from "@/lib/dashboard/greeting";
-import type { PublicProduct, PublicStore } from "@/lib/stores/public";
+import { lessonCountsOf, type PublicProduct, type PublicStore } from "@/lib/stores/public";
 import type { SocialLink } from "@/lib/stores/schemas";
 import { displayValueFor } from "@/lib/stores/social-handles";
 
@@ -75,9 +75,9 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
     theme: store.theme,
     currency: store.currency,
   };
-  const previewProducts: PublicProduct[] = products
-    .filter((product) => product.status === "published")
-    .map((product) => ({
+  const published = products.filter((product) => product.status === "published");
+  const lessonCounts = await lessonCountsOf(store.id, published).catch(() => new Map<string, number>());
+  const previewProducts: PublicProduct[] = published.map((product) => ({
       id: product._id,
       slug: product.slug,
       title: product.title,
@@ -88,7 +88,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
       salePriceCents: product.salePriceCents ?? null,
       buttonText: product.buttonText,
       type: product.type,
-      course: product.type === "course" ? { category: product.course?.category ?? null, accessDays: product.course?.accessDays ?? null } : null,
+      course: product.type === "course" ? { category: product.course?.category ?? null, accessDays: product.course?.accessDays ?? null, lessonCount: lessonCounts.get(product._id) ?? 0 } : null,
     }));
 
   return (

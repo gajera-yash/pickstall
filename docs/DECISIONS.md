@@ -4,6 +4,18 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-063: Studio and Academy themes (H4b)
+- **Date:** 2026-11-04
+- **Decision (founder's theme choice, D-062):** two new themes in the picker, each with its own layout:
+  - **Studio** (layout "split"): warm off-white page, the profile in a panel that stays put beside a two-column grid of large product cards (cover, "Course · N lessons" or "Digital product", title, short description, price or Free, the creator's button). On a phone the panel comes first, then one card per row. Colors: background #FAFAF7, text #1C1B19, muted #625F57, accent #2F5D50.
+  - **Academy** (layout "academy"): a course catalog. A wide header card with the profile and the real counts of courses and other products, category chips (each course's category, plus "Other products") that filter the cards (shadcn Toggle Group; all cards show without JavaScript), and course cards with category, lesson count and access period. Colors: background #F4F6FF, text #0F172A, muted #475569, accent #4F46E5.
+  - Every text pair passes 4.5:1 (lowest 6.1:1, tested); the creator's own accent still goes through the same check.
+- **Layouts size by the store frame, not the screen:** the frame is a CSS container (`@container`) and the new layouts use container breakpoints, so the dashboard's scaled preview shows the true phone or desktop layout.
+- **Public data:** public course data now includes `lessonCount` (only a count per course of that store; lesson content never leaves the server). The dashboard preview uses the same count.
+- **Landing page:** its theme demos keep the three classic themes (`CLASSIC_THEME_IDS`); they draw only that layout.
+- **Not yet:** the product, checkout and thank-you pages keep their single column in every theme (H6).
+- **Why:** founder request, 2026-11-04.
+
 ## D-062: Store themes get layouts; one live preview on My Store (H4a)
 - **Date:** 2026-11-04
 - **Decision (founder request; 6 new themes chosen: Studio, Editorial Luxury, Neon Bento, Academy, Neo-Brutalist, Frosted Glass; Clean, Bold and Soft stay):** a theme is now a layout plus a style, not only colors. `ThemePreset` gains `layout` (`STORE_LAYOUTS`) and `displayFont` ("sans" or "serif"). `StorePage` draws the theme's layout from a registry (`components/store/layouts/*`); the original page is the "stack" layout used by Clean, Bold and Soft, unchanged. New themes add a preset, a layout component and a picker sketch (H4b-H4d).

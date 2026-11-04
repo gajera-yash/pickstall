@@ -10,20 +10,20 @@ import { cardStyle, resolveTheme } from "@/components/store/store-theme";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { APP_NAME } from "@/lib/config";
-import { THEME_PRESETS, THEME_PRESET_IDS, type ThemePresetId } from "@/lib/themes";
+import { CLASSIC_THEME_IDS, THEME_PRESETS, type ThemePresetId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 
 // Storefront preview (D-039): pick one of the three real store themes and an accent, and the phone
 // re-skins with the same resolveTheme/cardStyle the public store page uses. Example content only.
 
-const THEME_NOTES: Record<ThemePresetId, string> = {
+const THEME_NOTES: Record<(typeof CLASSIC_THEME_IDS)[number], string> = {
   clean: "White and calm. Lets your products do the talking.",
   bold: "Loud color and hard edges. Made to stop the scroll.",
   soft: "Warm tones and round corners. Friendly and personal.",
 };
 
 /** The accents offered here are the presets' own, so every one already passes the contrast check. */
-const ACCENTS = [...new Set(THEME_PRESET_IDS.map((id) => THEME_PRESETS[id].accent))];
+const ACCENTS = [...new Set(CLASSIC_THEME_IDS.map((id) => THEME_PRESETS[id].accent))];
 
 const PRODUCTS = [
   { title: "Moody film presets", meta: "12 Lightroom presets", button: "Get the presets", price: "$15" },
@@ -57,7 +57,7 @@ export function StorefrontShowcase({ intro }: { intro: ReactNode }) {
           }}
           className="w-full flex-col items-stretch gap-2"
         >
-          {THEME_PRESET_IDS.map((id) => {
+          {CLASSIC_THEME_IDS.map((id) => {
             const on = id === presetId;
             return (
               <ToggleGroupItem key={id} value={id} className="relative flex min-h-16 justify-start gap-4 rounded-md px-4 py-3 text-left text-base font-normal whitespace-normal text-ink hover:bg-bg-subtle">

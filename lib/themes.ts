@@ -4,14 +4,17 @@ import { contrastRatio } from "@/lib/contrast";
 // means adding an entry here. Raw color values are allowed in this file only (and styles/tokens.css).
 // Every pair below is contrast-tested in tests/unit/themes.test.ts.
 
-export const THEME_PRESET_IDS = ["clean", "bold", "soft"] as const;
+export const THEME_PRESET_IDS = ["clean", "bold", "soft", "studio", "academy"] as const;
 export type ThemePresetId = (typeof THEME_PRESET_IDS)[number];
+
+/** The classic one-column themes, which the landing page demos draw (they do not draw the newer layouts). */
+export const CLASSIC_THEME_IDS = ["clean", "bold", "soft"] as const satisfies readonly ThemePresetId[];
 
 /**
  * How a theme arranges the store page (H4, D-062). "stack" is the original single column; the new
  * themes bring their own layouts (split, editorial, bento, academy, ...) in components/store/layouts.
  */
-export const STORE_LAYOUTS = ["stack"] as const;
+export const STORE_LAYOUTS = ["stack", "split", "academy"] as const;
 export type StoreLayout = (typeof STORE_LAYOUTS)[number];
 
 export type ThemePreset = {
@@ -81,6 +84,40 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePreset> = {
     shadow: "soft",
     displayWeight: 600,
     layout: "stack",
+    displayFont: "sans",
+  },
+  // Studio (D-063): calm and premium. A profile panel beside a grid of large product cards.
+  studio: {
+    id: "studio",
+    name: "Studio",
+    background: "#FAFAF7",
+    text: "#1C1B19",
+    muted: "#625F57",
+    accent: "#2F5D50",
+    onAccent: "#FFFFFF",
+    card: "#FFFFFF",
+    radiusPx: 16,
+    border: { widthPx: 1, color: "line" },
+    shadow: "none",
+    displayWeight: 600,
+    layout: "split",
+    displayFont: "sans",
+  },
+  // Academy (D-063): a course catalog with category filters, lesson counts and access periods.
+  academy: {
+    id: "academy",
+    name: "Academy",
+    background: "#F4F6FF",
+    text: "#0F172A",
+    muted: "#475569",
+    accent: "#4F46E5",
+    onAccent: "#FFFFFF",
+    card: "#FFFFFF",
+    radiusPx: 14,
+    border: { widthPx: 1, color: "line" },
+    shadow: "soft",
+    displayWeight: 800,
+    layout: "academy",
     displayFont: "sans",
   },
 };

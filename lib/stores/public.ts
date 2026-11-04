@@ -35,8 +35,8 @@ export type PublicProduct = {
   buttonText: string | null;
   /** "digital" or "course" (D-054). */
   type: ProductDoc["type"];
-  /** A course's public facts (category, access period); null for a digital product. */
-  course: { category: CourseCategory | null; accessDays: number | null } | null;
+  /** A course's public facts (category, access period, how many lessons); null for a digital product. */
+  course: { category: CourseCategory | null; accessDays: number | null; lessonCount: number } | null;
 };
 
 /** A published course's outline for its public page (D-056): titles only, never lesson content. */
@@ -66,7 +66,10 @@ export async function findPublicStore(slug: string): Promise<PublicStore | null>
   };
 }
 
-function toPublicProduct(doc: Pick<ProductDoc, "_id" | "slug" | "title" | "description" | "descriptionDoc" | "coverUrl" | "priceCents" | "salePriceCents" | "buttonText" | "type" | "course">): PublicProduct {
+function toPublicProduct(
+  doc: Pick<ProductDoc, "_id" | "slug" | "title" | "description" | "descriptionDoc" | "coverUrl" | "priceCents" | "salePriceCents" | "buttonText" | "type" | "course">,
+  lessonCounts: Map<string, number> = new Map(),
+): PublicProduct {
   return {
     id: doc._id,
     slug: doc.slug,
@@ -79,15 +82,25 @@ function toPublicProduct(doc: Pick<ProductDoc, "_id" | "slug" | "title" | "descr
     salePriceCents: doc.salePriceCents ?? null,
     buttonText: doc.buttonText,
     type: doc.type ?? "digital",
-    course: doc.type === "course" ? { category: doc.course?.category ?? null, accessDays: doc.course?.accessDays ?? null } : null,
+    course: doc.type === "course" ? { category: doc.course?.category ?? null, accessDays: doc.course?.accessDays ?? null, lessonCount: lessonCounts.get(doc._id) ?? 0 } : null,
   };
+}
+
+/** How many lessons each of these courses of the store has (D-063). Only a count leaves the lessons. */
+export async function lessonCountsOf(storeId: string, docs: Pick<ProductDoc, "_id" | "type">[]): Promise<Map<string, number>> {
+  const courseIds = docs.filter((doc) => doc.type === "course").map((doc) => doc._id);
+  if (courseIds.length === 0) return new Map();
+  const { lessons } = await collections();
+  const rows = await lessons.aggregate<{ _id: string; count: number }>([{ $match: { storeId, productId: { $in: courseIds } } }, { $group: { _id: "$productId", count: { $sum: 1 } } }]).toArray();
+  return new Map(rows.map((row) => [row._id, row.count]));
 }
 
 /** The published products of a (published) store, in the creator's order. */
 export async function listPublicProducts(storeId: string): Promise<PublicProduct[]> {
   const { products } = await collections();
   const docs = await products.find({ storeId, status: "published" }, { projection: PRODUCT_FIELDS }).sort({ sortOrder: 1, createdAt: -1 }).limit(100).toArray();
-  return docs.map(toPublicProduct);
+  const counts = await lessonCountsOf(storeId, docs);
+  return docs.map((doc) => toPublicProduct(doc, counts));
 }
 
 /** One published product of a store by its slug, or null. */
@@ -95,7 +108,7 @@ export async function findPublicProduct(storeId: string, slug: string): Promise<
   if (typeof storeId !== "string" || typeof slug !== "string" || !PRODUCT_SLUG.test(slug)) return null;
   const { products } = await collections();
   const doc = await products.findOne({ storeId, slug, status: "published" }, { projection: PRODUCT_FIELDS });
-  return doc ? toPublicProduct(doc) : null;
+  return doc ? toPublicProduct(doc, await lessonCountsOf(storeId, [doc])) : null;
 }
 
 /**

@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 import { PriceTag } from "@/components/store/price-tag";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { THEME_PRESETS, THEME_PRESET_IDS, type ThemePresetId } from "@/lib/themes";
+import { CLASSIC_THEME_IDS, THEME_PRESETS, type ThemePresetId } from "@/lib/themes";
 
 // Small live UIs inside the landing feature tiles. Example content only.
 
@@ -18,7 +18,7 @@ export function ThemeTile() {
   return (
     <div className="flex flex-col gap-4">
       <ToggleGroup type="single" variant="outline" aria-label="Store theme" value={themeId} onValueChange={(value) => value && setThemeId(value as ThemePresetId)} className="flex-wrap gap-2">
-        {THEME_PRESET_IDS.map((id) => (
+        {CLASSIC_THEME_IDS.map((id) => (
           <ToggleGroupItem key={id} value={id} className="min-h-11 rounded-full px-4">
             {THEME_PRESETS[id].name}
           </ToggleGroupItem>

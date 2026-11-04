@@ -5,9 +5,11 @@ import { resolveTheme } from "@/components/store/store-theme";
 import { SOCIAL_LINK_LABELS } from "@/lib/config";
 import { safeImageSrc } from "@/lib/media/media";
 import type { PublicStore } from "@/lib/stores/public";
+import { cn } from "@/lib/utils";
 
 /** Avatar, name, bio and social links. Shared by the store page and the product page header. */
-export function StoreHeader({ store, linkToStore }: { store: PublicStore; linkToStore?: boolean }) {
+export function StoreHeader({ store, linkToStore, align = "center" }: { store: PublicStore; linkToStore?: boolean; align?: "center" | "start" }) {
+  const start = align === "start";
   const { preset, accent, onAccent } = resolveTheme(store.theme);
   const initial = store.name.trim().charAt(0).toUpperCase() || "?";
   const body = (
@@ -28,13 +30,13 @@ export function StoreHeader({ store, linkToStore }: { store: PublicStore; linkTo
   );
 
   return (
-    <header className="flex flex-col items-center gap-3 text-center">
+    <header className={cn("flex flex-col gap-3", start ? "items-start text-left" : "items-center text-center")}>
       {linkToStore ? (
-        <Link href={`/@${store.slug}`} className="flex flex-col items-center gap-3">
+        <Link href={`/@${store.slug}`} className={cn("flex flex-col gap-3", start ? "items-start" : "items-center")}>
           {body}
         </Link>
       ) : (
-        <h1 className="flex flex-col items-center gap-3">{body}</h1>
+        <h1 className={cn("flex flex-col gap-3", start ? "items-start" : "items-center")}>{body}</h1>
       )}
       {store.bio && (
         <p className="max-w-md text-body-l break-words whitespace-pre-line" style={{ color: preset.muted }}>
@@ -42,7 +44,7 @@ export function StoreHeader({ store, linkToStore }: { store: PublicStore; linkTo
         </p>
       )}
       {store.socialLinks.length > 0 && (
-        <ul className="flex flex-wrap justify-center gap-2">
+        <ul className={cn("flex flex-wrap gap-2", start ? "justify-start" : "justify-center")}>
           {/* Saved links are https or mailto only (lib/stores/schemas.ts); anything else is skipped here too. */}
           {store.socialLinks
             .filter((link) => /^(https:|mailto:)/i.test(link.url))

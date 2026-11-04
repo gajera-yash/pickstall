@@ -47,7 +47,9 @@ export function StoreFrame({ theme, children, wide = false, preview = false }: {
   const frame = frameStyle(theme);
   const Body = preview ? "div" : "main";
   return (
-    <div className={cn("flex flex-col items-center px-4 py-8 sm:py-12", !preview && "min-h-dvh", frame.className)} style={frame.style}>
+    // @container: layouts size themselves by this frame's width, so the scaled dashboard preview
+    // shows the phone or desktop layout it pretends to be (D-063).
+    <div className={cn("@container flex flex-col items-center px-4 py-8 sm:py-12", !preview && "min-h-dvh", frame.className)} style={frame.style}>
       <Body {...(preview ? {} : { id: "main" })} className={cn("flex w-full flex-1 flex-col items-center gap-6", wide ? "max-w-6xl" : "max-w-xl")}>
         {children}
       </Body>
