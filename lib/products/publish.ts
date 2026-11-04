@@ -3,7 +3,7 @@ import { payableCents, type Priced } from "@/lib/products/pricing";
 
 export type PublishCheck = { ok: true } | { ok: false; problems: string[] };
 
-type Publishable = Pick<ProductDoc, "title" | "priceCents" | "salePriceCents" | "externalUrl" | "deliveryType" | "fileId">;
+type Publishable = Pick<ProductDoc, "title" | "priceCents" | "salePriceCents" | "externalUrl" | "deliveryType" | "fileId"> & { type?: ProductDoc["type"] };
 
 /**
  * Whether paid products may be published: the creator's Stripe account must be connected, or we
@@ -31,7 +31,9 @@ export function hasDelivery(product: Pick<ProductDoc, "externalUrl" | "deliveryT
 export function publishProblems(product: Publishable, paymentsOk: boolean): string[] {
   const problems: string[] = [];
   if (!product.title.trim()) problems.push("Add a title.");
-  if (!hasDelivery(product)) problems.push("Add a link or a file to deliver.");
+  // A course delivers its lessons; publishing it opens with the curriculum builder (course flow G3).
+  if (product.type === "course") problems.push("Add lessons to your course. The curriculum builder comes next.");
+  else if (!hasDelivery(product)) problems.push("Add a link or a file to deliver.");
   if (isPaid(product) && !paymentsOk) problems.push("Connect payments to publish a paid product.");
   return problems;
 }

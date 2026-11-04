@@ -21,7 +21,7 @@ export const PRODUCT_LIMITS = {
 } as const;
 
 /** Creator text: cleaned of tags and control characters, length-limited. Empty becomes undefined. */
-function text(max: number, label: string, options: { multiline?: boolean } = {}) {
+export function text(max: number, label: string, options: { multiline?: boolean } = {}) {
   return z
     .string()
     .transform((value) => cleanText(value, options))
@@ -66,10 +66,10 @@ export const questionInput = z
   }));
 
 /** An example amount for error messages, in the currency's own format ("19.99" or "500"). */
-const example = (currency: string) => (priceDecimals(currency) === 0 ? "500" : "19.99");
+export const example = (currency: string) => (priceDecimals(currency) === 0 ? "500" : "19.99");
 
 /** A price typed by the creator, in this store currency's amount units (D-046), within Stripe's limits. */
-const moneyField = (label: string, currency: string) =>
+export const moneyField = (label: string, currency: string) =>
   z.string().transform((value, ctx) => {
     const cents = parseMoneyToCents(value, currency);
     if (cents === null) {
@@ -83,6 +83,15 @@ const moneyField = (label: string, currency: string) =>
     }
     return cents;
   });
+
+/** What is wrong with a discounted price (D-047) for a regular price of `priceCents`, or null. */
+export function discountProblem(priceCents: number, salePrice: string, currency: string): string | null {
+  const sale = parseMoneyToCents(salePrice, currency);
+  if (priceCents === 0) return "A free product can't have a discount.";
+  if (sale === null) return `Discounted price: enter an amount like ${example(currency)}.`;
+  if (sale >= priceCents) return "The discounted price must be lower than the price.";
+  return sale === 0 ? "Discounted price: use an amount above 0, or make the product free." : priceProblem(sale, currency, "Discounted price");
+}
 
 const optionalNumber = (max: number, label: string) =>
   z
@@ -121,16 +130,8 @@ export const productInputFor = (currency: string) =>
     emailBody: emailText(PRODUCT_LIMITS.emailBody, "Email message", { multiline: true }),
   })
   .superRefine((input, ctx) => {
-    if (input.discountOn) {
-      const sale = parseMoneyToCents(input.salePrice, currency);
-      if (input.price === 0) ctx.addIssue({ code: "custom", path: ["salePrice"], message: "A free product can't have a discount." });
-      else if (sale === null) ctx.addIssue({ code: "custom", path: ["salePrice"], message: `Discounted price: enter an amount like ${example(currency)}.` });
-      else if (sale >= input.price) ctx.addIssue({ code: "custom", path: ["salePrice"], message: "The discounted price must be lower than the price." });
-      else {
-        const problem = sale === 0 ? "Discounted price: use an amount above 0, or make the product free." : priceProblem(sale, currency, "Discounted price");
-        if (problem) ctx.addIssue({ code: "custom", path: ["salePrice"], message: problem });
-      }
-    }
+    const discount = input.discountOn ? discountProblem(input.price, input.salePrice, currency) : null;
+    if (discount) ctx.addIssue({ code: "custom", path: ["salePrice"], message: discount });
     const ids = input.questions.map((question) => question.id);
     if (new Set(ids).size !== ids.length) ctx.addIssue({ code: "custom", path: ["questions"], message: "Duplicate question." });
   })

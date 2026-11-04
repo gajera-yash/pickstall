@@ -5,6 +5,7 @@ import type { Collection } from "mongodb";
 
 import { getDb } from "@/lib/db/mongo";
 import type { Currency, SocialLinkKind } from "@/lib/config";
+import type { CourseCategory } from "@/lib/courses/settings";
 import type { ThemePresetId } from "@/lib/themes";
 
 // Document shapes of the app's own collections (D-024). Better Auth owns `user`, `session`,
@@ -70,10 +71,22 @@ export type CheckoutQuestionDoc = {
 };
 
 /** A product (D-030). Phase 1 has one type, `digital`. Every query filters by `storeId` of the session owner. */
+/** A course's own settings (course flow G1, D-054). Only on products with type "course". */
+export type CourseSettingsDoc = {
+  category: CourseCategory | null;
+  /** Up to 5 short tags, cleaned, unique ignoring case. */
+  tags: string[];
+  /** How long a buyer keeps access after buying, in days; null is lifetime. */
+  accessDays: number | null;
+};
+
 export type ProductDoc = {
   _id: string;
   storeId: string;
-  type: "digital";
+  /** "digital" (Phase 1) or "course" (course flow, D-054). */
+  type: "digital" | "course";
+  /** Course settings, only when type is "course". */
+  course?: CourseSettingsDoc;
   title: string;
   /** Unique per store (index `products_store_slug_unique`). */
   slug: string;

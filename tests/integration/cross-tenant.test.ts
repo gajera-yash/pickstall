@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { collections, type OrderDoc, type ProductDoc, type StoreDoc } from "@/lib/db/collections";
+import { updateCourseDetails } from "@/lib/courses/queries";
 import { findPurchase, grantAccess, hasPurchases, listPurchases } from "@/lib/library/queries";
 import { countOrdersByStatus, findCustomerDetail, findOrderDetail, incomeStats, listCustomers, listOrders, listOrdersForExport, listPaidOrdersForExport } from "@/lib/orders/creator-queries";
 import { loadCheckoutContext } from "@/lib/orders/queries";
@@ -76,6 +77,19 @@ describe("products: creator B cannot touch creator A's products", () => {
     expect(after.externalUrl).toBe(productA.externalUrl);
     expect(after.status).toBe("published");
     expect(await reload("products", draftA._id)).not.toBeNull();
+  });
+});
+
+describe("courses: creator A cannot touch creator B's course (D-054)", () => {
+  const details = { title: "Taken over", description: null, descriptionDoc: null, coverUrl: null, priceCents: 100, salePriceCents: null, course: { category: null, tags: [], accessDays: null } };
+
+  it("saves a course only in its own store, and never a digital product", async () => {
+    const courseB = await seedProduct(storeB._id, { type: "course", title: "B's course", status: "draft", course: { category: "design", tags: [], accessDays: null } });
+    expect(await updateCourseDetails(storeA._id, courseB._id, details)).toBe("not_found");
+    expect(((await findProduct(storeB._id, courseB._id)) as ProductDoc).title).toBe("B's course");
+    expect(await updateCourseDetails(storeA._id, productA._id, details)).toBe("not_found");
+    expect(await updateCourseDetails(storeB._id, courseB._id, { ...details, title: "B renamed" })).toBe("saved");
+    expect(await updateProduct(storeB._id, courseB._id, {} as ProductInput)).toBe("not_found");
   });
 });
 

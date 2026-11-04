@@ -2,6 +2,8 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
+import type { Filter } from "mongodb";
+
 import { PRODUCTS_MAX_PER_STORE } from "@/lib/config";
 import { collections, type ProductDoc } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
@@ -53,19 +55,31 @@ export async function findProduct(storeId: string, id: string): Promise<CreatorP
 
 export type CreateProductResult = { id: string } | "limit" | "error";
 
-/** Creates an empty draft digital product. The unique index keeps slugs unique; a clash gets a suffix. */
-export async function createDraftProduct(storeId: string, defaults: { buttonText: string }): Promise<CreateProductResult> {
+const DRAFT_TITLES: Record<ProductDoc["type"], string> = { digital: "Untitled product", course: "Untitled course" };
+
+/** True for a product fresh from "Create" that has never been named (the editor opens on step 1). */
+export function isUnnamedDraft(product: Pick<ProductDoc, "status" | "title" | "type">): boolean {
+  return product.status === "draft" && product.title === DRAFT_TITLES[product.type];
+}
+
+/**
+ * Creates an empty draft product of `type` (a digital product, or a course with lifetime access).
+ * The unique index keeps slugs unique; a clash gets a suffix.
+ */
+export async function createDraftProduct(storeId: string, defaults: { buttonText: string; type?: ProductDoc["type"] }): Promise<CreateProductResult> {
   const { products } = await collections();
   if ((await products.countDocuments({ storeId })) >= PRODUCTS_MAX_PER_STORE) return "limit";
 
+  const type = defaults.type ?? "digital";
   const now = new Date();
-  const base = "untitled-product";
+  const base = slugFromTitle(DRAFT_TITLES[type]);
   for (let attempt = 0; attempt < 5; attempt++) {
     const doc: ProductDoc = {
       _id: randomUUID(),
       storeId,
-      type: "digital",
-      title: "Untitled product",
+      type,
+      ...(type === "course" ? { course: { category: null, tags: [], accessDays: null } } : {}),
+      title: DRAFT_TITLES[type],
       slug: attempt === 0 ? base : `${base}-${randomUUID().slice(0, 4)}`,
       description: null,
       descriptionDoc: null,
@@ -99,7 +113,8 @@ export type SaveProductResult = "saved" | "not_found";
 /** Saves the editor form. The slug follows the title until the product is published, then it stays stable. */
 export async function updateProduct(storeId: string, id: string, input: ProductInput): Promise<SaveProductResult> {
   const { products } = await collections();
-  const current = await products.findOne({ _id: id, storeId }, { projection: { status: 1, slug: 1, title: 1 } });
+  // The digital editor never writes a course (courses save through lib/courses/queries.ts).
+  const current = await products.findOne({ _id: id, storeId, type: { $ne: "course" } }, { projection: { status: 1, slug: 1, title: 1 } });
   if (!current) return "not_found";
 
   const set: Partial<ProductDoc> = {
@@ -123,12 +138,28 @@ export async function updateProduct(storeId: string, id: string, input: ProductI
     updatedAt: new Date(),
   };
 
-  const wantedSlug = current.status === "draft" ? slugFromTitle(input.title ?? current.title) : current.slug;
+  // Saving also clears the pay-what-you-want fields from before D-047.
+  return saveWithSlug({ _id: id, storeId, type: { $ne: "course" } }, current, input.title ?? current.title, set, { pricingModel: "", minPriceCents: "" });
+}
+
+/**
+ * Writes `set` to the product matching `filter` (which must include the store id). The slug follows
+ * the title while the product is a draft, then stays stable; a clash with another product of the
+ * store gets a short suffix.
+ */
+export async function saveWithSlug(
+  filter: Filter<ProductDoc>,
+  current: Pick<ProductDoc, "status" | "slug">,
+  title: string,
+  set: Partial<ProductDoc>,
+  unset: Record<string, ""> = {},
+): Promise<SaveProductResult> {
+  const { products } = await collections();
+  const wantedSlug = current.status === "draft" ? slugFromTitle(title) : current.slug;
   for (let attempt = 0; attempt < 5; attempt++) {
     const slug = attempt === 0 ? wantedSlug : `${wantedSlug.slice(0, 45)}-${randomUUID().slice(0, 4)}`;
     try {
-      // Saving also clears the pay-what-you-want fields from before D-047.
-      const result = await products.updateOne({ _id: id, storeId }, { $set: { ...set, slug }, $unset: { pricingModel: "", minPriceCents: "" } });
+      const result = await products.updateOne(filter, { $set: { ...set, slug }, ...(Object.keys(unset).length > 0 ? { $unset: unset } : {}) });
       return result.matchedCount === 1 ? "saved" : "not_found";
     } catch (error) {
       if (!isDuplicateKeyError(error, "slug")) throw error;
