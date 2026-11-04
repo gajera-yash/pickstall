@@ -14,7 +14,8 @@ import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PRODUCT_FILE_MAX_BYTES } from "@/lib/config";
-import { removeCourseAttachment, saveCourseLesson, startLessonVideoUpload, type CurriculumResult } from "@/lib/courses/curriculum-actions";
+import type { VideoUpload } from "@/components/dashboard/use-video-uploads";
+import { removeCourseAttachment, saveCourseLesson, type CurriculumResult } from "@/lib/courses/curriculum-actions";
 import type { EditorLesson, EditorLessonVideo } from "@/lib/courses/curriculum-types";
 import { COURSE_LIMITS } from "@/lib/courses/settings";
 import { watchUrlFor } from "@/lib/courses/video-links";
@@ -48,6 +49,8 @@ export function LessonSheet({
   onClose,
   onChange,
   onReload,
+  videoUpload,
+  onUploadVideo,
 }: {
   courseId: string;
   lesson: EditorLesson;
@@ -57,6 +60,9 @@ export function LessonSheet({
   onChange: (result: CurriculumResult) => void;
   /** Asks the builder to fetch the curriculum again (after an upload that went outside our actions). */
   onReload: () => void;
+  /** This lesson's video upload, held by the builder so the lesson row shows it too (H2, D-060). */
+  videoUpload: VideoUpload | undefined;
+  onUploadVideo: (file: File) => void;
 }) {
   const [title, setTitle] = useState(lesson.title);
   const [mode, setMode] = useState<VideoMode>(lesson.video === null ? "none" : lesson.video.kind === "bunny" ? "upload" : "link");
@@ -65,8 +71,8 @@ export function LessonSheet({
   const [links, setLinks] = useState(lesson.links);
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<{ field?: string; text: string } | null>(null);
-  const [upload, setUpload] = useState<{ percent: number } | null>(null);
-  const [uploadProblem, setUploadProblem] = useState<string | null>(null);
+  const upload = videoUpload?.error === null ? { percent: videoUpload.percent } : null;
+  const uploadProblem = videoUpload?.error ?? null;
   const videoInput = useRef<HTMLInputElement>(null);
 
   const fieldError = (field: string) => (problem?.field === field ? problem.text : null);
@@ -86,43 +92,10 @@ export function LessonSheet({
     onClose();
   };
 
-  const uploadVideo = async (file: File) => {
-    setUploadProblem(null);
-    const ticket = await startLessonVideoUpload(courseId, lesson.id, title || file.name);
-    if (!ticket.ok) {
-      setUploadProblem(ticket.error);
-      return;
-    }
-    setUpload({ percent: 0 });
-    // Loaded only when a video is picked: the upload goes from the browser straight to Bunny.
-    const { Upload } = await import("tus-js-client");
-    const tus = new Upload(file, {
-      endpoint: ticket.data.endpoint,
-      retryDelays: [0, 3000, 5000, 10000, 20000],
-      headers: {
-        AuthorizationSignature: ticket.data.signature,
-        AuthorizationExpire: String(ticket.data.expires),
-        VideoId: ticket.data.videoId,
-        LibraryId: ticket.data.libraryId,
-      },
-      metadata: { filetype: file.type || "video/mp4", title: title || file.name },
-      onProgress: (sent, total) => setUpload({ percent: total > 0 ? Math.round((sent / total) * 100) : 0 }),
-      onError: () => {
-        setUpload(null);
-        setUploadProblem("The upload stopped. Check your connection and try again.");
-      },
-      onSuccess: () => {
-        setUpload(null);
-        onReload();
-      },
-    });
-    tus.start();
-  };
-
   const current = lesson.video?.kind === "bunny" ? BUNNY_STATUS[lesson.video.status] : null;
 
   return (
-    <Sheet open onOpenChange={(open) => !open && !upload && onClose()}>
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent>
         <SheetHeader>
           <SheetTitle>Edit lesson</SheetTitle>
@@ -167,7 +140,7 @@ export function LessonSheet({
                     onChange={(event) => {
                       const picked = event.target.files?.[0];
                       event.target.value = "";
-                      if (picked) void uploadVideo(picked);
+                      if (picked) onUploadVideo(picked);
                     }}
                   />
                   {current && !upload && (
@@ -183,7 +156,7 @@ export function LessonSheet({
                   {upload && (
                     <div className="flex flex-col gap-1" role="status" aria-live="polite">
                       <Progress value={upload.percent} max={100} aria-label="Upload progress" />
-                      <span className="text-xs text-mute">Uploading... {upload.percent}%. Keep this open until it finishes.</span>
+                      <span className="text-xs text-mute">Uploading... {upload.percent}%. You can close this panel; keep the page open until it finishes.</span>
                     </div>
                   )}
                   {uploadProblem ? <FieldError>{uploadProblem}</FieldError> : <FieldHint>MP4, MOV or WebM. It is processed for every screen size; that takes a few minutes after the upload.</FieldHint>}
@@ -208,10 +181,10 @@ export function LessonSheet({
           <LinksField links={links} onChange={setLinks} error={fieldError("links")} />
         </SheetBody>
         <div className="flex justify-end gap-2 border-t border-line px-5 py-4 sm:px-6">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={saving || upload !== null}>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="button" onClick={save} loading={saving} disabled={upload !== null}>
+          <Button type="button" onClick={save} loading={saving}>
             Save lesson
           </Button>
         </div>

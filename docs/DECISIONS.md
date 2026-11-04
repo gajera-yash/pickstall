@@ -4,6 +4,11 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-060: Smoother course building: new lessons open at once, video upload on each lesson row
+- **Date:** 2026-11-04
+- **Decision (founder: "too many clicks per lesson", "video upload is hidden"):** "Add lesson" now opens the new lesson's editor straight away. Each lesson row has an **Upload video** button (Replace when it already has one) and accepts a video **dropped onto the row** from the computer (a lesson being dragged to reorder is a pointer drag and does not trigger it); the row shows the upload progress, or the error with Dismiss. Uploads are held by the builder (`useVideoUploads`), so the row and the lesson panel show the same upload, the panel can be closed while it runs, and the browser asks before leaving the page during an upload. Only video files start an upload (MP4, MOV, WebM, MKV, M4V, AVI). Upload buttons appear only when Bunny is set up (D-058).
+- **Why:** founder request, 2026-11-04.
+
 ## D-059: Softer form fields; Edit and Delete for published products
 - **Date:** 2026-11-04
 - **Decision (founder request; choices "soft but accessible" and "hide, keep buyer access"):**

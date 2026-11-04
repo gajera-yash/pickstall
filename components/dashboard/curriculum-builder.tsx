@@ -14,16 +14,19 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowDown, ArrowUp, FileText, GripVertical, ListTree, Paperclip, Pencil, PlayCircle, Plus, Trash2 } from "lucide-react";
-import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
+import { ArrowDown, ArrowUp, FileText, GripVertical, ListTree, Paperclip, Pencil, PlayCircle, Plus, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
 
 import { LessonSheet, videoBadge } from "@/components/dashboard/lesson-sheet";
+import { useVideoUploads, type VideoUpload } from "@/components/dashboard/use-video-uploads";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   addCourseLesson,
   addCourseModule,
@@ -98,6 +101,19 @@ export function CurriculumBuilder({
   };
 
   const reload = () => void getCourseCurriculum(courseId).then(apply);
+  const videos = useVideoUploads(courseId, reload);
+
+  // Adds a lesson and opens it straight away (H2): the new lesson is the one id that was not there.
+  const addLesson = async (moduleId: string, title: string): Promise<boolean> => {
+    const before = new Set(modules.flatMap((item) => item.lessons.map((lesson) => lesson.id)));
+    setBusy(true);
+    const result = await addCourseLesson(courseId, moduleId, title);
+    setBusy(false);
+    if (!apply(result) || !result.ok) return false;
+    const created = result.data.modules.find((item) => item.id === moduleId)?.lessons.find((lesson) => !before.has(lesson.id));
+    if (created) setEditing(created.id);
+    return true;
+  };
 
   // While a video is uploading or processing, check now and then until Bunny says it is ready.
   const waiting = modules.some((module) => module.lessons.some((lesson) => lesson.video?.kind === "bunny" && (lesson.video.status === "uploading" || lesson.video.status === "processing")));
@@ -218,6 +234,7 @@ export function CurriculumBuilder({
                       handle={handle}
                       busy={busy}
                       act={act}
+                      onAddLesson={(title) => addLesson(module.id, title)}
                       onMove={(delta) => moveModule(moduleIndex, delta)}
                     >
                       <SortableContext items={module.lessons.map((lesson) => lessonKey(lesson.id))} strategy={verticalListSortingStrategy}>
@@ -234,6 +251,10 @@ export function CurriculumBuilder({
                                   onEdit={() => setEditing(lesson.id)}
                                   onMove={(delta) => moveLesson(moduleIndex, lessonIndex, delta)}
                                   onDelete={() => act(() => deleteCourseLesson(courseId, lesson.id))}
+                                  canUpload={videoUploadReady}
+                                  upload={videos.uploads[lesson.id]}
+                                  onUpload={(file) => void videos.start(lesson.id, lesson.title, file)}
+                                  onDismissUpload={() => videos.dismiss(lesson.id)}
                                 />
                               )}
                             </SortableLesson>
@@ -270,7 +291,19 @@ export function CurriculumBuilder({
         </Button>
       </div>
 
-      {editingLesson && <LessonSheet key={editingLesson.id} courseId={courseId} lesson={editingLesson} videoUploadReady={videoUploadReady} onClose={() => setEditing(null)} onChange={apply} onReload={reload} />}
+      {editingLesson && (
+        <LessonSheet
+          key={editingLesson.id}
+          courseId={courseId}
+          lesson={editingLesson}
+          videoUploadReady={videoUploadReady}
+          onClose={() => setEditing(null)}
+          onChange={apply}
+          onReload={reload}
+          videoUpload={videos.uploads[editingLesson.id]}
+          onUploadVideo={(file) => void videos.start(editingLesson.id, editingLesson.title, file)}
+        />
+      )}
     </div>
   );
 }
@@ -322,6 +355,7 @@ function ModuleCard({
   handle,
   busy,
   act,
+  onAddLesson,
   onMove,
   children,
 }: {
@@ -332,6 +366,8 @@ function ModuleCard({
   handle: Handle;
   busy: boolean;
   act: (work: () => Promise<CurriculumResult>) => Promise<boolean>;
+  /** Adds a lesson to this module and opens it. */
+  onAddLesson: (title: string) => Promise<boolean>;
   onMove: (delta: number) => void;
   children: ReactNode;
 }) {
@@ -346,7 +382,7 @@ function ModuleCard({
   };
   const addLessonNow = async () => {
     if (!newLesson.trim() || busy) return;
-    if (await act(() => addCourseLesson(courseId, module.id, newLesson))) setNewLesson("");
+    if (await onAddLesson(newLesson)) setNewLesson("");
   };
 
   return (
@@ -439,6 +475,10 @@ function LessonRow({
   onEdit,
   onMove,
   onDelete,
+  canUpload,
+  upload,
+  onUpload,
+  onDismissUpload,
 }: {
   lesson: EditorLesson;
   handle: Handle;
@@ -448,12 +488,42 @@ function LessonRow({
   onEdit: () => void;
   onMove: (delta: number) => void;
   onDelete: () => void;
+  /** Bunny upload is set up. */
+  canUpload: boolean;
+  upload: VideoUpload | undefined;
+  onUpload: (file: File) => void;
+  onDismissUpload: () => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [dropping, setDropping] = useState(false);
+  const picker = useRef<HTMLInputElement>(null);
   const badge = videoBadge(lesson.video);
   const Icon = lesson.video ? PlayCircle : lesson.attachments.length > 0 ? Paperclip : FileText;
+  const uploading = upload?.error === null;
+  // Files dragged from the computer (not a lesson being reordered, which is a pointer drag).
+  const hasFiles = (event: DragEvent<HTMLDivElement>) => canUpload && !uploading && event.dataTransfer.types.includes("Files");
+
   return (
-    <div className="flex flex-wrap items-center gap-1 rounded-md border border-line bg-bg-subtle py-1 pr-2 pl-1">
+    <div
+      onDragOver={(event) => {
+        if (!hasFiles(event)) return;
+        event.preventDefault();
+        setDropping(true);
+      }}
+      onDragLeave={() => setDropping(false)}
+      onDrop={(event) => {
+        if (!hasFiles(event)) return;
+        event.preventDefault();
+        setDropping(false);
+        const file = event.dataTransfer.files[0];
+        if (file) onUpload(file);
+      }}
+      className={cn(
+        "flex flex-col rounded-md border bg-bg-subtle transition-colors duration-(--dur-fast)",
+        dropping ? "border-dashed border-blue bg-blue-soft" : "border-line",
+      )}
+    >
+    <div className="flex flex-wrap items-center gap-1 py-1 pr-2 pl-1">
       <DragHandle handle={handle} label={`Drag to reorder lesson ${lesson.title}`} />
       <Icon aria-hidden="true" className="size-4 shrink-0 text-blue" />
       <Button type="button" variant="ghost" onClick={onEdit} className="h-auto min-w-0 flex-1 justify-start truncate px-2 py-2 text-left text-sm font-semibold not-disabled:hover:bg-transparent not-disabled:hover:text-blue">
@@ -477,6 +547,26 @@ function LessonRow({
           <Button type="button" variant="ghost" size="icon-sm" aria-label={`Move lesson ${lesson.title} down`} disabled={busy || last} onClick={() => onMove(1)}>
             <ArrowDown aria-hidden="true" className="size-4" />
           </Button>
+          {canUpload && (
+            <>
+              <input
+                ref={picker}
+                type="file"
+                accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm,.mkv,.m4v"
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) onUpload(file);
+                }}
+              />
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={`${lesson.video?.kind === "bunny" ? "Replace" : "Upload"} video for ${lesson.title}`} title="Upload a video, or drop one on this row" disabled={uploading} onClick={() => picker.current?.click()}>
+                <Upload aria-hidden="true" className="size-4" />
+              </Button>
+            </>
+          )}
           <Button type="button" variant="ghost" size="icon-sm" aria-label={`Edit lesson ${lesson.title}`} onClick={onEdit}>
             <Pencil aria-hidden="true" className="size-4" />
           </Button>
@@ -484,6 +574,25 @@ function LessonRow({
             <Trash2 aria-hidden="true" className="size-4" />
           </Button>
         </span>
+      )}
+    </div>
+      {dropping && <p className="px-3 pb-2 text-xs font-semibold text-blue">Drop to upload this video</p>}
+      {upload && (
+        <div className="flex flex-col gap-1 px-3 pb-2" role="status" aria-live="polite">
+          {upload.error === null ? (
+            <>
+              <Progress value={upload.percent} max={100} aria-label={`Uploading video for ${lesson.title}`} />
+              <span className="text-xs text-mute">Uploading video... {upload.percent}%. Keep this page open.</span>
+            </>
+          ) : (
+            <span className="flex items-center justify-between gap-2">
+              <FieldError>{upload.error}</FieldError>
+              <Button type="button" variant="ghost" size="sm" onClick={onDismissUpload}>
+                Dismiss
+              </Button>
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
