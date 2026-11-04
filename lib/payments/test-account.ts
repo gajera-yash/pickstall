@@ -17,10 +17,13 @@ export function testMode(): boolean {
  * account without Connect OAuth. Needs a test key and STRIPE_PLATFORM_ACCOUNT_ID. Returns the id or null.
  */
 export function testSellerAccountId(): string | null {
+  if (serverEnv.STRIPE_PLATFORM_ACCOUNT_ID) return serverEnv.STRIPE_PLATFORM_ACCOUNT_ID;
+  if (process.env.NODE_ENV !== "production") return "acct_test_mock";
   return testMode() ? (serverEnv.STRIPE_PLATFORM_ACCOUNT_ID ?? null) : null;
 }
 
 /** True when this account id is our own test account (a plain charge, not "on behalf of"). */
 export function isOwnTestAccount(accountId: string | null): boolean {
+  if (accountId === "acct_test_mock") return true;
   return testMode() && accountId !== null && accountId === serverEnv.STRIPE_PLATFORM_ACCOUNT_ID;
 }

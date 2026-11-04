@@ -2,7 +2,7 @@
 
 import { Archive, ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, ChevronUp, Circle, CreditCard, FileText, FileUp, ImageIcon, Link2, Lock, Mail, Phone, Plus, Rocket, Settings2, ShoppingCart, Trash2, Undo2, UserRound } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
@@ -92,6 +92,8 @@ type Props = {
  */
 export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromSetup = searchParams.get("from") === "setup";
   const [values, setValues] = useState(initial);
   const [step, setStep] = useState<ProductStep>("details");
   const [furthest, setFurthest] = useState<ProductStep>(isNew ? "details" : "publish");
@@ -125,6 +127,10 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
       }
       set("status", status);
       setNotice({ kind: "success", text: status === "published" ? "Published. Buyers will see it once your store page is live." : status === "archived" ? "Archived." : "Back to draft." });
+      if (status === "published" && fromSetup) {
+        router.push("/dashboard/setup?step=connect-payments");
+        return;
+      }
       router.refresh();
     });
   };
@@ -140,6 +146,9 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
     } else if (state?.ok && state.data.published) {
       set("status", "published");
       setNotice({ kind: "success", text: "Published. Buyers will see it once your store page is live." });
+      if (fromSetup) {
+        router.push("/dashboard/setup?step=connect-payments");
+      }
     } else if (state?.ok && goAfterSave) {
       open(goAfterSave);
     }
@@ -228,9 +237,9 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
       <input type="hidden" name="payload" value={payload} />
 
       <div className="flex flex-col gap-4">
-        <Link href="/dashboard/products" className="inline-flex items-center gap-1 self-start text-sm font-semibold text-mute hover:text-ink">
+        <Link href={fromSetup ? "/dashboard/setup?step=first-product" : "/dashboard/products"} className="inline-flex items-center gap-1 self-start text-sm font-semibold text-mute hover:text-ink">
           <ArrowLeft aria-hidden="true" className="size-4" />
-          Products
+          {fromSetup ? "Back to setup" : "Products"}
         </Link>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
@@ -548,7 +557,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
             ) : (
               <Button type="submit" name="intent" value="publish" loading={busy} disabled={blockers.length > 0 || values.status === "archived"} onClick={() => setGoAfterSave(null)}>
                 <Rocket aria-hidden="true" className="size-4" />
-                Save and publish
+                {fromSetup ? "Save, publish & continue setup" : "Save and publish"}
               </Button>
             )}
           </div>

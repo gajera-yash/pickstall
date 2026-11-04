@@ -2,7 +2,7 @@
 
 import { ArrowLeft, ArrowRight, BookOpen, CalendarClock, Check, CheckCircle2, Circle, Clock, CreditCard, Eye, FileText, ImageIcon, Infinity as InfinityIcon, ListTree, Plus, Rocket, Tag, Trash2, Undo2, X } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
 import { CurriculumBuilder } from "@/components/dashboard/curriculum-builder";
@@ -89,6 +89,8 @@ type Props = {
  */
 export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum: initialCurriculum, videoUploadReady }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromSetup = searchParams.get("from") === "setup";
   const [values, setValues] = useState(initial);
   const [curriculum, setCurriculum] = useState(initialCurriculum);
   const [step, setStep] = useState<CourseStep>("basic");
@@ -115,6 +117,10 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
       }
       set("status", status);
       setSuccess(status === "published" ? "Published. Students can buy it once your store page is live." : "Back to draft. It is hidden from your store.");
+      if (status === "published" && fromSetup) {
+        router.push("/dashboard/setup?step=connect-payments");
+        return;
+      }
       router.refresh();
     });
   };
@@ -232,9 +238,9 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
       <input type="hidden" name="payload" value={payload} />
 
       <div className="flex flex-col gap-4">
-        <Link href="/dashboard/products" className="inline-flex items-center gap-1 self-start text-sm font-semibold text-mute hover:text-ink">
+        <Link href={fromSetup ? "/dashboard/setup?step=first-product" : "/dashboard/products"} className="inline-flex items-center gap-1 self-start text-sm font-semibold text-mute hover:text-ink">
           <ArrowLeft aria-hidden="true" className="size-4" />
-          Products
+          {fromSetup ? "Back to setup" : "Products"}
         </Link>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
@@ -504,7 +510,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
             ) : (
               <Button type="submit" loading={busy} disabled={blockers.length > 0 || values.status === "archived"} onClick={() => (publishAfterSave.current = true)}>
                 <Rocket aria-hidden="true" className="size-4" />
-                Save and publish
+                {fromSetup ? "Save, publish & continue setup" : "Save and publish"}
               </Button>
             )}
           </div>

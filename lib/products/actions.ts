@@ -33,7 +33,7 @@ async function allowed(ownerId: string): Promise<boolean> {
 }
 
 /** Creates an empty draft digital product and opens its editor. */
-export async function createProductAndEdit(): Promise<void> {
+export async function createProductAndEdit(formData?: FormData): Promise<void> {
   const { user, store } = await requireCreator("/dashboard/products/new");
   if (!(await allowed(user.id))) redirect("/dashboard/products?error=slow");
   const result = await createDraftProduct(store.id, { buttonText: "Buy now" }).catch((error: unknown) => {
@@ -42,7 +42,9 @@ export async function createProductAndEdit(): Promise<void> {
   });
   if (typeof result === "string") redirect(`/dashboard/products?error=${result}`);
   revalidatePath("/dashboard", "layout");
-  redirect(`/dashboard/products/${result.id}`);
+  const from = formData?.get("from");
+  const query = from === "setup" ? "?from=setup" : "";
+  redirect(`/dashboard/products/${result.id}${query}`);
 }
 
 /**

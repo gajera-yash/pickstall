@@ -129,6 +129,7 @@ function ProductStep({ step, products, currency }: { step: ChecklistItem; produc
 
       <div className="flex flex-wrap items-center gap-3">
         <form action={createProductAndEdit}>
+          <input type="hidden" name="from" value="setup" />
           <Button type="submit" variant={step.done ? "secondary" : "default"}>
             <Plus aria-hidden="true" />
             {step.done ? "Add another product" : "Create a digital product"}
