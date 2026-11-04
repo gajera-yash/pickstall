@@ -125,3 +125,28 @@ describe("Neo-Brutalist and Frosted Glass (D-065)", () => {
     expect(render("glass", true)).not.toContain("<main");
   });
 });
+
+describe("Clean, Bold and Soft on wide pages (D-066)", () => {
+  const second: PublicProduct = { ...product, id: "p3", slug: "workbook", title: "Brand workbook", type: "digital", course: null };
+  const render = (preset: "clean" | "bold" | "soft") =>
+    renderToStaticMarkup(createElement(StorePage, { store: { ...store, theme: { preset, accent: THEME_PRESETS[preset].accent } }, products: [product, second] }));
+
+  it("keeps the phone column and adds a banner header and product grid only at @3xl", () => {
+    for (const preset of ["clean", "bold", "soft"] as const) {
+      const page = render(preset);
+      expect(page).toContain("max-w-xl");
+      expect(page).toContain("@3xl:max-w-5xl");
+      expect(page).toContain("@3xl:grid-cols-2");
+      expect(page).toContain("@5xl:grid-cols-3");
+      expect(page).toContain("@3xl:flex-row");
+      expect(page).toContain("mt-auto");
+    }
+  });
+
+  it("does not change the centered header used elsewhere (product page)", async () => {
+    const { StoreHeader } = await import("@/components/store/store-header");
+    const header = renderToStaticMarkup(createElement(StoreHeader, { store }));
+    expect(header).toContain("items-center text-center");
+    expect(header).not.toContain("@3xl:");
+  });
+});

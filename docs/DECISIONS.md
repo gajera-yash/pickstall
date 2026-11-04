@@ -4,6 +4,12 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-066: Desktop layout for Clean, Bold and Soft (H5)
+- **Date:** 2026-11-04
+- **Decision:** the three original themes keep their phone look exactly. On a wide page (container `@3xl` and up) the page grows to about 1024px: the profile becomes a left-aligned banner (photo beside the name, bio and social links below, a thin rule under it) and the products form a grid of 2 cards, 3 on very wide pages (`@5xl`), with price and button lined up at the bottom of each card. Colors, borders, shadows and corners are unchanged. `StoreHeader` gains an `align="banner"` option; the product page header is unchanged.
+- **Not changed:** no profile card around the banner, so the phone view stays identical.
+- **Why:** founder request, 2026-11-04 (the old themes showed one narrow column on desktop).
+
 ## D-065: Neo-Brutalist and Frosted Glass themes (H4d)
 - **Date:** 2026-11-04
 - **Decision:** the last two of the six new themes, each with its own layout. **Neo-Brutalist** (`brutalist` layout): cream page, 3px ink borders, big hard "block" shadows, a loud accent band with the product count, uppercase headlines and a tilted price sticker on each cover; one, two or three columns by width. **Frosted Glass** (`glass` layout): a soft pastel gradient page with see-through, blurred cards (`backdrop-filter`), the profile in a centered card and the products in a grid below.

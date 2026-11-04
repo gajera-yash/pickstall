@@ -2,26 +2,33 @@ import Link from "next/link";
 
 import { PriceTag } from "@/components/store/price-tag";
 import { StoreHeader } from "@/components/store/store-header";
-import { StoreFrame, cardStyle } from "@/components/store/store-theme";
+import { StoreFrame, borderColor, cardStyle } from "@/components/store/store-theme";
 import type { StoreLayoutProps } from "@/components/store/layouts/types";
 import { safeImageSrc } from "@/lib/media/media";
 
-/** The original single column (themes Clean, Bold, Soft): header, then one card per product. */
+/**
+ * Clean, Bold and Soft. On a phone: the original single column, header then one card per product.
+ * On a wide page (@3xl and up, D-066): the header becomes a left-aligned banner with a rule under
+ * it, and the products form a grid of 2 (or 3 on very wide pages) cards with their buttons lined up.
+ */
 export function StackLayout({ store, products, theme, preview }: StoreLayoutProps) {
   const { preset } = theme;
 
   return (
-    <StoreFrame theme={theme} preview={preview}>
-      <StoreHeader store={store} />
+    <StoreFrame theme={theme} preview={preview} wide>
+      <div className="flex w-full max-w-xl flex-col items-center gap-6 @3xl:max-w-5xl @3xl:gap-10">
+      <div className="w-full @3xl:border-b @3xl:pb-10" style={{ borderColor: borderColor(preset) }}>
+        <StoreHeader store={store} align="banner" />
+      </div>
       {products.length === 0 ? (
         <p className="w-full p-6 text-center" style={{ ...cardStyle(theme), color: preset.muted }}>
           Products are coming soon. Check back later.
         </p>
       ) : (
-        <ul className="flex w-full flex-col gap-4">
+        <ul className="flex w-full flex-col gap-4 @3xl:grid @3xl:grid-cols-2 @3xl:gap-6 @5xl:grid-cols-3">
           {products.map((product) => (
             <li key={product.id}>
-              <Link href={`/@${store.slug}/${product.slug}`} className="flex flex-col gap-3 overflow-hidden p-4" style={cardStyle(theme)}>
+              <Link href={`/@${store.slug}/${product.slug}`} className="flex h-full flex-col gap-3 overflow-hidden p-4" style={cardStyle(theme)}>
                 {safeImageSrc(product.coverUrl) && (
                   // A creator's own https link on any host, so next/image (fixed remote hosts) cannot load it.
                   // eslint-disable-next-line @next/next/no-img-element
@@ -35,7 +42,7 @@ export function StackLayout({ store, products, theme, preview }: StoreLayoutProp
                     {product.description}
                   </span>
                 )}
-                <span className="flex items-center justify-between gap-3">
+                <span className="mt-auto flex items-center justify-between gap-3">
                   <PriceTag product={product} currency={store.currency} className="font-display text-money-m" regularStyle={{ color: preset.muted }} />
                   <span
                     className="flex h-11 items-center rounded-md px-5 text-button"
@@ -49,6 +56,7 @@ export function StackLayout({ store, products, theme, preview }: StoreLayoutProp
           ))}
         </ul>
       )}
+      </div>
     </StoreFrame>
   );
 }

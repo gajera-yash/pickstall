@@ -7,9 +7,14 @@ import { safeImageSrc } from "@/lib/media/media";
 import type { PublicStore } from "@/lib/stores/public";
 import { cn } from "@/lib/utils";
 
-/** Avatar, name, bio and social links. Shared by the store page and the product page header. */
-export function StoreHeader({ store, linkToStore, align = "center" }: { store: PublicStore; linkToStore?: boolean; align?: "center" | "start" }) {
+/**
+ * Avatar, name, bio and social links. Shared by the store page and the product page header.
+ * `banner` is centered like `center` until the page is wide (@3xl), then the photo sits beside the
+ * name and everything lines up on the left (D-066).
+ */
+export function StoreHeader({ store, linkToStore, align = "center" }: { store: PublicStore; linkToStore?: boolean; align?: "center" | "start" | "banner" }) {
   const start = align === "start";
+  const banner = align === "banner";
   const { preset, accent, onAccent } = resolveTheme(store.theme);
   const initial = store.name.trim().charAt(0).toUpperCase() || "?";
   const body = (
@@ -30,21 +35,21 @@ export function StoreHeader({ store, linkToStore, align = "center" }: { store: P
   );
 
   return (
-    <header className={cn("flex flex-col gap-3", start ? "items-start text-left" : "items-center text-center")}>
+    <header className={cn("flex flex-col gap-3", start ? "items-start text-left" : "items-center text-center", banner && "@3xl:items-start @3xl:text-left")}>
       {linkToStore ? (
-        <Link href={`/@${store.slug}`} className={cn("flex flex-col gap-3", start ? "items-start" : "items-center")}>
+        <Link href={`/@${store.slug}`} className={cn("flex flex-col gap-3", start ? "items-start" : "items-center", banner && "@3xl:flex-row @3xl:gap-5")}>
           {body}
         </Link>
       ) : (
-        <h1 className={cn("flex flex-col gap-3", start ? "items-start" : "items-center")}>{body}</h1>
+        <h1 className={cn("flex flex-col gap-3", start ? "items-start" : "items-center", banner && "@3xl:flex-row @3xl:gap-5")}>{body}</h1>
       )}
       {store.bio && (
-        <p className="max-w-md text-body-l break-words whitespace-pre-line" style={{ color: preset.muted }}>
+        <p className={cn("max-w-md text-body-l break-words whitespace-pre-line", banner && "@3xl:max-w-2xl")} style={{ color: preset.muted }}>
           {store.bio}
         </p>
       )}
       {store.socialLinks.length > 0 && (
-        <ul className={cn("flex flex-wrap gap-2", start ? "justify-start" : "justify-center")}>
+        <ul className={cn("flex flex-wrap gap-2", start ? "justify-start" : "justify-center", banner && "@3xl:justify-start")}>
           {/* Saved links are https or mailto only (lib/stores/schemas.ts); anything else is skipped here too. */}
           {store.socialLinks
             .filter((link) => /^(https:|mailto:)/i.test(link.url))
