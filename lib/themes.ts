@@ -4,7 +4,7 @@ import { contrastRatio } from "@/lib/contrast";
 // means adding an entry here. Raw color values are allowed in this file only (and styles/tokens.css).
 // Every pair below is contrast-tested in tests/unit/themes.test.ts.
 
-export const THEME_PRESET_IDS = ["clean", "bold", "soft", "studio", "academy", "editorial", "neon"] as const;
+export const THEME_PRESET_IDS = ["clean", "bold", "soft", "studio", "academy", "editorial", "neon", "brutalist", "glass"] as const;
 export type ThemePresetId = (typeof THEME_PRESET_IDS)[number];
 
 /** The classic one-column themes, which the landing page demos draw (they do not draw the newer layouts). */
@@ -14,7 +14,7 @@ export const CLASSIC_THEME_IDS = ["clean", "bold", "soft"] as const satisfies re
  * How a theme arranges the store page (H4, D-062). "stack" is the original single column; the new
  * themes bring their own layouts (split, editorial, bento, academy, ...) in components/store/layouts.
  */
-export const STORE_LAYOUTS = ["stack", "split", "academy", "editorial", "bento"] as const;
+export const STORE_LAYOUTS = ["stack", "split", "academy", "editorial", "bento", "brutalist", "glass"] as const;
 export type StoreLayout = (typeof STORE_LAYOUTS)[number];
 
 export type ThemePreset = {
@@ -29,9 +29,16 @@ export type ThemePreset = {
   card: string;
   radiusPx: number;
   /** "soft" is a faint line in the theme's own text color, for dark themes (D-064). */
-  border: { widthPx: 0 | 1 | 2; color: "line" | "ink" | "soft" | "none" };
-  /** "glow" is a neon halo in the accent color (D-064). */
-  shadow: "none" | "hard" | "soft" | "glow";
+  border: { widthPx: 0 | 1 | 2 | 3; color: "line" | "ink" | "soft" | "none" };
+  /** "glow" is a neon halo in the accent color (D-064); "block" a big hard shadow (D-065). */
+  shadow: "none" | "hard" | "soft" | "glow" | "block";
+  /**
+   * A gradient page instead of the flat background (D-065), as its color stops. `background` stays
+   * the flat fallback. Every stop is contrast-tested like the background.
+   */
+  pageGradient?: readonly string[];
+  /** See-through cards (D-065): the card color at this opacity over a blurred page. Contrast is tested on the mix over every gradient stop. */
+  glassOpacity?: number;
   displayWeight: 600 | 800;
   /** The page structure (D-062). */
   layout: StoreLayout;
@@ -156,6 +163,42 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePreset> = {
     displayWeight: 800,
     layout: "bento",
     displayFont: "sans",
+  },
+  // Neo-Brutalist (D-065): thick black borders, big hard shadows, loud colors, chunky type.
+  brutalist: {
+    id: "brutalist",
+    name: "Neo-Brutalist",
+    background: "#FFF4D6",
+    text: "#111111",
+    muted: "#3F3B33",
+    accent: "#FF4F8B",
+    onAccent: "#0B0D2A",
+    card: "#FFFFFF",
+    radiusPx: 6,
+    border: { widthPx: 3, color: "ink" },
+    shadow: "block",
+    displayWeight: 800,
+    layout: "brutalist",
+    displayFont: "sans",
+  },
+  // Frosted Glass (D-065): glassmorphism. See-through, blurred cards over a soft pastel gradient.
+  glass: {
+    id: "glass",
+    name: "Frosted Glass",
+    background: "#E0E7FF",
+    text: "#1E1B4B",
+    muted: "#4A4769",
+    accent: "#6D28D9",
+    onAccent: "#FFFFFF",
+    card: "#FFFFFF",
+    radiusPx: 22,
+    border: { widthPx: 1, color: "soft" },
+    shadow: "soft",
+    displayWeight: 800,
+    layout: "glass",
+    displayFont: "sans",
+    pageGradient: ["#E0E7FF", "#FCE7F3", "#D1FAE5", "#C7D2FE"],
+    glassOpacity: 0.62,
   },
 };
 

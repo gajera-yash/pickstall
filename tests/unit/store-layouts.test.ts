@@ -104,3 +104,24 @@ describe("Editorial Luxury and Neon Bento (D-064)", () => {
     expect(render("neon", true)).not.toContain("<main");
   });
 });
+
+describe("Neo-Brutalist and Frosted Glass (D-065)", () => {
+  const render = (preset: "brutalist" | "glass", preview = false) =>
+    renderToStaticMarkup(createElement(StorePage, { store: { ...store, theme: { preset, accent: THEME_PRESETS[preset].accent } }, products: [product], preview }));
+
+  it("Neo-Brutalist uses thick ink borders, block shadows and a price sticker", () => {
+    const page = render("brutalist");
+    expect(page).toContain(`box-shadow:6px 6px 0 ${THEME_PRESETS.brutalist.text}`);
+    expect(page).toContain("1 product · new drops");
+    expect(page).toContain("-rotate-3");
+    expect(render("brutalist", true)).not.toContain("<main");
+  });
+
+  it("Frosted Glass draws a gradient page with blurred see-through cards", () => {
+    const page = render("glass");
+    expect(page).toContain("linear-gradient(135deg");
+    expect(page).toContain("backdrop-filter:blur(18px) saturate(140%)");
+    expect(page).toContain(`color-mix(in srgb, ${THEME_PRESETS.glass.card} 62%, transparent)`);
+    expect(render("glass", true)).not.toContain("<main");
+  });
+});

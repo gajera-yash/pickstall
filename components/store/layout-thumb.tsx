@@ -16,7 +16,25 @@ export function LayoutThumb({ preset, className }: { preset: ThemePreset; classN
   const dot: CSSProperties = { background: preset.accent, borderRadius: 999 };
 
   return (
-    <span aria-hidden="true" className={className} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 5, width: 64, height: 48, flexShrink: 0, borderRadius: 6, background: preset.background, border: "1px solid var(--line)", overflow: "hidden" }}>
+    <span
+      aria-hidden="true"
+      className={className}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 3,
+        padding: 5,
+        width: 64,
+        height: 48,
+        flexShrink: 0,
+        borderRadius: 6,
+        background: preset.background,
+        ...(preset.pageGradient ? { backgroundImage: `linear-gradient(135deg, ${preset.pageGradient.join(", ")})` } : {}),
+        border: "1px solid var(--line)",
+        overflow: "hidden",
+      }}
+    >
       {preset.layout === "stack" && (
         <>
           <span style={{ ...dot, width: 9, height: 9 }} />
@@ -58,6 +76,28 @@ export function LayoutThumb({ preset, className }: { preset: ThemePreset; classN
           <span style={card} />
           <span style={{ ...card, gridColumn: "span 2" }} />
         </span>
+      )}
+      {preset.layout === "brutalist" && (
+        <>
+          <span style={{ ...card, width: "100%", height: 9, boxShadow: `2px 2px 0 ${preset.text}` }} />
+          <span style={{ ...dot, width: "100%", height: 5, borderRadius: 0, borderTop: `1px solid ${preset.text}`, borderBottom: `1px solid ${preset.text}` }} />
+          <span style={{ flex: 1, width: "100%", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
+            <span style={{ ...card, boxShadow: `2px 2px 0 ${preset.text}` }} />
+            <span style={{ ...card, boxShadow: `2px 2px 0 ${preset.text}` }} />
+            <span style={{ ...card, boxShadow: `2px 2px 0 ${preset.text}` }} />
+          </span>
+        </>
+      )}
+      {preset.layout === "glass" && (
+        <>
+          <span style={{ ...card, width: "70%", height: 11, display: "flex", justifyContent: "center", alignItems: "center", opacity: 0.75 }}>
+            <span style={{ ...dot, width: 5, height: 5 }} />
+          </span>
+          <span style={{ flex: 1, width: "100%", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3 }}>
+            <span style={{ ...card, opacity: 0.7 }} />
+            <span style={{ ...card, opacity: 0.7 }} />
+          </span>
+        </>
       )}
       {preset.layout === "academy" && (
         <>

@@ -4,6 +4,13 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-065: Neo-Brutalist and Frosted Glass themes (H4d)
+- **Date:** 2026-11-04
+- **Decision:** the last two of the six new themes, each with its own layout. **Neo-Brutalist** (`brutalist` layout): cream page, 3px ink borders, big hard "block" shadows, a loud accent band with the product count, uppercase headlines and a tilted price sticker on each cover; one, two or three columns by width. **Frosted Glass** (`glass` layout): a soft pastel gradient page with see-through, blurred cards (`backdrop-filter`), the profile in a centered card and the products in a grid below.
+- **Theme engine:** presets may now set `pageGradient` (page background stops) and `glassOpacity` (how solid cards are); the shadow list gains `block`. Colors still live only in `lib/themes.ts`.
+- **Contrast:** for gradient themes, text and muted colors are tested against every gradient color and against the glass card mixed over each of them, so text stays AA (4.5:1) wherever a card sits. Browsers without `backdrop-filter` still get the tinted card, so text stays readable.
+- **Why:** founder request, 2026-11-04 (picked Neo-Brutalism and Glassmorphism).
+
 ## D-064: Editorial Luxury and Neon Bento themes (H4c)
 - **Date:** 2026-11-04
 - **Decision (founder's theme choice, D-062):**

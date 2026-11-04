@@ -32,9 +32,14 @@ export function cardStyle({ preset, accent }: StoreTheme): CSSProperties {
     hard: `4px 4px 0 ${preset.text}`,
     soft: "var(--shadow-popover)",
     glow: `0 0 0 1px color-mix(in srgb, ${accent} 30%, transparent), 0 8px 32px color-mix(in srgb, ${accent} 22%, transparent)`,
+    block: `6px 6px 0 ${preset.text}`,
   };
+  // Glass (D-065): the card color, partly see-through, over a blurred page.
+  const glass = preset.glassOpacity
+    ? { background: `color-mix(in srgb, ${preset.card} ${Math.round(preset.glassOpacity * 100)}%, transparent)`, backdropFilter: "blur(18px) saturate(140%)", WebkitBackdropFilter: "blur(18px) saturate(140%)" }
+    : { background: preset.card };
   return {
-    background: preset.card,
+    ...glass,
     borderRadius: preset.radiusPx,
     border: preset.border.widthPx ? `${preset.border.widthPx}px solid ${borderColor(preset)}` : "none",
     boxShadow: shadows[preset.shadow],
@@ -47,7 +52,13 @@ export function frameStyle({ preset }: StoreTheme): { className: string; style: 
   return {
     className: serif ? storeSerif.variable : "",
     // font-display reads --font-bricolage (globals.css); a serif theme points it at its serif, on its own page only.
-    style: { background: preset.background, color: preset.text, ...(serif ? ({ "--font-bricolage": "var(--font-store-serif)" } as CSSProperties) : {}) },
+    style: {
+      background: preset.background,
+      // A gradient page (D-065) over the flat color, which stays as the fallback.
+      ...(preset.pageGradient ? { backgroundImage: `linear-gradient(135deg, ${preset.pageGradient.join(", ")})` } : {}),
+      color: preset.text,
+      ...(serif ? ({ "--font-bricolage": "var(--font-store-serif)" } as CSSProperties) : {}),
+    },
   };
 }
 

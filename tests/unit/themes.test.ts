@@ -21,7 +21,7 @@ describe("contrastRatio", () => {
 
 describe("storefront theme presets (DESIGN.md section 11)", () => {
   it("has the presets, keyed by id (the first three keep their order for existing stores)", () => {
-    expect([...THEME_PRESET_IDS]).toEqual(["clean", "bold", "soft", "studio", "academy", "editorial", "neon"]);
+    expect([...THEME_PRESET_IDS]).toEqual(["clean", "bold", "soft", "studio", "academy", "editorial", "neon", "brutalist", "glass"]);
     for (const id of THEME_PRESET_IDS) expect(THEME_PRESETS[id].id).toBe(id);
   });
 
@@ -32,6 +32,19 @@ describe("storefront theme presets (DESIGN.md section 11)", () => {
     expect(contrastRatio(t.text, t.card)).toBeGreaterThanOrEqual(AA_TEXT);
     expect(contrastRatio(t.muted, t.card)).toBeGreaterThanOrEqual(AA_TEXT);
     expect(contrastRatio(t.onAccent, t.accent)).toBeGreaterThanOrEqual(AA_TEXT);
+  });
+
+  it.each(THEME_PRESET_IDS.filter((id) => THEME_PRESETS[id].pageGradient))("%s: text reads on every gradient stop and on its glass cards over each (D-065)", (id) => {
+    const t = THEME_PRESETS[id];
+    const channels = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    const mix = (top: string, under: string, alpha: number) => `#${channels(top).map((c, i) => Math.round(c * alpha + (channels(under)[i] ?? 0) * (1 - alpha)).toString(16).padStart(2, "0")).join("")}`;
+    for (const stop of t.pageGradient ?? []) {
+      expect(contrastRatio(t.text, stop)).toBeGreaterThanOrEqual(AA_TEXT);
+      expect(contrastRatio(t.muted, stop)).toBeGreaterThanOrEqual(AA_TEXT);
+      const card = t.glassOpacity ? mix(t.card, stop, t.glassOpacity) : t.card;
+      expect(contrastRatio(t.text, card)).toBeGreaterThanOrEqual(AA_TEXT);
+      expect(contrastRatio(t.muted, card)).toBeGreaterThanOrEqual(AA_TEXT);
+    }
   });
 
   it("matches the measured ratios documented in DESIGN.md section 11", () => {
