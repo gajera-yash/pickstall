@@ -28,6 +28,8 @@ export type Purchase = {
   accessEnded: boolean;
   downloadLimit: number | null;
   accessCount: number;
+  /** A course's lessons completed out of its current lessons (D-070); null for digital products. */
+  progress: { done: number; total: number } | null;
 };
 
 const normalize = (email: string) => email.trim().toLowerCase();
@@ -42,6 +44,7 @@ async function loadDetails(orders: OrderDoc[], now: Date = new Date()): Promise<
   ]);
   const storeById = new Map(storeDocs.map((doc) => [doc._id, doc]));
   const productById = new Map(productDocs.map((doc) => [doc._id, doc]));
+  const progressByOrder = await loadProgress(orders.filter((order) => productById.get(order.productId)?.type === "course"));
 
   return orders.map((order) => {
     const store = storeById.get(order.storeId);
@@ -63,8 +66,42 @@ async function loadDetails(orders: OrderDoc[], now: Date = new Date()): Promise<
       accessEnded: endsAt !== null && now.getTime() >= endsAt.getTime(),
       downloadLimit: product?.downloadLimit ?? null,
       accessCount: order.accessCount ?? 0,
+      progress: progressByOrder.get(order._id) ?? null,
     };
   });
+}
+
+/**
+ * Course progress for these orders (D-070): completed lessons that still exist, out of the course's
+ * current lessons. Read only for orders already matched to this buyer's verified email, and each
+ * course's lessons are read through the order's own store.
+ */
+async function loadProgress(courseOrders: OrderDoc[]): Promise<Map<string, { done: number; total: number }>> {
+  const result = new Map<string, { done: number; total: number }>();
+  if (courseOrders.length === 0) return result;
+  const { lessons, lessonProgress } = await collections();
+  const [lessonDocs, progressDocs] = await Promise.all([
+    lessons
+      .find(
+        { $or: courseOrders.map((order) => ({ storeId: order.storeId, productId: order.productId })) },
+        { projection: { productId: 1, storeId: 1 } },
+      )
+      .toArray(),
+    lessonProgress.find({ orderId: { $in: courseOrders.map((order) => order._id) } }, { projection: { orderId: 1, lessonId: 1 } }).toArray(),
+  ]);
+  const lessonIdsByCourse = new Map<string, Set<string>>();
+  for (const lesson of lessonDocs) {
+    const key = `${lesson.storeId}:${lesson.productId}`;
+    const ids = lessonIdsByCourse.get(key) ?? new Set<string>();
+    ids.add(lesson._id);
+    lessonIdsByCourse.set(key, ids);
+  }
+  for (const order of courseOrders) {
+    const ids = lessonIdsByCourse.get(`${order.storeId}:${order.productId}`) ?? new Set<string>();
+    const done = new Set(progressDocs.filter((doc) => doc.orderId === order._id && ids.has(doc.lessonId)).map((doc) => doc.lessonId)).size;
+    result.set(order._id, { done, total: ids.size });
+  }
+  return result;
 }
 
 /** This buyer's purchases, newest first. */
