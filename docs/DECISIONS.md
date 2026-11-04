@@ -4,6 +4,12 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-069: Checkout with an order summary; a clearer thank-you page (H6b)
+- **Date:** 2026-11-04
+- **Decision:** both pages keep the creator's theme. **Checkout:** an order summary card (cover, title, "by <store>", regular price and discount when there is one, total) comes first on a phone and sits on the right, staying in view, on wide pages (`@3xl`); the form card is on the left with the creator's headline and "Sold by <store>. Payments are handled securely by the payment provider." The form keeps the app's own field colors on every theme. Its footer note now speaks to buyers ("Card details are entered on the payment provider's secure page, never here.") instead of mentioning Pickstall's fee. **Thank-you:** a status icon, the creator's message, the product, and for a paid order three numbered next steps (check your email, create your password if new, open your library) with an "Open your library" button; a pending order gets a Refresh button and a failed one "Try again".
+- **Not changed:** the summary is information only (the server still computes the amount), the thank-you page still never grants access, order lookups are unchanged.
+- **Why:** founder request, 2026-11-04 (H6).
+
 ## D-068: Product page redesign with a buy box (H6a)
 - **Date:** 2026-11-04
 - **Decision:** the public product page keeps the creator's theme and gets a clearer structure. At the top, a back link with the creator's photo and name (the full profile block at the bottom is gone). Then the cover, kind ("Course · 12 lessons" / "Digital product") and title; a **buy box** with the price, the Buy button, what the buyer gets (lessons and modules and access period for a course; email delivery and library for a digital product) and "Secure checkout. Sold by <store>."; then the description and course content. On a wide page (`@3xl`) the buy box sits on the right and stays in view while scrolling. On a phone, once the Buy button has scrolled away, a **buy bar** with the price and button slides up at the bottom (only when the store can take payments).

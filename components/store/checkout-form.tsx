@@ -10,7 +10,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FieldError } from "@/components/ui/field";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ANSWER_MAX_CHARS, BUYER_NAME_MAX } from "@/lib/config";
@@ -104,10 +103,7 @@ export function CheckoutForm({ username, productSlug, askPhone, questions, submi
         <Lock aria-hidden="true" className="size-4" />
         {submitLabel}
       </Button>
-      <p className="text-center text-sm text-mute">
-        <Label className="sr-only">Secure checkout</Label>
-        Pickstall takes 0% of your payment. Card details are entered on the payment provider&apos;s page, never here.
-      </p>
+      <p className="text-center text-sm text-mute">Card details are entered on the payment provider&apos;s secure page, never here.</p>
     </form>
   );
 }
