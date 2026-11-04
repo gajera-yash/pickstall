@@ -206,12 +206,55 @@ export type FileDoc = {
   _id: string;
   storeId: string;
   productId: string;
+  /** Set on a course lesson's attachment (D-055); missing on a digital product's file. */
+  lessonId?: string;
   key: string;
   name: string;
   ext: string;
   mime: string;
   size: number;
   createdAt: Date;
+};
+
+/** A module of a course (D-055): an ordered group of lessons. `productId` is the course. */
+export type CourseModuleDoc = {
+  _id: string;
+  storeId: string;
+  productId: string;
+  title: string;
+  sortOrder: number;
+  /** Drip (G3): days after purchase when the module unlocks; null opens it right away. */
+  dripDays: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
+ * A lesson's video (D-055): uploaded to Bunny Stream (status kept fresh by the verified Bunny
+ * webhook), or a YouTube / Vimeo video kept as its id only. Never in public reads.
+ */
+export type LessonVideoDoc =
+  | { kind: "bunny"; videoId: string; status: "uploading" | "processing" | "ready" | "failed" }
+  | { kind: "youtube"; id: string }
+  | { kind: "vimeo"; id: string; hash: string | null };
+
+/** An extra link on a lesson (a Figma file, a doc), https only. */
+export type LessonLinkDoc = { label: string; url: string };
+
+/** A lesson of a course module (D-055). Content is never public: students get it after access checks (G4). */
+export type LessonDoc = {
+  _id: string;
+  storeId: string;
+  productId: string;
+  moduleId: string;
+  title: string;
+  sortOrder: number;
+  video: LessonVideoDoc | null;
+  /** Written notes, as allow-listed rich text (D-049). */
+  bodyDoc: RichDoc | null;
+  links: LessonLinkDoc[];
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 /** Fixed-window rate-limit counter. Removed by a TTL index after `expiresAt`. */
@@ -229,6 +272,8 @@ export async function collections(): Promise<{
   webhookEvents: Collection<WebhookEventDoc>;
   signupIntents: Collection<SignupIntentDoc>;
   rateLimits: Collection<RateLimitDoc>;
+  courseModules: Collection<CourseModuleDoc>;
+  lessons: Collection<LessonDoc>;
 }> {
   const db = await getDb();
   return {
@@ -243,5 +288,7 @@ export async function collections(): Promise<{
     webhookEvents: db.collection<WebhookEventDoc>("webhookEvents"),
     signupIntents: db.collection<SignupIntentDoc>("signupIntents"),
     rateLimits: db.collection<RateLimitDoc>("rateLimits"),
+    courseModules: db.collection<CourseModuleDoc>("courseModules"),
+    lessons: db.collection<LessonDoc>("lessons"),
   };
 }

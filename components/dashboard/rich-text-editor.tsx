@@ -24,12 +24,15 @@ export function RichTextEditor({
   value,
   onChange,
   error,
+  maxChars = RICH_TEXT_MAX_CHARS,
 }: {
   id: string;
   label: string;
   value: RichDoc;
   onChange: (doc: RichDoc) => void;
   error?: string | null;
+  /** The server's limit for this field (descriptions 2000, lesson notes more). */
+  maxChars?: number;
 }) {
   const labelId = useId();
   const hintId = `${id}-hint`;
@@ -104,8 +107,8 @@ export function RichTextEditor({
       {error ? (
         <FieldError id={errorId}>{error}</FieldError>
       ) : (
-        <FieldHint id={hintId} className={cn(chars > RICH_TEXT_MAX_CHARS && "text-danger")}>
-          {chars}/{RICH_TEXT_MAX_CHARS}. Bold, italic, headings, lists and links.
+        <FieldHint id={hintId} className={cn(chars > maxChars && "text-danger")}>
+          {chars}/{maxChars}. Bold, italic, headings, lists and links.
         </FieldHint>
       )}
     </div>

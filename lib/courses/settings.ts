@@ -32,6 +32,15 @@ export const COURSE_LIMITS = {
   tag: 24,
   /** Access period in days when it is not lifetime (10 years at most). */
   accessDaysMax: 3650,
+  // Curriculum (D-055).
+  modulesMax: 50,
+  lessonsMax: 300,
+  moduleTitle: 80,
+  lessonTitle: 100,
+  notesChars: 10_000,
+  linksMax: 5,
+  linkLabel: 60,
+  attachmentsMax: 5,
 } as const;
 
 /** "Lifetime access" or "365 days of access". */

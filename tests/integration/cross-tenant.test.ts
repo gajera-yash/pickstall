@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { collections, type OrderDoc, type ProductDoc, type StoreDoc } from "@/lib/db/collections";
+import { addLesson, addModule, deleteLesson, deleteModule, loadCurriculum, renameModule, saveLayout, updateLesson } from "@/lib/courses/curriculum";
 import { updateCourseDetails } from "@/lib/courses/queries";
 import { findPurchase, grantAccess, hasPurchases, listPurchases } from "@/lib/library/queries";
 import { countOrdersByStatus, findCustomerDetail, findOrderDetail, incomeStats, listCustomers, listOrders, listOrdersForExport, listPaidOrdersForExport } from "@/lib/orders/creator-queries";
@@ -90,6 +91,31 @@ describe("courses: creator A cannot touch creator B's course (D-054)", () => {
     expect(await updateCourseDetails(storeA._id, productA._id, details)).toBe("not_found");
     expect(await updateCourseDetails(storeB._id, courseB._id, { ...details, title: "B renamed" })).toBe("saved");
     expect(await updateProduct(storeB._id, courseB._id, {} as ProductInput)).toBe("not_found");
+  });
+});
+
+describe("course curriculum: creator A cannot read or change creator B's lessons (D-055)", () => {
+  it("keeps every curriculum read and write inside the owner's course", async () => {
+    const courseB = await seedProduct(storeB._id, { type: "course", title: "B's course", status: "draft", course: { category: null, tags: [], accessDays: null } });
+    expect(await addModule(storeB._id, courseB._id, "Intro")).toBe("ok");
+    const [moduleB] = (await loadCurriculum(storeB._id, courseB._id))?.modules ?? [];
+    expect(await addLesson(storeB._id, courseB._id, moduleB!.id, "Welcome")).toBe("ok");
+    const lessonB = (await loadCurriculum(storeB._id, courseB._id))!.modules[0]!.lessons[0]!;
+
+    expect(await loadCurriculum(storeA._id, courseB._id)).toBeNull();
+    expect(await addModule(storeA._id, courseB._id, "Hijack")).toBe("not_found");
+    expect(await addLesson(storeA._id, courseB._id, moduleB!.id, "Hijack")).toBe("not_found");
+    expect(await renameModule(storeA._id, courseB._id, moduleB!.id, "Hijack")).toBe("not_found");
+    expect(await updateLesson(storeA._id, courseB._id, lessonB.id, { title: "Hijack", bodyDoc: null, links: [], video: null })).toBe("not_found");
+    expect(await saveLayout(storeA._id, courseB._id, { moduleIds: [moduleB!.id], lessons: [{ moduleId: moduleB!.id, lessonIds: [lessonB.id] }] })).toBe("not_found");
+    expect(await deleteLesson(storeA._id, courseB._id, lessonB.id)).toBeNull();
+    expect(await deleteModule(storeA._id, courseB._id, moduleB!.id)).toBeNull();
+    // A digital product is not a course: no curriculum can hang off it.
+    expect(await addModule(storeA._id, productA._id, "Nope")).toBe("not_found");
+
+    const after = await loadCurriculum(storeB._id, courseB._id);
+    expect(after?.modules.map((module) => module.title)).toEqual(["Intro"]);
+    expect(after?.modules[0]?.lessons.map((lesson) => lesson.title)).toEqual(["Welcome"]);
   });
 });
 

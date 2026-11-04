@@ -13,6 +13,7 @@ const queries = vi.hoisted(() => ({
 vi.mock("@/lib/products/queries", () => queries);
 const productFiles = vi.hoisted(() => ({ removeFilesOfProduct: vi.fn(async () => undefined) }));
 vi.mock("@/lib/files/product-files", () => productFiles);
+vi.mock("@/lib/courses/cleanup", () => ({ removeCourseContent: vi.fn(async () => undefined) }));
 
 import { changeProductStatus, createProductAndEdit, removeProduct, saveProduct } from "@/lib/products/actions";
 import { centsToInput, formatMoney, parseMoneyToCents, priceLimits, priceProblem } from "@/lib/products/money";
