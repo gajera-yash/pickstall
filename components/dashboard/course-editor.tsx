@@ -671,6 +671,12 @@ function ReleaseSection({ courseId, drip: savedDrip, modules, onSaved }: { cours
                     inputMode="numeric"
                     value={days[item.id] ?? "0"}
                     onChange={(event) => setDays((current) => ({ ...current, [item.id]: event.target.value.replace(/\D/g, "").slice(0, 3) }))}
+                    // Enter saves these days, not the course editor's form around them.
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter") return;
+                      event.preventDefault();
+                      void save();
+                    }}
                     className="px-2 tabular-nums"
                   />
                 </InputGroup>

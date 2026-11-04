@@ -15,7 +15,7 @@ import {
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ArrowDown, ArrowUp, FileText, GripVertical, ListTree, Paperclip, Pencil, PlayCircle, Plus, Trash2 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { LessonSheet, videoBadge } from "@/components/dashboard/lesson-sheet";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -171,6 +171,11 @@ export function CurriculumBuilder({
   const moveLesson = (moduleIndex: number, lessonIndex: number, delta: number) =>
     persist(modules.map((module, i) => (i === moduleIndex ? { ...module, lessons: arrayMove(module.lessons, lessonIndex, lessonIndex + delta) } : module)));
 
+  const addModuleNow = async () => {
+    if (!newModule.trim() || busy) return;
+    if (await act(() => addCourseModule(courseId, newModule))) setNewModule("");
+  };
+
   const total = lessonCount({ modules });
   const editingLesson = editing ? modules.flatMap((module) => module.lessons).find((lesson) => lesson.id === editing) : undefined;
   const activeLesson = activeKey && !isModuleKey(activeKey) ? modules.flatMap((module) => module.lessons).find((lesson) => lesson.id === idOf(activeKey)) : undefined;
@@ -248,20 +253,22 @@ export function CurriculumBuilder({
         </DndContext>
       )}
 
-      <form
-        className="flex flex-col gap-2 sm:flex-row"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          if (!newModule.trim()) return;
-          if (await act(() => addCourseModule(courseId, newModule))) setNewModule("");
-        }}
-      >
-        <Input aria-label="New module title" value={newModule} maxLength={COURSE_LIMITS.moduleTitle} onChange={(event) => setNewModule(event.target.value)} placeholder={`Module ${modules.length + 1}: Introduction`} />
-        <Button type="submit" variant="secondary" disabled={busy || !newModule.trim() || modules.length >= COURSE_LIMITS.modulesMax} className="shrink-0">
+      {/* Not a form element: the builder sits inside the course editor's form, and a nested form
+          would submit the editor instead. Enter and the button are handled here. */}
+      <div role="group" aria-label="Add a module" className="flex flex-col gap-2 sm:flex-row">
+        <Input
+          aria-label="New module title"
+          value={newModule}
+          maxLength={COURSE_LIMITS.moduleTitle}
+          onChange={(event) => setNewModule(event.target.value)}
+          onKeyDown={(event) => onEnter(event, addModuleNow)}
+          placeholder={`Module ${modules.length + 1}: Introduction`}
+        />
+        <Button type="button" variant="secondary" onClick={addModuleNow} disabled={busy || !newModule.trim() || modules.length >= COURSE_LIMITS.modulesMax} className="shrink-0">
           <Plus aria-hidden="true" className="size-4" />
           Add module
         </Button>
-      </form>
+      </div>
 
       {editingLesson && <LessonSheet key={editingLesson.id} courseId={courseId} lesson={editingLesson} videoUploadReady={videoUploadReady} onClose={() => setEditing(null)} onChange={apply} onReload={reload} />}
     </div>
@@ -269,6 +276,16 @@ export function CurriculumBuilder({
 }
 
 /** What a drag handle needs from useSortable; `activator` marks the element that starts a drag. */
+/**
+ * Enter in a builder field runs its action instead of submitting the course editor's form around
+ * the builder (the browser's implicit submit).
+ */
+function onEnter(event: KeyboardEvent<HTMLInputElement>, run: () => void) {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  run();
+}
+
 type Handle = { attributes: ReturnType<typeof useSortable>["attributes"]; listeners: ReturnType<typeof useSortable>["listeners"]; activator: (element: HTMLElement | null) => void };
 
 function SortableModule({ module, children }: { module: EditorModule; children: (handle: Handle) => ReactNode }) {
@@ -323,26 +340,29 @@ function ModuleCard({
   const [newLesson, setNewLesson] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const renameNow = async () => {
+    if (!title.trim() || busy) return;
+    if (await act(() => renameCourseModule(courseId, module.id, title))) setRenaming(false);
+  };
+  const addLessonNow = async () => {
+    if (!newLesson.trim() || busy) return;
+    if (await act(() => addCourseLesson(courseId, module.id, newLesson))) setNewLesson("");
+  };
+
   return (
     <AccordionItem value={module.id} className="rounded-md border border-line bg-surface last:border-b">
       <div className="flex items-center gap-1 pr-2 pl-1">
         <DragHandle handle={handle} label={`Drag to reorder module ${module.title}`} />
         {renaming ? (
-          <form
-            className="flex flex-1 items-center gap-2 py-2"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              if (await act(() => renameCourseModule(courseId, module.id, title))) setRenaming(false);
-            }}
-          >
-            <Input aria-label="Module title" value={title} maxLength={COURSE_LIMITS.moduleTitle} onChange={(event) => setTitle(event.target.value)} autoFocus className="h-10" />
-            <Button type="submit" size="sm" disabled={busy || !title.trim()}>
+          <div role="group" aria-label="Rename module" className="flex flex-1 items-center gap-2 py-2">
+            <Input aria-label="Module title" value={title} maxLength={COURSE_LIMITS.moduleTitle} onChange={(event) => setTitle(event.target.value)} onKeyDown={(event) => onEnter(event, renameNow)} autoFocus className="h-10" />
+            <Button type="button" size="sm" onClick={renameNow} disabled={busy || !title.trim()}>
               Save
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => (setTitle(module.title), setRenaming(false))}>
               Cancel
             </Button>
-          </form>
+          </div>
         ) : (
           <AccordionTrigger className="min-w-0 flex-1 gap-3 px-2">
             <span className="flex min-w-0 flex-col">
@@ -370,20 +390,21 @@ function ModuleCard({
       <AccordionContent className="flex flex-col gap-3 border-t border-line px-3 pt-3">
         {module.lessons.length === 0 && <p className="text-sm text-mute">No lessons yet. Add one below, or drag a lesson here.</p>}
         {children}
-        <form
-          className="flex flex-col gap-2 sm:flex-row"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            if (!newLesson.trim()) return;
-            if (await act(() => addCourseLesson(courseId, module.id, newLesson))) setNewLesson("");
-          }}
-        >
-          <Input aria-label={`New lesson in ${module.title}`} value={newLesson} maxLength={COURSE_LIMITS.lessonTitle} onChange={(event) => setNewLesson(event.target.value)} placeholder="Lesson title" className="h-10" />
-          <Button type="submit" size="sm" variant="secondary" disabled={busy || !newLesson.trim()} className="h-10 shrink-0">
+        <div role="group" aria-label={`Add a lesson to ${module.title}`} className="flex flex-col gap-2 sm:flex-row">
+          <Input
+            aria-label={`New lesson in ${module.title}`}
+            value={newLesson}
+            maxLength={COURSE_LIMITS.lessonTitle}
+            onChange={(event) => setNewLesson(event.target.value)}
+            onKeyDown={(event) => onEnter(event, addLessonNow)}
+            placeholder="Lesson title"
+            className="h-10"
+          />
+          <Button type="button" size="sm" variant="secondary" onClick={addLessonNow} disabled={busy || !newLesson.trim()} className="h-10 shrink-0">
             <Plus aria-hidden="true" className="size-4" />
             Add lesson
           </Button>
-        </form>
+        </div>
         <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
           {confirmDelete ? (
             <>
