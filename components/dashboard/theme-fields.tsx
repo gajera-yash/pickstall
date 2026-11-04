@@ -57,7 +57,7 @@ export function ThemeFields({ themePreset, accent, onThemePreset, onAccent, fiel
               <label
                 key={id}
                 className={cn(
-                  "flex cursor-pointer items-center gap-3 rounded-md border border-input p-3 transition-colors duration-(--dur-fast) hover:bg-bg-subtle",
+                  "flex cursor-pointer items-center gap-3 rounded-lg border border-line bg-surface p-3 transition-colors duration-(--dur-fast) hover:border-field-border hover:bg-bg-subtle",
                   "has-data-[state=checked]:border-blue has-data-[state=checked]:bg-blue-soft",
                 )}
               >
