@@ -40,6 +40,25 @@ function idOf(value: string | { id: string } | null | undefined): string | undef
   return typeof value === "string" ? value : value.id;
 }
 
+/** The subscription a billing event is about, or null for any other event. */
+function billingSubscriptionOf(event: Stripe.Event): string | undefined {
+  switch (event.type) {
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted":
+    case "customer.subscription.paused":
+    case "customer.subscription.resumed":
+      return event.data.object.id;
+    case "invoice.paid":
+    case "invoice.payment_failed":
+      return idOf(event.data.object.parent?.subscription_details?.subscription);
+    case "checkout.session.completed":
+      return event.data.object.mode === "subscription" ? idOf(event.data.object.subscription) : undefined;
+    default:
+      return undefined;
+  }
+}
+
 /**
  * Turns a verified Stripe event into our normalized event, or null when it does not concern us.
  * Exported for unit tests; the webhook goes through `handleWebhook`.
@@ -47,6 +66,13 @@ function idOf(value: string | { id: string } | null | undefined): string | undef
 export function normalizeStripeEvent(event: Stripe.Event, endpoint: WebhookEndpoint): PaymentEvent | null {
   // Production Connect endpoints receive both live and test events (docs.stripe.com/connect/webhooks).
   if (event.livemode !== liveKey()) return null;
+
+  // Platform billing (D-073): the creator's own subscription to a Pickstall plan. Only ever on the
+  // platform endpoint (our account); the handler fetches the subscription from Stripe and saves it.
+  if (endpoint === "platform") {
+    const subscriptionId = billingSubscriptionOf(event);
+    if (subscriptionId) return { eventId: event.id, type: "billing.subscription", subscriptionId };
+  }
 
   // Which seller account the event belongs to. On the Connect endpoint Stripe names it; on the
   // platform endpoint it is our own account, which only the test seller shortcut (D-034) sells from.

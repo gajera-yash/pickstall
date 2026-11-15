@@ -278,7 +278,7 @@ describe("product actions use the session owner's store only", () => {
     storeQueries.findStoreByOwner.mockResolvedValue({ access: PAUSED_ACCESS, id: "store-1", slug: "maya", currency: "usd", stripeChargesEnabled: false });
     queries.findProduct.mockResolvedValue({ _id: PRODUCT_ID, title: "T", priceCents: 0, salePriceCents: null, externalUrl: "https://x.example.com" });
     queries.setProductStatus.mockResolvedValue(true);
-    expect(await changeProductStatus(PRODUCT_ID, "published")).toMatchObject({ ok: false, error: expect.stringMatching(/free trial has ended/) });
+    expect(await changeProductStatus(PRODUCT_ID, "published")).toMatchObject({ ok: false, error: expect.stringMatching(/store is paused/) });
     expect(queries.setProductStatus).not.toHaveBeenCalled();
     expect(await changeProductStatus(PRODUCT_ID, "draft")).toEqual({ ok: true, data: { status: "draft" } });
   });

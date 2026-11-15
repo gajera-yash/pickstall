@@ -13,6 +13,17 @@ import type { ThemePresetId } from "@/lib/themes";
 // IDs are UUID strings, timestamps are Date (UTC). There is no row-level security in MongoDB:
 // every query on creator data MUST filter by the owner (see lib/stores/queries.ts).
 
+/** A store's subscription to a paid plan (D-073). `status` is Stripe's subscription status. */
+export type StoreBilling = {
+  customerId: string;
+  subscriptionId: string | null;
+  plan: "starter" | "pro" | null;
+  status: string;
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean;
+  updatedAt: Date;
+};
+
 /** Extra account details, keyed by the Better Auth user id. */
 export type ProfileDoc = {
   _id: string;
@@ -69,6 +80,11 @@ export type StoreDoc = {
   planTier?: "trial" | "founding";
   trialEndsAt?: Date;
   foundingEndsAt?: Date | null;
+  /**
+   * The paid plan (D-073), written ONLY from Stripe's verified data (webhooks on the platform account,
+   * or a subscription fetched from Stripe). Never sent to buyers. `customerId` is unique per store.
+   */
+  billing?: StoreBilling;
   isPublished: boolean;
   createdAt: Date;
   updatedAt: Date;

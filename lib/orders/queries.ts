@@ -49,6 +49,10 @@ const STORE_FIELDS = {
   planTier: 1,
   trialEndsAt: 1,
   foundingEndsAt: 1,
+  "billing.plan": 1,
+  "billing.status": 1,
+  "billing.currentPeriodEnd": 1,
+  "billing.cancelAtPeriodEnd": 1,
 } as const;
 const PRODUCT_FIELDS = {
   slug: 1,
@@ -77,11 +81,11 @@ export async function loadCheckoutContext(username: string, productSlug: string)
   if (!product) return null;
 
   // The plan fields only decide `open`; they are not passed on to the page.
-  const { planTier, trialEndsAt, foundingEndsAt, ...storeFields } = store;
+  const { planTier, trialEndsAt, foundingEndsAt, billing, ...storeFields } = store;
   await connection(); // open or paused depends on the current time
   return {
     store: storeFields,
-    open: can(storeAccess({ planTier, trialEndsAt, foundingEndsAt }), "sell"),
+    open: can(storeAccess({ planTier, trialEndsAt, foundingEndsAt, billing }), "sell"),
     product: {
       id: product._id,
       slug: product.slug,

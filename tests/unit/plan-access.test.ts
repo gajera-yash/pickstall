@@ -8,7 +8,7 @@ const days = (n: number) => new Date(now.getTime() + n * 24 * 60 * 60 * 1000);
 
 describe("storeAccess", () => {
   it("is a trial with days left, rounded up", () => {
-    expect(storeAccess({ planTier: "trial", trialEndsAt: days(10) }, now)).toEqual({ state: "trial", endsAt: days(10), daysLeft: 10 });
+    expect(storeAccess({ planTier: "trial", trialEndsAt: days(10) }, now)).toEqual({ state: "trial", endsAt: days(10), daysLeft: 10, plan: null, cancelsAtPeriodEnd: false });
     expect(storeAccess({ planTier: "trial", trialEndsAt: days(0.2) }, now).daysLeft).toBe(1);
   });
 
@@ -23,11 +23,51 @@ describe("storeAccess", () => {
   });
 
   it("keeps an older store without a trial date open until the migration", () => {
-    expect(storeAccess({}, now)).toEqual({ state: "trial", endsAt: null, daysLeft: null });
+    expect(storeAccess({}, now)).toEqual({ state: "trial", endsAt: null, daysLeft: null, plan: null, cancelsAtPeriodEnd: false });
   });
 
   it("starts a new trial TRIAL_DAYS after creation", () => {
     expect(trialEndFrom(now).getTime() - now.getTime()).toBe(TRIAL_DAYS * 24 * 60 * 60 * 1000);
+  });
+});
+
+describe("paid plans (D-073)", () => {
+  const billing = (status: string, extra: Record<string, unknown> = {}) => ({
+    customerId: "cus_1",
+    subscriptionId: "sub_1",
+    plan: "pro" as const,
+    status,
+    currentPeriodEnd: days(12),
+    cancelAtPeriodEnd: false,
+    updatedAt: now,
+    ...extra,
+  });
+  const expiredTrial = { planTier: "trial" as const, trialEndsAt: days(-40) };
+
+  it("an active subscription opens the store, whatever the trial says", () => {
+    expect(storeAccess({ ...expiredTrial, billing: billing("active") }, now)).toMatchObject({ state: "active", plan: "pro", daysLeft: 12 });
+    expect(storeAccess({ ...expiredTrial, billing: billing("trialing") }, now).state).toBe("active");
+  });
+
+  it("keeps the store open while Stripe retries a failed payment", () => {
+    const access = storeAccess({ ...expiredTrial, billing: billing("past_due") }, now);
+    expect(access.state).toBe("past_due");
+    expect(can(access, "sell")).toBe(true);
+  });
+
+  it("falls back to the free rules once a subscription has ended or never started", () => {
+    for (const status of ["canceled", "unpaid", "incomplete", "incomplete_expired", "paused"]) {
+      expect(storeAccess({ ...expiredTrial, billing: billing(status) }, now).state).toBe("paused");
+    }
+    expect(storeAccess({ planTier: "trial", trialEndsAt: days(5), billing: billing("canceled") }, now).state).toBe("trial");
+  });
+
+  it("reports a cancelled plan that is still running", () => {
+    expect(storeAccess({ ...expiredTrial, billing: billing("active", { cancelAtPeriodEnd: true }) }, now)).toMatchObject({ state: "active", cancelsAtPeriodEnd: true });
+  });
+
+  it("ignores a subscription without a known plan", () => {
+    expect(storeAccess({ ...expiredTrial, billing: billing("active", { plan: null }) }, now).state).toBe("paused");
   });
 });
 

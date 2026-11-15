@@ -78,10 +78,14 @@ Stripe Dashboard, **Test mode** on:
    - Copy its signing secret into `STRIPE_CONNECT_WEBHOOK_SECRET`.
 2. **Add endpoint** for your own account:
    - URL `https://pickstall.store/api/webhooks/stripe`, "Listen to events on **Your account**".
-   - Same checkout and refund events (used by the test seller shortcut).
+   - Same checkout and refund events (used by the test seller shortcut), plus the plan subscription events (D-073): `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, `customer.subscription.resumed`, `invoice.paid`, `invoice.payment_failed`.
    - Copy its signing secret into `STRIPE_PLATFORM_WEBHOOK_SECRET`.
 3. **Connect > Settings > OAuth > Redirects:** add `https://pickstall.store/api/connect/stripe/callback`.
-4. Redeploy after adding the secrets.
+4. **Settings > Billing > Customer portal** (test mode, then live): turn on "update payment method", "view invoices" and "cancel subscription" (cancel at the end of the period), set the return link to `https://pickstall.store/dashboard/settings/plan`, and **Save**. Plan switching happens in Pickstall, so leave "switch plans" off.
+5. Plan prices need no setup: Pickstall creates the Starter and Pro monthly prices in Stripe the first time someone subscribes (lookup keys `pickstall_starter_monthly`, `pickstall_pro_monthly`, amounts from `PLANNED_PRICE_CENTS`).
+6. Redeploy after adding the secrets.
+
+**Live mode with a Stripe India account (before real money):** Stripe India onboards registered businesses (sole proprietorship, LLP or company), not individuals; turn on export of services and the right purpose code during onboarding; customers outside India must give their name and billing address (Checkout asks for the address). Check these on docs.stripe.com/india-accept-international-payments when you apply.
 
 ## 7. Bunny Stream (course videos)
 

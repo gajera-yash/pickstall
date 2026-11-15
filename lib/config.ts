@@ -203,6 +203,12 @@ export const TRIAL_DAYS = 30;
 /** Founding creators (D-072): free for this many months, granted by the founder, at most this many stores. */
 export const FOUNDING_MONTHS = 6;
 export const FOUNDING_SPOTS = 10;
+/** Plans a creator can pay for (D-073). Prices: PLANNED_PRICE_CENTS. */
+export const PAID_PLANS = ["starter", "pro"] as const;
+export type PaidPlan = (typeof PAID_PLANS)[number];
+/** Subscribe, switch and portal clicks, per creator. */
+export const BILLING_RATE_LIMIT = { max: 20, windowMinutes: 10 } as const;
+
 /** Trial banner turns from info to warning this many days before the end. */
 export const TRIAL_WARNING_DAYS = 5;
 

@@ -4,6 +4,19 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-073: Paid plans with Stripe Billing on the platform account (Phase C)
+- **Date:** 2026-11-15
+- **Decision:**
+  - Creators subscribe to **Starter** or **Pro** (`PAID_PLANS`, monthly, USD, prices from `PLANNED_PRICE_CENTS`) through Stripe Checkout in subscription mode on **our own** Stripe account. This is the only way the platform earns (CLAUDE.md 7); nothing touches a creator's connected account, sets an application fee or moves creator money. Test mode until live is approved.
+  - Prices are created in Stripe on first use with lookup keys `pickstall_<plan>_monthly`; a changed amount creates a new price that takes the key over (`transfer_lookup_key`), so existing subscribers keep their price until they switch. No Dashboard setup for prices.
+  - Checkout requires the billing address and saves it on the customer: Stripe India needs the customer's name and address for payments from outside India (export of services). The product name is the invoice description.
+  - `stores.billing` (customer, subscription, plan, status, period end, cancel-at-period-end) is written only by `applySubscriptionState` from a subscription **fetched from Stripe**: on platform webhooks (`customer.subscription.*`, `invoice.paid`, `invoice.payment_failed`, `checkout.session.completed` in subscription mode) and on the Checkout return route (`/api/billing/return`, which checks the Checkout belongs to the creator's store). Fetching instead of trusting the event body makes duplicates and out-of-order events harmless; events are still recorded in `webhook_events` first.
+  - Guards: one Stripe customer per store (unique index), a store only accepts its own customer, and an ended subscription never replaces a different one that still gives access (late events).
+  - Access (`lib/plans/access.ts`): `active`/`trialing` = open with the plan; `past_due` = open with a warning while Stripe retries; anything else falls back to founding, trial or paused. A cancelled plan stays active to the end of the paid month.
+  - Settings > Plan: choose a plan (Checkout), switch plan in place (`create_prorations`: the difference goes on the next invoice), Manage billing (Stripe customer portal: card, invoices, cancel). The dashboard banner covers failed payments and a cancelled plan's last week.
+- **Founder actions:** add the subscription events to the platform webhook endpoint and save the customer portal settings in Stripe (docs/DEPLOY_VERCEL.md section 6). For live mode Stripe India needs a registered business (sole proprietorship, LLP or company), not an individual.
+- **Not built:** yearly plans, coupons for plans, plan feature limits beyond open/paused, emails about failed payments (Stripe can send its own).
+
 ## D-072: 1-month free trial; the store pauses when it ends (Phase B)
 - **Date:** 2026-11-15
 - **Decision (founder, 2026-11-15):**

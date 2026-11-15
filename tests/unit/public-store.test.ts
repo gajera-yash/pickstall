@@ -137,7 +137,7 @@ describe("publish the store", () => {
   it("does not publish a paused store, but always lets it unpublish (D-072)", async () => {
     storeQueries.findStoreByOwner.mockResolvedValue({ id: "s1", slug: "maya", access: PAUSED_ACCESS });
     storeQueries.setStorePublished.mockResolvedValue(true);
-    expect(await setStorePublishedAction(true)).toMatchObject({ ok: false, error: expect.stringMatching(/free trial has ended/) });
+    expect(await setStorePublishedAction(true)).toMatchObject({ ok: false, error: expect.stringMatching(/store is paused/) });
     expect(storeQueries.setStorePublished).not.toHaveBeenCalled();
     expect(await setStorePublishedAction(false)).toEqual({ ok: true, data: { isPublished: false } });
   });

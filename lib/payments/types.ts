@@ -58,7 +58,9 @@ export type PaymentEvent =
       fullyRefunded: boolean;
     })
   | { eventId: string; type: "account.updated"; account: string; status: AccountStatus }
-  | { eventId: string; type: "account.deauthorized"; account: string };
+  | { eventId: string; type: "account.deauthorized"; account: string }
+  /** Platform billing (D-073): something changed on a creator's plan subscription. */
+  | { eventId: string; type: "billing.subscription"; subscriptionId: string };
 
 export type WebhookOutcome = { ok: true; event: PaymentEvent | null } | { ok: false; reason: "bad_signature" | "bad_payload" };
 

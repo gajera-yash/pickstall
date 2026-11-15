@@ -15,52 +15,70 @@ function dayWord(days: number): string {
   return days === 1 ? "1 day" : `${days} days`;
 }
 
+function PlanLink({ children }: { children: string }) {
+  return (
+    <Link href={PLAN_PATH} className="font-semibold underline underline-offset-4">
+      {children}
+    </Link>
+  );
+}
+
 /**
- * Trial and pause notice at the top of the dashboard (D-072). Quiet during most of the trial, a
- * warning near the end, and an error once the store is paused. Founding creators see it only in
- * their last two weeks.
+ * Plan notice at the top of the dashboard (D-072, D-073). Quiet while all is well; a warning near the
+ * end of a free period, when a payment failed or when a cancelled plan is about to end; an error once
+ * the store is paused.
  */
 export function TrialBanner({ access }: { access: StoreAccess }) {
-  if (access.state === "paused") {
-    return (
-      <Alert variant="error">
-        <AlertTitle>Your free trial has ended</AlertTitle>
-        <AlertDescription>
-          Your store is paused: buyers can&apos;t open it or check out. Your products, orders and customers are safe.{" "}
-          <Link href={PLAN_PATH} className="font-semibold underline underline-offset-4">
-            Choose a plan to reopen it
-          </Link>
-        </AlertDescription>
-      </Alert>
-    );
+  switch (access.state) {
+    case "paused":
+      return (
+        <Alert variant="error">
+          <AlertTitle>Your store is paused</AlertTitle>
+          <AlertDescription>
+            Buyers can&apos;t open it or check out. Your products, orders and customers are safe. <PlanLink>Choose a plan to reopen it</PlanLink>
+          </AlertDescription>
+        </Alert>
+      );
+    case "past_due":
+      return (
+        <Alert variant="warning">
+          <AlertTitle>Your last payment didn&apos;t go through</AlertTitle>
+          <AlertDescription>
+            Stripe will try again. Update your card so your store stays open. <PlanLink>Update payment</PlanLink>
+          </AlertDescription>
+        </Alert>
+      );
+    case "active":
+      if (!access.cancelsAtPeriodEnd || !access.endsAt || access.daysLeft === null || access.daysLeft > 7) return null;
+      return (
+        <Alert variant="warning">
+          <AlertTitle>Your plan ends in {dayWord(access.daysLeft)}</AlertTitle>
+          <AlertDescription>
+            You cancelled it; it stays active until {formatPlanDate(access.endsAt)}, then your store pauses. <PlanLink>Keep my plan</PlanLink>
+          </AlertDescription>
+        </Alert>
+      );
+    case "founding":
+      if (!access.endsAt || access.daysLeft === null || access.daysLeft > 14) return null;
+      return (
+        <Alert variant="warning">
+          <AlertTitle>Your founding period ends in {dayWord(access.daysLeft)}</AlertTitle>
+          <AlertDescription>
+            Free until {formatPlanDate(access.endsAt)}. <PlanLink>Choose a plan</PlanLink>
+          </AlertDescription>
+        </Alert>
+      );
+    case "trial": {
+      if (!access.endsAt || access.daysLeft === null) return null;
+      const ending = access.daysLeft <= TRIAL_WARNING_DAYS;
+      return (
+        <Alert variant={ending ? "warning" : "info"}>
+          <AlertTitle>Free trial: {dayWord(access.daysLeft)} left</AlertTitle>
+          <AlertDescription>
+            Your trial ends on {formatPlanDate(access.endsAt)}. After that your store pauses until you pick a plan. <PlanLink>See plans</PlanLink>
+          </AlertDescription>
+        </Alert>
+      );
+    }
   }
-  if (!access.endsAt || access.daysLeft === null) return null;
-
-  if (access.state === "founding") {
-    if (access.daysLeft > 14) return null;
-    return (
-      <Alert variant="warning">
-        <AlertTitle>Your founding period ends in {dayWord(access.daysLeft)}</AlertTitle>
-        <AlertDescription>
-          Free until {formatPlanDate(access.endsAt)}.{" "}
-          <Link href={PLAN_PATH} className="font-semibold underline underline-offset-4">
-            See plans
-          </Link>
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  const ending = access.daysLeft <= TRIAL_WARNING_DAYS;
-  return (
-    <Alert variant={ending ? "warning" : "info"}>
-      <AlertTitle>Free trial: {dayWord(access.daysLeft)} left</AlertTitle>
-      <AlertDescription>
-        Your trial ends on {formatPlanDate(access.endsAt)}. After that your store pauses until you pick a plan.{" "}
-        <Link href={PLAN_PATH} className="font-semibold underline underline-offset-4">
-          See plans
-        </Link>
-      </AlertDescription>
-    </Alert>
-  );
 }

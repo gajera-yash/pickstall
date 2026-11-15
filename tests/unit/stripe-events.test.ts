@@ -128,6 +128,44 @@ describe("normalizeStripeEvent", () => {
   });
 });
 
+describe("platform billing events (D-073)", () => {
+  const platform = (type: string, object: Record<string, unknown>) => normalizeStripeEvent(stripeEvent(type, object, { account: undefined }), "platform");
+
+  it.each(["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted", "customer.subscription.paused", "customer.subscription.resumed"])(
+    "turns %s on the platform endpoint into a billing event",
+    (type) => {
+      expect(platform(type, { id: "sub_1", object: "subscription" })).toEqual({ eventId: `evt_${type}`, type: "billing.subscription", subscriptionId: "sub_1" });
+    },
+  );
+
+  it("finds the subscription of a paid or failed invoice", () => {
+    const invoice = { id: "in_1", object: "invoice", parent: { type: "subscription_details", subscription_details: { subscription: "sub_2" } } };
+    expect(platform("invoice.paid", invoice)).toMatchObject({ type: "billing.subscription", subscriptionId: "sub_2" });
+    expect(platform("invoice.payment_failed", invoice)).toMatchObject({ type: "billing.subscription", subscriptionId: "sub_2" });
+  });
+
+  it("treats a finished subscription Checkout as billing, and a payment Checkout still as an order", () => {
+    expect(platform("checkout.session.completed", { id: "cs_1", object: "checkout.session", mode: "subscription", subscription: "sub_3" })).toMatchObject({
+      type: "billing.subscription",
+      subscriptionId: "sub_3",
+    });
+    expect(platform("checkout.session.completed", { ...session, mode: "payment" })).toMatchObject({ type: "payment.succeeded", orderId: "order-1" });
+  });
+
+  it("never takes billing events from the Connect endpoint (creators' accounts)", () => {
+    expect(normalizeStripeEvent(stripeEvent("customer.subscription.updated", { id: "sub_1", object: "subscription" }), "connect")).toBeNull();
+  });
+
+  it("works without the test seller account id set", () => {
+    env.serverEnv.STRIPE_PLATFORM_ACCOUNT_ID = undefined;
+    try {
+      expect(platform("customer.subscription.updated", { id: "sub_9", object: "subscription" })).toMatchObject({ subscriptionId: "sub_9" });
+    } finally {
+      env.serverEnv.STRIPE_PLATFORM_ACCOUNT_ID = "acct_platform";
+    }
+  });
+});
+
 describe("liveKey", () => {
   it("is true only for live secret or restricted keys", () => {
     expect(liveKey("sk_live_x")).toBe(true);

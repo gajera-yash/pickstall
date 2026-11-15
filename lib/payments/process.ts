@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { providerByName } from "@/lib/payments";
 import { notifyOrderPaid, notifyRefund } from "@/lib/notifications/queries";
 import { scheduleOrderConfirmation } from "@/lib/orders/confirmation";
+import { syncSubscription } from "@/lib/plans/billing-sync";
 import type { PaymentEvent, PaymentProvider, WebhookEndpoint } from "@/lib/payments/types";
 import { applyStripeAccountStatus, detachStripeAccount, stripeAccountOfStore } from "@/lib/stores/queries";
 
@@ -78,6 +79,11 @@ async function applyEvent(providerName: PaymentProvider["name"], event: PaymentE
   const { orders } = await collections();
 
   switch (event.type) {
+    case "billing.subscription":
+      // Fetches the subscription from Stripe and saves it: replays and out-of-order events end the same.
+      await syncSubscription(event.subscriptionId);
+      return;
+
     case "account.updated":
       await applyStripeAccountStatus(event.account, event.status);
       return;
