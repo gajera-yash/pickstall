@@ -9,6 +9,7 @@ import { CodeStep } from "@/components/auth/code-step";
 import { EmailField } from "@/components/auth/email-field";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { PhoneField } from "@/components/auth/phone-field";
+import { TermsCheckbox } from "@/components/auth/terms-checkbox";
 import { useResendCooldown } from "@/components/auth/use-resend-cooldown";
 import { UsernameField } from "@/components/auth/username-field";
 import { WizardProgress } from "@/components/auth/wizard-progress";
@@ -22,7 +23,7 @@ import type { SignupStep } from "@/lib/signup-steps";
 
 const linkClass = "text-blue underline underline-offset-4 hover:text-blue-hover";
 
-type FieldName = "username" | "fullName" | "email";
+type FieldName = "username" | "fullName" | "email" | "acceptTerms";
 
 /**
  * Signup steps 1 and 2: details, then the email code (shared CodeStep). After the code the user
@@ -60,17 +61,6 @@ export function SignupFlow({ googleNext, initialUsername = "" }: { googleNext: s
             <Link href="/login" className={linkClass}>
               Log in
             </Link>
-          </p>
-          <p className="text-xs font-medium text-mute">
-            By continuing you agree to the{" "}
-            <Link href="/terms" className={linkClass}>
-              Terms
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy" className={linkClass}>
-              Privacy Policy
-            </Link>
-            .
           </p>
         </>
       }
@@ -128,6 +118,8 @@ export function SignupFlow({ googleNext, initialUsername = "" }: { googleNext: s
             <EmailField value={values.email} onChange={(email) => set("email", email)} serverError={fieldError("email")} />
 
             <PhoneField error={fieldError("phone")} />
+
+            <TermsCheckbox error={fieldError("acceptTerms")} />
 
             <Button type="submit" size="lg" className="mt-1 w-full" loading={pending}>
               Send my code

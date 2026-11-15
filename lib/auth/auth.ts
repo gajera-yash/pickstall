@@ -1,12 +1,14 @@
 import "server-only";
 
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins";
 
 import { APP_NAME, OTP_LENGTH, OTP_TTL_SECONDS, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, SESSION_COOKIE_CACHE_SECONDS } from "@/lib/config";
 import { appOriginFrom } from "@/lib/app-origin";
+import { AccountDeletionBlocked, prepareAccountDeletion } from "@/lib/account/delete-account";
 import { mongoDb } from "@/lib/db/mongo";
 import { sendSignInCode } from "@/lib/email/send-sign-in-code";
 import { publicEnv } from "@/lib/env";
@@ -39,6 +41,20 @@ export const auth = betterAuth({
     maxPasswordLength: PASSWORD_MAX_LENGTH,
   },
   socialProviders: google,
+  // Account deletion (D-074): Better Auth checks the session is fresh (signed in within a day), runs our
+  // cleanup, then deletes the user and all sessions. A failed cleanup throws and stops the deletion.
+  user: {
+    deleteUser: {
+      enabled: true,
+      beforeDelete: async (user) => {
+        try {
+          await prepareAccountDeletion({ id: user.id, email: user.email ?? null });
+        } catch (error) {
+          throw new APIError("BAD_REQUEST", { message: error instanceof AccountDeletionBlocked ? error.message : "Your account could not be deleted. Please try again." });
+        }
+      },
+    },
+  },
   // Speed (2026-10-29, founder approved): the session is also kept in a signed cookie (HMAC,
   // Better Auth's "compact" strategy) for a few minutes, so most page loads skip the database
   // session lookup. Trade-off: a session ended elsewhere (sign out on another device) can keep

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { startTransition, useActionState, useEffect, useState, type FormEvent } from "react";
 
 import { PhoneField } from "@/components/auth/phone-field";
+import { TermsCheckbox } from "@/components/auth/terms-checkbox";
 import { UsernameField } from "@/components/auth/username-field";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,8 @@ export function UsernameStep({ needsName, taken }: { needsName: boolean; taken: 
         )}
 
         <PhoneField error={fieldError("phone")} />
+
+        <TermsCheckbox error={fieldError("acceptTerms")} />
 
         <Button type="submit" size="lg" className="mt-1 w-full" loading={pending}>
           Continue to dashboard

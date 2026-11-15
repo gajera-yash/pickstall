@@ -24,10 +24,17 @@ describe("emailCodeSchema", () => {
 });
 
 describe("signupInput", () => {
-  const valid = { username: "Maya-Books", fullName: "  Maya Patel ", email: " Maya@Example.com ", phone: "+1 415 555 0100" };
+  it("requires the Terms and Privacy box (D-074)", () => {
+    const result = signupInput.safeParse({ username: "maya", fullName: "Maya", email: "maya@example.com", phone: "" });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["acceptTerms"]);
+  });
+
+  const valid = { username: "Maya-Books", fullName: "  Maya Patel ", email: " Maya@Example.com ", phone: "+1 415 555 0100", acceptTerms: "on" };
 
   it("cleans and accepts a complete form", () => {
     expect(signupInput.parse(valid)).toEqual({
+      acceptTerms: "on",
       username: "maya-books",
       fullName: "Maya Patel",
       email: "maya@example.com",
@@ -40,7 +47,7 @@ describe("signupInput", () => {
   });
 
   it("reports problems in form order, with the field name", () => {
-    const result = signupInput.safeParse({ username: "ab", fullName: "", email: "nope", phone: "1" });
+    const result = signupInput.safeParse({ username: "ab", fullName: "", email: "nope", phone: "1", acceptTerms: "on" });
     expect(result.success).toBe(false);
     expect(result.error?.issues.map((issue) => issue.path[0])).toEqual(["username", "fullName", "email", "phone"]);
   });

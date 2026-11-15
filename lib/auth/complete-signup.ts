@@ -7,6 +7,7 @@ import { INTENT_COOKIE } from "@/lib/auth/intent-token";
 import { DASHBOARD_PATH, USERNAME_PATH, resolvePostLoginPath } from "@/lib/auth/post-login";
 import { saveProfile } from "@/lib/auth/profiles";
 import { takeSignupIntent } from "@/lib/auth/signup-intents";
+import { LEGAL } from "@/lib/legal";
 import { logger } from "@/lib/logger";
 import { getClientIpHash } from "@/lib/request-ip";
 import { createDraftStore } from "@/lib/stores/create-draft-store";
@@ -31,7 +32,13 @@ export async function completeSignup(user: { id: string; email?: string | null }
   if (await findStoreByOwner(user.id)) return DASHBOARD_PATH;
 
   try {
-    await saveProfile(user.id, user.email, { fullName: intent.fullName, ...(intent.phone ? { phone: intent.phone } : {}) });
+    // The signup form required the Terms box, so the intent only exists after it was ticked (D-074).
+    await saveProfile(user.id, user.email, {
+      fullName: intent.fullName,
+      ...(intent.phone ? { phone: intent.phone } : {}),
+      termsVersion: LEGAL.termsVersion,
+      termsAcceptedAt: new Date(),
+    });
   } catch (error) {
     logger.warn("signup.profile_update_failed", { name: error instanceof Error ? error.name : undefined });
   }

@@ -30,6 +30,9 @@ export type ProfileDoc = {
   email: string;
   fullName: string | null;
   phone: string | null;
+  /** The Terms version accepted before the store was created, and when (D-074). Missing for older accounts. */
+  termsVersion?: string;
+  termsAcceptedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -85,6 +88,8 @@ export type StoreDoc = {
    * or a subscription fetched from Stripe). Never sent to buyers. `customerId` is unique per store.
    */
   billing?: StoreBilling;
+  /** Set when the owner deleted their account (D-074): the store is anonymised and unpublished. */
+  deletedAt?: Date;
   isPublished: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -350,6 +355,12 @@ export type NotificationDoc = {
 /** Fixed-window rate-limit counter. Removed by a TTL index after `expiresAt`. */
 export type RateLimitDoc = { _id: string; count: number; expiresAt: Date };
 
+/**
+ * A deleted account (D-074): only a one-way SHA-256 hash of the canonical email, so a new store
+ * with the same email does not get another free trial. No name, no readable email.
+ */
+export type DeletedAccountDoc = { _id: string; deletedAt: Date };
+
 export async function collections(): Promise<{
   profiles: Collection<ProfileDoc>;
   stores: Collection<StoreDoc>;
@@ -362,6 +373,7 @@ export async function collections(): Promise<{
   webhookEvents: Collection<WebhookEventDoc>;
   signupIntents: Collection<SignupIntentDoc>;
   rateLimits: Collection<RateLimitDoc>;
+  deletedAccounts: Collection<DeletedAccountDoc>;
   connectStates: Collection<ConnectStateDoc>;
   courseModules: Collection<CourseModuleDoc>;
   lessons: Collection<LessonDoc>;
@@ -381,6 +393,7 @@ export async function collections(): Promise<{
     webhookEvents: db.collection<WebhookEventDoc>("webhookEvents"),
     signupIntents: db.collection<SignupIntentDoc>("signupIntents"),
     rateLimits: db.collection<RateLimitDoc>("rateLimits"),
+    deletedAccounts: db.collection<DeletedAccountDoc>("deletedAccounts"),
     connectStates: db.collection<ConnectStateDoc>("connectStates"),
     courseModules: db.collection<CourseModuleDoc>("courseModules"),
     lessons: db.collection<LessonDoc>("lessons"),

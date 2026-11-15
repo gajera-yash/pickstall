@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LogOut } from "lucide-react";
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { Wordmark } from "@/components/brand/wordmark";
@@ -34,6 +35,9 @@ async function Who() {
   return (
     <div className="flex items-center gap-3">
       <span className="hidden max-w-56 truncate text-sm text-mute sm:block">{user.email}</span>
+      <Link href="/account" className="text-sm font-semibold text-ink underline-offset-4 hover:underline">
+        Account
+      </Link>
       <form action={signOut}>
         <Button type="submit" variant="ghost" size="sm" className="h-10">
           <LogOut aria-hidden="true" className="size-4" />

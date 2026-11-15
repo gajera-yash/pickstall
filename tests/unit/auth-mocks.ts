@@ -27,6 +27,7 @@ const hoisted = vi.hoisted(() => {
     signInEmail: vi.fn(),
     signInSocial: vi.fn(),
     signOut: vi.fn(),
+    deleteUser: vi.fn(),
   };
 
   // In-memory cookie jar for next/headers cookies().

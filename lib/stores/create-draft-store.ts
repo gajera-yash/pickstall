@@ -2,6 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
+import { deletedAccountKey } from "@/lib/account/deleted-key";
 import { canonicalEmail } from "@/lib/auth/email-rules";
 import { DEFAULT_CURRENCY } from "@/lib/config";
 import { collections } from "@/lib/db/collections";
@@ -23,14 +24,16 @@ export async function createDraftStore(ownerId: string, username: string, ownerE
   const now = new Date();
   const ownerEmailKey = canonicalEmail(ownerEmail);
   try {
-    const { stores } = await collections();
+    const { stores, deletedAccounts } = await collections();
+    // The same person had a store before and deleted it: no second free trial (D-074).
+    const returning = ownerEmailKey ? (await deletedAccounts.findOne({ _id: deletedAccountKey(ownerEmailKey) }, { projection: { _id: 1 } })) !== null : false;
     await stores.insertOne({
       _id: randomUUID(),
       ownerId,
       ...(ownerEmailKey ? { ownerEmailKey } : {}),
       // Every new store starts with the free trial (D-072).
       planTier: "trial",
-      trialEndsAt: trialEndFrom(now),
+      trialEndsAt: returning ? now : trialEndFrom(now),
       slug: username,
       name: storeNameFromUsername(username),
       bio: null,

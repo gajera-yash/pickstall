@@ -104,6 +104,17 @@ export function CheckoutForm({ username, productSlug, askPhone, questions, submi
         {submitLabel}
       </Button>
       <p className="text-center text-sm text-mute">Card details are entered on the payment provider&apos;s secure page, never here.</p>
+      <p className="text-center text-xs text-mute">
+        You buy from this creator. Pickstall&apos;s{" "}
+        <a href="/terms" target="_blank" rel="noopener" className="underline underline-offset-4">
+          Terms
+        </a>{" "}
+        and{" "}
+        <a href="/privacy" target="_blank" rel="noopener" className="underline underline-offset-4">
+          Privacy Policy
+        </a>{" "}
+        apply.
+      </p>
     </form>
   );
 }

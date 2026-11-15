@@ -20,7 +20,7 @@ export const getProfile = cache(async (userId: string): Promise<Profile | null> 
 export async function saveProfile(
   userId: string,
   email: string,
-  changes: { fullName?: string; phone?: string | null },
+  changes: { fullName?: string; phone?: string | null; termsVersion?: string; termsAcceptedAt?: Date },
 ): Promise<void> {
   const { profiles } = await collections();
   const now = new Date();

@@ -18,6 +18,7 @@ import { passwordLoginInput } from "@/lib/auth/password-schemas";
 import { claimUsernameInput, sendCodeInput, signupInput, verifyCodeInput } from "@/lib/auth/schemas";
 import { saveSignupIntent } from "@/lib/auth/signup-intents";
 import { PASSWORD_RATE_LIMIT, SEND_CODE_RATE_LIMITS, SIGNUP_EMAIL_CHECK_RATE_LIMIT, SIGNUP_INTENT_TTL_MINUTES } from "@/lib/config";
+import { LEGAL } from "@/lib/legal";
 import { logger } from "@/lib/logger";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { getClientIpHash } from "@/lib/request-ip";
@@ -97,6 +98,7 @@ export async function startSignup(_prev: SignupState, formData: FormData): Promi
     fullName: formData.get("fullName") ?? "",
     email: formData.get("email") ?? "",
     phone: formData.get("phone") ?? "",
+    acceptTerms: formData.get("acceptTerms"),
   });
   if (!parsed.success) return fieldIssue(parsed.error);
   const { username, fullName, email, phone } = parsed.data;
@@ -177,6 +179,7 @@ export async function claimUsername(_prev: ClaimUsernameState, formData: FormDat
     username: formData.get("username") ?? "",
     fullName: typeof fullNameField === "string" ? fullNameField : undefined,
     phone: formData.get("phone") ?? "",
+    acceptTerms: formData.get("acceptTerms"),
   });
   if (!parsed.success) return fieldIssue(parsed.error);
   const { username, fullName, phone } = parsed.data;
@@ -185,8 +188,9 @@ export async function claimUsername(_prev: ClaimUsernameState, formData: FormDat
   try {
     profile = await getProfile(user.id);
     if (!profile?.fullName && !fullName) return err("Enter your full name.", "fullName");
-    const changes = { ...(fullName ? { fullName } : {}), ...(phone ? { phone } : {}) };
-    if (Object.keys(changes).length > 0 || !profile) await saveProfile(user.id, user.email ?? "", changes);
+    // The box was ticked (schema): record which Terms were accepted, and when (D-074).
+    const changes = { ...(fullName ? { fullName } : {}), ...(phone ? { phone } : {}), termsVersion: LEGAL.termsVersion, termsAcceptedAt: new Date() };
+    await saveProfile(user.id, user.email ?? "", changes);
   } catch (error) {
     logger.warn("signup.profile_update_failed", { name: errorName(error) });
     return err("Couldn't save your details. Check your connection and try again.");

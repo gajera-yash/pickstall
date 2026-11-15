@@ -122,6 +122,7 @@ describe("startSignup", () => {
       fullName: "Maya Patel",
       email: "Maya@Example.com",
       phone: "+1 415 555 0100",
+      acceptTerms: "on",
       ...overrides,
     });
   const cookie = "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -136,6 +137,11 @@ describe("startSignup", () => {
     expect(await startSignup(null, form({ phone: "415" }))).toMatchObject({ ok: false, field: "phone" });
     expect(intents.saveSignupIntent).not.toHaveBeenCalled();
     expect(authApi.sendVerificationOTP).not.toHaveBeenCalled();
+  });
+
+  it("needs the Terms box ticked before anything else happens (D-074)", async () => {
+    expect(await startSignup(null, form({ acceptTerms: "" }))).toMatchObject({ ok: false, field: "acceptTerms" });
+    expect(intents.saveSignupIntent).not.toHaveBeenCalled();
   });
 
   it("refuses a throwaway inbox before any lookup", async () => {

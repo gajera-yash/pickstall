@@ -139,6 +139,11 @@ export async function subscriptionOfCheckout(sessionId: string, storeId: string)
   return fetchSubscriptionState(id);
 }
 
+/** Ends a subscription now, with no further charges (used when a creator deletes their account). */
+export async function cancelSubscriptionNow(subscriptionId: string): Promise<void> {
+  await stripeClient().subscriptions.cancel(subscriptionId);
+}
+
 /**
  * Moves a subscription to another plan. Prorations are added to the next invoice, so an upgrade costs
  * the difference for the rest of the month and a downgrade gives credit.

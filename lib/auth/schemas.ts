@@ -26,12 +26,16 @@ export const fullNameSchema = z
   .max(80, { error: "Use 80 characters or fewer." })
   .refine((value) => !hasControlChar(value), { error: "Remove the special characters from your name." });
 
+/** The Terms and Privacy box before a store is created (D-074). A ticked checkbox sends "on". */
+export const acceptTermsSchema = z.literal("on", { error: "Please accept the Terms of Service and Privacy Policy." });
+
 /** Step 1 of the signup wizard. Field order is the order errors are reported in. */
 export const signupInput = z.object({
   username: slugSchema,
   fullName: fullNameSchema,
   email: emailSchema,
   phone: optionalPhoneSchema,
+  acceptTerms: acceptTermsSchema,
 });
 
 /** Username step (Google users, taken usernames). The full name is only sent when the profile has none. */
@@ -39,4 +43,5 @@ export const claimUsernameInput = z.object({
   username: slugSchema,
   fullName: fullNameSchema.optional(),
   phone: optionalPhoneSchema,
+  acceptTerms: acceptTermsSchema,
 });

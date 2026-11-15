@@ -4,6 +4,18 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-074: Legal pages, cookie notice, Terms acceptance, data download and account deletion (Phase D)
+- **Date:** 2026-11-15
+- **Decision:**
+  - **Pages** (shared layout `components/legal/legal-page.tsx`): `/terms`, `/privacy`, `/refunds`, `/acceptable-use`, `/copyright`, `/cookies`, linked from the landing footer and each other. Plain-language drafts that describe what the code does today (creator is the seller of record and controller of buyer data, not a merchant of record, 0% fees, 30-day trial and pause, Stripe/Resend/Bunny/MongoDB Atlas/hosting as processors), covering GDPR / UK GDPR, CCPA and India's DPDP Act 2023 and IT Rules 2021 (Grievance Officer, acknowledge in 24 hours, resolve in 15 days). **A lawyer must review them before real money** (PRD 8.2).
+  - **Operator details** live in one place, `lib/legal.ts`; values in [BRACKETS] are unknown, and the pages show a "draft" notice until none remain (`legalPlaceholders()`).
+  - **Cookies:** every cookie we set is strictly necessary (Better Auth session cookies, `signup_intent`, `ps_device`), so the notice informs instead of asking consent; closing it is remembered in local storage. Adding analytics or ads requires a real consent choice first.
+  - **Terms acceptance:** a required checkbox on signup and on the username step (accounts created from the login page or Google); the accepted version (`LEGAL.termsVersion`) and time are saved on the profile. Checkout links the Terms and Privacy Policy.
+  - **Download my data** (`/account/export`, Settings > Account and `/account` for buyers): JSON with profile, store, products, sales and purchases, keyed by the session; no sign-in secrets; 5 per hour.
+  - **Delete account:** type DELETE; Better Auth's `deleteUser` checks the session is fresh (signed in within a day), then our `beforeDelete` cleanup (`lib/account/delete-account.ts`): cancel a running plan at Stripe (if that fails, nothing is deleted), disconnect Stripe Connect, anonymise and unpublish the store and free its username, unpublish products (kept so buyers keep what they paid for), delete the profile, and keep only a one-way hash of the email (`deletedAccounts`) so a new store with that email gets no second free trial. Orders stay for tax records. Better Auth then deletes the user and all sessions.
+- **Founder actions:** fill in `lib/legal.ts`; for live Stripe payments in India, a registered business is needed (D-073); have the texts reviewed by a lawyer.
+- **Not built:** email footer with the postal address (CAN-SPAM) until the address is known; deleting uploaded image files from disk on account deletion; a cookie consent choice (not needed while all cookies are necessary).
+
 ## D-073: Paid plans with Stripe Billing on the platform account (Phase C)
 - **Date:** 2026-11-15
 - **Decision:**

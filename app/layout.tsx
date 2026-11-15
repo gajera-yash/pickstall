@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Instrument_Sans } from "next/font/google";
 
+import { CookieNotice } from "@/components/legal/cookie-notice";
 import { APP_NAME } from "@/lib/config";
 
 import "./globals.css";
@@ -29,7 +30,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // White theme only (D-025): data-theme="light" stops the OS dark mode from switching the tokens.
     <html lang="en" data-theme="light" className={`${display.variable} ${body.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <CookieNotice />
+      </body>
     </html>
   );
 }

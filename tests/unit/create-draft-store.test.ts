@@ -12,7 +12,7 @@ const hoisted = vi.hoisted(() => {
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/logger", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("@/lib/db/collections", () => ({
-  collections: vi.fn(async () => ({ stores: { insertOne: hoisted.insertOne } })),
+  collections: vi.fn(async () => ({ stores: { insertOne: hoisted.insertOne }, deletedAccounts: { findOne: vi.fn(async () => null) } })),
 }));
 vi.mock("@/lib/db/mongo", () => ({
   isDuplicateKeyError: (error: unknown, field?: string) =>

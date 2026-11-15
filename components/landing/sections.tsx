@@ -8,6 +8,7 @@ import { FoundingCoupon } from "@/components/landing/founding-coupon";
 import { Container, SectionHeading } from "@/components/landing/ui";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { APP_NAME, SUPPORT_EMAIL } from "@/lib/config";
+import { LEGAL_PAGES } from "@/lib/legal";
 
 // The closing sections of the marketing landing (D-039): founding creators (in place of
 // testimonials, which we will only show once they are real), FAQ, the final CTA and the footer.
@@ -109,13 +110,7 @@ export function LandingFooter() {
         { href: "/library", label: "Buyer library" },
       ],
     },
-    {
-      title: "Legal",
-      links: [
-        { href: "/privacy", label: "Privacy" },
-        { href: "/terms", label: "Terms" },
-      ],
-    },
+    { title: "Legal", links: [...LEGAL_PAGES] },
   ];
   return (
     <footer className="border-t border-line bg-bg-subtle">
