@@ -10,7 +10,7 @@ vi.mock("@/components/brand/wordmark", () => ({ Wordmark: () => null }));
 import { ProductPage } from "@/components/store/product-page";
 import type { PublicCurriculum, PublicProduct, PublicStore } from "@/lib/stores/public";
 
-const store: PublicStore = { id: "s1", slug: "maya", name: "Maya", bio: "Design lessons", avatarUrl: null, socialLinks: [], theme: { preset: "clean", accent: "#0056FF" }, currency: "usd" };
+const store: PublicStore = { id: "s1", slug: "maya", name: "Maya", bio: "Design lessons", avatarUrl: null, socialLinks: [], theme: { preset: "clean", accent: "#0056FF" }, currency: "usd", isOpen: true };
 const course: PublicProduct = { id: "p1", slug: "ui-course", title: "UI course", description: "Learn UI", descriptionDoc: null, coverUrl: null, priceCents: 4900, salePriceCents: null, buttonText: "Enroll", type: "course", course: { category: "design", accessDays: null, lessonCount: 3 } };
 const ebook: PublicProduct = { ...course, id: "p2", slug: "ebook", title: "Ebook", buttonText: "", type: "digital", course: null };
 const curriculum: PublicCurriculum = { modules: [{ title: "Start", lessons: [{ title: "Hello", hasVideo: true }, { title: "Notes", hasVideo: false }] }, { title: "Next", lessons: [{ title: "Grids", hasVideo: true }] }] };

@@ -4,6 +4,18 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-072: 1-month free trial; the store pauses when it ends (Phase B)
+- **Date:** 2026-11-15
+- **Decision (founder, 2026-11-15):**
+  - Every new store starts with a **30-day free trial** (`TRIAL_DAYS`): `stores.planTier = "trial"`, `stores.trialEndsAt`.
+  - **Founding creators** (at most 10, `FOUNDING_SPOTS`) are free for 6 months (`FOUNDING_MONTHS`): `planTier = "founding"`, `foundingEndsAt`, granted only by the founder with `scripts/admin/grant-founding.mjs`.
+  - When the free period ends without a paid plan the store is **paused**: the public store, product and checkout pages show "taking a short break" in the creator's theme (no plan details are shown to buyers), checkout refuses new orders (free ones too), and products and the store cannot be published. Nothing is deleted or unpublished; unpublishing still works; the dashboard, orders, customers and buyers' libraries keep working; already-paid orders are still fulfilled.
+  - One rule for all of it: `storeAccess()` and `can(access, "sell" | "publish")` in `lib/plans/access.ts` (CLAUDE.md 5). Public reads expose only `isOpen` / `open`, never the plan fields.
+  - Dashboard: a banner (info during the trial, warning in the last 5 days, error when paused; founding creators only in their last 2 weeks) and Settings > Plan. Paid plans and the subscribe buttons come with billing (Phase C); until then the Plan page points to support.
+  - Stores created before D-072 count as an open trial until `scripts/migrations/2026-11-15-store-trials.mjs` gives them a trial of 30 days **from the day it runs**, so no existing creator is paused at once.
+  - Landing copy mentions the 30-day free trial (hero, pricing buttons, claim form, FAQ).
+- **Why:** founder decision; the trial only means something if it ends (paired with Phase A against repeat trials).
+
 ## D-071: Account safety before the free trial (Phase A)
 - **Date:** 2026-11-15
 - **Decision (founder, 2026-11-15):**

@@ -7,6 +7,7 @@ import { DEFAULT_CURRENCY } from "@/lib/config";
 import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { logger } from "@/lib/logger";
+import { trialEndFrom } from "@/lib/plans/access";
 import { storeNameFromUsername } from "@/lib/stores/store-name";
 import { DEFAULT_THEME } from "@/lib/themes";
 
@@ -27,6 +28,9 @@ export async function createDraftStore(ownerId: string, username: string, ownerE
       _id: randomUUID(),
       ownerId,
       ...(ownerEmailKey ? { ownerEmailKey } : {}),
+      // Every new store starts with the free trial (D-072).
+      planTier: "trial",
+      trialEndsAt: trialEndFrom(now),
       slug: username,
       name: storeNameFromUsername(username),
       bio: null,

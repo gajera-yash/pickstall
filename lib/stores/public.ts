@@ -1,7 +1,10 @@
 import "server-only";
 
+import { connection } from "next/server";
+
 import type { CourseCategory } from "@/lib/courses/settings";
 import { collections, type ProductDoc, type StoreDoc } from "@/lib/db/collections";
+import { can, storeAccess } from "@/lib/plans/access";
 import { socialLinksOf } from "@/lib/stores/social-links";
 import type { RichDoc } from "@/lib/products/rich-text";
 import type { SocialLink } from "@/lib/stores/schemas";
@@ -19,6 +22,8 @@ export type PublicStore = {
   socialLinks: SocialLink[];
   theme: StoreDoc["theme"];
   currency: StoreDoc["currency"];
+  /** False while the store is paused after its free trial (D-072). Only this flag is public, no plan details. */
+  isOpen: boolean;
 };
 
 export type PublicProduct = {
@@ -42,7 +47,7 @@ export type PublicProduct = {
 /** A published course's outline for its public page (D-056): titles only, never lesson content. */
 export type PublicCurriculum = { modules: { title: string; lessons: { title: string; hasVideo: boolean }[] }[] };
 
-const STORE_FIELDS = { slug: 1, name: 1, bio: 1, avatarUrl: 1, socialLinks: 1, link: 1, theme: 1, currency: 1 } as const;
+const STORE_FIELDS = { slug: 1, name: 1, bio: 1, avatarUrl: 1, socialLinks: 1, link: 1, theme: 1, currency: 1, planTier: 1, trialEndsAt: 1, foundingEndsAt: 1 } as const;
 const PRODUCT_FIELDS = { slug: 1, title: 1, description: 1, descriptionDoc: 1, coverUrl: 1, priceCents: 1, salePriceCents: 1, buttonText: 1, type: 1, "course.category": 1, "course.accessDays": 1 } as const;
 
 const SLUG = /^[a-z0-9-]{3,30}$/;
@@ -54,6 +59,8 @@ export async function findPublicStore(slug: string): Promise<PublicStore | null>
   const { stores } = await collections();
   const doc = await stores.findOne({ slug, isPublished: true }, { projection: STORE_FIELDS });
   if (!doc) return null;
+  // Open or paused depends on the current time, so this is request data (no prerendered answer).
+  await connection();
   return {
     id: doc._id,
     slug: doc.slug,
@@ -63,6 +70,7 @@ export async function findPublicStore(slug: string): Promise<PublicStore | null>
     socialLinks: socialLinksOf(doc),
     theme: doc.theme,
     currency: doc.currency,
+    isOpen: can(storeAccess(doc), "sell"),
   };
 }
 

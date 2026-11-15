@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireCreator } from "@/lib/auth/guards";
 import { STRIPE_CONNECT_RATE_LIMIT, USERNAME_CHANGE_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
+import { can, PAUSED_MESSAGES } from "@/lib/plans/access";
 import { rateLimitKey, releaseRateLimit, takeRateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import { SLUG_TAKEN_MESSAGE, slugSchema } from "@/lib/slug";
@@ -217,8 +218,10 @@ export async function disconnectStripe(): Promise<Result<{ connected: false }>> 
 
 /** Publishes or unpublishes the creator's own store page (the last step of the first-run checklist). */
 export async function setStorePublishedAction(isPublished: boolean): Promise<Result<{ isPublished: boolean }>> {
-  const { user } = await requireCreator(MY_STORE_PATH);
+  const { user, store } = await requireCreator(MY_STORE_PATH);
   if (typeof isPublished !== "boolean") return err(SAVE_FAILED);
+  // Unpublishing always works; publishing needs an open store (D-072).
+  if (isPublished && !can(store.access, "publish")) return err(PAUSED_MESSAGES.publish);
 
   try {
     if (!(await setStorePublished(user.id, isPublished))) return err(NO_STORE);

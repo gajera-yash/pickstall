@@ -2,6 +2,7 @@ import "server-only";
 
 import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
+import { storeAccess, type StoreAccess } from "@/lib/plans/access";
 import type { PageDesignInput, SocialLink, StoreProfileInput } from "@/lib/stores/schemas";
 import { socialLinksOf } from "@/lib/stores/social-links";
 
@@ -24,8 +25,9 @@ export type CreatorStore = {
   /** Connected Stripe account details (D-053), for Settings > Payments. Never sent to buyers. */
   stripe: { connected: boolean; payoutsEnabled: boolean; detailsSubmitted: boolean };
   isPublished: boolean;
+  /** Free trial, founding period or paused (D-072). Gate features with `can(store.access, ...)`. */
+  access: StoreAccess;
 };
-
 
 /** The store owned by this user, or null. */
 export async function findStoreByOwner(ownerId: string): Promise<CreatorStore | null> {
@@ -49,6 +51,7 @@ export async function findStoreByOwner(ownerId: string): Promise<CreatorStore | 
       detailsSubmitted: doc.stripeDetailsSubmitted ?? doc.stripeChargesEnabled,
     },
     isPublished: doc.isPublished,
+    access: storeAccess(doc),
   };
 }
 

@@ -5,7 +5,7 @@ import { CARD_FEES_NOTE, STAN } from "@/components/landing/content";
 import { StallDemo } from "@/components/landing/stall-demo";
 import { Container } from "@/components/landing/ui";
 import { Button } from "@/components/ui/button";
-import { PLANNED_PRICE_CENTS } from "@/lib/config";
+import { PLANNED_PRICE_CENTS, TRIAL_DAYS } from "@/lib/config";
 import { formatWholeDollars, yearlySavingsCents } from "@/lib/landing/demo";
 import { cn } from "@/lib/utils";
 
@@ -66,7 +66,7 @@ export function Hero() {
             </Button>
           </div>
           <p className="animate-rise text-sm text-mute [animation-delay:240ms]">
-            Free to join. {CARD_FEES_NOTE}{" "}
+            {TRIAL_DAYS}-day free trial, no card needed. {CARD_FEES_NOTE}{" "}
             <a href="#compare" className="font-semibold text-ink underline decoration-line underline-offset-4 hover:decoration-ink">
               Coming from {STAN.name}? Save {proSavings} a year.
             </a>

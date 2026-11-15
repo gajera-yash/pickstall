@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { removeCourseContent } from "@/lib/courses/cleanup";
 import { countLessonsWithContent } from "@/lib/courses/curriculum";
 import { removeFilesOfProduct } from "@/lib/files/product-files";
+import { can, PAUSED_MESSAGES } from "@/lib/plans/access";
 import { checkPublish } from "@/lib/products/publish";
 import { createDraftProduct, deleteProduct, findProduct, setProductStatus, updateProduct, type DeleteProductResult } from "@/lib/products/queries";
 import { productIdInput, productInputFor, productStatusInput } from "@/lib/products/schemas";
@@ -82,6 +83,11 @@ export async function saveProduct(productId: string, _prev: SaveProductState, fo
     const result = await updateProduct(store.id, productId, parsed.data);
     if (result === "not_found") return err(NOT_FOUND);
     if (publish) {
+      // A paused store (trial over, D-072) keeps its edits but cannot publish.
+      if (!can(store.access, "publish")) {
+        revalidatePath("/dashboard", "layout");
+        return err(`Saved, but not published: ${PAUSED_MESSAGES.publish}`);
+      }
       const saved = await findProduct(store.id, productId);
       if (!saved) return err(NOT_FOUND);
       const check = checkPublish(saved, store);
@@ -113,6 +119,7 @@ export async function changeProductStatus(productId: string, status: string): Pr
     if (!product) return err(NOT_FOUND);
 
     if (next.data === "published") {
+      if (!can(store.access, "publish")) return err(PAUSED_MESSAGES.publish);
       // A course is checked with its lessons (D-056).
       const courseLessons = product.type === "course" ? await countLessonsWithContent(store.id, id.data) : undefined;
       const check = checkPublish({ ...product, courseLessons }, store);

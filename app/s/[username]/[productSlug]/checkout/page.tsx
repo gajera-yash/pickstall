@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { CheckoutForm } from "@/components/store/checkout-form";
 import { OrderSummary } from "@/components/store/order-summary";
+import { StorePaused } from "@/components/store/store-paused";
 import { StoreFrame, cardStyle, resolveTheme } from "@/components/store/store-theme";
 import { APP_NAME } from "@/lib/config";
 import { canBuy, loadCheckoutContext } from "@/lib/orders/queries";
@@ -20,6 +21,7 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
   const { username, productSlug } = await params;
   const context = await loadCheckoutContext(username, productSlug);
   if (!context) notFound();
+  if (!context.open) return <StorePaused storeName={context.store.name} theme={context.store.theme} />;
 
   const { store, product } = context;
   const theme = resolveTheme(store.theme);

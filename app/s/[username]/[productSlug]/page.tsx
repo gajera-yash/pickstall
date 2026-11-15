@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ProductPage } from "@/components/store/product-page";
+import { StorePaused } from "@/components/store/store-paused";
 import { APP_NAME } from "@/lib/config";
 import { publicEnv } from "@/lib/env";
 import { absoluteImageUrl } from "@/lib/media/media";
@@ -33,6 +34,7 @@ export default async function PublicProductPage({ params }: PageProps<"/s/[usern
   const { username, productSlug } = await params;
   const store = await findPublicStore(username);
   if (!store) notFound();
+  if (!store.isOpen) return <StorePaused storeName={store.name} theme={store.theme} />;
   const product = await findPublicProduct(store.id, productSlug);
   if (!product) notFound();
   const [context, curriculum] = await Promise.all([loadCheckoutContext(username, productSlug), product.type === "course" ? findPublicCurriculum(store.id, product.id) : null]);

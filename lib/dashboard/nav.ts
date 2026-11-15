@@ -25,6 +25,7 @@ export type DashboardSectionId = (typeof DASHBOARD_SECTIONS)[number]["id"];
 export const SETTINGS_SECTIONS = [
   { id: "store", label: "Store", href: "/dashboard/settings" },
   { id: "payments", label: "Payments", href: "/dashboard/settings/payments" },
+  { id: "plan", label: "Plan", href: "/dashboard/settings/plan" },
   { id: "account", label: "Account", href: "/dashboard/settings/account" },
 ] as const;
 

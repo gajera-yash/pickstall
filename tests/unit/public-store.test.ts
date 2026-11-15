@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formData, mockSession, redirectOf, storeQueries, userId } from "./auth-mocks";
+import { formData, mockSession, OPEN_ACCESS, PAUSED_ACCESS, redirectOf, storeQueries, userId } from "./auth-mocks";
 
 const db = vi.hoisted(() => ({
   storeFindOne: vi.fn(),
   productFind: vi.fn(),
   productFindOne: vi.fn(),
 }));
+
+// Open or paused depends on the time of the request (D-072).
+vi.mock("next/server", async () => ({ ...(await vi.importActual<typeof import("next/server")>("next/server")), connection: vi.fn(async () => undefined) }));
 
 vi.mock("@/lib/db/collections", () => ({
   collections: vi.fn(async () => ({
@@ -54,7 +57,25 @@ describe("public store reads", () => {
     });
     const store = await findPublicStore("maya");
     for (const key of PRIVATE_KEYS) expect(store).not.toHaveProperty(key);
-    expect(store).toMatchObject({ id: "s1", slug: "maya", name: "Maya" });
+    expect(store).toMatchObject({ id: "s1", slug: "maya", name: "Maya", isOpen: true });
+  });
+
+  it("says a store is paused after its trial, without exposing plan details (D-072)", async () => {
+    db.storeFindOne.mockResolvedValue({
+      _id: "s1",
+      slug: "maya",
+      name: "Maya",
+      bio: null,
+      avatarUrl: null,
+      socialLinks: [],
+      theme: { preset: "clean", accent: "#0056FF" },
+      currency: "usd",
+      planTier: "trial",
+      trialEndsAt: new Date("2020-01-01T00:00:00Z"),
+    });
+    const store = await findPublicStore("maya");
+    expect(store?.isOpen).toBe(false);
+    for (const key of ["planTier", "trialEndsAt", "foundingEndsAt"]) expect(store).not.toHaveProperty(key);
   });
 
   it("rejects malformed usernames without a database call", async () => {
@@ -110,7 +131,15 @@ describe("publish the store", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSession({ id: userId, email: "maya@example.com" });
-    storeQueries.findStoreByOwner.mockResolvedValue({ id: "s1", slug: "maya" });
+    storeQueries.findStoreByOwner.mockResolvedValue({ id: "s1", slug: "maya", access: OPEN_ACCESS });
+  });
+
+  it("does not publish a paused store, but always lets it unpublish (D-072)", async () => {
+    storeQueries.findStoreByOwner.mockResolvedValue({ id: "s1", slug: "maya", access: PAUSED_ACCESS });
+    storeQueries.setStorePublished.mockResolvedValue(true);
+    expect(await setStorePublishedAction(true)).toMatchObject({ ok: false, error: expect.stringMatching(/free trial has ended/) });
+    expect(storeQueries.setStorePublished).not.toHaveBeenCalled();
+    expect(await setStorePublishedAction(false)).toEqual({ ok: true, data: { isPublished: false } });
   });
 
   it("publishes the session owner's own store", async () => {

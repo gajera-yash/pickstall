@@ -60,6 +60,15 @@ export type StoreDoc = {
    * (D-034), where several stores may use the founder's own account.
    */
   stripeClaimKey?: string;
+  /**
+   * Plan and free trial (D-072). New stores start as `trial` with `trialEndsAt` = created + TRIAL_DAYS.
+   * `founding` is granted by the founder (scripts/admin/grant-founding.mjs) until `foundingEndsAt`.
+   * Missing on stores created before D-072 until `scripts/migrations/2026-11-15-store-trials.mjs` ran;
+   * such stores count as an open trial without an end. Paid plans arrive with billing (Phase C).
+   */
+  planTier?: "trial" | "founding";
+  trialEndsAt?: Date;
+  foundingEndsAt?: Date | null;
   isPublished: boolean;
   createdAt: Date;
   updatedAt: Date;

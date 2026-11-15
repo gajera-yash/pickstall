@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formData, mockSession, rateLimit, redirectOf, userId } from "./auth-mocks";
+import { formData, mockSession, rateLimit, redirectOf, userId, OPEN_ACCESS, PAUSED_ACCESS } from "./auth-mocks";
 
 const queries = vi.hoisted(() => ({
   createDraftProduct: vi.fn(),
@@ -235,7 +235,7 @@ describe("product actions use the session owner's store only", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSession({ id: userId, email: "maya@example.com" });
-    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya", currency: "usd", stripeChargesEnabled: false });
+    storeQueries.findStoreByOwner.mockResolvedValue({ access: OPEN_ACCESS, id: "store-1", slug: "maya", currency: "usd", stripeChargesEnabled: false });
     rateLimit.takeRateLimit.mockResolvedValue(true);
   });
 
@@ -272,6 +272,15 @@ describe("product actions use the session owner's store only", () => {
     queries.findProduct.mockResolvedValue({ _id: PRODUCT_ID, title: "T", priceCents: 0, salePriceCents: null, externalUrl: null });
     expect(await changeProductStatus(PRODUCT_ID, "published")).toEqual({ ok: false, error: "Add a link or a file to deliver." });
     expect(queries.setProductStatus).not.toHaveBeenCalled();
+  });
+
+  it("does not publish while the store is paused, but still unpublishes (D-072)", async () => {
+    storeQueries.findStoreByOwner.mockResolvedValue({ access: PAUSED_ACCESS, id: "store-1", slug: "maya", currency: "usd", stripeChargesEnabled: false });
+    queries.findProduct.mockResolvedValue({ _id: PRODUCT_ID, title: "T", priceCents: 0, salePriceCents: null, externalUrl: "https://x.example.com" });
+    queries.setProductStatus.mockResolvedValue(true);
+    expect(await changeProductStatus(PRODUCT_ID, "published")).toMatchObject({ ok: false, error: expect.stringMatching(/free trial has ended/) });
+    expect(queries.setProductStatus).not.toHaveBeenCalled();
+    expect(await changeProductStatus(PRODUCT_ID, "draft")).toEqual({ ok: true, data: { status: "draft" } });
   });
 
   it("publishes a valid product and unpublishes without checks", async () => {

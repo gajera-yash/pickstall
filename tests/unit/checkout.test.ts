@@ -196,6 +196,7 @@ describe("handleWebhookRequest (the only way an order becomes paid)", () => {
 describe("startCheckout", () => {
   const context = {
     store: { _id: "store-1", slug: "maya", currency: "usd", stripeAccountId: null, stripeChargesEnabled: false },
+    open: true,
     product: {
       id: "p1",
       slug: "playbook",
@@ -235,6 +236,12 @@ describe("startCheckout", () => {
       expect.objectContaining({ item: { title: "Playbook", unitPriceCents: 2900 }, subtotalCents: 2900, discountCents: 1000, totalCents: 1900 }),
     );
     expect(provider.createCheckout).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 1900 }));
+  });
+
+  it("takes no order from a paused store, free products included (D-072)", async () => {
+    hoisted.queries.loadCheckoutContext.mockResolvedValue({ ...context, open: false });
+    expect(await startCheckout("maya", "guide", null, form())).toMatchObject({ ok: false, error: expect.stringMatching(/isn't taking orders/) });
+    expect(hoisted.queries.createPendingOrder).not.toHaveBeenCalled();
   });
 
   it("rejects missing required answers without creating an order", async () => {

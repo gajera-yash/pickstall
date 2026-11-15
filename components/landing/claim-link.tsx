@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 
 import { UsernameField } from "@/components/auth/username-field";
 import { Button } from "@/components/ui/button";
+import { TRIAL_DAYS } from "@/lib/config";
 
 /**
  * "Claim your stall link": the same live username check as signup, then signup opens with the
@@ -27,7 +28,7 @@ export function ClaimLink() {
         Claim my stall
         <ArrowRight aria-hidden="true" />
       </Button>
-      <p className="text-center text-xs text-mute">Free to join. You pick the final link when you create your account.</p>
+      <p className="text-center text-xs text-mute">{TRIAL_DAYS}-day free trial. You pick the final link when you create your account.</p>
     </form>
   );
 }

@@ -6,6 +6,7 @@ import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { SetupBar } from "@/components/dashboard/setup/setup-bar";
 import { SidebarFooter } from "@/components/dashboard/sidebar-footer";
 import { TopBar } from "@/components/dashboard/top-bar";
+import { TrialBanner } from "@/components/dashboard/trial-banner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { DASHBOARD_PATH } from "@/lib/auth/post-login";
@@ -39,6 +40,9 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
         </Suspense>
         <main id="main" className="flex w-full flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
           <Suspense fallback={null}>
+            <TrialBannerWithData />
+          </Suspense>
+          <Suspense fallback={null}>
             <SetupBarWithData />
           </Suspense>
           {children}
@@ -61,6 +65,11 @@ async function displayNameFor() {
 async function TopBarWithData() {
   const { user, store, displayName } = await displayNameFor();
   return <TopBar displayName={displayName} email={user.email} storeUrl={`https://${storeLink(store.slug)}`} publicPath={store.isPublished ? `/@${store.slug}` : null} />;
+}
+
+async function TrialBannerWithData() {
+  const { store } = await requireCreator(DASHBOARD_PATH);
+  return <TrialBanner access={store.access} />;
 }
 
 async function SetupBarWithData() {

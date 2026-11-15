@@ -16,7 +16,7 @@ import { frameStyle, resolveTheme } from "@/components/store/store-theme";
 import { STORE_LAYOUTS, THEME_PRESETS, THEME_PRESET_IDS } from "@/lib/themes";
 import { lessonCountsOf, type PublicProduct, type PublicStore } from "@/lib/stores/public";
 
-const store: PublicStore = { id: "s1", slug: "maya", name: "Maya", bio: "Design lessons", avatarUrl: null, socialLinks: [], theme: { preset: "clean", accent: "#0056FF" }, currency: "usd" };
+const store: PublicStore = { id: "s1", slug: "maya", name: "Maya", bio: "Design lessons", avatarUrl: null, socialLinks: [], theme: { preset: "clean", accent: "#0056FF" }, currency: "usd", isOpen: true };
 const product: PublicProduct = { id: "p1", slug: "ui-course", title: "UI course", description: "Learn UI", descriptionDoc: null, coverUrl: null, priceCents: 4900, salePriceCents: null, buttonText: "Enroll", type: "course", course: { category: "design", accessDays: null, lessonCount: 12 } };
 
 describe("store themes and layouts", () => {

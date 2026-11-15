@@ -6,7 +6,7 @@ import { FeeCalculator } from "@/components/landing/fee-calculator";
 import { Container, SectionHeading } from "@/components/landing/ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PLANNED_PRICE_CENTS } from "@/lib/config";
+import { PLANNED_PRICE_CENTS, TRIAL_DAYS } from "@/lib/config";
 import { formatWholeDollars } from "@/lib/landing/demo";
 
 // Pricing (D-039, PRD F9): planned plans, nothing billed yet. The founding plan is the featured
@@ -44,7 +44,7 @@ function PaidPlan({ plan }: { plan: PlanCard & { id: "starter" | "pro" } }) {
         <span className="text-sm text-mute">per month, planned</span>
       </p>
       <Button asChild variant="secondary" className="w-full">
-        <Link href="/signup">Join free</Link>
+        <Link href="/signup">Start your {TRIAL_DAYS}-day free trial</Link>
       </Button>
       <PlanItems items={plan.items} />
     </div>

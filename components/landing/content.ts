@@ -1,7 +1,7 @@
 // Copy for the marketing landing (D-039). Honesty rules: Phase 1 sells digital products; anything
 // else is tagged "Coming soon"; every 0% claim sits near the card-processing note (DESIGN.md 15).
 
-import { PLANNED_PRICE_CENTS } from "@/lib/config";
+import { PLANNED_PRICE_CENTS, TRIAL_DAYS } from "@/lib/config";
 import { formatWholeDollars } from "@/lib/landing/demo";
 
 export const LANDING_NAV = [
@@ -58,7 +58,7 @@ export const FAQ = [
   },
   {
     q: "What does it cost?",
-    a: `Founding creators get the first 6 months free. After that, plans are planned at ${STARTER} a month (Starter) and ${PRO} a month (Pro), with 0% transaction fees. Final prices are confirmed before anyone is asked to pay.`,
+    a: `Every new store starts with a ${TRIAL_DAYS}-day free trial, no card needed. Founding creators (the first 10) get 6 months free. After that, plans are planned at ${STARTER} a month (Starter) and ${PRO} a month (Pro), with 0% transaction fees. If you don't pick a plan when the free period ends, your store pauses (nothing is deleted) until you do. Final prices are confirmed before anyone is asked to pay.`,
   },
   {
     q: "How is Pickstall different from Stan Store?",

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { currencyLock, formData, mockSession, rateLimit, redirectOf, storeQueries, userId } from "./auth-mocks";
+import { currencyLock, formData, mockSession, rateLimit, redirectOf, storeQueries, userId, OPEN_ACCESS } from "./auth-mocks";
 
 import { changeUsername, savePageDesign, saveStoreSetup } from "@/lib/stores/actions";
 import { pageDesignInput, storeProfileInput } from "@/lib/stores/schemas";
@@ -109,19 +109,19 @@ describe("saveStoreSetup", () => {
     vi.clearAllMocks();
     mockSession({ id: userId, email: "maya@example.com" });
     // The saved profile above uses GBP, so most tests keep the currency unchanged.
-    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya", currency: "gbp" });
+    storeQueries.findStoreByOwner.mockResolvedValue({ access: OPEN_ACCESS, id: "store-1", slug: "maya", currency: "gbp" });
     currencyLock.isCurrencyLocked.mockResolvedValue(false);
   });
 
   it("lets a store without products change its currency", async () => {
-    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya", currency: "usd" });
+    storeQueries.findStoreByOwner.mockResolvedValue({ access: OPEN_ACCESS, id: "store-1", slug: "maya", currency: "usd" });
     storeQueries.updateStoreProfile.mockResolvedValue(true);
     expect((await saveStoreSetup(null, profileForm(profileFields)))?.ok).toBe(true);
     expect(currencyLock.isCurrencyLocked).toHaveBeenCalledWith("store-1");
   });
 
   it("refuses a currency change once the store has a product (D-046)", async () => {
-    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya", currency: "usd" });
+    storeQueries.findStoreByOwner.mockResolvedValue({ access: OPEN_ACCESS, id: "store-1", slug: "maya", currency: "usd" });
     currencyLock.isCurrencyLocked.mockResolvedValue(true);
     expect(await saveStoreSetup(null, profileForm(profileFields))).toMatchObject({ ok: false, field: "currency" });
     expect(storeQueries.updateStoreProfile).not.toHaveBeenCalled();
@@ -191,7 +191,7 @@ describe("savePageDesign", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSession({ id: userId, email: "maya@example.com" });
-    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya" });
+    storeQueries.findStoreByOwner.mockResolvedValue({ access: OPEN_ACCESS, id: "store-1", slug: "maya" });
   });
 
   it("saves theme and accent on the session user's store", async () => {
@@ -211,7 +211,7 @@ describe("changeUsername", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSession({ id: userId, email: "maya@example.com" });
-    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya" });
+    storeQueries.findStoreByOwner.mockResolvedValue({ access: OPEN_ACCESS, id: "store-1", slug: "maya" });
     rateLimit.takeRateLimit.mockResolvedValue(true);
     rateLimit.releaseRateLimit.mockResolvedValue(undefined);
   });

@@ -74,6 +74,8 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
     socialLinks: store.socialLinks,
     theme: store.theme,
     currency: store.currency,
+    // The preview shows the page itself; a paused store gets the banner in the dashboard instead.
+    isOpen: true,
   };
   const published = products.filter((product) => product.status === "published");
   const lessonCounts = await lessonCountsOf(store.id, published).catch(() => new Map<string, number>());

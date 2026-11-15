@@ -84,10 +84,11 @@ describe("first-run checklist (D-009, D-045)", () => {
 });
 
 describe("settings sub-nav and breadcrumb (D-028)", () => {
-  it("has Store, Payments and Account, with Store as the Settings root", () => {
+  it("has Store, Payments, Plan and Account, with Store as the Settings root", () => {
     expect(SETTINGS_SECTIONS.map((section) => [section.label, section.href])).toEqual([
       ["Store", "/dashboard/settings"],
       ["Payments", "/dashboard/settings/payments"],
+      ["Plan", "/dashboard/settings/plan"],
       ["Account", "/dashboard/settings/account"],
     ]);
   });

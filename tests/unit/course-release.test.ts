@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { mockSession, rateLimit, storeQueries, userId } from "./auth-mocks";
+import { mockSession, rateLimit, storeQueries, userId, OPEN_ACCESS } from "./auth-mocks";
 
 // D-056: drip, the player outline and video links, the public outline, release saving and the
 // course publish check.
@@ -124,7 +124,7 @@ describe("saving how lessons open", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSession({ id: userId, email: "maya@example.com" });
-    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya", currency: "usd", stripeChargesEnabled: false });
+    storeQueries.findStoreByOwner.mockResolvedValue({ access: OPEN_ACCESS, id: "store-1", slug: "maya", currency: "usd", stripeChargesEnabled: false });
     rateLimit.takeRateLimit.mockResolvedValue(true);
     db.products.updateOne.mockResolvedValue({ matchedCount: 1 });
     db.courseModules.bulkWrite.mockResolvedValue({});

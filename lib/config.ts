@@ -198,6 +198,14 @@ export const COURSE_EDIT_RATE_LIMIT = { max: 300, windowMinutes: 10 } as const;
 /** Starting a Bunny video upload creates a video in the creator's library. */
 export const COURSE_VIDEO_UPLOAD_RATE_LIMIT = { max: 30, windowMinutes: 60 } as const;
 
+/** Free trial every new store gets (D-072). When it ends without a paid plan, the store pauses. */
+export const TRIAL_DAYS = 30;
+/** Founding creators (D-072): free for this many months, granted by the founder, at most this many stores. */
+export const FOUNDING_MONTHS = 6;
+export const FOUNDING_SPOTS = 10;
+/** Trial banner turns from info to warning this many days before the end. */
+export const TRIAL_WARNING_DAYS = 5;
+
 export const PLANS = ["trial", "starter", "pro", "business"] as const;
 export type Plan = (typeof PLANS)[number];
 

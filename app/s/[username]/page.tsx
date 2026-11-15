@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { StorePage } from "@/components/store/store-page";
+import { StorePaused } from "@/components/store/store-paused";
 import { APP_NAME } from "@/lib/config";
 import { publicEnv } from "@/lib/env";
 import { absoluteImageUrl } from "@/lib/media/media";
@@ -31,6 +32,7 @@ export default async function PublicStorePage({ params }: PageProps<"/s/[usernam
   const { username } = await params;
   const store = await findPublicStore(username);
   if (!store) notFound();
+  if (!store.isOpen) return <StorePaused storeName={store.name} theme={store.theme} />;
   const products = await listPublicProducts(store.id);
   return <StorePage store={store} products={products} />;
 }

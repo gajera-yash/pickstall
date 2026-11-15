@@ -2,8 +2,11 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
+import { connection } from "next/server";
+
 import { collections, type CheckoutQuestionDoc, type OrderDoc, type StoreDoc } from "@/lib/db/collections";
 import { providerForStore } from "@/lib/payments";
+import { can, storeAccess } from "@/lib/plans/access";
 import { payableCents } from "@/lib/products/pricing";
 
 // Reads and writes for checkout. The buyer is anonymous, so every lookup goes through the public
@@ -15,6 +18,8 @@ const PRODUCT_SLUG = /^[a-z0-9-]{1,60}$/;
 
 export type CheckoutContext = {
   store: Pick<StoreDoc, "_id" | "slug" | "name" | "theme" | "currency" | "stripeAccountId" | "stripeChargesEnabled" | "bio" | "avatarUrl" | "socialLinks" | "link">;
+  /** False while the store is paused after its free trial (D-072): no new orders, free ones included. */
+  open: boolean;
   product: {
     id: string;
     slug: string;
@@ -30,7 +35,21 @@ export type CheckoutContext = {
   };
 };
 
-const STORE_FIELDS = { slug: 1, name: 1, bio: 1, avatarUrl: 1, socialLinks: 1, link: 1, theme: 1, currency: 1, stripeAccountId: 1, stripeChargesEnabled: 1 } as const;
+const STORE_FIELDS = {
+  slug: 1,
+  name: 1,
+  bio: 1,
+  avatarUrl: 1,
+  socialLinks: 1,
+  link: 1,
+  theme: 1,
+  currency: 1,
+  stripeAccountId: 1,
+  stripeChargesEnabled: 1,
+  planTier: 1,
+  trialEndsAt: 1,
+  foundingEndsAt: 1,
+} as const;
 const PRODUCT_FIELDS = {
   slug: 1,
   title: 1,
@@ -57,8 +76,12 @@ export async function loadCheckoutContext(username: string, productSlug: string)
   const product = await products.findOne({ storeId: store._id, slug: productSlug, status: "published" }, { projection: PRODUCT_FIELDS });
   if (!product) return null;
 
+  // The plan fields only decide `open`; they are not passed on to the page.
+  const { planTier, trialEndsAt, foundingEndsAt, ...storeFields } = store;
+  await connection(); // open or paused depends on the current time
   return {
-    store,
+    store: storeFields,
+    open: can(storeAccess({ planTier, trialEndsAt, foundingEndsAt }), "sell"),
     product: {
       id: product._id,
       slug: product.slug,
@@ -78,6 +101,7 @@ export async function loadCheckoutContext(username: string, productSlug: string)
 
 /** Can a buyer pay for this product right now? Free products always; paid ones need a payment provider. */
 export function canBuy(context: CheckoutContext): boolean {
+  if (!context.open) return false;
   const free = payableCents(context.product) === 0;
   return free || providerForStore(context.store) !== null;
 }

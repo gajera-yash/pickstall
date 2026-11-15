@@ -181,6 +181,11 @@ vi.mock("@/lib/rate-limit", () => ({
 
 export const userId = "11111111-1111-4111-8111-111111111111";
 
+/** A store in its free trial (D-072): may sell and publish. */
+export const OPEN_ACCESS = { state: "trial", endsAt: null, daysLeft: null } as const;
+/** A store whose trial has ended: paused. */
+export const PAUSED_ACCESS = { state: "paused", endsAt: new Date("2026-01-01T00:00:00Z"), daysLeft: 0 } as const;
+
 /** Makes getSession return a signed-in user (or nobody, with `null`). */
 export function mockSession(user: { id: string; email: string } | null) {
   authApi.getSession.mockResolvedValue(user ? { user, session: { id: "session-1" } } : null);

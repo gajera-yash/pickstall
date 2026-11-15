@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { redirect, unstable_rethrow } from "next/navigation";
 
 import { appOrigin } from "@/lib/app-origin";
+import { PAUSED_MESSAGES } from "@/lib/plans/access";
 import { CHECKOUT_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { validateAnswers } from "@/lib/orders/answers";
@@ -67,6 +68,8 @@ export async function startCheckout(username: string, productSlug: string, _prev
 
     const context = await loadCheckoutContext(username, productSlug);
     if (!context) return err("This product isn't available anymore.");
+    // A paused store takes no new orders, free ones included (D-072).
+    if (!context.open) return err(PAUSED_MESSAGES.checkout);
 
     // The price comes from the product in the database, never from the form (CLAUDE.md 7, D-047).
     const amount = orderAmounts(context.product);

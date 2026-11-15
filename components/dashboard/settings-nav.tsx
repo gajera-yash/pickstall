@@ -1,13 +1,13 @@
 "use client";
 
-import { CreditCard, Store, UserRound, type LucideIcon } from "lucide-react";
+import { BadgeCheck, CreditCard, Store, UserRound, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { SETTINGS_SECTIONS, isSettingsSectionActive, type SettingsSectionId } from "@/lib/dashboard/nav";
 import { cn } from "@/lib/utils";
 
-const ICONS: Record<SettingsSectionId, LucideIcon> = { store: Store, payments: CreditCard, account: UserRound };
+const ICONS: Record<SettingsSectionId, LucideIcon> = { store: Store, payments: CreditCard, plan: BadgeCheck, account: UserRound };
 
 /** Settings sub-nav (DESIGN.md 10.2): a left column on desktop, a horizontal scroller on mobile. */
 export function SettingsNav() {
