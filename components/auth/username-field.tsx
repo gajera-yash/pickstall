@@ -29,8 +29,15 @@ type Props = {
  * when taken. The check is a hint only; the server decides again when the store is created.
  */
 export function UsernameField({ value, onChange, serverError, autoFocus }: Props) {
+  const [domain, setDomain] = useState(ROOT_DOMAIN);
   const [check, setCheck] = useState<UsernameCheck | null>(null);
   const latest = useRef(value);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.host && !window.location.host.includes("localhost") && !window.location.host.includes("127.0.0.1")) {
+      setDomain(window.location.host);
+    }
+  }, []);
 
   useEffect(() => {
     latest.current = value;
@@ -69,7 +76,7 @@ export function UsernameField({ value, onChange, serverError, autoFocus }: Props
           aria-hidden="true"
           className={cn("h-full self-stretch border-r px-3 text-sm font-normal sm:px-4 sm:text-base", problem ? "border-danger bg-danger-soft" : "border-line bg-bg-subtle")}
         >
-          {ROOT_DOMAIN}/@
+          {domain}/@
         </InputGroupAddon>
         <InputGroupInput
           id="username"
@@ -105,12 +112,12 @@ export function UsernameField({ value, onChange, serverError, autoFocus }: Props
           <p className="flex items-center gap-2 text-sm text-mute">
             <CheckCircle2 aria-hidden="true" className="size-4 shrink-0 fill-mint text-surface" />
             <span>
-              Your link: <span className="font-semibold break-all text-mint">{storeLink(value)}</span>
+              Your link: <span className="font-semibold break-all text-mint">{domain}/@{value}</span>
             </span>
           </p>
         ) : (
           <p className="text-sm text-mute">
-            {checking ? "Checking..." : `Letters, numbers and hyphens. Your link: ${storeLink(value || "yourname")}`}
+            {checking ? "Checking..." : `Letters, numbers and hyphens. Your link: ${domain}/@${value || "yourname"}`}
           </p>
         )}
       </div>

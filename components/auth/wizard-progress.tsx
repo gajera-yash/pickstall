@@ -8,7 +8,7 @@ export function WizardProgress({ step }: { step: SignupStep }) {
   const { current, total } = stepPosition(step);
 
   return (
-    <div className="flex w-full max-w-sm flex-col items-center gap-2">
+    <div className="flex w-full flex-col items-center gap-2">
       <div
         role="progressbar"
         aria-label="Account setup"
@@ -16,7 +16,7 @@ export function WizardProgress({ step }: { step: SignupStep }) {
         aria-valuemax={total}
         aria-valuenow={current}
         aria-valuetext={`Step ${current} of ${total}`}
-        className="h-2.5 w-full overflow-hidden rounded-full bg-line"
+        className="h-2 w-full overflow-hidden rounded-full bg-line"
       >
         <div
           className="h-full w-full origin-left rounded-full bg-blue transition-transform duration-(--dur-slow) ease-(--ease-out)"

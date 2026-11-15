@@ -9,7 +9,14 @@ export const SUPPORT_EMAIL = "support@pickstall.store";
 export const APP_TAGLINE = "Creator Store Platform";
 
 /** The one domain the app runs on. Store links are path-based: `{ROOT_DOMAIN}/@username` (D-010). */
-export const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
+export const ROOT_DOMAIN =
+  process.env.NEXT_PUBLIC_ROOT_DOMAIN &&
+  process.env.NEXT_PUBLIC_ROOT_DOMAIN !== "localhost:3000" &&
+  !process.env.NEXT_PUBLIC_ROOT_DOMAIN.includes("localhost")
+    ? process.env.NEXT_PUBLIC_ROOT_DOMAIN
+    : process.env.NODE_ENV === "production"
+      ? "pickstall.store"
+      : (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000");
 
 /** Public link of a store, for display (D-010). */
 export function storeLink(username: string): string {

@@ -16,7 +16,7 @@ export function AuthShell({ children, top, footer }: { children: ReactNode; top?
           <Wordmark className="h-12 sm:h-14" priority />
           <p className="text-sm font-medium text-mute">{APP_TAGLINE}</p>
         </div>
-        {top}
+        {top && <div className="w-full">{top}</div>}
         <div className="flex flex-col gap-6 rounded-lg bg-surface px-5 py-7 sm:px-8 sm:py-8">
           {children}
         </div>
