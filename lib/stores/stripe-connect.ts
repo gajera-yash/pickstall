@@ -50,7 +50,7 @@ const callbackQuery = z.object({
   error: z.string().max(100).optional(),
 });
 
-export type ConnectOutcome = "connected" | "cancelled" | "expired" | "wrong_mode" | "error";
+export type ConnectOutcome = "connected" | "cancelled" | "expired" | "wrong_mode" | "in_use" | "error";
 
 /** Where the callback sends the creator, with the outcome for the page to show. */
 function landing(returnTo: ConnectReturn | null, outcome: ConnectOutcome): string {
@@ -73,7 +73,8 @@ export async function completeStripeConnect(userId: string, query: Record<string
     const exchanged = await exchangeConnectCode(parsed.data.code);
     if (!exchanged.ok) return landing(returnTo, exchanged.reason === "wrong_mode" ? "wrong_mode" : "error");
 
-    const saved = await setStoreStripeConnection(userId, exchanged.account);
+    const saved = await setStoreStripeConnection(userId, exchanged.account, { exclusive: true });
+    if (saved === "in_use") return landing(returnTo, "in_use");
     if (!saved) return landing(returnTo, "error");
     if (saved.previousAccountId && saved.previousAccountId !== exchanged.account.accountId) {
       await releaseAccount(userId, saved.previousAccountId);

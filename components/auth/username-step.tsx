@@ -2,7 +2,7 @@
 
 import { ArrowRight, User } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState, type FormEvent } from "react";
 
 import { PhoneField } from "@/components/auth/phone-field";
 import { UsernameField } from "@/components/auth/username-field";
@@ -46,7 +46,17 @@ export function UsernameStep({ needsName, taken }: { needsName: boolean; taken: 
         </Alert>
       )}
 
-      <form action={action} noValidate className="flex flex-col gap-5">
+      {/* Submitted by hand so an error does not clear the fields (see SignupFlow). */}
+      <form
+        action={action}
+        onSubmit={(event: FormEvent<HTMLFormElement>) => {
+          event.preventDefault();
+          const data = new FormData(event.currentTarget);
+          startTransition(() => action(data));
+        }}
+        noValidate
+        className="flex flex-col gap-5"
+      >
         <UsernameField value={username} onChange={setUsername} serverError={fieldError("username")} autoFocus />
 
         {needsName && (

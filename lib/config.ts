@@ -48,6 +48,16 @@ export const SIGNUP_INTENT_TTL_MINUTES = 30;
 export const USERNAME_CHECK_RATE_LIMIT = { max: 120, windowMinutes: 5 } as const;
 
 /** Signup rate limits (D-019): attempts per email, and new signups per IP address. */
+/**
+ * New stores per browser and per IP address within 30 days (D-071). A soft limit against free-trial
+ * abuse: beyond it the creator is asked to contact support. The IP limit is higher because mobile
+ * networks put many people behind one address.
+ */
+export const STORE_CREATION_LIMITS = { perDevice: 2, perIp: 5, windowDays: 30 } as const;
+
+/** "Does this email already have an account?" checks on the signup form, per IP and per browser (D-071). */
+export const SIGNUP_EMAIL_CHECK_RATE_LIMIT = { max: 15, windowMinutes: 60 } as const;
+
 export const SIGNUP_RATE_LIMITS = {
   perEmail: { max: 5, windowMinutes: 15 },
   perIp: { max: 10, windowMinutes: 60 },

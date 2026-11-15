@@ -2,7 +2,7 @@
 
 import { ArrowRight, User } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState, type FormEvent } from "react";
 
 import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
 import { CodeStep } from "@/components/auth/code-step";
@@ -91,7 +91,19 @@ export function SignupFlow({ googleNext, initialUsername = "" }: { googleNext: s
             </Alert>
           )}
 
-          <form action={action} onSubmit={cooldown.start} noValidate className="flex flex-col gap-5">
+          {/* Submits by hand so React 19 does not reset the form after the action: on an error the
+              creator keeps what they typed (the inputs are controlled). Without JavaScript the action still runs. */}
+          <form
+            action={action}
+            onSubmit={(event: FormEvent<HTMLFormElement>) => {
+              event.preventDefault();
+              cooldown.start();
+              const data = new FormData(event.currentTarget);
+              startTransition(() => action(data));
+            }}
+            noValidate
+            className="flex flex-col gap-5"
+          >
             <UsernameField
               value={values.username}
               onChange={(username) => set("username", username)}

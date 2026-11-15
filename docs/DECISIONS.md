@@ -4,6 +4,19 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-071: Account safety before the free trial (Phase A)
+- **Date:** 2026-11-15
+- **Decision (founder, 2026-11-15):**
+  - **Existing email on signup:** the signup form says "This email already has an account. Log in instead." This deliberately overrides the CLAUDE.md 8 "don't reveal whether an email exists" rule for the signup form only. To keep it from being used to list registered emails, the check is limited to 15 per hour per IP and per browser (`SIGNUP_EMAIL_CHECK_RATE_LIMIT`). The login page still answers the same way for every email.
+  - **One store per inbox:** `canonicalEmail` (lib/auth/email-rules.ts) folds Gmail dots, `+tags` and googlemail.com into one key; `stores.ownerEmailKey` has a unique index, so `maya+2@gmail.com` cannot open a second store next to `maya@gmail.com`.
+  - **No throwaway inboxes** for new stores (lib/auth/disposable-domains.ts, a curated list to grow as needed).
+  - **Soft limit per browser and IP:** at most 2 new stores per browser and 5 per IP in 30 days (`STORE_CREATION_LIMITS`); beyond that the creator is asked to email support. The browser id is a random first-party cookie (`ps_device`, only its hash is stored), not a fingerprint. The IP limit is higher because mobile networks share addresses.
+  - **One real Stripe account per store:** a Connect OAuth connection sets `stores.stripeClaimKey` (unique index); a second store gets "That Stripe account is already in use". The test-mode shortcut (D-034) is not exclusive.
+  - All store-creation checks live in one gate (`lib/stores/new-store-guard.ts`) called before `createDraftStore`, because the login page and Google also create accounts (on first sign-in) and reach the username step; a check only on the signup form would be bypassed.
+- **Also fixed:** `?blocked=` and `?stripe=` lookups used the `in` operator, so `toString` matched the object prototype; they use `Object.hasOwn` now. A lint error in the username field (setState inside an effect) was replaced by `useSyncExternalStore`. The signup and username forms submit by hand (`preventDefault` + `startTransition`) so React 19's automatic form reset no longer clears what the creator typed when the server answers with an error.
+- **Migration (founder runs):** `node --env-file=.env.local scripts/migrations/2026-11-15-store-identity-keys.mjs` (dry run), then with `--apply`. It fills the two keys on older stores; when old stores already share an inbox or a Stripe account, the oldest keeps the key and the rest are listed, not changed.
+- **Why:** stop free-trial abuse before the 1-month trial (Phase B) and billing (Phase C).
+
 ## D-070: Library as a card grid with course progress (H6c)
 - **Date:** 2026-11-04
 - **Decision (founder OK for the extra read):** the buyer library shows purchases as cards (2 per row from `sm`): cover, a Course / Digital product badge, Refunded / Unavailable / Access ended when they apply, title, store and date, and for a course a progress bar with "N of M lessons done". The card's action says what happens next: Start course, Continue, Review course, Open, or View details. An open course goes straight to the player; anything else to its library page as before. The loading state is a card-shaped skeleton; the empty state is unchanged.

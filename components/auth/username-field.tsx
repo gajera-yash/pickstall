@@ -1,19 +1,27 @@
 "use client";
 
 import { AlertCircle, CheckCircle2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { ROOT_DOMAIN, storeLink } from "@/lib/config";
+import { ROOT_DOMAIN } from "@/lib/config";
 import { SLUG_MIN_LENGTH, normalizeSlugInput } from "@/lib/slug";
 import { checkUsername, type UsernameCheck } from "@/lib/stores/username-check";
 import { cn } from "@/lib/utils";
 
 const CHECK_DELAY_MS = 400;
+
+// The link prefix shows the site's own host once in the browser (localhost keeps ROOT_DOMAIN). Read
+// without an effect, so the server render and hydration agree and nothing re-renders in a loop.
+const noSubscribe = () => () => {};
+function browserDomain(): string {
+  const host = window.location.host;
+  return host && !host.includes("localhost") && !host.includes("127.0.0.1") ? host : ROOT_DOMAIN;
+}
 
 type Props = {
   value: string;
@@ -29,15 +37,9 @@ type Props = {
  * when taken. The check is a hint only; the server decides again when the store is created.
  */
 export function UsernameField({ value, onChange, serverError, autoFocus }: Props) {
-  const [domain, setDomain] = useState(ROOT_DOMAIN);
+  const domain = useSyncExternalStore(noSubscribe, browserDomain, () => ROOT_DOMAIN);
   const [check, setCheck] = useState<UsernameCheck | null>(null);
   const latest = useRef(value);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.location.host && !window.location.host.includes("localhost") && !window.location.host.includes("127.0.0.1")) {
-      setDomain(window.location.host);
-    }
-  }, []);
 
   useEffect(() => {
     latest.current = value;

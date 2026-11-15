@@ -5,10 +5,12 @@ import { Suspense } from "react";
 import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
 import { LoginFormSkeleton } from "@/components/auth/login-form-skeleton";
 import { UsernameStep } from "@/components/auth/username-step";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { requireUser } from "@/lib/auth/guards";
 import { DASHBOARD_PATH, USERNAME_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
 import { APP_NAME } from "@/lib/config";
+import { NEW_STORE_MESSAGES, type NewStoreBlock } from "@/lib/stores/new-store-messages";
 import { findStoreByOwner } from "@/lib/stores/queries";
 
 export const metadata: Metadata = { title: `Choose your username | ${APP_NAME}`, robots: { index: false } };
@@ -32,6 +34,8 @@ async function UsernameContent({ searchParams }: Pick<PageProps<"/signup/usernam
 
   const params = await searchParams;
   const taken = params.taken === "1";
+  // Only known reasons are shown, each with its own fixed text (D-071).
+  const blocked = typeof params.blocked === "string" && Object.hasOwn(NEW_STORE_MESSAGES, params.blocked) ? (params.blocked as NewStoreBlock) : null;
   const initial = (profile?.fullName || user.email || "?").trim().charAt(0).toUpperCase();
 
   return (
@@ -54,6 +58,12 @@ async function UsernameContent({ searchParams }: Pick<PageProps<"/signup/usernam
         <AuthHeading>One last step</AuthHeading>
         <p className="text-mute">Choose your username. This becomes your store link.</p>
       </div>
+      {blocked && (
+        <Alert variant="warning">
+          <AlertTitle>We couldn&apos;t open your store</AlertTitle>
+          <AlertDescription>{NEW_STORE_MESSAGES[blocked]}</AlertDescription>
+        </Alert>
+      )}
       <UsernameStep needsName={!profile?.fullName} taken={taken} />
     </>
   );

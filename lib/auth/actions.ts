@@ -4,8 +4,11 @@ import { isAPIError } from "better-auth/api";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { emailHasAccount } from "@/lib/auth/accounts";
 import { auth } from "@/lib/auth/auth";
 import { completeSignup } from "@/lib/auth/complete-signup";
+import { deviceId } from "@/lib/auth/device";
+import { DISPOSABLE_EMAIL_MESSAGE, isDisposableEmail } from "@/lib/auth/email-rules";
 import { getCurrentUser } from "@/lib/auth/guards";
 import { INTENT_COOKIE } from "@/lib/auth/intent-token";
 import { DASHBOARD_PATH, USERNAME_PATH } from "@/lib/auth/post-login";
@@ -14,13 +17,15 @@ import { loginPath, safeNextPath } from "@/lib/auth/redirect";
 import { passwordLoginInput } from "@/lib/auth/password-schemas";
 import { claimUsernameInput, sendCodeInput, signupInput, verifyCodeInput } from "@/lib/auth/schemas";
 import { saveSignupIntent } from "@/lib/auth/signup-intents";
-import { PASSWORD_RATE_LIMIT, SEND_CODE_RATE_LIMITS, SIGNUP_INTENT_TTL_MINUTES } from "@/lib/config";
+import { PASSWORD_RATE_LIMIT, SEND_CODE_RATE_LIMITS, SIGNUP_EMAIL_CHECK_RATE_LIMIT, SIGNUP_INTENT_TTL_MINUTES } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { getClientIpHash } from "@/lib/request-ip";
 import { err, ok, type Result } from "@/lib/result";
 import { SLUG_TAKEN_MESSAGE } from "@/lib/slug";
 import { createDraftStore } from "@/lib/stores/create-draft-store";
+import { checkNewStore, recordNewStore } from "@/lib/stores/new-store-guard";
+import { NEW_STORE_MESSAGES } from "@/lib/stores/new-store-messages";
 import { isSlugTaken } from "@/lib/stores/slug-availability";
 
 export type SendCodeState = Result<{ email: string }> | null;
@@ -31,6 +36,7 @@ export type PasswordLoginState = Result<never> | null;
 
 const TOO_MANY = "Too many attempts. Wait a minute, then try again.";
 const SEND_FAILED = "Couldn't send the code. Check your connection and try again.";
+const EMAIL_EXISTS = "This email already has an account. Log in instead.";
 
 function firstIssue(error: { issues: { message: string }[] }): string {
   return error.issues[0]?.message ?? "Check the form and try again.";
@@ -59,6 +65,7 @@ async function allowCodeSend(email: string): Promise<boolean> {
 /** Rate-limits, then emails a 6-digit sign-in code (accounts are created on first sign-in). */
 async function sendCode(email: string): Promise<Result<{ email: string }>> {
   try {
+    await deviceId();
     if (!(await allowCodeSend(email))) return err(TOO_MANY);
     await auth.api.sendVerificationOTP({ body: { email, type: "sign-in" } });
     return ok({ email });
@@ -93,6 +100,22 @@ export async function startSignup(_prev: SignupState, formData: FormData): Promi
   });
   if (!parsed.success) return fieldIssue(parsed.error);
   const { username, fullName, email, phone } = parsed.data;
+  if (isDisposableEmail(email)) return err(DISPOSABLE_EMAIL_MESSAGE, "email");
+
+  // "Already has an account" is shown on purpose (founder decision, D-071), so the check is
+  // rate-limited per IP and per browser to keep it from being used to list registered emails.
+  try {
+    const device = await deviceId();
+    const ipHash = await getClientIpHash();
+    const { max, windowMinutes } = SIGNUP_EMAIL_CHECK_RATE_LIMIT;
+    const byDevice = await takeRateLimit(rateLimitKey("signup-email-check:device", device), max, windowMinutes);
+    const byIp = ipHash ? await takeRateLimit(rateLimitKey("signup-email-check:ip", ipHash), max, windowMinutes) : true;
+    if (!byDevice || !byIp) return err(TOO_MANY);
+    if (await emailHasAccount(email)) return err(EMAIL_EXISTS, "email");
+  } catch (error) {
+    logger.warn("signup.email_check_failed", { name: errorName(error) });
+    return err(SEND_FAILED);
+  }
 
   const taken = await isSlugTaken(username);
   if (!taken.ok) return taken;
@@ -169,8 +192,21 @@ export async function claimUsername(_prev: ClaimUsernameState, formData: FormDat
     return err("Couldn't save your details. Check your connection and try again.");
   }
 
-  const result = await createDraftStore(user.id, username);
+  if (!user.email) return err("Your account has no email address. Sign in again with your email.");
+  const device = await deviceId();
+  const ipHash = await getClientIpHash();
+  let result;
+  try {
+    const allowed = await checkNewStore({ ownerId: user.id, email: user.email, device, ipHash });
+    if (!allowed.ok) return err(allowed.message);
+    result = await createDraftStore(user.id, username, user.email);
+    if (result === "created") await recordNewStore({ device, ipHash });
+  } catch (error) {
+    logger.warn("signup.store_create_failed", { name: errorName(error) });
+    return err("Couldn't create your store. Check your connection and try again.");
+  }
   if (result === "taken") return err(SLUG_TAKEN_MESSAGE, "username");
+  if (result === "email_used") return err(NEW_STORE_MESSAGES.email_used);
   if (result === "error") return err("Couldn't create your store. Check your connection and try again.");
   redirect(DASHBOARD_PATH);
 }

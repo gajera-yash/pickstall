@@ -115,7 +115,11 @@ const PAID_PRODUCT = { priceCents: { $gt: 0 }, salePriceCents: { $ne: 0 } } as c
  * unpublishes the store's paid products (PRD 5.6 A): they could not be bought any more. Returns
  * the account that was connected before (so the caller can deauthorize it), or false without a store.
  */
-export async function setStoreStripeConnection(ownerId: string, connection: StripeConnection | null): Promise<{ previousAccountId: string | null } | false> {
+export async function setStoreStripeConnection(
+  ownerId: string,
+  connection: StripeConnection | null,
+  options: { exclusive?: boolean } = {},
+): Promise<{ previousAccountId: string | null } | false | "in_use"> {
   const { stores, products } = await collections();
   const now = new Date();
   const set = connection
@@ -129,7 +133,17 @@ export async function setStoreStripeConnection(ownerId: string, connection: Stri
         updatedAt: now,
       }
     : { stripeAccountId: null, stripeChargesEnabled: false, stripePayoutsEnabled: false, stripeDetailsSubmitted: false, stripeConnectedAt: null, updatedAt: now };
-  const before = await stores.findOneAndUpdate({ ownerId }, { $set: set }, { projection: { _id: 1, stripeAccountId: 1 } });
+  // A real Connect account may belong to one store only (D-071): the claim key carries the unique
+  // index. The test-mode shortcut (D-034) is not exclusive, and disconnecting always clears it.
+  const update =
+    connection && options.exclusive ? { $set: { ...set, stripeClaimKey: connection.accountId } } : { $set: set, $unset: { stripeClaimKey: "" as const } };
+  let before;
+  try {
+    before = await stores.findOneAndUpdate({ ownerId }, update, { projection: { _id: 1, stripeAccountId: 1 } });
+  } catch (error) {
+    if (isDuplicateKeyError(error, "stripeClaimKey")) return "in_use";
+    throw error;
+  }
   if (!before) return false;
   if (!connection) await products.updateMany({ storeId: before._id, status: "published", ...PAID_PRODUCT }, { $set: { status: "draft", updatedAt: now } });
   return { previousAccountId: before.stripeAccountId };
@@ -162,7 +176,10 @@ export async function detachStripeAccount(accountId: string): Promise<void> {
   const now = new Date();
   await stores.updateMany(
     { _id: { $in: ids }, stripeAccountId: accountId },
-    { $set: { stripeAccountId: null, stripeChargesEnabled: false, stripePayoutsEnabled: false, stripeDetailsSubmitted: false, stripeConnectedAt: null, updatedAt: now } },
+    {
+      $set: { stripeAccountId: null, stripeChargesEnabled: false, stripePayoutsEnabled: false, stripeDetailsSubmitted: false, stripeConnectedAt: null, updatedAt: now },
+      $unset: { stripeClaimKey: "" },
+    },
   );
   await products.updateMany({ storeId: { $in: ids }, status: "published", ...PAID_PRODUCT }, { $set: { status: "draft", updatedAt: now } });
 }

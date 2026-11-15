@@ -65,6 +65,9 @@ const hoisted = vi.hoisted(() => {
     releaseAccount: vi.fn(async () => undefined),
   };
   const rateLimit = { takeRateLimit: vi.fn(), releaseRateLimit: vi.fn() };
+  // Phase A (D-071): the new-store gate, the browser id and the "email has an account" check.
+  const newStore = { checkNewStore: vi.fn(async () => ({ ok: true })), recordNewStore: vi.fn(async () => undefined) };
+  const accounts = { emailHasAccount: vi.fn(async () => false) };
 
   return {
     RedirectSignal,
@@ -83,6 +86,8 @@ const hoisted = vi.hoisted(() => {
     library,
     stripeConnect,
     connectFlow,
+    newStore,
+    accounts,
   };
 });
 
@@ -103,6 +108,8 @@ export const {
   library,
   stripeConnect,
   connectFlow,
+  newStore,
+  accounts,
 } = hoisted;
 
 vi.mock("server-only", () => ({}));
@@ -162,6 +169,9 @@ vi.mock("@/lib/stores/currency-lock", () => hoisted.currencyLock);
 vi.mock("@/lib/library/queries", () => hoisted.library);
 vi.mock("@/lib/payments/connect", () => hoisted.stripeConnect);
 vi.mock("@/lib/stores/stripe-connect", () => hoisted.connectFlow);
+vi.mock("@/lib/stores/new-store-guard", () => hoisted.newStore);
+vi.mock("@/lib/auth/accounts", () => hoisted.accounts);
+vi.mock("@/lib/auth/device", () => ({ DEVICE_COOKIE: "ps_device", deviceId: vi.fn(async () => "test-device-id") }));
 
 vi.mock("@/lib/rate-limit", () => ({
   rateLimitKey: (scope: string, value: string) => `${scope}:${value}`,

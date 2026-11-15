@@ -186,7 +186,8 @@ export async function connectStripeTestAccount(): Promise<Result<{ connected: tr
       livemode: false,
       status: { chargesEnabled: true, payoutsEnabled: true, detailsSubmitted: true },
     });
-    if (!saved) return err(NO_STORE);
+    // The shortcut is not exclusive, so "in_use" cannot happen here.
+    if (!saved || saved === "in_use") return err(NO_STORE);
     if (saved.previousAccountId && saved.previousAccountId !== accountId) await releaseAccount(user.id, saved.previousAccountId);
   } catch (error) {
     logger.error("stores.stripe_connect_failed", { name: errorName(error) });
@@ -204,7 +205,7 @@ export async function disconnectStripe(): Promise<Result<{ connected: false }>> 
   const { user } = await requireCreator(CONNECT_RETURN_PATHS.settings);
   try {
     const saved = await setStoreStripeConnection(user.id, null);
-    if (!saved) return err(NO_STORE);
+    if (!saved || saved === "in_use") return err(NO_STORE);
     if (saved.previousAccountId) await releaseAccount(user.id, saved.previousAccountId);
   } catch (error) {
     logger.error("stores.stripe_disconnect_failed", { name: errorName(error) });

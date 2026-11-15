@@ -25,6 +25,10 @@ async function ensureIndexes(db: Db): Promise<void> {
   await Promise.all([
     db.collection("stores").createIndex({ slug: 1 }, { unique: true, name: "stores_slug_unique" }),
     db.collection("stores").createIndex({ ownerId: 1 }, { unique: true, name: "stores_owner_unique" }),
+    // One store per inbox and one store per real Stripe account (D-071). Partial: older stores
+    // without the field do not collide until the migration fills it in.
+    db.collection("stores").createIndex({ ownerEmailKey: 1 }, { unique: true, partialFilterExpression: { ownerEmailKey: { $type: "string" } }, name: "stores_owner_email_unique" }),
+    db.collection("stores").createIndex({ stripeClaimKey: 1 }, { unique: true, partialFilterExpression: { stripeClaimKey: { $type: "string" } }, name: "stores_stripe_claim_unique" }),
     db.collection("products").createIndex({ storeId: 1, slug: 1 }, { unique: true, name: "products_store_slug_unique" }),
     db.collection("products").createIndex({ storeId: 1, status: 1, sortOrder: 1 }, { name: "products_store_status" }),
     db.collection("orders").createIndex({ providerSessionId: 1 }, { unique: true, partialFilterExpression: { providerSessionId: { $type: "string" } }, name: "orders_provider_session_unique" }),

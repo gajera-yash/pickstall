@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FakeAPIError, authApi, cookieJar, formData, intents, rateLimit, redirectOf, slugs, storeQueries } from "./auth-mocks";
+import { FakeAPIError, accounts, authApi, cookieJar, formData, intents, rateLimit, redirectOf, slugs, storeQueries } from "./auth-mocks";
 
 import { sendEmailCode, signInWithGoogle, startSignup, verifyEmailCode } from "@/lib/auth/actions";
 
@@ -136,6 +136,27 @@ describe("startSignup", () => {
     expect(await startSignup(null, form({ phone: "415" }))).toMatchObject({ ok: false, field: "phone" });
     expect(intents.saveSignupIntent).not.toHaveBeenCalled();
     expect(authApi.sendVerificationOTP).not.toHaveBeenCalled();
+  });
+
+  it("refuses a throwaway inbox before any lookup", async () => {
+    expect(await startSignup(null, form({ email: "maya@mailinator.com" }))).toMatchObject({ ok: false, field: "email" });
+    expect(accounts.emailHasAccount).not.toHaveBeenCalled();
+    expect(intents.saveSignupIntent).not.toHaveBeenCalled();
+  });
+
+  it("says the email already has an account (D-071), without saving an intent or sending a code", async () => {
+    accounts.emailHasAccount.mockResolvedValueOnce(true);
+    expect(await startSignup(null, form())).toEqual({ ok: false, error: "This email already has an account. Log in instead.", field: "email" });
+    expect(accounts.emailHasAccount).toHaveBeenCalledWith("maya@example.com");
+    expect(intents.saveSignupIntent).not.toHaveBeenCalled();
+    expect(authApi.sendVerificationOTP).not.toHaveBeenCalled();
+  });
+
+  it("rate-limits the email check per browser and IP", async () => {
+    rateLimit.takeRateLimit.mockResolvedValueOnce(false);
+    expect(await startSignup(null, form())).toMatchObject({ ok: false, error: expect.stringMatching(/Too many attempts/) });
+    expect(accounts.emailHasAccount).not.toHaveBeenCalled();
+    expect(rateLimit.takeRateLimit.mock.calls[0]?.[0]).toBe("signup-email-check:device:test-device-id");
   });
 
   it("says the username is taken, without saving an intent or sending a code", async () => {

@@ -16,13 +16,18 @@ const OUTCOMES = {
   cancelled: { variant: "info", title: "Stripe wasn't connected", text: "You left Stripe before finishing. Connect again whenever you're ready." },
   expired: { variant: "warning", title: "That link expired", text: "For your safety, a Stripe connection must finish within 10 minutes. Please connect again." },
   wrong_mode: { variant: "warning", title: "Wrong Stripe mode", text: "Pickstall is in test mode, so connect a Stripe account in test mode." },
+  in_use: {
+    variant: "warning",
+    title: "That Stripe account is already in use",
+    text: "It is connected to another Pickstall store. Each store needs its own Stripe account.",
+  },
   error: { variant: "error", title: "Couldn't connect Stripe", text: "Something went wrong on the way back from Stripe. Please try again." },
 } as const;
 
 export type StripeOutcome = keyof typeof OUTCOMES;
 
 export function stripeOutcomeOf(value: unknown): StripeOutcome | null {
-  return typeof value === "string" && value in OUTCOMES ? (value as StripeOutcome) : null;
+  return typeof value === "string" && Object.hasOwn(OUTCOMES, value) ? (value as StripeOutcome) : null;
 }
 
 function statusText(store: CreatorStore): { done: boolean; text: string } {

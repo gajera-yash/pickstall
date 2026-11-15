@@ -45,6 +45,13 @@ export async function takeRateLimit(key: string, max: number, windowMinutes: num
   return (doc?.count ?? 1) <= max;
 }
 
+/** The count in a rate-limit window without taking an attempt (0 when the window has ended). */
+export async function peekRateLimit(key: string, now = new Date()): Promise<number> {
+  const { rateLimits } = await collections();
+  const doc = await rateLimits.findOne({ _id: key, expiresAt: { $gt: now } }, { projection: { count: 1 } });
+  return doc?.count ?? 0;
+}
+
 /**
  * Gives back one attempt taken with `takeRateLimit`, for an attempt that did not happen after all
  * (for example a username change that failed because the name was taken). Never goes below zero.

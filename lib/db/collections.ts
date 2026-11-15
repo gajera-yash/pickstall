@@ -26,6 +26,12 @@ export type ProfileDoc = {
 export type StoreDoc = {
   _id: string;
   ownerId: string;
+  /**
+   * The owner's email as one key per inbox (`canonicalEmail`, D-071): one store, and one free trial,
+   * per person. Unique index `stores_owner_email_unique`. Missing on stores created before D-071
+   * until `scripts/migrations/2026-11-15-store-identity-keys.mjs` has run.
+   */
+  ownerEmailKey?: string;
   slug: string;
   name: string;
   bio: string | null;
@@ -48,6 +54,12 @@ export type StoreDoc = {
   /** True when the account was connected with a live key. Events in the other mode are ignored. */
   stripeLivemode?: boolean;
   stripeConnectedAt?: Date | null;
+  /**
+   * The connected Stripe account id, set only for a real Connect OAuth connection (D-071): one Stripe
+   * account per store (unique index `stores_stripe_claim_unique`). Not set for the test-mode shortcut
+   * (D-034), where several stores may use the founder's own account.
+   */
+  stripeClaimKey?: string;
   isPublished: boolean;
   createdAt: Date;
   updatedAt: Date;

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { cookieJar, draftStore, formData, intents, mockSession, profiles, redirectOf, storeQueries, userId } from "./auth-mocks";
+import { cookieJar, draftStore, formData, intents, mockSession, newStore, profiles, redirectOf, storeQueries, userId } from "./auth-mocks";
 
 import { claimUsername } from "@/lib/auth/actions";
 import { completeSignup } from "@/lib/auth/complete-signup";
@@ -29,7 +29,7 @@ describe("completeSignup", () => {
     expect(await completeSignup(user, undefined)).toBe("/dashboard");
     expect(intents.takeSignupIntent).toHaveBeenCalledWith("maya@example.com", "cookie-value");
     expect(profiles.saveProfile).toHaveBeenCalledWith(userId, "maya@example.com", { fullName: "Maya Patel", phone: "+14155550100" });
-    expect(draftStore.createDraftStore).toHaveBeenCalledWith(userId, "maya-books");
+    expect(draftStore.createDraftStore).toHaveBeenCalledWith(userId, "maya-books", "maya@example.com");
     expect(cookieJar.has("signup_intent")).toBe(false);
   });
 
@@ -71,6 +71,42 @@ describe("completeSignup", () => {
   });
 });
 
+describe("new-store gate (D-071)", () => {
+  it("counts a store created after signup against this browser", async () => {
+    cookieJar.set("signup_intent", "cookie-value");
+    intents.takeSignupIntent.mockResolvedValue(intent);
+    draftStore.createDraftStore.mockResolvedValue("created");
+    expect(await completeSignup(user, undefined)).toBe("/dashboard");
+    expect(newStore.checkNewStore).toHaveBeenCalledWith(expect.objectContaining({ ownerId: userId, email: "maya@example.com", device: "test-device-id" }));
+    expect(newStore.recordNewStore).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends a blocked signup to the username page with the reason, and creates nothing", async () => {
+    cookieJar.set("signup_intent", "cookie-value");
+    intents.takeSignupIntent.mockResolvedValue(intent);
+    newStore.checkNewStore.mockResolvedValueOnce({ ok: false, reason: "limit", message: "x" } as never);
+    expect(await completeSignup(user, undefined)).toBe("/signup/username?blocked=limit");
+    expect(draftStore.createDraftStore).not.toHaveBeenCalled();
+    expect(newStore.recordNewStore).not.toHaveBeenCalled();
+  });
+
+  it("maps a second store for the same inbox (unique index) to the same message", async () => {
+    cookieJar.set("signup_intent", "cookie-value");
+    intents.takeSignupIntent.mockResolvedValue(intent);
+    draftStore.createDraftStore.mockResolvedValue("email_used");
+    expect(await completeSignup(user, undefined)).toBe("/signup/username?blocked=email_used");
+    expect(newStore.recordNewStore).not.toHaveBeenCalled();
+  });
+
+  it("refuses the username step when the gate says no", async () => {
+    mockSession(user);
+    profiles.getProfile.mockResolvedValue({ fullName: "Maya Patel" });
+    newStore.checkNewStore.mockResolvedValueOnce({ ok: false, reason: "disposable", message: "Use a permanent email address." } as never);
+    expect(await claimUsername(null, formData({ username: "maya" }))).toEqual({ ok: false, error: "Use a permanent email address." });
+    expect(draftStore.createDraftStore).not.toHaveBeenCalled();
+  });
+});
+
 describe("claimUsername", () => {
   beforeEach(() => {
     mockSession(user);
@@ -101,7 +137,7 @@ describe("claimUsername", () => {
     profiles.getProfile.mockResolvedValue({ fullName: "Maya Patel", phone: null });
     draftStore.createDraftStore.mockResolvedValue("created");
     expect(await redirectOf(() => claimUsername(null, formData({ username: "Maya-Books" })))).toBe("/dashboard");
-    expect(draftStore.createDraftStore).toHaveBeenCalledWith(userId, "maya-books");
+    expect(draftStore.createDraftStore).toHaveBeenCalledWith(userId, "maya-books", "maya@example.com");
   });
 
   it("saves a new name and phone", async () => {

@@ -30,10 +30,11 @@ beforeEach(() => {
 describe("createDraftStore", () => {
   it("inserts an unpublished store named after the username, with USD and the default theme", async () => {
     hoisted.insertOne.mockResolvedValue({ acknowledged: true });
-    expect(await createDraftStore(ownerId, "maya-books")).toBe("created");
+    expect(await createDraftStore(ownerId, "maya-books", "M.aya+shop@Gmail.com")).toBe("created");
     expect(hoisted.insertOne).toHaveBeenCalledWith(
       expect.objectContaining({
         ownerId,
+        ownerEmailKey: "maya@gmail.com",
         slug: "maya-books",
         name: "Maya Books",
         currency: "usd",
@@ -47,16 +48,17 @@ describe("createDraftStore", () => {
     expect(doc._id).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-
-  it("maps unique-index violations to taken or has_store", async () => {
+  it("maps unique-index violations to taken, has_store or email_used", async () => {
     hoisted.insertOne.mockRejectedValueOnce(new hoisted.DuplicateKey("slug"));
-    expect(await createDraftStore(ownerId, "maya")).toBe("taken");
+    expect(await createDraftStore(ownerId, "maya", "maya@gmail.com")).toBe("taken");
     hoisted.insertOne.mockRejectedValueOnce(new hoisted.DuplicateKey("ownerId"));
-    expect(await createDraftStore(ownerId, "maya")).toBe("has_store");
+    expect(await createDraftStore(ownerId, "maya", "maya@gmail.com")).toBe("has_store");
+    hoisted.insertOne.mockRejectedValueOnce(new hoisted.DuplicateKey("ownerEmailKey"));
+    expect(await createDraftStore(ownerId, "maya", "maya@gmail.com")).toBe("email_used");
   });
 
   it("returns error for anything else", async () => {
     hoisted.insertOne.mockRejectedValueOnce(new Error("network"));
-    expect(await createDraftStore(ownerId, "maya")).toBe("error");
+    expect(await createDraftStore(ownerId, "maya", "maya@gmail.com")).toBe("error");
   });
 });

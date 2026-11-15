@@ -2,12 +2,15 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
+import { deviceId } from "@/lib/auth/device";
 import { INTENT_COOKIE } from "@/lib/auth/intent-token";
 import { DASHBOARD_PATH, USERNAME_PATH, resolvePostLoginPath } from "@/lib/auth/post-login";
 import { saveProfile } from "@/lib/auth/profiles";
 import { takeSignupIntent } from "@/lib/auth/signup-intents";
 import { logger } from "@/lib/logger";
+import { getClientIpHash } from "@/lib/request-ip";
 import { createDraftStore } from "@/lib/stores/create-draft-store";
+import { checkNewStore, recordNewStore } from "@/lib/stores/new-store-guard";
 import { findStoreByOwner } from "@/lib/stores/queries";
 
 /**
@@ -33,8 +36,17 @@ export async function completeSignup(user: { id: string; email?: string | null }
     logger.warn("signup.profile_update_failed", { name: error instanceof Error ? error.name : undefined });
   }
 
-  const result = await createDraftStore(user.id, intent.username);
+  // The same gate as the username step (D-071): a blocked store creation lands on the username
+  // page, which explains why (a fixed message per reason, nothing from the request is echoed).
+  const device = await deviceId();
+  const ipHash = await getClientIpHash();
+  const allowed = await checkNewStore({ ownerId: user.id, email: user.email, device, ipHash });
+  if (!allowed.ok) return `${USERNAME_PATH}?blocked=${allowed.reason}`;
+
+  const result = await createDraftStore(user.id, intent.username, user.email);
+  if (result === "created") await recordNewStore({ device, ipHash });
   if (result === "created" || result === "has_store") return DASHBOARD_PATH;
+  if (result === "email_used") return `${USERNAME_PATH}?blocked=email_used`;
   if (result === "taken") return `${USERNAME_PATH}?taken=1`;
   return USERNAME_PATH;
 }
