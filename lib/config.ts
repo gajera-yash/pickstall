@@ -176,6 +176,8 @@ export const STRIPE_CONNECT_RATE_LIMIT = { max: 10, windowMinutes: 15 } as const
 
 /** Refund requests from the order drawer, per creator (D-053). */
 export const REFUND_RATE_LIMIT = { max: 20, windowMinutes: 60 } as const;
+/** "Send again" for a buyer's access email, per creator. */
+export const ORDER_EMAIL_RATE_LIMIT = { max: 10, windowMinutes: 60 } as const;
 export const ANSWER_MAX_CHARS = { text: 300, long_text: 2000 } as const;
 export const BUYER_NAME_MAX = 80;
 

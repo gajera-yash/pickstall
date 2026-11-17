@@ -2,19 +2,41 @@ import { Check, ChevronRight, Crown } from "lucide-react";
 import Link from "next/link";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { PLAN_LIMITS } from "@/lib/config";
+import type { StoreAccess } from "@/lib/plans/access";
 
-const PRO_PERKS = ["Lower fees", "Custom domain", "Advanced analytics"] as const;
+const PLAN_PATH = "/dashboard/settings/plan";
+
+// What Pro adds over Starter, from the plan limits (0% transaction fees is on every plan).
+const PRO_PERKS = ["Unlimited courses", `${PLAN_LIMITS.pro.videoHours} hours of course video`, `${PLAN_LIMITS.pro.emailSubscribers.toLocaleString("en-US")} email subscribers`] as const;
+
+/** The creator's plan in a few words, under their name. */
+export function planStatusLabel(access: StoreAccess): string {
+  switch (access.state) {
+    case "trial":
+      return "Free trial";
+    case "founding":
+      return "Founding creator";
+    case "paused":
+      return "Store paused";
+    case "past_due":
+      return "Payment due";
+    case "active":
+      return access.plan === "pro" ? "Pro plan" : "Starter plan";
+  }
+}
 
 /**
- * Bottom of the sidebar (reference docs/ui-reference/dashboard.webp): the Pro plan card and the
- * signed-in creator. Paid plans arrive in Phase 3 (PRD F9), so the card says so instead of
- * offering a checkout that does not exist yet.
+ * Bottom of the sidebar (reference docs/ui-reference/dashboard.webp): the Pro plan card, hidden once
+ * the creator is on Pro, and the signed-in creator with their plan status (D-073, D-076).
  */
-export function SidebarFooter({ displayName }: { displayName: string }) {
+export function SidebarFooter({ displayName, access }: { displayName: string; access: StoreAccess }) {
   const initial = displayName.trim().charAt(0).toUpperCase() || "?";
+  const onPro = access.state === "active" && access.plan === "pro";
   return (
     <div className="mt-auto flex flex-col gap-3">
+      {!onPro && (
       <section aria-labelledby="pro-title" className="flex flex-col gap-3 rounded-lg border border-line bg-bg-subtle p-4">
         <div className="flex items-start gap-3">
           <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-yellow-soft text-on-yellow">
@@ -34,11 +56,11 @@ export function SidebarFooter({ displayName }: { displayName: string }) {
             </ul>
           </div>
         </div>
-        <p className="flex items-center justify-between gap-2 rounded-md bg-surface px-3 py-2 text-sm font-semibold text-ink">
-          Pro plans
-          <Badge variant="soon">Coming soon</Badge>
-        </p>
+        <Button asChild size="sm" className="w-full">
+          <Link href={PLAN_PATH}>See plans</Link>
+        </Button>
       </section>
+      )}
 
       <Link
         href="/dashboard/settings/account"
@@ -49,7 +71,7 @@ export function SidebarFooter({ displayName }: { displayName: string }) {
         </Avatar>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-semibold text-ink">{displayName}</span>
-          <span className="text-sm text-mute">Free plan</span>
+          <span className="text-sm text-mute">{planStatusLabel(access)}</span>
         </span>
         <ChevronRight aria-hidden="true" className="size-4 text-mute" />
       </Link>

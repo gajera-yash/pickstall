@@ -3,6 +3,7 @@ import "server-only";
 import type { Filter } from "mongodb";
 
 import { collections, type OrderAnswerDoc, type OrderDoc } from "@/lib/db/collections";
+import { orderEmailStatus, type OrderEmailStatus } from "@/lib/orders/email-status";
 import { escapeRegex } from "@/lib/orders/csv";
 import type { CustomerCursor, OrderStatusFilter } from "@/lib/orders/params";
 import { buildSeries, type DayRow, type Series } from "@/lib/orders/series";
@@ -96,6 +97,8 @@ export type OrderDetail = OrderRow & {
   refundRequestedAt: Date | null;
   refundedAt: Date | null;
   amountRefundedCents: number;
+  /** Delivery of the buyer's access email (null when none was tried yet). */
+  accessEmail: OrderEmailStatus;
 };
 
 /** One order of this store for the details drawer, or null when it is not this store's. */
@@ -116,6 +119,8 @@ export async function findOrderDetail(storeId: string, orderId: string): Promise
     refundRequestedAt: doc.refundRequestedAt ?? null,
     refundedAt: doc.refundedAt ?? null,
     amountRefundedCents: doc.amountRefundedCents ?? 0,
+    // Read only after the order was found with this store's id, so it is never another store's.
+    accessEmail: await orderEmailStatus(doc._id),
   };
 }
 

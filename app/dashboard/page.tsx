@@ -9,6 +9,7 @@ import { DesignDraftProvider } from "@/components/dashboard/design-draft";
 import { PageDesignForm } from "@/components/dashboard/page-design-form";
 import { ProductsEmpty } from "@/components/dashboard/products-empty";
 import { SocialLogo } from "@/components/brand/social-logos";
+import { StoreLinkCard } from "@/components/dashboard/store-link-card";
 import { HelpCard, StorePreviewCard } from "@/components/dashboard/store-preview-card";
 import { WelcomeHero } from "@/components/dashboard/welcome-hero";
 import { Button } from "@/components/ui/button";
@@ -26,10 +27,10 @@ import { lessonCountsOf, type PublicProduct, type PublicStore } from "@/lib/stor
 import type { SocialLink } from "@/lib/stores/schemas";
 import { displayValueFor } from "@/lib/stores/social-handles";
 
-// My Store home (D-029, D-045, reference docs/ui-reference/dashboard.webp). Until setup is done:
-// the welcome card and the setup checklist only. After: welcome card, last-30-days KPIs and the
-// Products / Store design / Links / Analytics tabs, with a live store preview and help on the right
-// from 1280px up. Publishing and the store link live in Settings > Store from then on.
+// My Store home (D-029, D-076, reference docs/ui-reference/dashboard.webp): welcome card, last-30-days
+// KPIs and the Products / Store design / Links / Analytics tabs, with a live store preview and help on
+// the right from 1280px up. Until setup is done, the store link card and the "Get started" steps sit
+// under the welcome card; after that, publishing and the store link live in Settings > Store.
 export default function MyStorePage({ searchParams }: PageProps<"/dashboard">) {
   return (
     <Suspense fallback={<MyStoreSkeleton />}>
@@ -50,15 +51,6 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
   const { checklist, products } = await loadSetupState(store);
   const name = firstName(profile?.fullName) ?? store.name;
   const link = storeLink(store.slug);
-
-  if (!checklist.complete) {
-    return (
-      <div className="flex max-w-4xl flex-col gap-6">
-        <WelcomeHero name={name} storeUrl={`https://${link}`} ready={false} publicPath={store.isPublished ? `/@${store.slug}` : null} />
-        <ChecklistCard {...checklist} />
-      </div>
-    );
-  }
 
   const stats = await incomeStats(store.id, store.currency, 90).catch(() => null);
   const productCount = products.length;
@@ -97,7 +89,14 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
     <DesignDraftProvider saved={{ themePreset: store.theme.preset, accent: store.theme.accent }}>
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="flex min-w-0 flex-col gap-6">
-        <WelcomeHero name={name} storeUrl={`https://${link}`} ready publicPath={store.isPublished ? `/@${store.slug}` : null} />
+        <WelcomeHero name={name} storeUrl={`https://${link}`} ready={checklist.complete} publicPath={store.isPublished ? `/@${store.slug}` : null} />
+
+        {!checklist.complete && (
+          <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+            <StoreLinkCard link={link} isPublished={store.isPublished} />
+            <ChecklistCard {...checklist} />
+          </div>
+        )}
 
         <KpiSection currency={store.currency} series={series} />
 

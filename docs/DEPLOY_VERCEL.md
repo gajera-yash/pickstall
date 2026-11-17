@@ -68,7 +68,9 @@ Then **Deployments > Redeploy** so the build picks the values up.
 
 1. Resend > Domains > add `pickstall.store` (or a subdomain such as `mail.pickstall.store`).
 2. Add the DNS records Resend shows (SPF, DKIM, optional DMARC) at your domain registrar. Wait until Resend says **Verified**.
-3. Until the domain is verified, Resend only delivers to your own Resend account email, so other people cannot receive their sign-in code.
+3. Until the domain is verified, Resend only delivers to your own Resend account email, so other people cannot receive their sign-in code **and buyers get no order email** (your own tests still work, which hides the problem).
+4. In Vercel, set `EMAIL_FROM` to an address on the verified domain, for example `Pickstall <orders@pickstall.store>`, then redeploy. Without it the app falls back to Resend's test sender (`onboarding@resend.dev`), with the same problem, and Sentry reports `email.sender_not_verified`.
+5. Check: buy a product from a private window with an email address that is **not** your Resend login. In the dashboard, Orders > the order > Delivery shows "Access email: Sent". If it says "Not delivered", fix the sender, then press **Send again**.
 
 ## 6. Stripe (test mode)
 

@@ -29,6 +29,7 @@ describe("Orders and Customers query strings", () => {
 const db = vi.hoisted(() => ({
   orders: { find: vi.fn(), findOne: vi.fn(), aggregate: vi.fn() },
   products: { findOne: vi.fn() },
+  emailOutbox: { findOne: vi.fn<(filter: { _id: string }) => Promise<{ status: string; sentAt: null; attempts: number }>>(async () => ({ status: "sent", sentAt: null, attempts: 1 })) },
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/db/collections", () => ({ collections: vi.fn(async () => db) }));
@@ -81,7 +82,8 @@ describe("order and customer queries stay inside the store (ownership)", () => {
     const detail = await findOrderDetail("store-1", ORDER);
     expect(db.orders.findOne).toHaveBeenCalledWith({ _id: ORDER, storeId: "store-1" });
     expect(db.products.findOne.mock.calls[0]?.[0]).toEqual({ _id: PRODUCT, storeId: "store-1" });
-    expect(detail).toMatchObject({ id: ORDER, discountCents: 500, accessCount: 2, downloadLimit: 5 });
+    expect(detail).toMatchObject({ id: ORDER, discountCents: 500, accessCount: 2, downloadLimit: 5, accessEmail: { status: "sent" } });
+    expect(db.emailOutbox.findOne.mock.calls.at(-1)?.[0]).toEqual({ _id: `${ORDER}:order-confirmation` });
   });
 
   it("returns null for another store's order", async () => {

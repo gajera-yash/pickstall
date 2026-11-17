@@ -564,7 +564,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
         </Card>
 
         <aside aria-label="Preview" className="xl:sticky xl:top-22 xl:self-start">
-          <ProductPreview values={values} currency={currency} price={previewPrice} />
+          {step === "checkout" ? <CheckoutPreview values={values} /> : <ProductPreview values={values} currency={currency} price={previewPrice} />}
         </aside>
       </div>
     </form>
@@ -664,6 +664,83 @@ function QuestionList({ questions, onChange, errorFor, listError }: { questions:
       </Button>
       {full && <p className="text-sm text-mute">You can add up to {CHECKOUT_QUESTIONS_MAX} extra fields.</p>}
     </section>
+  );
+}
+
+/**
+ * Live checkout preview on the "Checkout form" step: the fields buyers will see, in order, updated as
+ * the creator adds, edits, reorders or removes questions (the real form is components/store/checkout-form.tsx).
+ * Inputs are inert: nothing here can be typed into or submitted.
+ */
+function CheckoutPreview({ values }: { values: EditorProduct }) {
+  const optional = (required: boolean) => (required ? "" : " (optional)");
+
+  return (
+    <Card className="gap-4">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-display text-h4">Checkout preview</h2>
+        <Badge variant="example">What buyers see</Badge>
+      </div>
+      <div aria-hidden="true" inert className="pointer-events-none flex flex-col gap-4 rounded-md border border-line p-4 select-none">
+        <p className="font-display text-h4 break-words">{values.headline.trim() || "Checkout"}</p>
+        <PreviewField label="Name">
+          <Input tabIndex={-1} readOnly />
+        </PreviewField>
+        <PreviewField label="Email">
+          <Input tabIndex={-1} readOnly />
+        </PreviewField>
+        {values.askPhone && (
+          <PreviewField label="Phone (optional)">
+            <Input tabIndex={-1} readOnly />
+          </PreviewField>
+        )}
+        {values.questions.map((question) => {
+          const label = `${question.label.trim() || "Untitled question"}${optional(question.required)}`;
+          if (question.kind === "checkbox") {
+            return (
+              <p key={question.id} className="flex items-start gap-3 text-sm font-medium break-words">
+                <Checkbox tabIndex={-1} className="mt-0.5" checked={false} />
+                <span className="min-w-0">{label}</span>
+              </p>
+            );
+          }
+          return (
+            <PreviewField key={question.id} label={label}>
+              {question.kind === "long_text" ? (
+                <Textarea tabIndex={-1} rows={3} readOnly />
+              ) : question.kind === "dropdown" ? (
+                <Select tabIndex={-1} value="" onChange={() => undefined}>
+                  <option value="">Choose...</option>
+                  {question.options
+                    .filter((option) => option.trim() !== "")
+                    .map((option, index) => (
+                      <option key={`${option}-${index}`} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                </Select>
+              ) : (
+                <Input tabIndex={-1} readOnly />
+              )}
+            </PreviewField>
+          );
+        })}
+        <span className="flex h-11 items-center justify-center gap-2 rounded-md bg-primary text-button text-primary-foreground">
+          <Lock className="size-4" />
+          {values.buttonText.trim() || "Pay now"}
+        </span>
+      </div>
+      <p className="text-sm text-mute">Save to make changes live on your checkout page.</p>
+    </Card>
+  );
+}
+
+function PreviewField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium break-words">{label}</span>
+      {children}
+    </div>
   );
 }
 

@@ -96,6 +96,8 @@ if (uri && /^mongodb(\+srv)?:\/\//.test(uri)) {
 
 // 6. Optional services.
 if (!process.env.RESEND_API_KEY) warn("RESEND_API_KEY not set", "fine for development: sign-in codes are printed in the terminal");
+if (process.env.RESEND_API_KEY && (!process.env.EMAIL_FROM || /@resend\.dev>?\s*$/i.test(process.env.EMAIL_FROM.trim())))
+  warn("EMAIL_FROM is not on your own domain", "Resend then delivers only to your own Resend account email: buyers get no order email. Use an address on a domain verified in Resend");
 if (!process.env.IP_HASH_SECRET) warn("IP_HASH_SECRET not set", "per-IP rate limits are off until it is set");
 
 print(failures ? `\n${failures} problem(s) found. Fix them, then run \`pnpm doctor\` again.` : "\nAll good. Start with `pnpm dev`.");

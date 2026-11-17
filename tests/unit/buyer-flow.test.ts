@@ -39,9 +39,11 @@ vi.mock("@/lib/db/collections", () => ({
         if (hoisted.outbox.has(doc._id)) throw new Error("dup");
         hoisted.outbox.set(doc._id, { status: doc.status });
       }),
-      updateOne: vi.fn(async (filter: { _id: string; status?: string }, update: { $set: { status?: string } }) => {
+      updateOne: vi.fn(async (filter: { _id: string; status?: string; $or?: { status: string; createdAt?: unknown }[] }, update: { $set: { status?: string } }) => {
         const row = hoisted.outbox.get(filter._id);
-        if (!row || (filter.status && row.status !== filter.status)) return { matchedCount: 0 };
+        // A retry matches "failed", or "sending" only when old (rows here are always fresh).
+        const allowed = filter.$or ? filter.$or.filter((condition) => !condition.createdAt).map((condition) => condition.status) : filter.status ? [filter.status] : null;
+        if (!row || (allowed && !allowed.includes(row.status))) return { matchedCount: 0 };
         if (update.$set.status) row.status = update.$set.status;
         return { matchedCount: 1 };
       }),

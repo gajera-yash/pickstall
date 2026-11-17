@@ -80,8 +80,8 @@ async function SetupBarWithData() {
 }
 
 async function SidebarFooterWithData() {
-  const { displayName } = await displayNameFor();
-  return <SidebarFooter displayName={displayName} />;
+  const { store, displayName } = await displayNameFor();
+  return <SidebarFooter displayName={displayName} access={store.access} />;
 }
 
 function TopBarSkeleton() {

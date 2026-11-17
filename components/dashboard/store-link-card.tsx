@@ -59,7 +59,7 @@ export function StoreLinkCard({
   };
 
   return (
-    <Card id="your-store-link" className="scroll-mt-24 gap-5">
+    <Card id="your-store-link" className="@container scroll-mt-24 gap-5">
       <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-display text-h3">{title}</h2>
@@ -70,12 +70,12 @@ export function StoreLinkCard({
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+      <div className="flex flex-col gap-3 @lg:flex-row @lg:items-stretch">
         <p className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-md border border-line bg-bg-subtle px-4 text-base font-medium break-all text-ink">
           <Link2 aria-hidden="true" className="size-5 shrink-0 text-mute" />
           {link}
         </p>
-        <div className="grid grid-cols-2 gap-2 sm:flex">
+        <div className="grid grid-cols-2 gap-2 @lg:flex">
           <Button type="button" variant="secondary" onClick={copyLink} className="h-12">
             {copy === "copied" ? <Check aria-hidden="true" className="text-mint" /> : <Copy aria-hidden="true" />}
             {copy === "copied" ? "Copied" : "Copy"}
@@ -97,12 +97,12 @@ export function StoreLinkCard({
       {copy === "failed" && <p className="-mt-2 text-sm text-danger">Couldn&apos;t copy. Select the link and copy it yourself.</p>}
 
       {!isPublished && (
-        <div className="flex flex-col gap-2 rounded-md border border-blue/25 bg-blue-soft px-4 py-3 text-sm sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 rounded-md border border-blue/25 bg-blue-soft px-4 py-3 text-sm @lg:flex-row @lg:items-center">
           <p className="flex flex-1 items-start gap-2 text-ink">
             <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-blue" />
             Your store is in draft mode. Publish it to make it public.
           </p>
-          <Button type="button" size="sm" onClick={() => togglePublished(true)} loading={pending} className="self-start sm:self-auto">
+          <Button type="button" size="sm" onClick={() => togglePublished(true)} loading={pending} className="self-start @lg:self-auto">
             Publish store
             <ArrowRight aria-hidden="true" className="size-4" />
           </Button>

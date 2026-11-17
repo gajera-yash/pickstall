@@ -28,28 +28,28 @@ export function MyStoreTabs({ initialTab, products, design, links, analytics, pr
   };
 
   return (
-    <Tabs defaultValue={initialTab} onValueChange={remember} className="gap-0 overflow-hidden rounded-xl border border-line bg-surface">
-      <div className="flex flex-col border-b border-line px-4 sm:px-6 lg:h-14 lg:flex-row lg:items-center lg:justify-between">
-        <TabsList aria-label="My Store" className="border-b-0 lg:h-full">
-          <TabsTrigger value="products" className="lg:h-full">
+    <Tabs defaultValue={initialTab} onValueChange={remember} className="@container gap-0 overflow-hidden rounded-xl border border-line bg-surface">
+      <div className="flex flex-col border-b border-line px-4 sm:px-6 @3xl:h-14 @3xl:flex-row @3xl:items-center @3xl:justify-between">
+        <TabsList aria-label="My Store" className="border-b-0 @3xl:h-full">
+          <TabsTrigger value="products" className="@3xl:h-full">
             <Package aria-hidden="true" />
             Products
           </TabsTrigger>
-          <TabsTrigger value="design" className="lg:h-full">
+          <TabsTrigger value="design" className="@3xl:h-full">
             <Palette aria-hidden="true" />
             Store design
           </TabsTrigger>
-          <TabsTrigger value="links" className="lg:h-full">
+          <TabsTrigger value="links" className="@3xl:h-full">
             <Link2 aria-hidden="true" />
             Links
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="lg:h-full">
+          <TabsTrigger value="analytics" className="@3xl:h-full">
             <BarChart3 aria-hidden="true" />
             Analytics
           </TabsTrigger>
         </TabsList>
-        <div className="flex items-center gap-2.5 py-3 lg:py-0">
-          <InputGroup className="h-9 min-w-0 flex-1 sm:w-60 lg:w-64 lg:flex-none">
+        <div className="flex items-center gap-2.5 py-3 @3xl:py-0">
+          <InputGroup className="h-9 min-w-0 flex-1 sm:w-60 @3xl:w-56 @3xl:flex-none">
             <InputGroupInput
               type="search"
               aria-label="Search products"

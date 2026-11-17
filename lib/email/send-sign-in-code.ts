@@ -20,7 +20,7 @@ export async function sendSignInCode(email: string, code: string): Promise<void>
 
   const resend = new Resend(apiKey);
   const { error } = await resend.emails.send({
-    from: serverEnv.EMAIL_FROM ?? `${APP_NAME} <onboarding@resend.dev>`,
+    from: serverEnv.EMAIL_FROM ?? `${APP_NAME} <onboarding@resend.dev>`, // see usesTestSender in ./send.ts
     to: email,
     subject: `${code} is your ${APP_NAME} code`,
     text: `Your ${APP_NAME} sign-in code is ${code}.\n\nIt expires in 10 minutes. If you did not ask for it, you can ignore this email.`,

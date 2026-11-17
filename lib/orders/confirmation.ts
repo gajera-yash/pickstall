@@ -10,6 +10,9 @@ import { sendEmail } from "@/lib/email/send";
 import { renderOrderEmail } from "@/lib/email/templates";
 import { logger } from "@/lib/logger";
 
+/** A "sending" row older than this is treated as failed (the send was cut off). */
+const STUCK_SENDING_MS = 10 * 60 * 1000;
+
 /**
  * Sends the order confirmation: a unique link where the buyer creates a password and opens their
  * purchase (D-037). One outbox row per order makes this safe to call twice (a replayed webhook cannot
@@ -26,8 +29,13 @@ export async function sendOrderConfirmation(orderId: string): Promise<"sent" | "
       await emailOutbox.insertOne({ _id: key, orderId, kind: "order-confirmation", status: "sending", attempts: 1, createdAt: new Date(), sentAt: null });
     } catch (error) {
       if (!isDuplicateKeyError(error)) throw error;
-      // Already handled: take it again only if the last attempt failed.
-      const retry = await emailOutbox.updateOne({ _id: key, status: "failed" }, { $set: { status: "sending" }, $inc: { attempts: 1 } });
+      // Already handled: take it again only if the last attempt failed, or stopped half way (the
+      // function was stopped while sending) long enough ago that it is not still running.
+      const stuckBefore = new Date(Date.now() - STUCK_SENDING_MS);
+      const retry = await emailOutbox.updateOne(
+        { _id: key, $or: [{ status: "failed" }, { status: "sending", createdAt: { $lt: stuckBefore } }] },
+        { $set: { status: "sending", createdAt: new Date() }, $inc: { attempts: 1 } },
+      );
       if (retry.matchedCount === 0) return "skipped";
     }
 

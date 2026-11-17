@@ -4,6 +4,18 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-076: Full My Store during setup, checkout preview, access email status (founder bug report)
+- **Date:** 2026-11-17
+- **Decision:**
+  - **My Store during setup** now follows `docs/ui-reference/dashboard.webp` (supersedes the D-045 rule "greeting and checklist only"). It shows the welcome card, then the store link card and a compact "Get started" list side by side (each row opens its step on `/dashboard/setup`), then KPIs, the Products / Store design / Links / Analytics tabs and the store preview with help on the right. Once setup is done the two cards go away, as before. The store link card and the tab bar respond to their own width (container queries), so nothing is squeezed next to the preview column.
+  - **Sidebar plan card:** links to Settings > Plan ("See plans") instead of "Coming soon", lists what Pro really adds (from `PLAN_LIMITS`; 0% fees is on every plan), hides on Pro, and shows the creator's real status (Free trial, Founding creator, Starter or Pro plan, Payment due, Store paused) instead of "Free plan".
+  - **Checkout preview:** on the product editor's "Checkout form" step, the preview shows the buyer's form (headline, name, email, phone if asked, every question with its answer type, and the button), updating as fields are added. Before, it showed only the product card and a count, so a new field looked missing.
+  - **Access email:** the order drawer shows "Access email: Sent / Not delivered / Not sent" from the email outbox, with "Send again" (rate limited, own store only, never resends a delivered email). A send cut off half way is retried after 10 minutes. In production, a sender that is Resend's test address (`EMAIL_FROM` unset or `@resend.dev`) is reported as `email.sender_not_verified`, and `pnpm doctor` warns. Resend delivers such mail only to the account owner, which is why the founder's own tests worked and buyers got nothing.
+- **Why:** founder bug report, 2026-11-17.
+- **Consequences:** the founder sets `EMAIL_FROM` on a domain verified in Resend (docs/DEPLOY_VERCEL.md step 5). Image and file uploads on Vercel still need object storage (DEPLOY_VERCEL section 0), which is the founder's choice.
+
+---
+
 ## D-075: Monitoring, audit log, health check and ops runbook (Phase E)
 - **Date:** 2026-11-17
 - **Decision:**

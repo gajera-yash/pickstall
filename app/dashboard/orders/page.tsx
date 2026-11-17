@@ -6,12 +6,13 @@ import { CopyButton, DetailsSheet } from "@/components/dashboard/details-sheet";
 import { Answers, DetailList, DetailSection, ListCard, ListToolbar, OrderBadges, formatDateTime, formatDay, orderNumber } from "@/components/dashboard/orders-ui";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { RefundButton } from "@/components/dashboard/refund-button";
+import { ResendEmailButton } from "@/components/dashboard/resend-email-button";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireCreator } from "@/lib/auth/guards";
-import { countOrdersByStatus, findOrderDetail, listOrders, type OrderRow } from "@/lib/orders/creator-queries";
+import { countOrdersByStatus, findOrderDetail, listOrders, type OrderDetail, type OrderRow } from "@/lib/orders/creator-queries";
 import { ORDER_STATUSES, parseOrderParams, withQuery, type OrderParams } from "@/lib/orders/params";
 import { formatMoney } from "@/lib/products/money";
 import { listProducts } from "@/lib/products/queries";
@@ -197,6 +198,14 @@ function OrdersTable({ orders, hrefFor }: { orders: OrderRow[]; hrefFor: (id: st
   );
 }
 
+/** Where the buyer's access email stands, in plain words. */
+function accessEmailLabel(email: OrderDetail["accessEmail"]): string {
+  if (!email) return "Not sent";
+  if (email.status === "sent") return email.sentAt ? `Sent ${formatDateTime(email.sentAt)}` : "Sent";
+  if (email.status === "sending") return "Sending";
+  return "Not delivered";
+}
+
 const PAID_WITH: Record<OrderRow["provider"], string> = { stripe: "Stripe", mock: "Test payment", free: "Free product" };
 
 async function OrderDrawer({ storeId, orderId, closeHref }: { storeId: string; orderId: string; closeHref: string }) {
@@ -269,7 +278,19 @@ async function OrderDrawer({ storeId, orderId, closeHref }: { storeId: string; o
 
       {order.status === "paid" && (
         <DetailSection title="Delivery">
-          <DetailList rows={[{ label: "Downloads used", value: order.downloadLimit ? `${order.accessCount} of ${order.downloadLimit}` : `${order.accessCount} (no limit)`, numeric: true }]} />
+          <DetailList
+            rows={[
+              { label: "Access email", value: accessEmailLabel(order.accessEmail) },
+              { label: "Downloads used", value: order.downloadLimit ? `${order.accessCount} of ${order.downloadLimit}` : `${order.accessCount} (no limit)`, numeric: true },
+            ]}
+          />
+          {order.accessEmail?.status !== "sent" && order.accessEmail?.status !== "sending" && (
+            <>
+              <p className="text-sm text-mute">The buyer didn&apos;t get the email with their access link. Send it again once your email settings are fixed.</p>
+              <ResendEmailButton orderId={order.id} />
+            </>
+          )}
+          {order.accessEmail?.status === "sent" && <p className="text-sm text-mute">If the buyer can&apos;t find it, ask them to check their spam folder.</p>}
         </DetailSection>
       )}
 
