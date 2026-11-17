@@ -82,6 +82,8 @@ type Props = {
   paymentsOk: boolean;
   /** A product that was just created opens on step 1 with nothing checked yet. */
   isNew: boolean;
+  /** False on the live site until file storage exists (D-077): delivery by link only. */
+  fileUploadReady: boolean;
 };
 
 /**
@@ -90,7 +92,7 @@ type Props = {
  * and then publishes, so nothing typed is lost. The whole form is one JSON payload; the server
  * cleans and validates every field again and checks the publish rules on the saved product.
  */
-export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew }: Props) {
+export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew, fileUploadReady }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSetup = searchParams.get("from") === "setup";
@@ -320,7 +322,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
                 <Input id="title" value={values.title} maxLength={PRODUCT_LIMITS.title} onChange={(event) => set("title", event.target.value)} aria-invalid={!!fieldError("title")} placeholder="Instagram growth playbook" />
               </Field>
               <RichTextEditor id="descriptionDoc" label="Description (optional)" value={values.descriptionDoc} onChange={(doc) => set("descriptionDoc", doc)} error={fieldError("descriptionDoc")} />
-              <ImageUploader id="coverUrl" label="Cover image (optional)" kind="cover" shape="wide" value={values.coverUrl} onChange={(value) => set("coverUrl", value)} error={fieldError("coverUrl")} hint="Shown on your store and product page. JPG, PNG, WebP or GIF, up to 5 MB." />
+              <ImageUploader id="coverUrl" label="Cover image (optional)" kind="cover" shape="wide" value={values.coverUrl} onChange={(value) => set("coverUrl", value)} error={fieldError("coverUrl")} hint="Shown on your store and product page. JPG, PNG, WebP or GIF, up to 4 MB." />
               <fieldset className="flex flex-col gap-3">
                 <legend className="mb-2 text-sm font-semibold">How buyers get it</legend>
                 <ToggleGroup
@@ -331,7 +333,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
                   onValueChange={(value) => value && set("deliveryType", value as EditorProduct["deliveryType"])}
                   className="grid w-full grid-cols-2"
                 >
-                  <ToggleGroupItem value="file">
+                  <ToggleGroupItem value="file" disabled={!fileUploadReady && !values.file}>
                     <FileUp aria-hidden="true" />
                     Upload file
                   </ToggleGroupItem>
@@ -340,6 +342,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew 
                     Redirect to URL
                   </ToggleGroupItem>
                 </ToggleGroup>
+                {!fileUploadReady && <p className="text-sm text-mute">File uploads aren&apos;t available on the live site yet. For now, share the file with a link (Google Drive, Dropbox or Notion).</p>}
                 {values.deliveryType === "file" ? (
                   <ProductFileField productId={values.id} file={values.file} onChange={(file) => set("file", file)} />
                 ) : (

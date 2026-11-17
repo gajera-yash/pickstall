@@ -4,6 +4,17 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-077: Images in MongoDB; file uploads off on the live site (founder decision)
+- **Date:** 2026-11-17
+- **Decision:**
+  - Uploaded images are saved in MongoDB (`mediaBlobs`, keyed by the upload's storage key, `storeId` indexed) instead of the server's disk, which Vercel cannot keep. Serving is unchanged (`/media/<id>`, cached as immutable). In development, images uploaded to disk before this still show.
+  - Image limit 4 MB (was 5 MB), so the upload fits Vercel's ~4.5 MB request limit. Each store gets 60 MB of images (`MEDIA_STORE_QUOTA_BYTES`). When it is full, the store's own images that nothing shows (not the store photo, not any product or course cover, older than one hour) are deleted first.
+  - Product and lesson file uploads are off in production unless `PRODUCT_FILES_DIR` is set (own server): routes answer 503 with a clear message, the editors disable the upload and point to delivery links.
+- **Why:** founder decision, 2026-11-17: no paid storage service for now. Saving into the project folder cannot work on Vercel (read-only, wiped between instances).
+- **Consequences:** Atlas storage grows with images (free M0: about 512 MB in total), so watch it and move images to object storage (R2, chosen earlier, free up to 10 GB) before it fills. File delivery by upload returns with object storage. No migration: no live images existed (uploads failed on Vercel).
+
+---
+
 ## D-076: Full My Store during setup, checkout preview, access email status (founder bug report)
 - **Date:** 2026-11-17
 - **Decision:**

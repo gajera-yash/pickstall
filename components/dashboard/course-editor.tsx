@@ -80,6 +80,8 @@ type Props = {
   /** Modules and lessons (D-055), and whether Bunny video upload is set up. */
   curriculum: Curriculum;
   videoUploadReady: boolean;
+  /** False on the live site until file storage exists (D-077). */
+  fileUploadReady: boolean;
 };
 
 /**
@@ -87,7 +89,7 @@ type Props = {
  * 2 Pricing, 3 Curriculum, 4 Publish, beside a live card preview. Steps 1 and 2 save as one JSON
  * payload that the server checks again; the curriculum builder (G2) and publishing (G3) follow.
  */
-export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum: initialCurriculum, videoUploadReady }: Props) {
+export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum: initialCurriculum, videoUploadReady, fileUploadReady }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSetup = searchParams.get("from") === "setup";
@@ -326,7 +328,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
                 <Input id="title" value={values.title} maxLength={PRODUCT_LIMITS.title} onChange={(event) => set("title", event.target.value)} aria-invalid={!!fieldError("title")} placeholder="Advanced UI/UX Design Masterclass" />
               </Field>
               <RichTextEditor id="descriptionDoc" label="Description (optional)" value={values.descriptionDoc} onChange={(doc) => set("descriptionDoc", doc)} error={fieldError("descriptionDoc")} />
-              <ImageUploader id="coverUrl" label="Cover image (optional)" kind="cover" shape="wide" value={values.coverUrl} onChange={(value) => set("coverUrl", value)} error={fieldError("coverUrl")} hint="The banner on your store and course page. JPG, PNG, WebP or GIF, up to 5 MB." />
+              <ImageUploader id="coverUrl" label="Cover image (optional)" kind="cover" shape="wide" value={values.coverUrl} onChange={(value) => set("coverUrl", value)} error={fieldError("coverUrl")} hint="The banner on your store and course page. JPG, PNG, WebP or GIF, up to 4 MB." />
               <Field id="category" label="Category" error={fieldError("category")} hint="Helps students understand what the course is about.">
                 <NativeSelect id="category" value={values.category} onChange={(event) => set("category", event.target.value as EditorCourse["category"])} aria-invalid={!!fieldError("category")}>
                   <NativeSelectOption value="">Pick a category</NativeSelectOption>
@@ -431,7 +433,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
           {step === "curriculum" && (
             <>
               <StepHeading title="Curriculum" body="Modules and lessons: videos, attachments and written notes." />
-              <CurriculumBuilder courseId={values.id} curriculum={curriculum} videoUploadReady={videoUploadReady} onChange={setCurriculum} />
+              <CurriculumBuilder courseId={values.id} curriculum={curriculum} videoUploadReady={videoUploadReady} fileUploadReady={fileUploadReady} onChange={setCurriculum} />
             </>
           )}
 

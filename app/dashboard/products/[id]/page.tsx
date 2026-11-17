@@ -8,6 +8,7 @@ import { requireCreator } from "@/lib/auth/guards";
 import { storeLink } from "@/lib/config";
 import { loadCurriculum } from "@/lib/courses/curriculum";
 import { findProductFile } from "@/lib/files/product-files";
+import { fileStorageAvailable } from "@/lib/files/storage";
 import { centsToInput } from "@/lib/products/money";
 import { docFromPlainText } from "@/lib/products/rich-text";
 import { paymentsReady } from "@/lib/products/publish";
@@ -28,6 +29,7 @@ export default function ProductEditorPage({ params }: PageProps<"/dashboard/prod
 async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id]">, "params">) {
   const { id } = await params;
   const { store } = await requireCreator(`/dashboard/products/${id}`);
+  const fileUploadReady = fileStorageAvailable();
   if (!productIdInput.safeParse(id).success) notFound();
 
   const product = await findProduct(store.id, id);
@@ -53,7 +55,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
       drip: product.course?.drip ?? false,
     };
     const curriculum = (await loadCurriculum(store.id, product._id)) ?? { modules: [] };
-    return <CourseEditor initial={course} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} curriculum={curriculum} videoUploadReady={bunnyConfig() !== null} />;
+    return <CourseEditor initial={course} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} curriculum={curriculum} videoUploadReady={bunnyConfig() !== null} fileUploadReady={fileUploadReady} />;
   }
 
   const initial: EditorProduct = {
@@ -66,7 +68,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
     coverUrl: product.coverUrl ?? "",
     externalUrl: product.externalUrl ?? "",
     // Products saved before D-050 deliver a link.
-    deliveryType: product.deliveryType ?? "link",
+    deliveryType: fileUploadReady || product.fileId ? (product.deliveryType ?? "link") : "link",
     file: await findProductFile(store.id, product.fileId).catch(() => null),
     price: centsToInput(product.priceCents, store.currency),
     discountOn: product.salePriceCents != null,
@@ -82,7 +84,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
     emailBody: product.afterPurchase.emailBody ?? "",
   };
 
-  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} />;
+  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} fileUploadReady={fileUploadReady} />;
 }
 
 function EditorSkeleton() {

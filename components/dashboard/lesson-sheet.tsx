@@ -46,6 +46,7 @@ export function LessonSheet({
   courseId,
   lesson,
   videoUploadReady,
+  fileUploadReady,
   onClose,
   onChange,
   onReload,
@@ -55,6 +56,7 @@ export function LessonSheet({
   courseId: string;
   lesson: EditorLesson;
   videoUploadReady: boolean;
+  fileUploadReady: boolean;
   onClose: () => void;
   /** A fresh curriculum from the server after any change. */
   onChange: (result: CurriculumResult) => void;
@@ -176,7 +178,7 @@ export function LessonSheet({
 
           <RichTextEditor id="bodyDoc" label="Notes (optional)" value={bodyDoc} onChange={setBodyDoc} error={fieldError("bodyDoc")} maxChars={COURSE_LIMITS.notesChars} />
 
-          <AttachmentsField courseId={courseId} lessonId={lesson.id} files={lesson.attachments} onChange={onChange} onReload={onReload} />
+          <AttachmentsField courseId={courseId} lessonId={lesson.id} files={lesson.attachments} onChange={onChange} onReload={onReload} uploadReady={fileUploadReady} />
 
           <LinksField links={links} onChange={setLinks} error={fieldError("links")} />
         </SheetBody>
@@ -200,12 +202,14 @@ function AttachmentsField({
   files,
   onChange,
   onReload,
+  uploadReady,
 }: {
   courseId: string;
   lessonId: string;
   files: ProductFileInfo[];
   onChange: (result: CurriculumResult) => void;
   onReload: () => void;
+  uploadReady: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -285,7 +289,7 @@ function AttachmentsField({
           ))}
         </ul>
       )}
-      <Button type="button" variant="secondary" size="sm" className="self-start" onClick={() => input.current?.click()} disabled={full || progress !== null}>
+      <Button type="button" variant="secondary" size="sm" className="self-start" onClick={() => input.current?.click()} disabled={!uploadReady || full || progress !== null}>
         <Plus aria-hidden="true" className="size-4" />
         Add a file
       </Button>
@@ -295,7 +299,7 @@ function AttachmentsField({
           <span className="text-xs text-mute">Uploading... {progress}%</span>
         </div>
       )}
-      {problem ? <FieldError>{problem}</FieldError> : <FieldHint>{full ? `That's the limit of ${COURSE_LIMITS.attachmentsMax} files.` : "PDFs, slides, source files and more, up to 200 MB each."}</FieldHint>}
+      {problem ? <FieldError>{problem}</FieldError> : !uploadReady ? <FieldHint>File uploads aren&apos;t available on the live site yet. Add a link to the file under Links instead.</FieldHint> : <FieldHint>{full ? `That's the limit of ${COURSE_LIMITS.attachmentsMax} files.` : "PDFs, slides, source files and more, up to 200 MB each."}</FieldHint>}
     </section>
   );
 }

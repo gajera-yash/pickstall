@@ -25,6 +25,18 @@ function pathFor(key: string): string {
   return path.join(filesDir(), key);
 }
 
+/**
+ * Whether product and lesson files can be uploaded on this server (D-077). Files are stored on the
+ * server's disk, which serverless hosting (Vercel) cannot keep, so they are off in production
+ * unless PRODUCT_FILES_DIR points at a lasting folder (your own server). Creators use a delivery
+ * link meanwhile.
+ */
+export function fileStorageAvailable(): boolean {
+  return process.env.NODE_ENV !== "production" || Boolean(serverEnv.PRODUCT_FILES_DIR);
+}
+
+export const FILE_UPLOADS_OFF_MESSAGE = "File uploads aren't available on the live site yet. For now, share the file with a link (Google Drive, Dropbox or Notion).";
+
 export type WriteResult = { ok: true; size: number; head: Uint8Array } | { ok: false; reason: "empty" | "too_large" };
 
 /**

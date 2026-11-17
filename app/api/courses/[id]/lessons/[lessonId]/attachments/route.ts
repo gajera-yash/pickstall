@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth/guards";
+import { FILE_UPLOADS_OFF_MESSAGE, fileStorageAvailable } from "@/lib/files/storage";
 import { PRODUCT_FILE_MAX_BYTES, PRODUCT_FILE_UPLOAD_RATE_LIMIT } from "@/lib/config";
 import { saveLessonAttachment } from "@/lib/courses/attachments";
 import { logger } from "@/lib/logger";
@@ -17,6 +18,7 @@ const fail = (error: string, status: number) => NextResponse.json({ error }, { s
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string; lessonId: string }> }) {
   const { id, lessonId } = await params;
   if (!isUuid(id) || !isUuid(lessonId)) return fail("We couldn't find that lesson.", 404);
+  if (!fileStorageAvailable()) return fail(FILE_UPLOADS_OFF_MESSAGE, 503);
 
   const length = Number(request.headers.get("content-length") ?? "0");
   if (length > PRODUCT_FILE_MAX_BYTES) return fail(`Use a file under ${PRODUCT_FILE_MAX_BYTES / 1024 / 1024} MB.`, 413);

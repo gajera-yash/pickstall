@@ -103,7 +103,7 @@ export function ImageUploader({ id, label, kind, value, onChange, error, hint, s
         </div>
       </div>
       <div aria-live="polite">
-        {shown ? <FieldError id={`${id}-error`}>{shown}</FieldError> : <FieldHint id={`${id}-hint`}>{hint ?? "JPG, PNG, WebP or GIF, up to 5 MB."}</FieldHint>}
+        {shown ? <FieldError id={`${id}-error`}>{shown}</FieldError> : <FieldHint id={`${id}-hint`}>{hint ?? "JPG, PNG, WebP or GIF, up to 4 MB."}</FieldHint>}
       </div>
     </div>
   );

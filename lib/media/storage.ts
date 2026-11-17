@@ -1,49 +1,64 @@
 import "server-only";
 
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
+import { Binary } from "mongodb";
+
+import { collections } from "@/lib/db/collections";
 import { serverEnv } from "@/lib/env.server";
 
-// File storage for uploaded images (D-032). One small interface so the disk driver used now can be
-// replaced by object storage (S3) without touching the routes. Keys are server-made
-// (`<uuid>.<ext>`), never taken from a client file name, and are checked again before any path is built.
+// Storage for uploaded images (D-032, D-077). Images are kept in MongoDB, so they work on Vercel,
+// whose functions cannot keep files on disk, without a paid file store. Keys are server-made
+// (`<uuid>.<ext>`), never taken from a client file name, and are checked again before use.
 
 export type FileStorage = {
-  put(key: string, bytes: Uint8Array): Promise<void>;
+  put(key: string, bytes: Uint8Array, storeId: string): Promise<void>;
   get(key: string): Promise<Buffer | null>;
   remove(key: string): Promise<void>;
 };
 
 const KEY = /^[0-9a-f-]{36}\.(jpg|png|webp|gif)$/;
 
-function uploadDir(): string {
-  return path.resolve(serverEnv.UPLOAD_DIR ?? path.join(process.cwd(), ".data", "uploads"));
-}
-
-function pathFor(key: string): string {
+function checkKey(key: string): string {
   if (!KEY.test(key)) throw new Error("Invalid storage key.");
-  return path.join(uploadDir(), key);
+  return key;
 }
 
-/** Files on this server's disk. Fine for development and a single server; use object storage when running several. */
-export const diskStorage: FileStorage = {
-  async put(key, bytes) {
-    const target = pathFor(key);
-    await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, bytes, { flag: "wx" });
+/** Path of an old disk image. A runtime folder, not part of the build: Turbopack must not trace it. */
+function diskPath(key: string): string {
+  const dir = path.resolve(/* turbopackIgnore: true */ serverEnv.UPLOAD_DIR ?? path.join(/* turbopackIgnore: true */ process.cwd(), ".data", "uploads"));
+  return path.join(/* turbopackIgnore: true */ dir, checkKey(key));
+}
+
+/** Images saved on this server's disk before D-077 (development only). Read-only now. */
+async function readFromDisk(key: string): Promise<Buffer | null> {
+  try {
+    return await readFile(/* turbopackIgnore: true */ diskPath(key));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+/** Image bytes in the `mediaBlobs` collection. A key can be written once (unique `_id`). */
+export const mongoStorage: FileStorage = {
+  async put(key, bytes, storeId) {
+    const { mediaBlobs } = await collections();
+    await mediaBlobs.insertOne({ _id: checkKey(key), storeId, bytes: new Binary(bytes), size: bytes.byteLength, createdAt: new Date() });
   },
   async get(key) {
-    try {
-      return await readFile(pathFor(key));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-      throw error;
-    }
+    const { mediaBlobs } = await collections();
+    const doc = await mediaBlobs.findOne({ _id: checkKey(key) }, { projection: { bytes: 1 } });
+    if (doc) return Buffer.from(doc.bytes.buffer);
+    // Local images uploaded before D-077 still show in development.
+    return process.env.NODE_ENV === "production" ? null : readFromDisk(key);
   },
   async remove(key) {
-    await rm(pathFor(key), { force: true });
+    const { mediaBlobs } = await collections();
+    await mediaBlobs.deleteOne({ _id: checkKey(key) });
+    if (process.env.NODE_ENV !== "production") await rm(/* turbopackIgnore: true */ diskPath(key), { force: true });
   },
 };
 
-export const storage: FileStorage = diskStorage;
+export const storage: FileStorage = mongoStorage;

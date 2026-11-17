@@ -60,11 +60,13 @@ export function CurriculumBuilder({
   courseId,
   curriculum,
   videoUploadReady,
+  fileUploadReady,
   onChange,
 }: {
   courseId: string;
   curriculum: Curriculum;
   videoUploadReady: boolean;
+  fileUploadReady: boolean;
   onChange: (curriculum: Curriculum) => void;
 }) {
   const [modules, setModules] = useState(curriculum.modules);
@@ -297,6 +299,7 @@ export function CurriculumBuilder({
           courseId={courseId}
           lesson={editingLesson}
           videoUploadReady={videoUploadReady}
+          fileUploadReady={fileUploadReady}
           onClose={() => setEditing(null)}
           onChange={apply}
           onReload={reload}

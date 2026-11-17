@@ -40,6 +40,8 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("accessTokens").createIndex({ deleteAt: 1 }, { expireAfterSeconds: 0, name: "access_tokens_ttl" }),
     db.collection("accessTokens").createIndex({ orderId: 1 }, { name: "access_tokens_order" }),
     db.collection("uploads").createIndex({ storeId: 1, createdAt: -1 }, { name: "uploads_store" }),
+    // Image bytes (D-077): looked up by key (_id); by store for clean-up.
+    db.collection("mediaBlobs").createIndex({ storeId: 1 }, { name: "media_blobs_store" }),
     db.collection("files").createIndex({ storeId: 1, productId: 1 }, { name: "files_store_product" }),
     db.collection("signupIntents").createIndex({ email: 1 }, { unique: true, name: "signup_intents_email_unique" }),
     db.collection("signupIntents").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "signup_intents_ttl" }),

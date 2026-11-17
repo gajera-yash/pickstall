@@ -3,18 +3,13 @@
 > Written 2026-11-15 from the current code (commit `7c76eb4`). Stripe stays in **test mode** until live mode is approved (CLAUDE.md 7).
 > Vercel builds every deployment, Preview included, with `NODE_ENV=production`: the development MockProvider is off there, so payments need Stripe test keys.
 
-## 0. Blocker: file storage (code change first)
+## 0. File storage on Vercel (D-077)
 
-Today uploaded images (`UPLOAD_DIR`, D-032) and product files (`PRODUCT_FILES_DIR`, D-050) are saved on the server's disk. On Vercel that does not work:
+Vercel functions cannot keep files on disk, and a request body is limited to about 4.5 MB. So:
 
-- The function filesystem is read-only (only `/tmp`, which is wiped between instances), so uploads fail or disappear.
-- A request body to a Vercel function is limited to about 4.5 MB. Images are allowed up to 5 MB and product files up to 200 MB (`PRODUCT_FILE_MAX_BYTES`).
-
-Fix before real creators upload: move both stores to object storage, with the browser uploading straight to the bucket through a short-lived signed upload URL, and product files downloaded only through signed URLs of about 60 seconds after the order check (CLAUDE.md 7, PRD F3b). Both storage modules (`lib/media/storage.ts`, `lib/files/storage.ts`) are already behind a small interface, so the routes barely change.
-
-Storage choice is the founder's (CLAUDE.md 2). Options: **Cloudflare R2** (S3-compatible, private buckets, presigned URLs, no egress fees) or **AWS S3** (the PRD's original choice). Course videos already go straight to Bunny Stream and are not affected.
-
-Everything else works on Vercel as it is. You can deploy before the storage change; only image and file uploads fail until it lands.
+- **Images** (store photo, product and course covers) are saved in MongoDB (`mediaBlobs`), up to 4 MB each and 60 MB per store; replaced images are cleared automatically when a store runs out of space. Nothing to set up. Watch the Atlas storage size: the free M0 cluster has about 512 MB in total.
+- **Product files and lesson files** cannot be uploaded on the live site yet. The editor says so and creators deliver with a link (Google Drive, Dropbox, Notion). Course videos go to Bunny Stream and are not affected.
+- When file uploads are needed, move files to object storage (Cloudflare R2 was the chosen option; free up to 10 GB). Do not set `UPLOAD_DIR` or `PRODUCT_FILES_DIR` on Vercel.
 
 ## 1. Before you start
 

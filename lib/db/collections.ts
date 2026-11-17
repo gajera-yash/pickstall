@@ -1,7 +1,7 @@
 import "server-only";
 import type { RichDoc } from "@/lib/products/rich-text";
 
-import type { Collection } from "mongodb";
+import type { Binary, Collection } from "mongodb";
 
 import { getDb } from "@/lib/db/mongo";
 import type { Currency, SocialLinkKind } from "@/lib/config";
@@ -247,6 +247,10 @@ export type EmailOutboxDoc = {
 };
 
 /** An uploaded image (D-032). The file itself is in file storage under `key`; images are public. */
+/** The bytes of one uploaded image (D-077), keyed by the upload's storage key. Kept in MongoDB so
+ * images work on serverless hosting without a paid file store; at most MEDIA_MAX_BYTES each. */
+export type MediaBlobDoc = { _id: string; storeId: string; bytes: Binary; size: number; createdAt: Date };
+
 export type UploadDoc = {
   _id: string;
   storeId: string;
@@ -377,6 +381,7 @@ export async function collections(): Promise<{
   stores: Collection<StoreDoc>;
   products: Collection<ProductDoc>;
   uploads: Collection<UploadDoc>;
+  mediaBlobs: Collection<MediaBlobDoc>;
   files: Collection<FileDoc>;
   orders: Collection<OrderDoc>;
   accessTokens: Collection<AccessTokenDoc>;
@@ -406,6 +411,7 @@ export async function collections(): Promise<{
     signupIntents: db.collection<SignupIntentDoc>("signupIntents"),
     rateLimits: db.collection<RateLimitDoc>("rateLimits"),
     deletedAccounts: db.collection<DeletedAccountDoc>("deletedAccounts"),
+    mediaBlobs: db.collection<MediaBlobDoc>("mediaBlobs"),
     auditLogs: db.collection<AuditLogDoc>("auditLogs"),
     connectStates: db.collection<ConnectStateDoc>("connectStates"),
     courseModules: db.collection<CourseModuleDoc>("courseModules"),

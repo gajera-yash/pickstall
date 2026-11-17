@@ -14,7 +14,7 @@ vi.mock("@/lib/env.server", () => ({
   },
 }));
 
-import { readFileStream, removeFile, writeFileStream } from "@/lib/files/storage";
+import { fileStorageAvailable, readFileStream, removeFile, writeFileStream } from "@/lib/files/storage";
 
 const KEY = "11111111-2222-4333-8444-555555555555";
 
@@ -71,5 +71,20 @@ describe("private product file storage (D-050)", () => {
     expect(await readFileStream("44444444-2222-4333-8444-555555555555")).toBeNull();
     await removeFile(KEY);
     expect(await readFileStream(KEY)).toBeNull();
+  });
+});
+
+describe("fileStorageAvailable (D-077)", () => {
+  it("is on in development, and in production only with a lasting PRODUCT_FILES_DIR", () => {
+    const saved = dir.path;
+    vi.stubEnv("NODE_ENV", "development");
+    dir.path = "";
+    expect(fileStorageAvailable()).toBe(true);
+    vi.stubEnv("NODE_ENV", "production");
+    expect(fileStorageAvailable()).toBe(false);
+    dir.path = "/srv/pickstall/files";
+    expect(fileStorageAvailable()).toBe(true);
+    vi.unstubAllEnvs();
+    dir.path = saved;
   });
 });

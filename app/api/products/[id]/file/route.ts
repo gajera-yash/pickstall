@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth/guards";
 import { PRODUCT_FILE_MAX_BYTES, PRODUCT_FILE_UPLOAD_RATE_LIMIT } from "@/lib/config";
 import { removeProductFile, saveProductFile } from "@/lib/files/product-files";
+import { FILE_UPLOADS_OFF_MESSAGE, fileStorageAvailable } from "@/lib/files/storage";
 import { logger } from "@/lib/logger";
 import { isUuid } from "@/lib/media/media";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
@@ -26,6 +27,7 @@ async function ownerStore(): Promise<{ id: string; ownerId: string } | NextRespo
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!isUuid(id)) return fail("We couldn't find that product.", 404);
+  if (!fileStorageAvailable()) return fail(FILE_UPLOADS_OFF_MESSAGE, 503);
 
   // Refuse a huge body before reading it; the real limit is enforced while streaming.
   const length = Number(request.headers.get("content-length") ?? "0");

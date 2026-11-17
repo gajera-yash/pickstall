@@ -1,6 +1,10 @@
 // Uploaded images (D-032). Pure helpers, safe for server and client code.
 
-export const MEDIA_MAX_BYTES = 5 * 1024 * 1024;
+// 4 MB: a request to a Vercel function is limited to about 4.5 MB, and images are stored in
+// MongoDB (D-077). Large photos should be resized before upload.
+export const MEDIA_MAX_BYTES = 4 * 1024 * 1024;
+/** All images of one store together (D-077), so one store cannot fill the shared database. */
+export const MEDIA_STORE_QUOTA_BYTES = 60 * 1024 * 1024;
 export const MEDIA_KINDS = ["avatar", "cover"] as const;
 export type MediaKind = (typeof MEDIA_KINDS)[number];
 

@@ -58,10 +58,12 @@ describe("image sources", () => {
   });
 });
 
-const store = vi.hoisted(() => ({ put: vi.fn(), remove: vi.fn(), insertOne: vi.fn() }));
+const store = vi.hoisted(() => ({ put: vi.fn(), remove: vi.fn(), insertOne: vi.fn(), used: 0 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/media/storage", () => ({ storage: { put: store.put, remove: store.remove, get: vi.fn() } }));
-vi.mock("@/lib/db/collections", () => ({ collections: vi.fn(async () => ({ uploads: { insertOne: store.insertOne } })) }));
+vi.mock("@/lib/db/collections", () => ({
+  collections: vi.fn(async () => ({ uploads: { insertOne: store.insertOne, aggregate: () => ({ toArray: async () => (store.used ? [{ total: store.used }] : []) }), find: () => ({ toArray: async () => [] }) }, stores: { findOne: async () => null }, products: { find: () => ({ toArray: async () => [] }) } })),
+}));
 
 import { saveImageUpload } from "@/lib/media/uploads";
 
@@ -72,12 +74,13 @@ describe("saveImageUpload", () => {
     vi.clearAllMocks();
     store.put.mockResolvedValue(undefined);
     store.insertOne.mockResolvedValue({});
+    store.used = 0;
   });
 
   it("stores a real image under a new uuid name for the given store", async () => {
     const result = await saveImageUpload("store-1", "avatar", png);
     expect(result.ok).toBe(true);
-    expect(store.put).toHaveBeenCalledWith(expect.stringMatching(/^[0-9a-f-]{36}\.png$/), png);
+    expect(store.put).toHaveBeenCalledWith(expect.stringMatching(/^[0-9a-f-]{36}\.png$/), png, "store-1");
     expect(store.insertOne).toHaveBeenCalledWith(expect.objectContaining({ storeId: "store-1", kind: "avatar", mime: "image/png", size: png.length }));
     if (result.ok) expect(result.data.url).toMatch(/^\/media\/[0-9a-f-]{36}$/);
   });
@@ -86,7 +89,13 @@ describe("saveImageUpload", () => {
     const svg = new TextEncoder().encode("<svg onload=alert(1)></svg>");
     expect(await saveImageUpload("store-1", "cover", svg)).toMatchObject({ ok: false, status: 415 });
     expect(await saveImageUpload("store-1", "cover", new Uint8Array())).toMatchObject({ ok: false, status: 400 });
-    expect(await saveImageUpload("store-1", "cover", new Uint8Array(5 * 1024 * 1024 + 1))).toMatchObject({ ok: false, status: 413 });
+    expect(await saveImageUpload("store-1", "cover", new Uint8Array(4 * 1024 * 1024 + 1))).toMatchObject({ ok: false, status: 413 });
+    expect(store.put).not.toHaveBeenCalled();
+  });
+
+  it("refuses an image once the store's image space is full (D-077)", async () => {
+    store.used = 60 * 1024 * 1024 - 5;
+    expect(await saveImageUpload("store-1", "avatar", png)).toMatchObject({ ok: false, status: 413 });
     expect(store.put).not.toHaveBeenCalled();
   });
 
