@@ -10,6 +10,7 @@ import { auth } from "@/lib/auth/auth";
 import { fullNameSchema } from "@/lib/auth/schemas";
 import { requireCreator, requireUser } from "@/lib/auth/guards";
 import { saveProfile } from "@/lib/auth/profiles";
+import { recordAudit } from "@/lib/audit/log";
 import { logger } from "@/lib/logger";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { optionalPhoneSchema } from "@/lib/phone";
@@ -71,4 +72,24 @@ export async function deleteAccount(_prev: DeleteAccountState, formData: FormDat
     return err("Your account could not be deleted. Please try again.");
   }
   redirect("/account/deleted");
+}
+
+export type SignOutOthersState = Result<{ doneAt: number }> | null;
+
+/**
+ * Settings > Account > "Sign out other devices" (D-075): ends every session of this person except the
+ * one making the request. Better Auth takes the user from the session cookie, never from the form.
+ */
+export async function signOutOtherDevices(): Promise<SignOutOthersState> {
+  const user = await requireUser("/account");
+  if (!(await takeRateLimit(rateLimitKey("sign-out-others:user", user.id), 10, 60))) return err("Too many attempts. Please wait an hour.");
+
+  try {
+    await auth.api.revokeOtherSessions({ headers: await headers() });
+  } catch (error) {
+    logger.error("account.revoke_others_failed", { name: error instanceof Error ? error.name : undefined });
+    return err("Couldn't sign out your other devices. Please try again.");
+  }
+  await recordAudit({ actorId: user.id, action: "security.signed_out_other_devices" });
+  return ok({ doneAt: Date.now() });
 }

@@ -361,6 +361,17 @@ export type RateLimitDoc = { _id: string; count: number; expiresAt: Date };
  */
 export type DeletedAccountDoc = { _id: string; deletedAt: Date };
 
+/** One audit record (D-075): ids and a hashed IP only. Removed by a TTL index after ~13 months. */
+export type AuditLogDoc = {
+  _id: string;
+  actorId: string;
+  storeId: string | null;
+  action: import("@/lib/audit/log").AuditAction;
+  meta: Record<string, string | number | boolean>;
+  ipHash: string | null;
+  at: Date;
+};
+
 export async function collections(): Promise<{
   profiles: Collection<ProfileDoc>;
   stores: Collection<StoreDoc>;
@@ -374,6 +385,7 @@ export async function collections(): Promise<{
   signupIntents: Collection<SignupIntentDoc>;
   rateLimits: Collection<RateLimitDoc>;
   deletedAccounts: Collection<DeletedAccountDoc>;
+  auditLogs: Collection<AuditLogDoc>;
   connectStates: Collection<ConnectStateDoc>;
   courseModules: Collection<CourseModuleDoc>;
   lessons: Collection<LessonDoc>;
@@ -394,6 +406,7 @@ export async function collections(): Promise<{
     signupIntents: db.collection<SignupIntentDoc>("signupIntents"),
     rateLimits: db.collection<RateLimitDoc>("rateLimits"),
     deletedAccounts: db.collection<DeletedAccountDoc>("deletedAccounts"),
+    auditLogs: db.collection<AuditLogDoc>("auditLogs"),
     connectStates: db.collection<ConnectStateDoc>("connectStates"),
     courseModules: db.collection<CourseModuleDoc>("courseModules"),
     lessons: db.collection<LessonDoc>("lessons"),

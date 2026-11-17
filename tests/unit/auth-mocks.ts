@@ -20,6 +20,9 @@ const hoisted = vi.hoisted(() => {
     }
   }
 
+  // Audit log (D-075): records what was written, without a database.
+  const audit = { recordAudit: vi.fn(async () => undefined), listOwnAudit: vi.fn(async () => []) };
+
   const authApi = {
     getSession: vi.fn(),
     sendVerificationOTP: vi.fn(),
@@ -28,6 +31,7 @@ const hoisted = vi.hoisted(() => {
     signInSocial: vi.fn(),
     signOut: vi.fn(),
     deleteUser: vi.fn(),
+    revokeOtherSessions: vi.fn(),
   };
 
   // In-memory cookie jar for next/headers cookies().
@@ -89,6 +93,7 @@ const hoisted = vi.hoisted(() => {
     connectFlow,
     newStore,
     accounts,
+    audit,
   };
 });
 
@@ -111,6 +116,7 @@ export const {
   connectFlow,
   newStore,
   accounts,
+  audit,
 } = hoisted;
 
 vi.mock("server-only", () => ({}));
@@ -172,6 +178,7 @@ vi.mock("@/lib/payments/connect", () => hoisted.stripeConnect);
 vi.mock("@/lib/stores/stripe-connect", () => hoisted.connectFlow);
 vi.mock("@/lib/stores/new-store-guard", () => hoisted.newStore);
 vi.mock("@/lib/auth/accounts", () => hoisted.accounts);
+vi.mock("@/lib/audit/log", () => hoisted.audit);
 vi.mock("@/lib/auth/device", () => ({ DEVICE_COOKIE: "ps_device", deviceId: vi.fn(async () => "test-device-id") }));
 
 vi.mock("@/lib/rate-limit", () => ({

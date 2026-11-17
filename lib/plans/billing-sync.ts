@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 
+import { recordAudit } from "@/lib/audit/log";
 import { logger } from "@/lib/logger";
 import { fetchSubscriptionState, subscriptionOfCheckout } from "@/lib/payments/billing";
 import { applySubscriptionState, billingOfOwner } from "@/lib/plans/billing-queries";
@@ -27,7 +28,9 @@ export async function syncCheckoutReturn(ownerId: string, rawSessionId: string |
     const state = await subscriptionOfCheckout(parsed.data, billing.storeId);
     if (!state) return "error";
     await applySubscriptionState(state);
-    return state.status === "active" || state.status === "trialing" ? "success" : "pending";
+    const active = state.status === "active" || state.status === "trialing";
+    if (active) await recordAudit({ actorId: ownerId, storeId: billing.storeId, action: "plan.subscribed", meta: { plan: state.plan ?? "unknown" } });
+    return active ? "success" : "pending";
   } catch (error) {
     logger.error("billing.return_failed", { name: error instanceof Error ? error.name : undefined });
     return "pending"; // the webhook will still bring the plan in

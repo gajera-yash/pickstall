@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { collections, type ConnectStateDoc } from "@/lib/db/collections";
 import { publicEnv } from "@/lib/env";
+import { recordAudit } from "@/lib/audit/log";
 import { logger } from "@/lib/logger";
 import { deauthorizeAccount, exchangeConnectCode } from "@/lib/payments/connect";
 import { countOtherStoresWithAccount, setStoreStripeConnection } from "@/lib/stores/queries";
@@ -79,6 +80,7 @@ export async function completeStripeConnect(userId: string, query: Record<string
     if (saved.previousAccountId && saved.previousAccountId !== exchanged.account.accountId) {
       await releaseAccount(userId, saved.previousAccountId);
     }
+    await recordAudit({ actorId: userId, action: "stripe.connected" });
     return landing(returnTo, "connected");
   } catch (error) {
     logger.error("stripe.connect_failed", { name: error instanceof Error ? error.name : undefined });

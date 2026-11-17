@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { AccountData } from "@/components/account/account-data";
+import { RecentActivity } from "@/components/account/recent-activity";
 import { AccountForm } from "@/components/dashboard/account-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -9,7 +10,8 @@ import { signOut } from "@/lib/auth/actions";
 import { requireCreator } from "@/lib/auth/guards";
 import { getProfile } from "@/lib/auth/profiles";
 
-// Settings > Account (PRD F8, D-074): name, email, phone, sign out, download my data, delete account.
+// Settings > Account (PRD F8, D-074, D-075): name, email, phone, sign out, recent activity and
+// "sign out other devices", download my data, delete account.
 export default function AccountSettingsPage() {
   return (
     <Suspense fallback={<Skeleton className="h-96 w-full rounded-lg" />}>
@@ -37,6 +39,8 @@ async function AccountContent() {
           </Button>
         </form>
       </Card>
+
+      <RecentActivity userId={user.id} />
 
       <AccountData hasStore />
     </>

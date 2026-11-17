@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formData, mockSession, profiles, redirectOf, storeQueries, userId } from "./auth-mocks";
+import { audit, authApi, formData, mockSession, profiles, rateLimit, redirectOf, storeQueries, userId } from "./auth-mocks";
 
-import { saveAccount } from "@/lib/account/actions";
+import { saveAccount, signOutOtherDevices } from "@/lib/account/actions";
 
 describe("saveAccount", () => {
   beforeEach(() => {
@@ -40,5 +40,38 @@ describe("saveAccount", () => {
       ok: false,
       error: "Couldn't save your account. Check your connection and try again.",
     });
+  });
+});
+
+describe("signOutOtherDevices", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSession({ id: userId, email: "maya@example.com" });
+    authApi.revokeOtherSessions.mockResolvedValue({ status: true });
+    rateLimit.takeRateLimit.mockResolvedValue(true);
+  });
+
+  it("ends the other sessions of the signed-in person and records it", async () => {
+    expect(await signOutOtherDevices()).toMatchObject({ ok: true });
+    expect(authApi.revokeOtherSessions).toHaveBeenCalledTimes(1);
+    expect(audit.recordAudit).toHaveBeenCalledWith({ actorId: userId, action: "security.signed_out_other_devices" });
+  });
+
+  it("sends a signed-out visitor to login", async () => {
+    mockSession(null);
+    expect(await redirectOf(() => signOutOtherDevices())).toBe("/login?next=%2Faccount");
+    expect(authApi.revokeOtherSessions).not.toHaveBeenCalled();
+  });
+
+  it("hides Better Auth errors and records nothing", async () => {
+    authApi.revokeOtherSessions.mockRejectedValue(new Error("adapter detail"));
+    expect(await signOutOtherDevices()).toEqual({ ok: false, error: "Couldn't sign out your other devices. Please try again." });
+    expect(audit.recordAudit).not.toHaveBeenCalled();
+  });
+
+  it("is rate limited", async () => {
+    rateLimit.takeRateLimit.mockResolvedValueOnce(false);
+    expect(await signOutOtherDevices()).toMatchObject({ ok: false });
+    expect(authApi.revokeOtherSessions).not.toHaveBeenCalled();
   });
 });

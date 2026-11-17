@@ -48,6 +48,9 @@ async function ensureIndexes(db: Db): Promise<void> {
     // Connect webhooks find the store(s) of a Stripe account (account.updated, deauthorization).
     db.collection("stores").createIndex({ stripeAccountId: 1 }, { partialFilterExpression: { stripeAccountId: { $type: "string" } }, name: "stores_stripe_account" }),
     db.collection("rateLimits").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "rate_limits_ttl" }),
+    // Audit log (D-075): a person's own activity, newest first; records expire after 400 days.
+    db.collection("auditLogs").createIndex({ actorId: 1, at: -1 }, { name: "audit_actor_at" }),
+    db.collection("auditLogs").createIndex({ at: 1 }, { expireAfterSeconds: 400 * 24 * 60 * 60, name: "audit_ttl" }),
     // Course curriculum (D-055): every read filters by store and course, in order.
     db.collection("courseModules").createIndex({ storeId: 1, productId: 1, sortOrder: 1 }, { name: "course_modules_store_course" }),
     db.collection("lessons").createIndex({ storeId: 1, productId: 1, moduleId: 1, sortOrder: 1 }, { name: "lessons_store_course_module" }),

@@ -2,6 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
+import { recordAudit } from "@/lib/audit/log";
 import { deviceId } from "@/lib/auth/device";
 import { INTENT_COOKIE } from "@/lib/auth/intent-token";
 import { DASHBOARD_PATH, USERNAME_PATH, resolvePostLoginPath } from "@/lib/auth/post-login";
@@ -20,6 +21,7 @@ import { findStoreByOwner } from "@/lib/stores/queries";
  * draft store (D-019). Otherwise the usual post-login rules apply. Returns where to go.
  */
 export async function completeSignup(user: { id: string; email?: string | null }, next: unknown): Promise<string> {
+  await recordAudit({ actorId: user.id, action: "auth.signed_in", ipHash: await getClientIpHash() });
   const cookieStore = await cookies();
   const cookieValue = cookieStore.get(INTENT_COOKIE)?.value;
   if (!cookieValue || !user.email) return resolvePostLoginPath(user.id, next, user.email);

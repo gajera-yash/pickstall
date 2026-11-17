@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireCreator } from "@/lib/auth/guards";
 import { STRIPE_CONNECT_RATE_LIMIT, USERNAME_CHANGE_RATE_LIMIT } from "@/lib/config";
+import { recordAudit } from "@/lib/audit/log";
 import { logger } from "@/lib/logger";
 import { can, PAUSED_MESSAGES } from "@/lib/plans/access";
 import { rateLimitKey, releaseRateLimit, takeRateLimit } from "@/lib/rate-limit";
@@ -147,6 +148,7 @@ export async function changeUsername(_prev: ChangeUsernameState, formData: FormD
     return err("Couldn't change your username. Check your connection and try again.");
   }
 
+  await recordAudit({ actorId: user.id, action: "store.username_changed", meta: { username } });
   revalidatePath("/dashboard", "layout");
   return ok({ username });
 }
@@ -194,6 +196,7 @@ export async function connectStripeTestAccount(): Promise<Result<{ connected: tr
     logger.error("stores.stripe_connect_failed", { name: errorName(error) });
     return err(SAVE_FAILED);
   }
+  await recordAudit({ actorId: user.id, action: "stripe.connected", meta: { testAccount: true } });
   revalidatePath("/dashboard", "layout");
   return ok({ connected: true });
 }
@@ -212,6 +215,7 @@ export async function disconnectStripe(): Promise<Result<{ connected: false }>> 
     logger.error("stores.stripe_disconnect_failed", { name: errorName(error) });
     return err(SAVE_FAILED);
   }
+  await recordAudit({ actorId: user.id, action: "stripe.disconnected" });
   revalidatePath("/dashboard", "layout");
   return ok({ connected: false });
 }
@@ -230,6 +234,7 @@ export async function setStorePublishedAction(isPublished: boolean): Promise<Res
     return err(SAVE_FAILED);
   }
 
+  await recordAudit({ actorId: user.id, storeId: store.id, action: isPublished ? "store.published" : "store.unpublished" });
   revalidatePath("/dashboard", "layout");
   return ok({ isPublished });
 }

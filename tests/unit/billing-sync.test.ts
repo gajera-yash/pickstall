@@ -8,11 +8,13 @@ const mocks = vi.hoisted(() => ({
   fetchSubscriptionState: vi.fn(),
   billingOfOwner: vi.fn(),
   applySubscriptionState: vi.fn(async () => "applied"),
+  recordAudit: vi.fn(async () => undefined),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/logger", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("@/lib/payments/billing", () => ({ subscriptionOfCheckout: mocks.subscriptionOfCheckout, fetchSubscriptionState: mocks.fetchSubscriptionState }));
+vi.mock("@/lib/audit/log", () => ({ recordAudit: mocks.recordAudit }));
 vi.mock("@/lib/plans/billing-queries", () => ({ billingOfOwner: mocks.billingOfOwner, applySubscriptionState: mocks.applySubscriptionState }));
 
 import { syncCheckoutReturn, syncSubscription } from "@/lib/plans/billing-sync";

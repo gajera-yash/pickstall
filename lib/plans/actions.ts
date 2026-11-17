@@ -6,6 +6,7 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { appOrigin } from "@/lib/app-origin";
 import { requireCreator } from "@/lib/auth/guards";
 import { BILLING_RATE_LIMIT, PAID_PLANS, type PaidPlan } from "@/lib/config";
+import { recordAudit } from "@/lib/audit/log";
 import { logger } from "@/lib/logger";
 import { billingConfigured, createPortalSession, createSubscriptionCheckout, switchSubscriptionPlan } from "@/lib/payments/billing";
 import { applySubscriptionState, billingOfOwner } from "@/lib/plans/billing-queries";
@@ -41,6 +42,7 @@ export async function startSubscription(planValue: string): Promise<void> {
     if (billing!.subscriptionId && store.access.plan) {
       if (store.access.plan === plan) back("same_plan");
       await applySubscriptionState(await switchSubscriptionPlan(billing!.subscriptionId, plan!));
+      await recordAudit({ actorId: user.id, storeId: billing!.storeId, action: "plan.changed", meta: { plan: plan! } });
       revalidatePath("/dashboard", "layout");
       back("switched");
     }
@@ -54,6 +56,7 @@ export async function startSubscription(planValue: string): Promise<void> {
       successUrl: `${origin}/api/billing/return?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${origin}${PLAN_PATH}?billing=cancelled`,
     });
+    await recordAudit({ actorId: user.id, storeId: billing!.storeId, action: "plan.checkout_started", meta: { plan: plan! } });
   } catch (error) {
     unstable_rethrow(error); // redirects pass through
     logger.error("billing.subscribe_failed", { name: error instanceof Error ? error.name : undefined });

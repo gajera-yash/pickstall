@@ -4,6 +4,21 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-075: Monitoring, audit log, health check and ops runbook (Phase E)
+- **Date:** 2026-11-17
+- **Decision:**
+  - **Sentry** (`@sentry/nextjs`) on server, edge and browser, with `lib/monitoring/sentry-options.ts` shared. It is **off unless `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` are set**. Data collection is off (no user info, cookies, headers, bodies or query params), and `scrubEvent` also strips them and replaces the `/welcome/<token>`, `/library/<orderId>` and `/mock-pay/<orderId>` segments. Traces are sampled at 5% in production only. Browser reports go through `/monitoring` on our domain. `logger.error` also reports to Sentry. Error pages (`app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx`, dashboard error) show a calm message and report the error.
+  - **Audit log:** an `auditLogs` collection (`lib/audit/log.ts`) records sign-ins, store publish and unpublish, link change, Stripe connect and disconnect, plan checkout, start and change, product delete, data download, "sign out other devices" and account deletion. It holds ids, a hashed IP (sign-ins only) and small safe meta values; no emails or tokens. Indexes: `{ actorId, at }`, plus a TTL after 400 days. `recordAudit` never throws. Each person sees their own last 15 entries in Settings > Account and on `/account` (read by session user id only).
+  - **Sign out other devices:** Better Auth `revokeOtherSessions` (session from the cookie), rate limited 10 per hour.
+  - **Health check:** `GET /api/health` returns `200 {status:"ok"}` or `503 {status:"degraded"}` after a database ping with a 3-second timeout. No versions or error text, never cached.
+  - **CI:** adds `pnpm test:integration` (in-memory MongoDB, binary cached) and a separate `pnpm audit --prod --audit-level=high` job, also run weekly.
+  - **Ops:** `docs/OPS_RUNBOOK.md` covers the uptime monitor, Sentry alerts, Atlas backups and restore test, load test, independent review, and incident steps. The Privacy Policy now lists Sentry, the activity log and its retention.
+  - **2FA skipped for now:** creators sign in with an email code, so each sign-in already proves inbox control. Authenticator apps can come later.
+- **Why:** PRD 6 (observability, audit log, backups) before launch. The founder asked for a project that is hard to hack or crash and gets noticed fast when something breaks.
+- **Consequences:** the founder must create the Sentry project, the uptime monitor and Atlas backups (runbook). No schema migration is needed: the collection and indexes are created on first start. Audit writes add one small insert to each recorded action.
+
+---
+
 ## D-074: Legal pages, cookie notice, Terms acceptance, data download and account deletion (Phase D)
 - **Date:** 2026-11-15
 - **Decision:**

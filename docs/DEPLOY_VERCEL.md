@@ -57,6 +57,8 @@ Vercel > Settings > Environment Variables. Add them for **Production** (and Prev
 | `STRIPE_PLATFORM_ACCOUNT_ID` | `acct_...` | Optional, test mode only (D-034 shortcut). |
 | `BUNNY_STREAM_LIBRARY_ID`, `BUNNY_STREAM_API_KEY`, `BUNNY_STREAM_TOKEN_KEY`, `BUNNY_STREAM_READONLY_KEY` | from Bunny Stream | Course video upload and signed playback (D-055). |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` | from Google Cloud | Optional. Leave out to hide the Google button. |
+| `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | from Sentry > Project > Client Keys | Optional but recommended: error monitoring (D-075). Same DSN in both. Leave out to turn it off. |
+| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | from Sentry | Optional: uploads source maps at build time so errors show real file names. The token is secret. |
 
 Do **not** set `UPLOAD_DIR`, `PRODUCT_FILES_DIR` or `DEV_ALLOWED_HOSTS` on Vercel.
 
@@ -110,10 +112,11 @@ Google Cloud Console > Credentials > your OAuth client > **Authorized redirect U
 - [ ] Stripe > Webhooks shows the events delivered with `200`.
 - [ ] Refund in Stripe: access is removed.
 - [ ] Image and file uploads: only after the storage change in section 0.
+- [ ] `https://pickstall.store/api/health` answers `{"status":"ok","database":"ok"}`.
 - [ ] Vercel > Logs: no errors.
 
 ## 11. After launch
 
 - Tell alpha creators it is a test version (PRD 8.2) until Stripe live mode is approved.
-- Error monitoring (Sentry) and analytics (PostHog) are not installed yet.
-- Atlas backups: turn on Cloud Backup on a paid tier, or schedule exports, before real data matters.
+- Follow `docs/OPS_RUNBOOK.md`: uptime monitor on `/api/health`, Sentry alerts, Atlas backups, a load test and an independent security review.
+- Analytics (PostHog) is not installed yet.

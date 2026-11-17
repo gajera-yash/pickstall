@@ -35,7 +35,7 @@ const sections: LegalSection[] = [
         <li><strong>Store:</strong> what you publish (store name, bio, photo, links, products, files, course videos), settings, and your plan and billing status.</li>
         <li><strong>Payments:</strong> handled by Stripe. We store Stripe account, customer and subscription ids and payment results, never card numbers.</li>
         <li><strong>Orders:</strong> for each sale, the buyer&apos;s name, email, optional phone, checkout answers, the product, the amount and the status.</li>
-        <li><strong>Technical:</strong> a hashed (not readable) form of your IP address and a random browser id, used only to stop abuse such as repeated sign-ups; cookies listed in our <LegalLink href="/cookies">Cookie Policy</LegalLink>.</li>
+        <li><strong>Technical:</strong> a hashed (not readable) form of your IP address and a random browser id, used only to stop abuse such as repeated sign-ups; a log of security-relevant actions on your account (sign-ins, store and plan changes, data downloads), which you can see in your account settings; error reports with secrets and personal details removed; cookies listed in our <LegalLink href="/cookies">Cookie Policy</LegalLink>.</li>
       </ul>
     ),
   },
@@ -62,6 +62,7 @@ const sections: LegalSection[] = [
           <li>Resend (sending emails such as sign-in codes and order emails)</li>
           <li>Bunny.net (storing and streaming course videos)</li>
           <li>MongoDB Atlas (database) and our hosting provider (running the website)</li>
+          <li>Sentry (error reports, with tokens, cookies, form contents and user details removed first)</li>
           <li>Google, only if you choose to sign in with Google</li>
         </ul>
         <p>A creator sees the data of their own buyers. We may also disclose data when the law requires it, or to protect people from harm or fraud.</p>
@@ -85,7 +86,7 @@ const sections: LegalSection[] = [
       <ul>
         <li>Account and store data: while your account exists. When you delete your account, we remove your profile and store details at once.</li>
         <li>Orders and plan invoices: as long as tax and accounting law requires, even after an account is deleted, because both creators and buyers rely on them.</li>
-        <li>Security records expire on their own: sign-up attempts after 30 minutes, abuse counters after at most 30 days, email links after 30 days.</li>
+        <li>Security records expire on their own: sign-up attempts after 30 minutes, abuse counters after at most 30 days, email links after 30 days, the account activity log after about 13 months.</li>
         <li>After you delete your account we keep only a one-way scrambled form (a hash) of your email, so a new account with the same email does not get a second free trial. It cannot be turned back into your email.</li>
       </ul>
     ),

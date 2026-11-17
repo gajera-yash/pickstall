@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { AccountData } from "@/components/account/account-data";
+import { RecentActivity } from "@/components/account/recent-activity";
 import { Wordmark } from "@/components/brand/wordmark";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/lib/auth/guards";
@@ -42,6 +43,7 @@ async function AccountContent() {
           </Link>
         </p>
       </div>
+      <RecentActivity userId={user.id} />
       <AccountData hasStore={store !== null} />
     </>
   );

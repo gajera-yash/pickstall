@@ -1,6 +1,9 @@
 /* eslint-disable no-console -- this module is the single place allowed to write to the console */
 
-// Minimal structured logger. Sentry is wired in during Block F.
+import * as Sentry from "@sentry/nextjs";
+
+// Minimal structured logger. Errors also go to Sentry (D-075) when a DSN is set; without one,
+// Sentry is not started and the call does nothing.
 // Never pass secrets, tokens, full emails or payment data in `context`.
 
 type Level = "debug" | "info" | "warn" | "error";
@@ -18,5 +21,8 @@ export const logger = {
   },
   info: (message: string, context?: Record<string, unknown>) => write("info", message, context),
   warn: (message: string, context?: Record<string, unknown>) => write("warn", message, context),
-  error: (message: string, context?: Record<string, unknown>) => write("error", message, context),
+  error: (message: string, context?: Record<string, unknown>) => {
+    write("error", message, context);
+    Sentry.captureMessage(message, { level: "error", extra: context });
+  },
 };

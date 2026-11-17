@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { requireCreator } from "@/lib/auth/guards";
 import { PRODUCT_RATE_LIMIT } from "@/lib/config";
+import { recordAudit } from "@/lib/audit/log";
 import { logger } from "@/lib/logger";
 import { removeCourseContent } from "@/lib/courses/cleanup";
 import { countLessonsWithContent } from "@/lib/courses/curriculum";
@@ -159,6 +160,7 @@ export async function removeProduct(productId: string): Promise<Result<{ deleted
     return err(SAVE_FAILED);
   }
 
+  await recordAudit({ actorId: user.id, storeId: store.id, action: "product.deleted", meta: { productId: id.data } });
   revalidatePath("/dashboard", "layout");
   return ok({ deleted: true, kept: result === "hidden" });
 }

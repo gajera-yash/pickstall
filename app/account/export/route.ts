@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { exportUserData } from "@/lib/account/export";
+import { recordAudit } from "@/lib/audit/log";
 import { appOriginFrom } from "@/lib/app-origin";
 import { getCurrentUser } from "@/lib/auth/guards";
 import { loginPath } from "@/lib/auth/redirect";
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
   }
   try {
     const data = await exportUserData(user);
+    await recordAudit({ actorId: user.id, action: "account.data_exported" });
     const day = data.exportedAt.slice(0, 10);
     return new NextResponse(JSON.stringify(data, null, 2), {
       headers: {

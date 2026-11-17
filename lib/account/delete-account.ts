@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { deletedAccountKey } from "@/lib/account/deleted-key";
 import { canonicalEmail } from "@/lib/auth/email-rules";
 import { collections } from "@/lib/db/collections";
+import { recordAudit } from "@/lib/audit/log";
 import { logger } from "@/lib/logger";
 import { cancelSubscriptionNow } from "@/lib/payments/billing";
 import { releaseAccount } from "@/lib/stores/stripe-connect";
@@ -73,5 +74,6 @@ export async function prepareAccountDeletion(user: { id: string; email: string |
 
   const key = user.email ? canonicalEmail(user.email) : null;
   if (key) await deletedAccounts.updateOne({ _id: deletedAccountKey(key) }, { $set: { deletedAt: now } }, { upsert: true });
+  await recordAudit({ actorId: user.id, storeId: store?._id ?? null, action: "account.deleted" });
   logger.info("account.deleted", { hadStore: Boolean(store) });
 }
