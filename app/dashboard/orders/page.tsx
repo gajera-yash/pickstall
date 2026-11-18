@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { requireCreator } from "@/lib/auth/guards";
+import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { countOrdersByStatus, findOrderDetail, listOrders, type OrderDetail, type OrderRow } from "@/lib/orders/creator-queries";
 import { ORDER_STATUSES, parseOrderParams, withQuery, type OrderParams } from "@/lib/orders/params";
 import { formatMoney } from "@/lib/products/money";
@@ -40,7 +40,7 @@ const listHref = (params: OrderParams, extra: { before?: string; order?: string 
   withQuery(PATH, { status: params.status, q: params.q, product: params.product, before: extra.before ?? params.before?.toISOString(), order: extra.order });
 
 async function OrdersContent({ searchParams }: Pick<PageProps<"/dashboard/orders">, "searchParams">) {
-  const [{ store }, raw] = await Promise.all([requireCreator(PATH), searchParams]);
+  const [{ store }, raw] = await Promise.all([requireUnlockedCreator(PATH), searchParams]);
   const params = parseOrderParams(raw);
   const [page, counts, products] = await Promise.all([listOrders(store.id, params), countOrdersByStatus(store.id), listProducts(store.id)]);
   const total = ORDER_STATUSES.reduce((sum, status) => sum + counts[status], 0);

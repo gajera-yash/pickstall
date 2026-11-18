@@ -4,7 +4,7 @@ import { StripeStatus, stripeOutcomeOf } from "@/components/dashboard/stripe-sta
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { requireCreator } from "@/lib/auth/guards";
+import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { liveKey } from "@/lib/payments/test-account";
 
 // Settings > Payments (PRD F8, D-053): status, test mode badge, connect or disconnect, and the payment-methods note.
@@ -17,7 +17,7 @@ export default function PaymentsSettingsPage({ searchParams }: PageProps<"/dashb
 }
 
 async function PaymentsContent({ searchParams }: { searchParams: PageProps<"/dashboard/settings/payments">["searchParams"] }) {
-  const [{ store }, params] = await Promise.all([requireCreator("/dashboard/settings/payments"), searchParams]);
+  const [{ store }, params] = await Promise.all([requireUnlockedCreator("/dashboard/settings/payments"), searchParams]);
 
   return (
     <Card>

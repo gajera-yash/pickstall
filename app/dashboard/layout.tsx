@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
-import { loadSetupState } from "@/lib/dashboard/setup-state";
+import { loadSetupGate } from "@/lib/dashboard/setup-gate";
 import { APP_NAME, storeLink } from "@/lib/config";
 
 export const metadata: Metadata = { title: `Dashboard | ${APP_NAME}`, robots: { index: false } };
@@ -24,9 +24,9 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
     <div className="flex min-h-dvh flex-1 bg-bg-subtle">
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-line bg-surface px-3 py-5 md:flex">
         <Wordmark className="h-10 self-start px-3" priority />
-        {/* usePathname() is request data, so the nav streams in behind a boundary. */}
+        {/* usePathname() and the setup lock are request data, so the nav streams in behind a boundary. */}
         <Suspense fallback={<Skeleton className="h-96 w-full rounded-lg" />}>
-          <DashboardNav variant="sidebar" />
+          <NavWithData variant="sidebar" />
         </Suspense>
         <Suspense fallback={<Skeleton className="mt-auto h-48 w-full rounded-lg" />}>
           <SidebarFooterWithData />
@@ -50,7 +50,7 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
       </div>
 
       <Suspense fallback={null}>
-        <DashboardNav variant="bottom" />
+        <NavWithData variant="bottom" />
       </Suspense>
     </div>
   );
@@ -64,7 +64,23 @@ async function displayNameFor() {
 
 async function TopBarWithData() {
   const { user, store, displayName } = await displayNameFor();
-  return <TopBar displayName={displayName} email={user.email} storeUrl={`https://${storeLink(store.slug)}`} publicPath={store.isPublished ? `/@${store.slug}` : null} />;
+  const { unlocked } = await loadSetupGate(store);
+  return (
+    <TopBar
+      displayName={displayName}
+      email={user.email}
+      storeUrl={`https://${storeLink(store.slug)}`}
+      publicPath={store.isPublished ? `/@${store.slug}` : null}
+      locked={!unlocked}
+    />
+  );
+}
+
+// Until setup is done, every section but My Store is locked (D-079); the pages enforce it too.
+async function NavWithData({ variant }: { variant: "sidebar" | "bottom" }) {
+  const { store } = await requireCreator(DASHBOARD_PATH);
+  const { unlocked } = await loadSetupGate(store);
+  return <DashboardNav variant={variant} unlocked={unlocked} />;
 }
 
 async function TrialBannerWithData() {
@@ -74,14 +90,15 @@ async function TrialBannerWithData() {
 
 async function SetupBarWithData() {
   const { store } = await requireCreator(DASHBOARD_PATH);
-  const { checklist } = await loadSetupState(store);
+  const { checklist } = await loadSetupGate(store);
   if (!checklist.next) return null;
   return <SetupBar doneCount={checklist.doneCount} requiredCount={checklist.requiredCount} nextLabel={checklist.next.label} />;
 }
 
 async function SidebarFooterWithData() {
   const { store, displayName } = await displayNameFor();
-  return <SidebarFooter displayName={displayName} access={store.access} />;
+  const { unlocked } = await loadSetupGate(store);
+  return <SidebarFooter displayName={displayName} access={store.access} storeSetUp={unlocked} />;
 }
 
 function TopBarSkeleton() {

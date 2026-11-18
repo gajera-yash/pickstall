@@ -29,9 +29,10 @@ export function planStatusLabel(access: StoreAccess): string {
 
 /**
  * Bottom of the sidebar (reference docs/ui-reference/dashboard.webp): the Pro plan card, hidden once
- * the creator is on Pro, and the signed-in creator with their plan status (D-073, D-076).
+ * the creator is on Pro, and the signed-in creator with their plan status (D-073, D-076), or
+ * "Store not set up" until setup is done (D-079).
  */
-export function SidebarFooter({ displayName, access }: { displayName: string; access: StoreAccess }) {
+export function SidebarFooter({ displayName, access, storeSetUp }: { displayName: string; access: StoreAccess; storeSetUp: boolean }) {
   const initial = displayName.trim().charAt(0).toUpperCase() || "?";
   const onPro = access.state === "active" && access.plan === "pro";
   return (
@@ -71,7 +72,7 @@ export function SidebarFooter({ displayName, access }: { displayName: string; ac
         </Avatar>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-semibold text-ink">{displayName}</span>
-          <span className="text-sm text-mute">{planStatusLabel(access)}</span>
+          <span className="text-sm text-mute">{storeSetUp ? planStatusLabel(access) : "Store not set up"}</span>
         </span>
         <ChevronRight aria-hidden="true" className="size-4 text-mute" />
       </Link>

@@ -8,6 +8,7 @@ import { StripeStatus, stripeOutcomeOf, type StripeOutcome } from "@/components/
 import { PublishButton } from "@/components/dashboard/setup/publish-step";
 import { SetupStepper } from "@/components/dashboard/setup/setup-stepper";
 import { priceLabel } from "@/lib/products/pricing";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import { loadSetupState } from "@/lib/dashboard/setup-state";
 import { liveKey } from "@/lib/payments/test-account";
 import { isCurrencyLocked } from "@/lib/stores/currency-lock";
 import { createProductAndEdit } from "@/lib/products/actions";
+import { productCreateError } from "@/lib/products/create-errors";
 import type { CreatorProduct } from "@/lib/products/queries";
 import { storeLink } from "@/lib/config";
 
@@ -69,7 +71,7 @@ async function SetupContent({ searchParams }: { searchParams: PageProps<"/dashbo
           }}
         />
       )}
-      {step.id === "first-product" && <ProductStep step={step} products={products} currency={store.currency} />}
+      {step.id === "first-product" && <ProductStep step={step} products={products} currency={store.currency} error={productCreateError(params.error)} />}
       {step.id === "connect-payments" && <PaymentsStep step={step} store={store} outcome={stripeOutcomeOf(params.stripe)} />}
       {step.id === "publish" && <PublishStep
           store={store}
@@ -104,13 +106,19 @@ function NextLink({ label = "Continue" }: { label?: string }) {
   );
 }
 
-function ProductStep({ step, products, currency }: { step: ChecklistItem; products: CreatorProduct[]; currency: string }) {
+function ProductStep({ step, products, currency, error }: { step: ChecklistItem; products: CreatorProduct[]; currency: string; error?: string }) {
   return (
     <Card className="gap-6">
       <CardHeader>
         <h2 className="font-display text-h3">Add your first product</h2>
         <p className="text-sm text-mute">A guide, template, preset or any digital download. You can fill in the details now and publish it when it is ready.</p>
       </CardHeader>
+
+      {error && (
+        <Alert variant="error">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       {products.length > 0 && (
         <ul className="flex flex-col divide-y divide-line rounded-md border border-line">

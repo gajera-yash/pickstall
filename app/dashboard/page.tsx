@@ -11,6 +11,7 @@ import { ProductsEmpty } from "@/components/dashboard/products-empty";
 import { SocialLogo } from "@/components/brand/social-logos";
 import { StoreLinkCard } from "@/components/dashboard/store-link-card";
 import { HelpCard, StorePreviewCard } from "@/components/dashboard/store-preview-card";
+import { SetupOnboarding } from "@/components/dashboard/setup-onboarding";
 import { WelcomeHero } from "@/components/dashboard/welcome-hero";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,7 +21,7 @@ import { getProfile } from "@/lib/auth/profiles";
 import { incomeStats } from "@/lib/orders/creator-queries";
 import { ProductList } from "@/components/dashboard/product-list";
 import { SOCIAL_LINK_LABELS, storeLink } from "@/lib/config";
-import { loadSetupState } from "@/lib/dashboard/setup-state";
+import { loadSetupGate } from "@/lib/dashboard/setup-gate";
 import { MY_STORE_TABS, type MyStoreTab } from "@/lib/dashboard/nav";
 import { firstName } from "@/lib/dashboard/greeting";
 import { lessonCountsOf, type PublicProduct, type PublicStore } from "@/lib/stores/public";
@@ -29,8 +30,8 @@ import { displayValueFor } from "@/lib/stores/social-handles";
 
 // My Store home (D-029, D-076, reference docs/ui-reference/dashboard.webp): welcome card, last-30-days
 // KPIs and the Products / Store design / Links / Analytics tabs, with a live store preview and help on
-// the right from 1280px up. Until setup is done, the store link card and the "Get started" steps sit
-// under the welcome card; after that, publishing and the store link live in Settings > Store.
+// the right from 1280px up. Until setup is done it shows the onboarding screen instead (D-079). A store
+// that is unlocked but has an open step again (unpublished, say) gets the "Get started" steps back.
 export default function MyStorePage({ searchParams }: PageProps<"/dashboard">) {
   return (
     <Suspense fallback={<MyStoreSkeleton />}>
@@ -48,7 +49,9 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
   const tabParam = typeof params.tab === "string" ? params.tab : "";
   const initialTab: MyStoreTab = (MY_STORE_TABS as readonly string[]).includes(tabParam) ? (tabParam as MyStoreTab) : "products";
 
-  const { checklist, products } = await loadSetupState(store);
+  const { checklist, products, unlocked } = await loadSetupGate(store);
+  // Until setup is done, My Store is the onboarding screen and the other sections are locked (D-079).
+  if (!unlocked) return <SetupOnboarding checklist={checklist} />;
   const name = firstName(profile?.fullName) ?? store.name;
   const link = storeLink(store.slug);
 

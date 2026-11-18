@@ -19,28 +19,37 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/lib/auth/actions";
 
-type Props = { displayName: string; email: string | null; storeUrl: string; publicPath: string | null };
+type Props = {
+  displayName: string;
+  email: string | null;
+  storeUrl: string;
+  publicPath: string | null;
+  /** Setup is not done (D-079): search and "View my store" are hidden, as there is nothing to find or show yet. */
+  locked: boolean;
+};
 
 /**
  * Dashboard top bar (D-029, reference docs/ui-reference/dashboard.webp): search / command palette,
  * "View my store", notifications and the account menu. 64px high, sticky, white.
  */
-export function TopBar({ displayName, email, storeUrl, publicPath }: Props) {
+export function TopBar({ displayName, email, storeUrl, publicPath, locked }: Props) {
   return (
     <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur md:px-6">
       <Wordmark className="h-7 md:hidden" />
 
       <div className="flex min-w-0 flex-1 justify-end md:justify-start">
-        <CommandMenu storeUrl={storeUrl} />
+        {!locked && <CommandMenu storeUrl={storeUrl} />}
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
+        {!locked && (
         <Button asChild variant="secondary" size="sm" className="hidden h-10 sm:inline-flex">
           <Link href={publicPath ?? "/dashboard?tab=design#store-preview"} {...(publicPath ? { target: "_blank", rel: "noopener" } : {})}>
             <ExternalLink aria-hidden="true" className="size-4" />
             View my store
           </Link>
         </Button>
+        )}
         <NotificationBell />
         <AccountMenu displayName={displayName} email={email} />
       </div>
