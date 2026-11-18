@@ -1,6 +1,8 @@
 import "server-only";
 
 import { confirmBookingForOrder, releaseBookingForOrder } from "@/lib/coaching/bookings";
+import { cancelBookingOfRefundedOrder } from "@/lib/coaching/calls";
+import { scheduleCallReminders } from "@/lib/coaching/reminders";
 import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { logger } from "@/lib/logger";
@@ -72,7 +74,8 @@ async function fromStoreAccount(event: { account?: string | null }, storeId: str
  * step here, keyed by the order id: a coaching call confirms its booked time (D-083).
  */
 async function onOrderPaid(orderId: string): Promise<void> {
-  await confirmBookingForOrder(orderId); // no booking (not a coaching order): nothing happens
+  // No booking (not a coaching order): nothing happens. A confirmed call gets its reminders (D-085).
+  if ((await confirmBookingForOrder(orderId)) === "confirmed") await scheduleCallReminders(orderId);
   scheduleOrderConfirmation(orderId); // a replay is safe: one outbox row per order
   await notifyOrderPaid(orderId); // one "New sale" per order (dedupe key); never throws (D-061)
 }
@@ -146,6 +149,8 @@ async function applyEvent(providerName: PaymentProvider["name"], event: PaymentE
       );
       // Only when this event changed the order, so a replay does not notify again (D-061).
       if (changed.modifiedCount === 1) await notifyRefund(order._id, refunded, Boolean(event.fullyRefunded));
+      // A full refund cancels a coaching call too, wherever it was made (D-086).
+      if (event.fullyRefunded) await cancelBookingOfRefundedOrder(order._id);
       return;
     }
   }

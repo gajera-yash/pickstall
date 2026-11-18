@@ -40,6 +40,7 @@ vi.mock("@/lib/db/collections", () => ({
 vi.mock("@/lib/orders/queries", () => hoisted.queries);
 // Coaching bookings (D-083) have their own integration tests on a real MongoDB.
 vi.mock("@/lib/coaching/bookings", () => hoisted.bookings);
+vi.mock("@/lib/coaching/calls", () => ({ cancelBookingOfRefundedOrder: vi.fn(async () => undefined) }));
 vi.mock("@/lib/payments", async () => {
   const actual = await vi.importActual<typeof import("@/lib/payments")>("@/lib/payments");
   return { ...actual, providerForStore: hoisted.providerForStore };

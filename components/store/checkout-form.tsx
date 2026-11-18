@@ -60,7 +60,7 @@ export function CheckoutForm({ username, productSlug, askPhone, questions, submi
         <Input id="name" name="name" autoComplete="name" required maxLength={BUYER_NAME_MAX} value={values.name ?? ""} onChange={(event) => set("name", event.target.value)} aria-invalid={fieldError("name") ? true : undefined} aria-describedby={describedBy("name", fieldError("name"))} />
       </FormField>
 
-      <FormField id="email" label="Email" error={fieldError("email")} hint="Your receipt and access link go here.">
+      <FormField id="email" label="Email" error={fieldError("email")} hint={booking ? "Your booking and receipt go here." : "Your receipt and access link go here."}>
         <Input id="email" name="email" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required value={values.email ?? ""} onChange={(event) => set("email", event.target.value)} aria-invalid={fieldError("email") ? true : undefined} aria-describedby={describedBy("email", fieldError("email"), "hint")} />
       </FormField>
 

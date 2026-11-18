@@ -36,6 +36,10 @@ export const serverEnvSchema = publicEnvSchema.extend({
   BUNNY_STREAM_TOKEN_KEY: optional(z.string().min(8)),
   // Read-only API key: Bunny signs its webhooks with it (HMAC-SHA256).
   BUNNY_STREAM_READONLY_KEY: optional(z.string().min(8)),
+  // Inngest background jobs (D-085): call reminders. The event key sends events, the signing key
+  // verifies Inngest's calls to /api/inngest. Development uses the local dev server with INNGEST_DEV=1.
+  INNGEST_EVENT_KEY: optional(z.string().min(1)),
+  INNGEST_SIGNING_KEY: optional(z.string().min(1)),
   // Stripe (test mode until the founder approves live mode). Server only; never logged.
   STRIPE_SECRET_KEY: optional(z.string().min(1)),
   STRIPE_CONNECT_WEBHOOK_SECRET: optional(z.string().min(1)),

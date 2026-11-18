@@ -4,6 +4,31 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-085: Coaching call reminders through Inngest
+- **Date:** 2026-11-18
+- **Decision (founder chose Inngest, free plan, 2026-11-18):**
+  - New dependency `inngest@4.26.2`, pinned exactly; released 29 Oct 2026, about three weeks old. pnpm is told not to run the build script of its sub-dependency `protobufjs` (`pnpm-workspace.yaml`, like the other denied scripts).
+  - Client: `lib/inngest/client.ts`. Route: `app/api/inngest/route.ts` (`serve` from `inngest/next`, exporting GET, POST and PUT). The SDK verifies Inngest's requests with `INNGEST_SIGNING_KEY`. API shapes were checked in the installed package's README and types, not guessed.
+  - When a booking becomes confirmed (only in the paid-order path), `scheduleCallReminders` sends one `coaching/call.confirmed` event whose id is `call-confirmed-<orderId>`. A replayed webhook sends the same id, so Inngest runs the function once. It never throws, and it is skipped when Inngest is not configured (no `INNGEST_EVENT_KEY`; in development `INNGEST_DEV`).
+  - The function `coaching-call-reminders` works out, in a step, which reminders are still ahead (24 hours and 1 hour before; a call booked 3 hours ahead gets only the 1-hour one), sleeps until each (`step.sleepUntil`), then sends it.
+  - **Each send checks again** that the order is paid, the booking is confirmed, the call has not started, and its start is still the same. So a call refunded, cancelled or moved later (K5) gets no stale reminder.
+  - **One outbox row per order and reminder** (`<orderId>:call-reminder-24h` / `-1h`, new `EmailOutboxDoc.kind` values): a retry never emails twice. A failed send throws, so Inngest retries that step.
+  - Reminder email (`renderCallReminder`): fixed text with the sender identity, the time in the buyer's zone, the join link (or that the coach sends it) and a link to the booking in the library.
+  - Env: `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY` (server only) and `INNGEST_DEV` for local development. The setup steps are in `docs/DEPLOY_VERCEL.md` section 7b.
+- **Why:** plan part K4 (D-081). Vercel's Hobby plan runs crons only daily, too coarse for a 1-hour reminder.
+
+## D-084: Coaching calls, part K4: booking email, calendar file and library card
+- **Date:** 2026-11-18
+- **Decision:**
+  - **Buyer's email:** the confirmation email of a coaching order always carries the booking, whatever the creator wrote: the call time in the buyer's own time zone (from the booking page; else the coach's), and the meeting link or "the coach will email you the link". A late "conflict" booking says the time was taken and the creator will get in touch. The default subject for a confirmed call is "Your call is booked: …". The sender identity and the access link are still always included (D-014).
+  - **Calendar file:** a confirmed call's email has a `call.ics` attachment (RFC 5545, UTC times, escaped and folded text, `lib/coaching/ics.ts`). `sendEmail` accepts attachments (Resend `attachments` with filename, content and content type, checked in the installed resend 6.x types).
+  - **Library:** coaching purchases are kind "coaching". The purchase page shows a call card (time, "Join the call", "Add to calendar"), and the list card shows "Coaching call · Call on <date>" and "View booking". The meeting link is given only for a confirmed, paid (not refunded) booking, to the buyer whose verified email matches. "Add to calendar" downloads from `/library/<order>/call.ics`, which checks the same rules.
+  - Checkout's email hint for a coaching call reads "Your booking and receipt go here."
+- **Not in K4:**
+  - **Reminder emails** (24 hours and 1 hour before) need a scheduler. The project has neither Inngest nor a cron yet, and Vercel's Hobby plan runs crons only once a day, so the founder picks the approach first.
+  - **No email to the creator:** the app has no creator emails yet, and the creator still gets the in-app "New sale" notification. A creator booking email can come with K5.
+- **Why:** plan part K4 (D-081).
+
 ## D-083: Coaching calls, part K3: booking at checkout
 - **Date:** 2026-11-18
 - **Decision (founder approved the K3 plan 2026-11-18):**

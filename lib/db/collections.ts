@@ -248,8 +248,8 @@ export type OrderDoc = {
 /**
  * A coaching call's time slot (D-083), one per coaching order. "held" while the buyer pays (until
  * `holdExpiresAt`), "confirmed" once the order is paid (only through the verified payment path),
- * "released" when the payment failed or expired, and "conflict" when a late payment found its time
- * taken (the creator sorts it out, K5).
+ * "released" when the payment failed or expired, "conflict" when a late payment found its time
+ * taken, and "cancelled" when the creator cancelled the call or the order was fully refunded (D-086).
  */
 export type BookingDoc = {
   _id: string;
@@ -258,7 +258,9 @@ export type BookingDoc = {
   orderId: string;
   start: Date;
   end: Date;
-  status: "held" | "confirmed" | "released" | "conflict";
+  status: "held" | "confirmed" | "released" | "conflict" | "cancelled";
+  /** When the call was cancelled (D-086). */
+  cancelledAt?: Date | null;
   /**
    * `<storeId>|<start ISO>` while the booking takes its time (held or confirmed), else null. A
    * unique index on it means one store can never have two calls starting at the same moment.
@@ -298,7 +300,8 @@ export type AccessTokenDoc = {
 export type EmailOutboxDoc = {
   _id: string;
   orderId: string;
-  kind: "order-confirmation";
+  /** The order email (D-037), or a coaching call reminder (D-085). */
+  kind: "order-confirmation" | "call-reminder-24h" | "call-reminder-1h" | "call-cancelled";
   status: "sending" | "sent" | "failed";
   attempts: number;
   createdAt: Date;

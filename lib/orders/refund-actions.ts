@@ -6,11 +6,9 @@ import { requireCreator } from "@/lib/auth/guards";
 import { REFUND_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { isUuid } from "@/lib/media/media";
-import { findRefundableOrder, markRefundRequested } from "@/lib/orders/creator-queries";
-import { providerByName } from "@/lib/payments";
+import { requestFullRefund } from "@/lib/orders/refunds";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
-import { stripeAccountOfStore } from "@/lib/stores/queries";
 
 const ORDERS_PATH = "/dashboard/orders";
 
@@ -29,18 +27,9 @@ export async function refundOrder(orderId: string): Promise<Result<{ requested: 
     const { max, windowMinutes } = REFUND_RATE_LIMIT;
     if (!(await takeRateLimit(rateLimitKey("refund", user.id), max, windowMinutes))) return err("Too many refunds at once. Wait a few minutes, then try again.");
 
-    const order = await findRefundableOrder(store.id, orderId);
-    if (!order) return err("This order can't be refunded.");
-    const provider = providerByName(order.provider);
-    if (!provider) return err("This order can't be refunded here. Refund it in your Stripe Dashboard.");
-
-    await provider.refund({
-      orderId: order.id,
-      providerPaymentId: order.providerPaymentId,
-      amountCents: order.totalCents,
-      connectedAccountId: order.provider === "stripe" ? await stripeAccountOfStore(store.id) : null,
-    });
-    await markRefundRequested(store.id, order.id);
+    const result = await requestFullRefund(store.id, orderId);
+    if (result === "not_refundable") return err("This order can't be refunded.");
+    if (result === "no_provider") return err("This order can't be refunded here. Refund it in your Stripe Dashboard.");
   } catch (error) {
     logger.error("orders.refund_failed", { name: error instanceof Error ? error.name : undefined });
     return err("Couldn't refund this order. Try again, or refund it in your Stripe Dashboard.");
