@@ -2,25 +2,39 @@
 
 import { BarChart3, Link2, Package, Palette, Plus, Search } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import type { MyStoreTab } from "@/lib/dashboard/nav";
+import { MY_STORE_TABS, type MyStoreTab } from "@/lib/dashboard/nav";
 
 export type { MyStoreTab };
 
-type Props = { initialTab: MyStoreTab; products: ReactNode; design: ReactNode; links: ReactNode; analytics: ReactNode; productCount: number };
+type Props = { products: ReactNode; design: ReactNode; links: ReactNode; analytics: ReactNode; productCount: number };
 
 /**
  * My Store tabs (reference docs/ui-reference/dashboard.webp): Products, Store design, Links and
- * Analytics, with product search and "Add product" on the right. The open tab is kept in `?tab=`
- * so a link can open a tab directly; switching does not reload.
+ * Analytics, with product search and "Add product" on the right. The open tab follows `?tab=`, so a
+ * link can open a tab directly, also while My Store is already open ("Customize design"); switching
+ * does not reload.
  */
-export function MyStoreTabs({ initialTab, products, design, links, analytics, productCount }: Props) {
+export function MyStoreTabs({ products, design, links, analytics, productCount }: Props) {
+  const searchParams = useSearchParams();
+  const fromUrl = searchParams.get("tab");
+  // No ?tab= means Products: the URL alone decides.
+  const urlTab: MyStoreTab = fromUrl !== null && (MY_STORE_TABS as readonly string[]).includes(fromUrl) ? (fromUrl as MyStoreTab) : "products";
+  const [tab, setTab] = useState<MyStoreTab>(urlTab);
+  // A link to another ?tab= while this page is open switches the tab (state adjusted while rendering).
+  const [seenUrlTab, setSeenUrlTab] = useState(urlTab);
+  if (urlTab !== seenUrlTab) {
+    setSeenUrlTab(urlTab);
+    setTab(urlTab);
+  }
   const remember = (value: string) => {
+    setTab(value as MyStoreTab);
     const url = new URL(window.location.href);
     if (value === "products") url.searchParams.delete("tab");
     else url.searchParams.set("tab", value);
@@ -28,7 +42,7 @@ export function MyStoreTabs({ initialTab, products, design, links, analytics, pr
   };
 
   return (
-    <Tabs defaultValue={initialTab} onValueChange={remember} className="@container gap-0 overflow-hidden rounded-xl border border-line bg-surface">
+    <Tabs id="my-store-tabs" value={tab} onValueChange={remember} className="@container scroll-mt-24 gap-0 overflow-hidden rounded-xl border border-line bg-surface">
       <div className="flex flex-col border-b border-line px-4 sm:px-6 @3xl:h-14 @3xl:flex-row @3xl:items-center @3xl:justify-between">
         <TabsList aria-label="My Store" className="border-b-0 @3xl:h-full">
           <TabsTrigger value="products" className="@3xl:h-full">

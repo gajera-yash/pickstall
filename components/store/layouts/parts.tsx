@@ -1,7 +1,8 @@
-import { BookOpen, Download, ImageIcon, PlayCircle } from "lucide-react";
+import { BookOpen, CalendarCheck, Download, ImageIcon, PlayCircle } from "lucide-react";
 
 import { PriceTag } from "@/components/store/price-tag";
 import type { StoreTheme } from "@/components/store/store-theme";
+import { durationLabel } from "@/lib/coaching/settings";
 import { COURSE_CATEGORY_LABELS, accessLabel } from "@/lib/courses/settings";
 import { safeImageSrc } from "@/lib/media/media";
 import type { PublicProduct } from "@/lib/stores/public";
@@ -19,7 +20,7 @@ export function ProductCover({ product, theme, className }: { product: PublicPro
   }
   return (
     <span aria-hidden="true" className={cn("flex w-full items-center justify-center", className)} style={{ background: `color-mix(in srgb, ${theme.accent} 14%, ${theme.preset.card})`, color: theme.accent }}>
-      {product.type === "course" ? <PlayCircle className="size-10" /> : <ImageIcon className="size-10" />}
+      {product.type === "course" ? <PlayCircle className="size-10" /> : product.type === "coaching" ? <CalendarCheck className="size-10" /> : <ImageIcon className="size-10" />}
     </span>
   );
 }
@@ -29,8 +30,12 @@ export function ProductKind({ product, theme }: { product: PublicProduct; theme:
   const course = product.course;
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.preset.muted }}>
-      {course ? <BookOpen aria-hidden="true" className="size-3.5" /> : <Download aria-hidden="true" className="size-3.5" />}
-      {course ? `Course · ${course.lessonCount} ${course.lessonCount === 1 ? "lesson" : "lessons"}` : "Digital product"}
+      {course ? <BookOpen aria-hidden="true" className="size-3.5" /> : product.type === "coaching" ? <CalendarCheck aria-hidden="true" className="size-3.5" /> : <Download aria-hidden="true" className="size-3.5" />}
+      {course
+        ? `Course · ${course.lessonCount} ${course.lessonCount === 1 ? "lesson" : "lessons"}`
+        : product.type === "coaching"
+          ? `Coaching call · ${durationLabel(product.coaching?.durationMinutes ?? 30)}`
+          : "Digital product"}
     </span>
   );
 }
@@ -52,7 +57,7 @@ export function PriceAndButton({ product, theme, currency }: { product: PublicPr
         <PriceTag product={product} currency={currency} className="font-display text-money-m" regularStyle={{ color: preset.muted }} />
       )}
       <span className="flex h-11 items-center px-5 text-button" style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}>
-        {product.buttonText || (product.type === "course" ? "Enroll now" : "Buy now")}
+        {product.buttonText || (product.type === "course" ? "Enroll now" : product.type === "coaching" ? "Book a call" : "Buy now")}
       </span>
     </span>
   );

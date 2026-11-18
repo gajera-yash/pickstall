@@ -44,6 +44,7 @@ import {
 } from "@/lib/coaching/settings";
 import type { CoachingWindowDoc } from "@/lib/db/collections";
 import { safeImageSrc } from "@/lib/media/media";
+import { PUBLISHED_HREF } from "@/lib/products/create-errors";
 import { changeProductStatus, removeProduct } from "@/lib/products/actions";
 import { parseMoneyToCents } from "@/lib/products/money";
 import { savingPercent, type Priced } from "@/lib/products/pricing";
@@ -185,6 +186,11 @@ export function CoachingEditor({ initial, currency, paymentsOk, isNew }: Props) 
       }
       set("status", status);
       setSuccess(status === "published" ? "Published. Buyers can book once your store page is live." : "Back to draft. It is hidden from your store.");
+      if (status === "published") {
+        // Published: back to the products list (D-087), or to the next setup step from the wizard.
+        router.push(fromSetup ? "/dashboard/setup?step=connect-payments" : PUBLISHED_HREF);
+        return;
+      }
       router.refresh();
     });
   };

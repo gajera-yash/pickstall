@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, Library, Mail, RefreshCw, XCircle } from "lucide-react";
+import { CalendarPlus, CheckCircle2, Clock, Library, Mail, RefreshCw, XCircle } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,11 +7,19 @@ import { ProductThumb } from "@/components/store/order-summary";
 import { StoreFrame, borderColor, cardStyle, resolveTheme } from "@/components/store/store-theme";
 import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/config";
+import { formatCallTime } from "@/lib/coaching/ics";
 import { isUuid } from "@/lib/media/media";
 import { findOrderForThankYou, loadCheckoutContext } from "@/lib/orders/queries";
 
 export const instant = false;
 export const metadata: Metadata = { title: `Thank you | ${APP_NAME}`, robots: { index: false } };
+
+// A booked coaching call (D-087): the email carries the booking and a calendar file.
+const CALL_NEXT_STEPS = [
+  { icon: Mail, title: "Check your email", body: "We sent your booking with a calendar file and the meeting details." },
+  { icon: CalendarPlus, title: "Add it to your calendar", body: "Open the calendar file from the email, or use your library." },
+  { icon: Library, title: "See it in your library", body: "Your booking stays there, with the join link when it's time." },
+] as const;
 
 const NEXT_STEPS = [
   { icon: Mail, title: "Check your email", body: "We sent your receipt and a link to your purchase." },
@@ -55,7 +63,7 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
           </h1>
           <p className="max-w-sm break-words whitespace-pre-line" style={{ color: preset.muted }}>
             {paid
-              ? product.thankYou || `Your purchase of ${product.title} is confirmed.`
+              ? product.thankYou || (order.booking ? `Your call is booked: ${formatCallTime(order.booking.start, order.booking.end, order.booking.buyerTimeZone ?? product.coaching?.timeZone ?? null)}.` : `Your purchase of ${product.title} is confirmed.`)
               : pending
                 ? "This can take a moment. Refresh this page in a few seconds."
                 : "Something went wrong with this payment. You were not charged for this order."}
@@ -78,7 +86,7 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
               What happens next
             </h2>
             <ol className="flex flex-col gap-3">
-              {NEXT_STEPS.map((step, index) => (
+              {(order.booking ? CALL_NEXT_STEPS : NEXT_STEPS).map((step, index) => (
                 <li key={step.title} className="flex items-start gap-3">
                   <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold" style={{ background: theme.accent, color: theme.onAccent }}>
                     {index + 1}

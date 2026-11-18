@@ -22,7 +22,6 @@ import { incomeStats } from "@/lib/orders/creator-queries";
 import { ProductList } from "@/components/dashboard/product-list";
 import { SOCIAL_LINK_LABELS, storeLink } from "@/lib/config";
 import { loadSetupGate } from "@/lib/dashboard/setup-gate";
-import { MY_STORE_TABS, type MyStoreTab } from "@/lib/dashboard/nav";
 import { firstName } from "@/lib/dashboard/greeting";
 import { lessonCountsOf, type PublicProduct, type PublicStore } from "@/lib/stores/public";
 import type { SocialLink } from "@/lib/stores/schemas";
@@ -44,10 +43,9 @@ const DAYS = 90;
 const zeros = () => Array.from({ length: DAYS }, () => 0);
 
 async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dashboard">["searchParams"] }) {
-  const [{ user, store }, params] = await Promise.all([requireCreator(DASHBOARD_PATH), searchParams]);
+  // The open tab comes from ?tab= in MyStoreTabs; awaiting searchParams keeps the page dynamic per URL.
+  const [{ user, store }] = await Promise.all([requireCreator(DASHBOARD_PATH), searchParams]);
   const profile = await getProfile(user.id).catch(() => null);
-  const tabParam = typeof params.tab === "string" ? params.tab : "";
-  const initialTab: MyStoreTab = (MY_STORE_TABS as readonly string[]).includes(tabParam) ? (tabParam as MyStoreTab) : "products";
 
   const { checklist, products, unlocked } = await loadSetupGate(store);
   // Until setup is done, My Store is the onboarding screen and the other sections are locked (D-079).
@@ -86,6 +84,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
       buttonText: product.buttonText,
       type: product.type,
       course: product.type === "course" ? { category: product.course?.category ?? null, accessDays: product.course?.accessDays ?? null, lessonCount: lessonCounts.get(product._id) ?? 0 } : null,
+      coaching: product.type === "coaching" ? { durationMinutes: product.coaching?.durationMinutes ?? 30 } : null,
     }));
 
   return (
@@ -104,7 +103,6 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
         <KpiSection currency={store.currency} series={series} />
 
         <MyStoreTabs
-          initialTab={initialTab}
           productCount={productCount}
           products={products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} storeSlug={store.slug} />}
           design={

@@ -37,6 +37,7 @@ import {
 } from "@/lib/courses/editor-steps";
 import { COURSE_CATEGORIES, COURSE_CATEGORY_LABELS, COURSE_LIMITS, accessLabel, type CourseCategory } from "@/lib/courses/settings";
 import { safeImageSrc } from "@/lib/media/media";
+import { PUBLISHED_HREF } from "@/lib/products/create-errors";
 import { changeProductStatus, removeProduct } from "@/lib/products/actions";
 import { parseMoneyToCents } from "@/lib/products/money";
 import { savingPercent, type Priced } from "@/lib/products/pricing";
@@ -125,8 +126,9 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
       }
       set("status", status);
       setSuccess(status === "published" ? "Published. Students can buy it once your store page is live." : "Back to draft. It is hidden from your store.");
-      if (status === "published" && fromSetup) {
-        router.push("/dashboard/setup?step=connect-payments");
+      if (status === "published") {
+        // Published: back to the products list (D-087), or to the next setup step from the wizard.
+        router.push(fromSetup ? "/dashboard/setup?step=connect-payments" : PUBLISHED_HREF);
         return;
       }
       router.refresh();

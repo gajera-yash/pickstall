@@ -4,6 +4,21 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-087: Pre-QA fixes: Customize design, prerender errors, coaching wording, locks, publish redirect
+- **Date:** 2026-11-18
+- **Decision (founder report before handing the site to a QA tester):**
+  - **"Customize design" did nothing** while My Store was open: the tabs read `?tab=` only on first load. `MyStoreTabs` now follows the URL (state adjusted while rendering), and the button and command menu open `/dashboard?tab=design#my-store-tabs`.
+  - **Prerender errors (red dev "Issue"):** `findPublicStore`, `loadCheckoutContext` and `findPendingMockOrder` now call `await connection()` before the database is touched (the driver reads the clock, which Next refuses while prerendering). This affected the store, product, checkout, thank-you and mock-pay pages. The old `/dashboard/store` redirect page sets `instant = false`.
+  - **Coaching on buyer pages:**
+    - Store cards show a calendar icon and "Coaching call · 30 min".
+    - The product page lists what the call is, instead of "Delivered by email", and its default button text is "Book a call".
+    - The thank-you page shows the booked time and calendar steps.
+    - Public products expose only `coaching.durationMinutes`, never the meeting link or the hours (tested).
+  - **Any free product** shows "Free" on its product page.
+  - **Settings sub-nav:** Store and Payments show a lock and are not links while setup is incomplete (D-079).
+  - **After publishing**, the digital, course and coaching editors go to `/dashboard/products?published=1`, which shows a "Published" message; from the setup wizard they still go to the next setup step.
+- **Why:** founder request, 2026-11-18.
+
 ## D-086: Coaching calls, part K5: calls list and cancel with refund
 - **Date:** 2026-11-18
 - **Decision:**

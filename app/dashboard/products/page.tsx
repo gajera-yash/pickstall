@@ -40,9 +40,15 @@ async function ProductsContent({ searchParams }: Pick<PageProps<"/dashboard/prod
   const [{ store }, params] = await Promise.all([requireUnlockedCreator("/dashboard/products"), searchParams]);
   const products = await listProducts(store.id);
   const error = productCreateError(params.error);
+  const published = params.published === "1";
 
   return (
     <>
+      {published && !error && (
+        <Alert variant="success">
+          <AlertDescription>Published. Buyers see it on your store page once your store is live.</AlertDescription>
+        </Alert>
+      )}
       {error && (
         <Alert variant="error">
           <AlertDescription>{error}</AlertDescription>

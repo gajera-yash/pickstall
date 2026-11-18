@@ -39,7 +39,7 @@ export function StorePreviewCard({ store, products, isPublished }: { store: Publ
           Expand preview
         </Button>
         <Button asChild variant="secondary" className="border-blue text-blue sm:flex-1 xl:flex-none not-disabled:hover:bg-blue-soft">
-          <Link href="/dashboard?tab=design">
+          <Link href="/dashboard?tab=design#my-store-tabs">
             <Palette aria-hidden="true" className="size-4" />
             Customize design
           </Link>

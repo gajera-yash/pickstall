@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { CHECKOUT_QUESTIONS_MAX } from "@/lib/config";
+import { PUBLISHED_HREF } from "@/lib/products/create-errors";
 import { changeProductStatus, removeProduct, saveProduct, type SaveProductState } from "@/lib/products/actions";
 import { safeImageSrc } from "@/lib/media/media";
 import { parseMoneyToCents } from "@/lib/products/money";
@@ -130,8 +131,9 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
       }
       set("status", status);
       setNotice({ kind: "success", text: status === "published" ? "Published. Buyers will see it once your store page is live." : status === "archived" ? "Archived." : "Back to draft." });
-      if (status === "published" && fromSetup) {
-        router.push("/dashboard/setup?step=connect-payments");
+      if (status === "published") {
+        // Published: back to the products list (D-087), or to the next setup step from the wizard.
+        router.push(fromSetup ? "/dashboard/setup?step=connect-payments" : PUBLISHED_HREF);
         return;
       }
       router.refresh();
@@ -149,9 +151,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
     } else if (state?.ok && state.data.published) {
       set("status", "published");
       setNotice({ kind: "success", text: "Published. Buyers will see it once your store page is live." });
-      if (fromSetup) {
-        router.push("/dashboard/setup?step=connect-payments");
-      }
+      router.push(fromSetup ? "/dashboard/setup?step=connect-payments" : PUBLISHED_HREF);
     } else if (state?.ok && goAfterSave) {
       open(goAfterSave);
     }
