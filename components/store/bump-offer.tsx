@@ -3,6 +3,7 @@
 import { ImageIcon } from "lucide-react";
 import { useState } from "react";
 
+import { useCheckoutTotals } from "@/components/store/checkout-totals";
 import { Checkbox } from "@/components/ui/checkbox";
 import { safeImageSrc } from "@/lib/media/media";
 
@@ -14,10 +15,11 @@ export type BumpOfferData = { title: string; coverUrl: string | null; price: str
  */
 export function BumpOffer({ bump }: { bump: BumpOfferData }) {
   const [checked, setChecked] = useState(false);
+  const totals = useCheckoutTotals();
   const cover = safeImageSrc(bump.coverUrl);
   return (
     <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-dashed border-line bg-bg-subtle p-4 has-data-[state=checked]:bg-blue-soft">
-      <Checkbox checked={checked} onCheckedChange={(next) => setChecked(next === true)} className="mt-1" aria-describedby="bump-offer-text" />
+      <Checkbox checked={checked} onCheckedChange={(next) => (setChecked(next === true), totals?.setBump(next === true))} className="mt-1" aria-describedby="bump-offer-text" />
       {checked && <input type="hidden" name="addBump" value="on" />}
       <span className="flex min-w-0 flex-1 gap-3">
         {cover ? (

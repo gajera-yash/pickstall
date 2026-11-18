@@ -4,6 +4,15 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-090: Fixes from the live check (checkout summary, preview placeholder, health check)
+- **Date:** 2026-11-18
+- **Decision (from checking the live site in the founder's Chrome):**
+  - **Checkout order summary** now follows the form: an applied coupon adds a "Code X −amount" line, a ticked order bump adds a "+price" line, and the total changes with both. A small client context (`components/store/checkout-totals.tsx`) is written by the coupon field and the bump box. The coupon box itself now says only "You save …". This is information only; the server still computes the amount (D-088, D-089).
+  - **My Store's store preview** shows a skeleton until its box is measured (after the page's script loads) instead of a blank box.
+  - **Health check** pings the database right after connecting, without waiting for the app's index setup, which made the first check after a deploy report a false "unreachable" (503).
+- **Left as it is:** a missing store (`/@nobody`) answers HTTP 200 on the live site. Its page is streamed, so Next.js sends the status before the "not found" is known; it adds `<meta name="robots" content="noindex">` instead (checked on the live site), so search engines do not index it. A real 404 status would need a database check in a proxy on every store visit.
+- **Why:** founder request, 2026-11-18.
+
 ## D-089: Order bumps (Phase 2)
 - **Date:** 2026-11-18
 - **Decision (founder approved the plan 2026-11-18):** a product can offer one other product of the same store at checkout. The buyer ticks it and pays once.

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CheckoutForm } from "@/components/store/checkout-form";
+import { CheckoutTotalsProvider } from "@/components/store/checkout-totals";
 import { OrderSummary } from "@/components/store/order-summary";
 import { StorePaused } from "@/components/store/store-paused";
 import { StoreFrame, cardStyle, resolveTheme } from "@/components/store/store-theme";
@@ -52,9 +53,10 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
           {product.title}
         </Link>
 
+        <CheckoutTotalsProvider>
         <div className="grid w-full grid-cols-[minmax(0,1fr)] gap-6 @3xl:grid-cols-[minmax(0,1fr)_360px] @3xl:items-start @3xl:gap-8">
           <aside className="p-5 @3xl:sticky @3xl:top-8 @3xl:col-start-2 @3xl:row-start-1" style={cardStyle(theme)}>
-            <OrderSummary product={product} storeName={store.name} currency={store.currency} theme={theme} />
+            <OrderSummary product={product} storeName={store.name} currency={store.currency} theme={theme} bump={offer ? { title: offer.title, priceCents: offer.priceCents } : null} />
           </aside>
 
           <section aria-labelledby="checkout-title" className="flex flex-col gap-5 p-5 @3xl:col-start-1 @3xl:row-start-1 @3xl:p-8" style={cardStyle(theme)}>
@@ -91,6 +93,7 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
             </p>
           </section>
         </div>
+        </CheckoutTotalsProvider>
       </div>
     </StoreFrame>
   );
