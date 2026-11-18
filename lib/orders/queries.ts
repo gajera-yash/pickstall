@@ -4,7 +4,9 @@ import { randomUUID } from "node:crypto";
 
 import { connection } from "next/server";
 
-import { collections, type CheckoutQuestionDoc, type OrderDoc, type StoreDoc } from "@/lib/db/collections";
+import { releaseBookingForOrder } from "@/lib/coaching/bookings";
+import type { SlotSettings } from "@/lib/coaching/slots";
+import { collections, type CheckoutQuestionDoc, type OrderDoc, type ProductDoc, type StoreDoc } from "@/lib/db/collections";
 import { providerForStore } from "@/lib/payments";
 import { can, storeAccess } from "@/lib/plans/access";
 import { payableCents } from "@/lib/products/pricing";
@@ -32,6 +34,9 @@ export type CheckoutContext = {
     checkout: { headline: string | null; askPhone: boolean; questions: CheckoutQuestionDoc[] };
     thankYou: string | null;
     redirectUrl: string | null;
+    type: ProductDoc["type"];
+    /** A coaching call's booking rules (D-083); never its meeting link. Null for other products. */
+    coaching: SlotSettings | null;
   };
 };
 
@@ -67,6 +72,14 @@ const PRODUCT_FIELDS = {
   "checkout.questions": 1,
   "afterPurchase.thankYou": 1,
   "afterPurchase.redirectUrl": 1,
+  type: 1,
+  // The booking rules only: the meeting link is sent to buyers after they book (D-081).
+  "coaching.durationMinutes": 1,
+  "coaching.timeZone": 1,
+  "coaching.weekly": 1,
+  "coaching.bufferMinutes": 1,
+  "coaching.minNoticeHours": 1,
+  "coaching.bookingWindowDays": 1,
 } as const;
 
 /** The published store and product for a checkout, or null. Never includes the delivery link. */
@@ -99,6 +112,18 @@ export async function loadCheckoutContext(username: string, productSlug: string)
       checkout: product.checkout,
       thankYou: product.afterPurchase?.thankYou ?? null,
       redirectUrl: product.afterPurchase?.redirectUrl ?? null,
+      type: product.type ?? "digital",
+      coaching:
+        product.type === "coaching" && product.coaching
+          ? {
+              durationMinutes: product.coaching.durationMinutes,
+              timeZone: product.coaching.timeZone,
+              weekly: product.coaching.weekly,
+              bufferMinutes: product.coaching.bufferMinutes,
+              minNoticeHours: product.coaching.minNoticeHours,
+              bookingWindowDays: product.coaching.bookingWindowDays,
+            }
+          : null,
     },
   };
 }
@@ -113,7 +138,8 @@ export function canBuy(context: CheckoutContext): boolean {
 export type NewOrder = Pick<
   OrderDoc,
   "storeId" | "productId" | "item" | "buyerEmail" | "buyerName" | "buyerPhone" | "answers" | "subtotalCents" | "discountCents" | "totalCents" | "currency" | "provider"
->;
+> &
+  Partial<Pick<OrderDoc, "booking">>;
 
 /** Creates a pending order. Amounts are what the server computed from the product (lib/orders/pricing.ts). */
 export async function createPendingOrder(input: NewOrder): Promise<string> {
@@ -138,6 +164,7 @@ export async function attachProviderSession(orderId: string, providerSessionId: 
 export async function markOrderFailed(orderId: string): Promise<void> {
   const { orders } = await collections();
   await orders.updateOne({ _id: orderId, status: "pending" }, { $set: { status: "failed" } });
+  await releaseBookingForOrder(orderId); // a coaching order gives its time back (D-083)
 }
 
 /** What the thank-you page may show: the order's status for this store only. The order id is an unguessable uuid. */

@@ -4,6 +4,92 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-086: Coaching calls, part K5: calls list and cancel with refund
+- **Date:** 2026-11-18
+- **Decision:**
+  - **Upcoming calls** card at the top of Orders (`components/dashboard/upcoming-calls.tsx`), shown only when the store has calls. It lists confirmed calls still ahead and every "conflict" ("Needs a new time"), soonest first, in the coach's time zone. A row opens the order drawer.
+  - **Order drawer, "Call" section:** the time, the booking state, and for a paid order with a confirmed or conflict call, **"Cancel call and refund"** (or "Cancel call" for a free one), behind a confirmation dialog.
+  - **`cancelCall` action** (`lib/coaching/call-actions.ts`): uses the session owner's store only and is rate limited with the refund limit.
+    - A paid call is refunded in full **first**, through the same path as the Refund button. That path moved into the server-only `requestFullRefund` (`lib/orders/refunds.ts`), which `refundOrder` now calls too; its behaviour is unchanged, so there is still one refund path and the Stripe idempotency key per order.
+    - Only once the provider accepts the refund is the booking set to `cancelled`. That frees the time; reminders skip it because they check the booking first.
+    - The buyer then gets a "Your call was cancelled" email (once, outbox kind `call-cancelled`).
+    - If the refund fails, the call is kept. A free call is just cancelled.
+  - **Refund from anywhere cancels the call:** a verified full refund event (from the drawer or the Stripe Dashboard) also cancels the booking (`cancelBookingOfRefundedOrder` in the payment path).
+  - **Buyer's library:** a cancelled call says the coach cancelled it and whether it was refunded.
+  - **Schema:** `BookingDoc.status` adds `"cancelled"` (with `cancelledAt`), and `EmailOutboxDoc.kind` adds `"call-cancelled"`. No migration.
+- **Not in K5:**
+  - Rescheduling, by the buyer or the coach (founder: later).
+  - A creator email for new bookings: the creator still gets the in-app "New sale" notification.
+  - A full calls history page: past calls stay in Orders.
+- **Why:** plan part K5 (D-081).
+
+## D-085: Coaching call reminders through Inngest
+- **Date:** 2026-11-18
+- **Decision (founder chose Inngest, free plan, 2026-11-18):**
+  - New dependency `inngest@4.26.2`, pinned exactly; released 29 Oct 2026, about three weeks old. pnpm is told not to run the build script of its sub-dependency `protobufjs` (`pnpm-workspace.yaml`, like the other denied scripts).
+  - Client: `lib/inngest/client.ts`. Route: `app/api/inngest/route.ts` (`serve` from `inngest/next`, exporting GET, POST and PUT). The SDK verifies Inngest's requests with `INNGEST_SIGNING_KEY`. API shapes were checked in the installed package's README and types, not guessed.
+  - When a booking becomes confirmed (only in the paid-order path), `scheduleCallReminders` sends one `coaching/call.confirmed` event whose id is `call-confirmed-<orderId>`. A replayed webhook sends the same id, so Inngest runs the function once. It never throws, and it is skipped when Inngest is not configured (no `INNGEST_EVENT_KEY`; in development `INNGEST_DEV`).
+  - The function `coaching-call-reminders` works out, in a step, which reminders are still ahead (24 hours and 1 hour before; a call booked 3 hours ahead gets only the 1-hour one), sleeps until each (`step.sleepUntil`), then sends it.
+  - **Each send checks again** that the order is paid, the booking is confirmed, the call has not started, and its start is still the same. So a call refunded, cancelled or moved later (K5) gets no stale reminder.
+  - **One outbox row per order and reminder** (`<orderId>:call-reminder-24h` / `-1h`, new `EmailOutboxDoc.kind` values): a retry never emails twice. A failed send throws, so Inngest retries that step.
+  - Reminder email (`renderCallReminder`): fixed text with the sender identity, the time in the buyer's zone, the join link (or that the coach sends it) and a link to the booking in the library.
+  - Env: `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY` (server only) and `INNGEST_DEV` for local development. The setup steps are in `docs/DEPLOY_VERCEL.md` section 7b.
+- **Why:** plan part K4 (D-081). Vercel's Hobby plan runs crons only daily, too coarse for a 1-hour reminder.
+
+## D-084: Coaching calls, part K4: booking email, calendar file and library card
+- **Date:** 2026-11-18
+- **Decision:**
+  - **Buyer's email:** the confirmation email of a coaching order always carries the booking, whatever the creator wrote: the call time in the buyer's own time zone (from the booking page; else the coach's), and the meeting link or "the coach will email you the link". A late "conflict" booking says the time was taken and the creator will get in touch. The default subject for a confirmed call is "Your call is booked: …". The sender identity and the access link are still always included (D-014).
+  - **Calendar file:** a confirmed call's email has a `call.ics` attachment (RFC 5545, UTC times, escaped and folded text, `lib/coaching/ics.ts`). `sendEmail` accepts attachments (Resend `attachments` with filename, content and content type, checked in the installed resend 6.x types).
+  - **Library:** coaching purchases are kind "coaching". The purchase page shows a call card (time, "Join the call", "Add to calendar"), and the list card shows "Coaching call · Call on <date>" and "View booking". The meeting link is given only for a confirmed, paid (not refunded) booking, to the buyer whose verified email matches. "Add to calendar" downloads from `/library/<order>/call.ics`, which checks the same rules.
+  - Checkout's email hint for a coaching call reads "Your booking and receipt go here."
+- **Not in K4:**
+  - **Reminder emails** (24 hours and 1 hour before) need a scheduler. The project has neither Inngest nor a cron yet, and Vercel's Hobby plan runs crons only once a day, so the founder picks the approach first.
+  - **No email to the creator:** the app has no creator emails yet, and the creator still gets the in-app "New sale" notification. A creator booking email can come with K5.
+- **Why:** plan part K4 (D-081).
+
+## D-083: Coaching calls, part K3: booking at checkout
+- **Date:** 2026-11-18
+- **Decision (founder approved the K3 plan 2026-11-18):**
+  - **Buyer flow:** the checkout page of a coaching call shows a day and time picker (`components/store/slot-picker.tsx`) with the slot engine's open times (D-082), in the buyer's own time zone. The picked start and the buyer's time zone go to the server as hidden fields. The button reads "Book and pay" (or "Book for free").
+  - **Server check:** `startCheckout` ignores the browser's time: it loads the store's busy times around the pick and accepts it only if `findSlot` offers that exact start now. The order stores the server's slot (`OrderDoc.booking`: start, end, buyer time zone).
+  - **New `bookings` collection** (`BookingDoc`), one booking per order, status held → confirmed / released / conflict. Indexes: unique `activeSlot` (store + start, only while held or confirmed), unique `orderId`, and `storeId + start`.
+  - **Hold:** the time is held for 65 minutes while the buyer pays (a Stripe checkout session expires after 60). A hold that ran out is let go when someone else wants that time. If the hold fails, the order is marked failed and the buyer is asked to pick again.
+  - **No double booking:** the unique index stops two calls starting together. Overlapping calls of different lengths are settled after the write: the booking created first keeps the time and the other lets go, and both sides use the same rule.
+  - **Confirm only from the payment path:** `onOrderPaid` (verified webhook, mock through the same handler, or the free-order path) confirms the booking, and a replay changes nothing. A failed or expired payment (`payment.failed`, `markOrderFailed`) releases it. The success page never confirms anything.
+  - **Late payment:** if the time was taken meanwhile, the booking becomes "conflict" and the order stays paid. The creator sorts it out in K5 (logged as `coaching.booking_conflict`).
+  - The "booking turns on in the next update" publish rule from D-081 is removed: coaching calls can be published, and the editor's last button is "Save and publish".
+  - The checkout context reads only the coaching booking rules, never the meeting link.
+- **Unchanged:** prices come from the database, charges are direct on the creator's Stripe account, there is no application fee, and the `PaymentProvider` interface and its code are not changed.
+- **Also fixed:** on phones the checkout grid column now stays inside the screen (`grid-cols-[minmax(0,1fr)]`).
+- **Known:** the dev-only "new Date() while prerendering" warning on the checkout route comes from the existing `loadCheckoutContext` database call (an open follow-up from before), not from this change. Emails, the .ics file, reminders and the library call card are K4; the creator's calls list and cancel/refund are K5.
+- **Why:** plan part K3 (D-081).
+
+## D-082: Coaching calls, part K2: the slot engine
+- **Date:** 2026-11-18
+- **Decision:** call start times are computed by one pure function, `availableSlots(settings, busy, now)` in `lib/coaching/slots.ts`, used by both the booking page (K3) and the server. Rules:
+  - Slots follow the weekly hours in the coach's time zone, back to back from the start of each range: each is `durationMinutes` long, with `bufferMinutes` of break before the next, and must end by the end of its range.
+  - Only starts between now plus the minimum notice and now plus the booking window are offered.
+  - A slot that overlaps a busy time (a booked or held call of any of the store's coaching products, from K3) is dropped, with the break kept on both sides.
+  - Daylight saving: a wall time that does not exist (clocks go forward) is skipped; a time that happens twice (clocks go back) uses the first.
+  - At most 5,000 slots are returned (90 days of 15-minute calls fits).
+- **Server check:** `findSlot` accepts only a start that the engine itself offers at that moment. K3 calls it before holding a time, so a time sent by a browser is never trusted on its own.
+- **Booking page helper:** `slotsByDay` groups slots by the buyer's own calendar day.
+- **No date library:** time zone maths uses `Intl` only (`lib/coaching/time-zones.ts`), so there is no new dependency. Tests cover India (no DST), New York on both DST days and the 90-day window.
+- **Why:** plan part K2 (D-081).
+
+## D-081: Coaching calls, part K1: product type, editor and availability
+- **Date:** 2026-11-18
+- **Decision (founder approved the plan 2026-11-18):** coaching calls use a built-in booking calendar (not a Calendly-style link), on every plan. In the first version only the creator cancels (with a refund); buyer rescheduling and Google Calendar sync come later. The work ships in five parts: K1 editor and availability, K2 slot engine, K3 booking at checkout (slot hold, webhook confirms), K4 emails, .ics and reminders, K5 calls list and cancel/refund.
+- **K1 (this entry):**
+  - New product type `"coaching"` with `ProductDoc.coaching` (`CoachingSettingsDoc`): call length (15/30/45/60/90 min), IANA time zone, weekly hours (ISO weekday plus `HH:MM` ranges, up to 3 a day, no overlap, each fits one call), break after each call, minimum notice, how far ahead buyers can book, and an https meeting link or "I'll send it later". New calls start at 30 minutes, weekdays 09:00 to 17:00, link sent later. No migration: there are no users yet, and nothing else in the product changes.
+  - **Time zone lives on the coaching product**, not on the store as the plan said: it is only needed by coaching, so it stays with it. The editor fills in the creator's browser zone until it is saved. Double-booking across a creator's calls is handled by the bookings collection in K3, not by the time zone.
+  - The meeting link is never in public reads; it goes to buyers after they book (K4).
+  - Coaching editor (`components/dashboard/coaching-editor.tsx`): Details, Availability, Price & publish, with a live card preview. One JSON payload, checked again on the server (`lib/coaching/schemas.ts`); the save is scoped to the session owner's store and `type: "coaching"` (`lib/coaching/queries.ts`). The digital product editor and file upload now skip both courses and coaching calls.
+  - **A coaching call cannot be published yet:** the publish rules add "Booking turns on in the next update" (`COACHING_BOOKING_PENDING`), so nothing can be sold without a booking calendar. K3 removes that rule.
+  - The type picker's "Coaching call" card is live; the product list labels coaching calls.
+- **Why:** founder request, 2026-11-18.
+
 ## D-080: Setup wizard matches the onboarding screen; one soft border everywhere
 - **Date:** 2026-11-18
 - **Decision (founder request, screenshot of /dashboard/setup):**

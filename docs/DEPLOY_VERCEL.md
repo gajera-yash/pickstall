@@ -90,6 +90,16 @@ Stripe Dashboard, **Test mode** on:
 
 Bunny > Stream > your library > **Webhook URL:** `https://pickstall.store/api/webhooks/bunny`. Bunny signs it with the read-only API key (`BUNNY_STREAM_READONLY_KEY`).
 
+## 7b. Inngest (coaching call reminders, D-085)
+
+Coaching calls send reminder emails 24 hours and 1 hour before the call through Inngest (free plan).
+Without these keys everything else works; only the reminders are not sent.
+
+1. Create a free account at inngest.com and open the production environment.
+2. Copy the **Event key** into `INNGEST_EVENT_KEY` and the **Signing key** into `INNGEST_SIGNING_KEY` (Vercel > Settings > Environment Variables), then redeploy.
+3. In the Inngest dashboard, sync the app with the URL `https://<your domain>/api/inngest`. The function "coaching-call-reminders" should appear.
+4. Local testing: run the Inngest dev server and set `INNGEST_DEV=1` in `.env.local` (no keys needed).
+
 ## 8. Google sign-in (optional)
 
 Google Cloud Console > Credentials > your OAuth client > **Authorized redirect URIs:** add `https://pickstall.store/api/auth/callback/google`. Also add `https://pickstall.store` to Authorized JavaScript origins.

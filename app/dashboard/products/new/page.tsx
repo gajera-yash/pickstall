@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
+import { createCoachingAndEdit } from "@/lib/coaching/actions";
 import { createCourseAndEdit } from "@/lib/courses/actions";
 import { createProductAndEdit } from "@/lib/products/actions";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,7 @@ type ProductType = { id: string; title: string; description: string; icon: Lucid
 const TYPES: ProductType[] = [
   { id: "digital", title: "Digital product", description: "PDFs, templates, presets, audio or any file. Or a private link.", icon: Download, live: true },
   { id: "course", title: "Course", description: "Video lessons in modules, with progress for each student.", icon: PlayCircle, live: true },
-  { id: "coaching", title: "Coaching call", description: "Sell 1:1 time with booking built in.", icon: CalendarCheck, live: false },
+  { id: "coaching", title: "Coaching call", description: "Sell 1:1 time with booking built in.", icon: CalendarCheck, live: true },
   { id: "membership", title: "Membership", description: "Monthly access to content and a community.", icon: UsersRound, live: false },
   { id: "emails", title: "Collect emails", description: "A free lead magnet that grows your list.", icon: Mail, live: false },
   { id: "link", title: "Link", description: "Send buyers to any page: a booking tool, a group or a site.", icon: Link2, live: false },
@@ -46,7 +47,7 @@ async function TypePicker() {
       {TYPES.map(({ id, title, description, icon: Icon, live }) => (
         <li key={id}>
           {live ? (
-            <form action={id === "course" ? createCourseAndEdit : createProductAndEdit} className="h-full">
+            <form action={id === "course" ? createCourseAndEdit : id === "coaching" ? createCoachingAndEdit : createProductAndEdit} className="h-full">
               <Button
                 type="submit"
                 variant="secondary"

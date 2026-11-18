@@ -1,6 +1,6 @@
 import "server-only";
 
-import { collections, type OrderDoc } from "@/lib/db/collections";
+import { collections, type BookingDoc, type OrderDoc } from "@/lib/db/collections";
 import { accessEndsAt } from "@/lib/courses/access";
 import { isUuid } from "@/lib/media/media";
 import { hasDelivery } from "@/lib/products/publish";
@@ -20,8 +20,8 @@ export type Purchase = {
   status: OrderDoc["status"];
   /** The product still exists and has something to open. */
   available: boolean;
-  /** A course opens in the course player (D-057); anything else through `grantAccess`. */
-  kind: "digital" | "course";
+  /** A course opens in the course player (D-057), a coaching call shows its booking (D-084); anything else opens through `grantAccess`. */
+  kind: "digital" | "course" | "coaching";
   /** When a course's access period ends; null for lifetime access and for digital products. */
   accessEndsAt: Date | null;
   /** True once that period is over (the course player refuses it too). */
@@ -30,18 +30,24 @@ export type Purchase = {
   accessCount: number;
   /** A course's lessons completed out of its current lessons (D-070); null for digital products. */
   progress: { done: number; total: number } | null;
+  /** A coaching call's booking (D-084): its time, state, and the meeting link once confirmed. Null for other products. */
+  call: { start: Date; end: Date; status: BookingDoc["status"]; meetingUrl: string | null; coachTimeZone: string | null; buyerTimeZone: string | null; ended: boolean } | null;
 };
 
 const normalize = (email: string) => email.trim().toLowerCase();
 
 async function loadDetails(orders: OrderDoc[], now: Date = new Date()): Promise<Purchase[]> {
-  const { stores, products } = await collections();
+  const { stores, products, bookings } = await collections();
   const storeIds = [...new Set(orders.map((order) => order.storeId))];
   const productIds = [...new Set(orders.map((order) => order.productId))];
   const [storeDocs, productDocs] = await Promise.all([
     stores.find({ _id: { $in: storeIds } }, { projection: { name: 1, slug: 1 } }).toArray(),
-    products.find({ _id: { $in: productIds } }, { projection: { slug: 1, coverUrl: 1, externalUrl: 1, downloadLimit: 1, status: 1, type: 1, deliveryType: 1, fileId: 1, "course.accessDays": 1 } }).toArray(),
+    products.find({ _id: { $in: productIds } }, { projection: { slug: 1, coverUrl: 1, externalUrl: 1, downloadLimit: 1, status: 1, type: 1, deliveryType: 1, fileId: 1, "course.accessDays": 1, "coaching.meetingUrl": 1, "coaching.timeZone": 1 } }).toArray(),
   ]);
+  // Bookings of these orders only (orders already matched to this buyer).
+  const bookedOrders = orders.filter((order) => order.booking);
+  const bookingDocs = bookedOrders.length > 0 ? await bookings.find({ orderId: { $in: bookedOrders.map((order) => order._id) } }, { projection: { orderId: 1, status: 1 } }).toArray() : [];
+  const bookingByOrder = new Map(bookingDocs.map((doc) => [doc.orderId, doc.status]));
   const storeById = new Map(storeDocs.map((doc) => [doc._id, doc]));
   const productById = new Map(productDocs.map((doc) => [doc._id, doc]));
   const progressByOrder = await loadProgress(orders.filter((order) => productById.get(order.productId)?.type === "course"));
@@ -60,13 +66,21 @@ async function loadDetails(orders: OrderDoc[], now: Date = new Date()): Promise<
       paidAt: order.paidAt,
       status: order.status,
       // A course always has its lessons; a digital product needs its link or its file (D-050).
-      available: product ? product.type === "course" || hasDelivery(product) : false,
-      kind: product?.type === "course" ? "course" : "digital",
+      available: product ? product.type === "course" || product.type === "coaching" || hasDelivery(product) : false,
+      kind: product?.type === "course" ? "course" : product?.type === "coaching" ? "coaching" : "digital",
       accessEndsAt: endsAt,
       accessEnded: endsAt !== null && now.getTime() >= endsAt.getTime(),
       downloadLimit: product?.downloadLimit ?? null,
       accessCount: order.accessCount ?? 0,
       progress: progressByOrder.get(order._id) ?? null,
+      call: order.booking
+        ? (() => {
+            const status = bookingByOrder.get(order._id) ?? "held";
+            // The link goes only to a buyer whose call is confirmed and not refunded.
+            const showLink = status === "confirmed" && order.status === "paid";
+            return { start: order.booking.start, end: order.booking.end, status, meetingUrl: showLink ? (product?.coaching?.meetingUrl ?? null) : null, coachTimeZone: product?.coaching?.timeZone ?? null, buyerTimeZone: order.booking?.buyerTimeZone ?? null, ended: now.getTime() >= order.booking.end.getTime() };
+          })()
+        : null,
     };
   });
 }

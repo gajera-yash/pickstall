@@ -6,7 +6,10 @@ import { APP_NAME } from "@/lib/config";
 import { serverEnv } from "@/lib/env.server";
 import { logger } from "@/lib/logger";
 
-export type OutgoingEmail = { to: string; subject: string; text: string; html: string };
+/** A small file sent with the email (Resend `attachments`: filename, content, content type). */
+export type EmailAttachment = { filename: string; content: string; contentType: string };
+
+export type OutgoingEmail = { to: string; subject: string; text: string; html: string; attachments?: EmailAttachment[] };
 
 const RESEND_TEST_SENDER = `${APP_NAME} <onboarding@resend.dev>`;
 
@@ -40,6 +43,7 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
     subject: email.subject,
     text: email.text,
     html: email.html,
+    ...(email.attachments?.length ? { attachments: email.attachments.map((file) => ({ filename: file.filename, content: Buffer.from(file.content, "utf8"), contentType: file.contentType })) } : {}),
   });
   if (error) {
     // Resend's error name says why (for example "validation_error" for an unverified sender).

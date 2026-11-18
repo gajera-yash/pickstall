@@ -1,4 +1,4 @@
-import { ChevronRight, Download, ImageIcon, PlayCircle } from "lucide-react";
+import { CalendarCheck, ChevronRight, Download, ImageIcon, PlayCircle } from "lucide-react";
 import Link from "next/link";
 
 import { ProductRowActions } from "@/components/dashboard/product-row-actions";
@@ -38,6 +38,11 @@ export function ProductList({ products, currency, storeSlug }: { products: Creat
                     <span className="inline-flex items-center gap-1">
                       <PlayCircle aria-hidden="true" className="size-3.5" />
                       Course
+                    </span>
+                  ) : product.type === "coaching" ? (
+                    <span className="inline-flex items-center gap-1">
+                      <CalendarCheck aria-hidden="true" className="size-3.5" />
+                      Coaching call
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1">

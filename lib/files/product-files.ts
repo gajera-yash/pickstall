@@ -37,8 +37,9 @@ async function dropFile(doc: Pick<FileDoc, "_id" | "key" | "storeId">): Promise<
  */
 export async function saveProductFile(storeId: string, productId: string, rawName: string, body: ReadableStream<Uint8Array>): Promise<SaveFileResult> {
   const { products, files } = await collections();
-  // Only digital products deliver a file this way; course attachments come with the lessons (G2).
-  const product = await products.findOne({ _id: productId, storeId, type: { $ne: "course" } }, { projection: { fileId: 1 } });
+  // Only digital products deliver a file this way; course attachments come with the lessons (G2),
+  // and coaching calls deliver a booking (D-081).
+  const product = await products.findOne({ _id: productId, storeId, type: { $nin: ["course", "coaching"] } }, { projection: { fileId: 1 } });
   if (!product) return { ok: false, error: "We couldn't find that product.", status: 404 };
 
   const id = randomUUID();

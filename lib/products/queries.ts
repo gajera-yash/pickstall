@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import type { Filter } from "mongodb";
 
 import { PRODUCTS_MAX_PER_STORE } from "@/lib/config";
+import { defaultCoachingSettings } from "@/lib/coaching/settings";
 import { collections, type ProductDoc } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import type { ProductInput } from "@/lib/products/schemas";
@@ -58,7 +59,10 @@ export async function findProduct(storeId: string, id: string): Promise<CreatorP
 
 export type CreateProductResult = { id: string } | "limit" | "error";
 
-const DRAFT_TITLES: Record<ProductDoc["type"], string> = { digital: "Untitled product", course: "Untitled course" };
+// Courses (D-054) and coaching calls (D-081) have their own editors; the digital product editor never writes them.
+const OWN_EDITOR_TYPES: ProductDoc["type"][] = ["course", "coaching"];
+
+const DRAFT_TITLES: Record<ProductDoc["type"], string> = { digital: "Untitled product", course: "Untitled course", coaching: "Untitled coaching call" };
 
 /** True for a product fresh from "Create" that has never been named (the editor opens on step 1). */
 export function isUnnamedDraft(product: Pick<ProductDoc, "status" | "title" | "type">): boolean {
@@ -82,6 +86,7 @@ export async function createDraftProduct(storeId: string, defaults: { buttonText
       storeId,
       type,
       ...(type === "course" ? { course: { category: null, tags: [], accessDays: null } } : {}),
+      ...(type === "coaching" ? { coaching: defaultCoachingSettings() } : {}),
       title: DRAFT_TITLES[type],
       slug: attempt === 0 ? base : `${base}-${randomUUID().slice(0, 4)}`,
       description: null,
@@ -117,7 +122,7 @@ export type SaveProductResult = "saved" | "not_found";
 export async function updateProduct(storeId: string, id: string, input: ProductInput): Promise<SaveProductResult> {
   const { products } = await collections();
   // The digital editor never writes a course (courses save through lib/courses/queries.ts).
-  const current = await products.findOne({ _id: id, storeId, type: { $ne: "course" }, ...NOT_DELETED }, { projection: { status: 1, slug: 1, title: 1 } });
+  const current = await products.findOne({ _id: id, storeId, type: { $nin: OWN_EDITOR_TYPES }, ...NOT_DELETED }, { projection: { status: 1, slug: 1, title: 1 } });
   if (!current) return "not_found";
 
   const set: Partial<ProductDoc> = {
@@ -142,7 +147,7 @@ export async function updateProduct(storeId: string, id: string, input: ProductI
   };
 
   // Saving also clears the pay-what-you-want fields from before D-047.
-  return saveWithSlug({ _id: id, storeId, type: { $ne: "course" }, ...NOT_DELETED }, current, input.title ?? current.title, set, { pricingModel: "", minPriceCents: "" });
+  return saveWithSlug({ _id: id, storeId, type: { $nin: OWN_EDITOR_TYPES }, ...NOT_DELETED }, current, input.title ?? current.title, set, { pricingModel: "", minPriceCents: "" });
 }
 
 /**

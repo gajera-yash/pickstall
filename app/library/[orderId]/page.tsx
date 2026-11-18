@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { formatDay } from "@/components/dashboard/orders-ui";
+import { CallCard } from "@/components/library/call-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -76,7 +77,9 @@ async function PurchaseContent({ params, searchParams }: Pick<PageProps<"/librar
         </div>
       </div>
 
-      {refunded ? (
+      {purchase.kind === "coaching" && purchase.call ? (
+        <CallCard orderId={purchase.orderId} call={purchase.call} storeName={purchase.storeName} refunded={refunded} />
+      ) : refunded ? (
         <p className="rounded-md bg-bg-subtle px-4 py-3 text-mute">This purchase was refunded, so access has been removed.</p>
       ) : !purchase.available ? (
         <p className="rounded-md bg-bg-subtle px-4 py-3 text-mute">This product isn&apos;t available right now. Contact the creator.</p>

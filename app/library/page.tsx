@@ -1,4 +1,4 @@
-import { ChevronRight, ImageIcon, Library, PlayCircle } from "lucide-react";
+import { CalendarCheck, ChevronRight, ImageIcon, Library, PlayCircle } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -68,7 +68,8 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
   const progress = course ? purchase.progress : null;
   const done = progress !== null && progress.total > 0 && progress.done >= progress.total;
   const href = course && open ? `/library/${purchase.orderId}/learn` : `/library/${purchase.orderId}`;
-  const action = !open ? "View details" : !course ? "Open" : done ? "Review course" : progress && progress.done > 0 ? "Continue" : "Start course";
+  const coaching = purchase.kind === "coaching";
+  const action = !open ? "View details" : coaching ? "View booking" : !course ? "Open" : done ? "Review course" : progress && progress.done > 0 ? "Continue" : "Start course";
 
   return (
     <Link
@@ -82,13 +83,15 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
           <img src={cover} alt="" referrerPolicy="no-referrer" loading="lazy" className="size-full object-cover" />
         ) : course ? (
           <PlayCircle className="size-10" />
+        ) : coaching ? (
+          <CalendarCheck className="size-10" />
         ) : (
           <ImageIcon className="size-10" />
         )}
       </span>
       <span className="flex flex-1 flex-col gap-3 p-4">
         <span className="flex flex-wrap items-center gap-2">
-          <Badge variant={course ? "live" : "draft"}>{course ? "Course" : "Digital product"}</Badge>
+          <Badge variant={course || coaching ? "live" : "draft"}>{course ? "Course" : coaching ? "Coaching call" : "Digital product"}</Badge>
           {purchase.status === "refunded" ? (
             <Badge variant="draft">Refunded</Badge>
           ) : !purchase.available ? (
@@ -101,7 +104,7 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
           <span className="font-semibold break-words">{purchase.title}</span>
           <span className="truncate text-sm text-mute">
             {purchase.storeName}
-            {purchase.paidAt && ` · ${formatDay(purchase.paidAt)}`}
+            {coaching && purchase.call ? ` · Call on ${callDay(purchase.call)}` : purchase.paidAt && ` · ${formatDay(purchase.paidAt)}`}
           </span>
         </span>
         {progress && progress.total > 0 && (
@@ -119,6 +122,16 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
       </span>
     </Link>
   );
+}
+
+/** The call's date in the zone the buyer booked from (or the coach's), like "Nov 23, 2026". */
+function callDay(call: NonNullable<Purchase["call"]>): string {
+  const zone = call.buyerTimeZone ?? call.coachTimeZone ?? "UTC";
+  try {
+    return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeZone: zone }).format(call.start);
+  } catch {
+    return formatDay(call.start);
+  }
 }
 
 function LibrarySkeleton() {

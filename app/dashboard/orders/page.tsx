@@ -5,12 +5,16 @@ import { Suspense } from "react";
 import { CopyButton, DetailsSheet } from "@/components/dashboard/details-sheet";
 import { Answers, DetailList, DetailSection, ListCard, ListToolbar, OrderBadges, formatDateTime, formatDay, orderNumber } from "@/components/dashboard/orders-ui";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { CancelCallButton } from "@/components/dashboard/cancel-call-button";
 import { RefundButton } from "@/components/dashboard/refund-button";
+import { UpcomingCalls } from "@/components/dashboard/upcoming-calls";
 import { ResendEmailButton } from "@/components/dashboard/resend-email-button";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { findOrderCall, listUpcomingCalls, type OrderCall } from "@/lib/coaching/calls";
+import { formatCallTime } from "@/lib/coaching/ics";
 import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { countOrdersByStatus, findOrderDetail, listOrders, type OrderDetail, type OrderRow } from "@/lib/orders/creator-queries";
 import { ORDER_STATUSES, parseOrderParams, withQuery, type OrderParams } from "@/lib/orders/params";
@@ -42,7 +46,7 @@ const listHref = (params: OrderParams, extra: { before?: string; order?: string 
 async function OrdersContent({ searchParams }: Pick<PageProps<"/dashboard/orders">, "searchParams">) {
   const [{ store }, raw] = await Promise.all([requireUnlockedCreator(PATH), searchParams]);
   const params = parseOrderParams(raw);
-  const [page, counts, products] = await Promise.all([listOrders(store.id, params), countOrdersByStatus(store.id), listProducts(store.id)]);
+  const [page, counts, products, calls] = await Promise.all([listOrders(store.id, params), countOrdersByStatus(store.id), listProducts(store.id), listUpcomingCalls(store.id).catch(() => [])]);
   const total = ORDER_STATUSES.reduce((sum, status) => sum + counts[status], 0);
 
   if (total === 0) {
@@ -67,6 +71,8 @@ async function OrdersContent({ searchParams }: Pick<PageProps<"/dashboard/orders
 
   return (
     <div className="flex flex-col gap-4">
+      <UpcomingCalls calls={calls} hrefFor={(id) => listHref(params, { order: id })} />
+
       <nav aria-label="Order status" className="flex gap-1 overflow-x-auto border-b border-line">
         {tabs.map(({ key, count }) => {
           const active = (params.status ?? "all") === key;
@@ -199,6 +205,31 @@ function OrdersTable({ orders, hrefFor }: { orders: OrderRow[]; hrefFor: (id: st
 }
 
 /** Where the buyer's access email stands, in plain words. */
+const CALL_STATUS: Record<OrderCall["status"], string> = {
+  held: "Waiting for payment",
+  confirmed: "Booked",
+  released: "Not booked (payment did not go through)",
+  conflict: "Needs a new time: this time was taken before the payment arrived",
+  cancelled: "Cancelled",
+};
+
+/** A coaching order's call (D-086): its time in the coach's zone, its state, and "Cancel call". */
+function CallSection({ orderId, call, amount, paid, orderPaid }: { orderId: string; call: OrderCall; amount: string; paid: boolean; orderPaid: boolean }) {
+  const cancellable = orderPaid && (call.status === "confirmed" || call.status === "conflict");
+  return (
+    <DetailSection title="Call">
+      <DetailList
+        rows={[
+          { label: "When", value: formatCallTime(call.start, call.end, call.timeZone) },
+          { label: "Status", value: CALL_STATUS[call.status] },
+        ]}
+      />
+      {call.status === "conflict" && <p className="text-sm text-mute">Email the buyer to agree a new time, or cancel and refund the call.</p>}
+      {cancellable && <CancelCallButton orderId={orderId} amount={amount} paid={paid} />}
+    </DetailSection>
+  );
+}
+
 function accessEmailLabel(email: OrderDetail["accessEmail"]): string {
   if (!email) return "Not sent";
   if (email.status === "sent") return email.sentAt ? `Sent ${formatDateTime(email.sentAt)}` : "Sent";
@@ -209,7 +240,7 @@ function accessEmailLabel(email: OrderDetail["accessEmail"]): string {
 const PAID_WITH: Record<OrderRow["provider"], string> = { stripe: "Stripe", mock: "Test payment", free: "Free product" };
 
 async function OrderDrawer({ storeId, orderId, closeHref }: { storeId: string; orderId: string; closeHref: string }) {
-  const order = await findOrderDetail(storeId, orderId);
+  const [order, call] = await Promise.all([findOrderDetail(storeId, orderId), findOrderCall(storeId, orderId).catch(() => null)]);
   if (!order) {
     return (
       <DetailsSheet closeHref={closeHref} title="Order not found">
@@ -229,6 +260,8 @@ async function OrderDrawer({ storeId, orderId, closeHref }: { storeId: string; o
       <DetailSection title="Product">
         <p className="font-semibold break-words">{order.title}</p>
       </DetailSection>
+
+      {call && <CallSection orderId={order.id} call={call} amount={money(order.totalCents)} paid={order.refundable} orderPaid={order.status === "paid"} />}
 
       <DetailSection title="Payment">
         <DetailList
