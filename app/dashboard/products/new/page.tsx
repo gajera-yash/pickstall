@@ -51,7 +51,7 @@ async function TypePicker() {
               <Button
                 type="submit"
                 variant="secondary"
-                className="group h-full w-full flex-col items-stretch justify-start gap-3 rounded-lg border border-line p-5 text-left font-normal whitespace-normal transition-all duration-(--dur-fast) not-disabled:hover:border-blue not-disabled:hover:bg-blue-soft not-disabled:hover:ring-1 not-disabled:hover:ring-blue focus-visible:border-blue focus-visible:ring-1 focus-visible:ring-blue"
+                className="group h-full w-full flex-col items-stretch justify-start gap-3 rounded-lg border border-line p-5 text-left font-normal whitespace-normal transition-all duration-(--dur-fast) not-disabled:hover:border-blue not-disabled:hover:bg-blue-soft not-disabled:hover:ring-1 not-disabled:hover:ring-blue focus-visible:outline-none"
               >
                 <TypeCardBody title={title} description={description} Icon={Icon} live badge="Start" />
               </Button>
