@@ -19,6 +19,7 @@ const hoisted = vi.hoisted(() => {
     },
     providerForStore: vi.fn(),
     markFreeOrderPaid: vi.fn(),
+    bumps: { findCheckoutBump: vi.fn(async (): Promise<unknown> => null), createBumpOrder: vi.fn(async () => null), refundBumpOrder: vi.fn() },
     coupons: { findCouponByCode: vi.fn(async (): Promise<unknown> => null), holdCoupon: vi.fn(async (): Promise<string> => "held"), releaseCouponForOrder: vi.fn(), redeemCouponForOrder: vi.fn() },
     bookings: { busyTimesForStore: vi.fn<(storeId: string) => Promise<{ start: Date; end: Date }[]>>(async () => []), holdSlot: vi.fn(async () => "held"), confirmBookingForOrder: vi.fn(async () => null), releaseBookingForOrder: vi.fn() },
   };
@@ -42,6 +43,7 @@ vi.mock("@/lib/orders/queries", () => hoisted.queries);
 // Coaching bookings (D-083) have their own integration tests on a real MongoDB.
 vi.mock("@/lib/coaching/bookings", () => hoisted.bookings);
 vi.mock("@/lib/coupons/queries", () => hoisted.coupons);
+vi.mock("@/lib/bumps/queries", () => hoisted.bumps);
 vi.mock("@/lib/coaching/calls", () => ({ cancelBookingOfRefundedOrder: vi.fn(async () => undefined) }));
 vi.mock("@/lib/payments", async () => {
   const actual = await vi.importActual<typeof import("@/lib/payments")>("@/lib/payments");
@@ -289,6 +291,30 @@ describe("startCheckout", () => {
     expect(await startCheckout("maya", "playbook", null, form())).toMatchObject({ ok: false });
     expect(hoisted.queries.createPendingOrder).not.toHaveBeenCalled();
   });
+  describe("an order bump (D-089)", () => {
+    const bump = { productId: "b1", title: "Workbook", coverUrl: null, priceCents: 900, headline: null };
+
+    it("adds the bump at the price saved on the product, only when ticked", async () => {
+      hoisted.queries.loadCheckoutContext.mockResolvedValue({ ...context, product: { ...context.product, bump: { productId: "b1", priceCents: 900, headline: null } } });
+      hoisted.bumps.findCheckoutBump.mockResolvedValueOnce(bump);
+      await redirectOf(() => startCheckout("maya", "playbook", null, form({ addBump: "on", bumpPrice: "1" })));
+      expect(hoisted.bumps.findCheckoutBump).toHaveBeenCalledWith("store-1", { productId: "b1", priceCents: 900, headline: null });
+      expect(hoisted.queries.createPendingOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ item: { title: "Playbook", unitPriceCents: 1900 }, subtotalCents: 2800, discountCents: 0, totalCents: 2800, bump: { productId: "b1", title: "Workbook", priceCents: 900 } }),
+      );
+      expect(provider.createCheckout).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 2800, title: "Playbook + Workbook" }));
+    });
+
+    it("charges no bump when it is not ticked, or no longer available", async () => {
+      await redirectOf(() => startCheckout("maya", "playbook", null, form()));
+      expect(hoisted.bumps.findCheckoutBump).not.toHaveBeenCalled();
+      hoisted.bumps.findCheckoutBump.mockResolvedValueOnce(null);
+      await redirectOf(() => startCheckout("maya", "playbook", null, form({ addBump: "on" })));
+      expect(hoisted.queries.createPendingOrder).toHaveBeenLastCalledWith(expect.objectContaining({ totalCents: 1900 }));
+      expect(hoisted.queries.createPendingOrder.mock.lastCall?.[0]).not.toHaveProperty("bump");
+    });
+  });
+
   describe("a coupon (D-088)", () => {
     const coupon = { _id: "c1", code: "SAVE20", kind: "percent", percentOff: 20, amountOffCents: null, active: true, expiresAt: null, productIds: null, maxRedemptions: null, redemptionCount: 0 };
 

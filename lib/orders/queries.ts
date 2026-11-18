@@ -38,6 +38,8 @@ export type CheckoutContext = {
     type: ProductDoc["type"];
     /** A coaching call's booking rules (D-083); never its meeting link. Null for other products. */
     coaching: SlotSettings | null;
+    /** The order bump saved on the product (D-089); `findCheckoutBump` checks its target. */
+    bump: ProductDoc["bump"] | null;
   };
 };
 
@@ -81,6 +83,7 @@ const PRODUCT_FIELDS = {
   "coaching.bufferMinutes": 1,
   "coaching.minNoticeHours": 1,
   "coaching.bookingWindowDays": 1,
+  bump: 1,
 } as const;
 
 /** The published store and product for a checkout, or null. Never includes the delivery link. */
@@ -127,6 +130,7 @@ export async function loadCheckoutContext(username: string, productSlug: string)
               bookingWindowDays: product.coaching.bookingWindowDays,
             }
           : null,
+      bump: product.bump ?? null,
     },
   };
 }

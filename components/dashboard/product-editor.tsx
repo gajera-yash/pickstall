@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 
+import { BumpSection, type BumpCandidate, type BumpSettings } from "@/components/dashboard/bump-section";
 import { ConfirmationEmailFields } from "@/components/dashboard/confirmation-email-fields";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
@@ -86,6 +87,8 @@ type Props = {
   isNew: boolean;
   /** False on the live site until file storage exists (D-077): delivery by link only. */
   fileUploadReady: boolean;
+  /** Order bump settings and the products that can be offered (D-089). */
+  bump: { initial: BumpSettings; candidates: BumpCandidate[] };
 };
 
 /**
@@ -94,7 +97,7 @@ type Props = {
  * and then publishes, so nothing typed is lost. The whole form is one JSON payload; the server
  * cleans and validates every field again and checks the publish rules on the saved product.
  */
-export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew, fileUploadReady }: Props) {
+export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew, fileUploadReady, bump }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSetup = searchParams.get("from") === "setup";
@@ -427,6 +430,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
                 errorFor={(index) => fieldError(`question-${index}`)}
                 listError={fieldError("questions")}
               />
+              <BumpSection productId={values.id} currency={currency} initial={bump.initial} candidates={bump.candidates} />
             </>
           )}
 

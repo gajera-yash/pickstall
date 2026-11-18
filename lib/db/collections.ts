@@ -165,6 +165,11 @@ export type ProductDoc = {
   course?: CourseSettingsDoc;
   /** Coaching settings, only when type is "coaching". */
   coaching?: CoachingSettingsDoc;
+  /**
+   * Order bump (D-089): one other product of the store offered at checkout with a tick, at its own
+   * price. Only digital products and courses can be the bump. Missing or null: no bump.
+   */
+  bump?: { productId: string; priceCents: number; headline: string | null } | null;
   title: string;
   /** Unique per store (index `products_store_slug_unique`). */
   slug: string;
@@ -243,6 +248,13 @@ export type OrderDoc = {
   booking?: { start: Date; end: Date; buyerTimeZone: string | null } | null;
   /** The coupon used (D-088), frozen at checkout. Its discount is part of `discountCents`. */
   coupon?: { couponId: string; code: string; discountCents: number } | null;
+  /** The order bump the buyer added (D-089), frozen at checkout; its price is part of `subtotalCents` and `totalCents`. */
+  bump?: { productId: string; title: string; priceCents: number } | null;
+  /**
+   * Set on the $0 order made for a bump product when its parent order is paid (D-089), so the bump
+   * reaches the buyer's library like any purchase. Creator lists and income leave these out.
+   */
+  bumpOf?: string | null;
   createdAt: Date;
   paidAt: Date | null;
 };

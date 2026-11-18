@@ -12,6 +12,12 @@ import { buildSeries, type DayRow, type Series } from "@/lib/orders/series";
 // every query here starts from `storeId`: callers pass the store id of `requireCreator()`, never an
 // id from the request. Customers are derived from paid orders, so they can never drift from them.
 
+/**
+ * Leaves out the $0 orders made for order bump products (D-089): their money is in the parent order,
+ * which lists the bump, so lists, customers and income count each sale once.
+ */
+const NOT_BUMP = { bumpOf: null };
+
 export const PAGE_SIZE = 20;
 export const CUSTOMER_PAGE_SIZE = 25;
 const EXPORT_MAX_ROWS = 5000;
@@ -59,6 +65,7 @@ export type OrderFilters = { status?: OrderStatusFilter; q?: string; product?: s
 function orderFilter(storeId: string, filters: OrderFilters): Filter<OrderDoc> {
   return {
     storeId,
+    ...NOT_BUMP,
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.product ? { productId: filters.product } : {}),
     ...searchFilter(filters.q),
@@ -101,6 +108,8 @@ export type OrderDetail = OrderRow & {
   accessEmail: OrderEmailStatus;
   /** The coupon used (D-088), or null. */
   coupon: { code: string; discountCents: number } | null;
+  /** The order bump the buyer added (D-089), or null. */
+  bump: { title: string; priceCents: number } | null;
 };
 
 /** One order of this store for the details drawer, or null when it is not this store's. */
@@ -124,6 +133,7 @@ export async function findOrderDetail(storeId: string, orderId: string): Promise
     // Read only after the order was found with this store's id, so it is never another store's.
     accessEmail: await orderEmailStatus(doc._id),
     coupon: doc.coupon ? { code: doc.coupon.code, discountCents: doc.coupon.discountCents } : null,
+    bump: doc.bump ? { title: doc.bump.title, priceCents: doc.bump.priceCents } : null,
   };
 }
 
@@ -156,7 +166,7 @@ export async function storeHasOrders(storeId: string): Promise<boolean> {
 
 export async function countOrdersByStatus(storeId: string): Promise<Record<OrderStatusFilter, number>> {
   const { orders } = await collections();
-  const rows = await orders.aggregate<{ _id: OrderStatusFilter; count: number }>([{ $match: { storeId } }, { $group: { _id: "$status", count: { $sum: 1 } } }]).toArray();
+  const rows = await orders.aggregate<{ _id: OrderStatusFilter; count: number }>([{ $match: { storeId, ...NOT_BUMP } }, { $group: { _id: "$status", count: { $sum: 1 } } }]).toArray();
   const counts: Record<OrderStatusFilter, number> = { paid: 0, pending: 0, refunded: 0, failed: 0 };
   for (const row of rows) counts[row._id] = row.count;
   return counts;
@@ -202,7 +212,7 @@ export async function listCustomers(storeId: string, options: { q?: string; prod
   const after = options.after;
   const groups = await orders
     .aggregate<CustomerAgg>([
-      { $match: { storeId, status: "paid", ...searchFilter(options.q) } },
+      { $match: { storeId, status: "paid", ...NOT_BUMP, ...searchFilter(options.q) } },
       { $sort: { paidAt: -1, _id: -1 } },
       {
         $group: {
@@ -263,7 +273,7 @@ export async function findCustomerDetail(storeId: string, orderId: string): Prom
   const { orders } = await collections();
   const order = await orders.findOne({ _id: orderId, storeId }, { projection: { buyerEmail: 1 } });
   if (!order) return null;
-  const docs = await orders.find({ storeId, buyerEmail: order.buyerEmail, status: "paid" }).sort({ paidAt: -1 }).limit(100).toArray();
+  const docs = await orders.find({ storeId, buyerEmail: order.buyerEmail, status: "paid", ...NOT_BUMP }).sort({ paidAt: -1 }).limit(100).toArray();
   const latest = docs[0];
   if (!latest) return null;
   return {
@@ -282,7 +292,7 @@ export async function findCustomerDetail(storeId: string, orderId: string): Prom
 /** Every paid order of the store with buyer details and answers, for the customers CSV. */
 export async function listPaidOrdersForExport(storeId: string, limit = EXPORT_MAX_ROWS): Promise<OrderRow[]> {
   const { orders } = await collections();
-  const docs = await orders.find({ storeId, status: "paid" }).sort({ paidAt: -1 }).limit(limit).toArray();
+  const docs = await orders.find({ storeId, status: "paid", ...NOT_BUMP }).sort({ paidAt: -1 }).limit(limit).toArray();
   return docs.map((doc) => ({ ...toRow(doc), createdAt: doc.paidAt ?? doc.createdAt }));
 }
 
@@ -298,7 +308,7 @@ export type IncomeStats = {
 export async function incomeStats(storeId: string, currency: string, days: number, now = new Date()): Promise<IncomeStats> {
   const { orders } = await collections();
   const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (days - 1)));
-  const paidInRange = { storeId, status: "paid" as const, currency, paidAt: { $gte: since } };
+  const paidInRange = { storeId, status: "paid" as const, currency, paidAt: { $gte: since }, ...NOT_BUMP };
 
   const [dayRows, customers, top, refunded, totalPaidOrders] = await Promise.all([
     orders
@@ -317,8 +327,8 @@ export async function incomeStats(storeId: string, currency: string, days: numbe
         { $limit: 5 },
       ])
       .toArray(),
-    orders.aggregate<{ total: number }>([{ $match: { storeId, status: "refunded", currency, createdAt: { $gte: since } } }, { $group: { _id: null, total: { $sum: "$totalCents" } } }]).toArray(),
-    orders.countDocuments({ storeId, status: "paid" }),
+    orders.aggregate<{ total: number }>([{ $match: { storeId, status: "refunded", currency, createdAt: { $gte: since }, ...NOT_BUMP } }, { $group: { _id: null, total: { $sum: "$totalCents" } } }]).toArray(),
+    orders.countDocuments({ storeId, status: "paid", ...NOT_BUMP }),
   ]);
 
   const rows: DayRow[] = dayRows.map((row) => ({ day: row._id, revenueCents: row.revenueCents, orders: row.orders, customers: row.buyers.length }));

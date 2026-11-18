@@ -6,6 +6,8 @@ import { redirect, unstable_rethrow } from "next/navigation";
 
 import { appOrigin } from "@/lib/app-origin";
 import { busyTimesForStore, holdSlot } from "@/lib/coaching/bookings";
+import { findCheckoutBump } from "@/lib/bumps/queries";
+import { withBump } from "@/lib/bumps/rules";
 import { findCouponByCode, holdCoupon } from "@/lib/coupons/queries";
 import { couponDiscountCents, couponProblem, totalProblem } from "@/lib/coupons/rules";
 import { bookingInput } from "@/lib/coaching/schemas";
@@ -88,7 +90,11 @@ export async function startCheckout(username: string, productSlug: string, _prev
     }
 
     // The price comes from the product in the database, never from the form (CLAUDE.md 7, D-047).
-    const amount = orderAmounts(context.product, coupon ? couponDiscountCents(payableCents(context.product), coupon) : 0);
+    const mainAmount = orderAmounts(context.product, coupon ? couponDiscountCents(payableCents(context.product), coupon) : 0);
+    // An order bump the buyer ticked (D-089): only the one saved on this product, still published in
+    // this store, at the price saved with it. The coupon applies to the main product only.
+    const bump = formData.get("addBump") === "on" ? await findCheckoutBump(context.store._id, context.product.bump) : null;
+    const amount = bump ? withBump(mainAmount, bump.priceCents) : mainAmount;
     if (coupon) {
       const low = totalProblem(amount.totalCents, context.store.currency);
       if (low) return err(low, "couponCode");
@@ -119,7 +125,7 @@ export async function startCheckout(username: string, productSlug: string, _prev
     const orderId = await createPendingOrder({
       storeId: context.store._id,
       productId: context.product.id,
-      item: { title: context.product.title, unitPriceCents: amount.subtotalCents },
+      item: { title: context.product.title, unitPriceCents: mainAmount.subtotalCents },
       buyerEmail: buyer.email,
       buyerName: buyer.name,
       buyerPhone: buyer.phone ?? null,
@@ -131,6 +137,7 @@ export async function startCheckout(username: string, productSlug: string, _prev
       provider: free ? "free" : provider!.name,
       ...(booking ? { booking } : {}),
       ...(coupon ? { coupon: { couponId: coupon._id, code: coupon.code, discountCents: amount.discountCents - orderAmounts(context.product).discountCents } } : {}),
+      ...(bump ? { bump: { productId: bump.productId, title: bump.title, priceCents: bump.priceCents } } : {}),
     });
 
     // Holds one use of the coupon (the limit is never exceeded); if it is used up meanwhile, the order is dropped.
@@ -160,7 +167,7 @@ export async function startCheckout(username: string, productSlug: string, _prev
       try {
         const session = await provider.createCheckout({
           orderId,
-          title: context.product.title,
+          title: bump ? `${context.product.title} + ${bump.title}` : context.product.title,
           amountCents: amount.totalCents,
           currency: context.store.currency,
           buyerEmail: buyer.email,

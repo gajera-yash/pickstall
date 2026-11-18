@@ -6,6 +6,7 @@ import { CourseEditor, type EditorCourse } from "@/components/dashboard/course-e
 import { ProductEditor, type EditorProduct } from "@/components/dashboard/product-editor";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
+import { listBumpCandidates } from "@/lib/bumps/queries";
 import { defaultCoachingSettings } from "@/lib/coaching/settings";
 import { storeLink } from "@/lib/config";
 import { loadCurriculum } from "@/lib/courses/curriculum";
@@ -38,6 +39,16 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
   if (!product) notFound();
   // A product that has never been named is fresh from "Create": it opens on step 1 with no steps checked.
   const isNew = isUnnamedDraft(product);
+  // Order bump (D-089): its saved settings and the store's products that can be offered.
+  const bump = {
+    initial: {
+      enabled: Boolean(product.bump),
+      productId: product.bump?.productId ?? "",
+      price: product.bump ? centsToInput(product.bump.priceCents, store.currency) : "",
+      headline: product.bump?.headline ?? "",
+    },
+    candidates: await listBumpCandidates(store.id, product._id).catch(() => []),
+  };
 
   if (product.type === "coaching") {
     const settings = product.coaching ?? defaultCoachingSettings();
@@ -60,7 +71,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
       discountOn: product.salePriceCents != null,
       salePrice: centsToInput(product.salePriceCents ?? null, store.currency),
     };
-    return <CoachingEditor initial={coaching} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} />;
+    return <CoachingEditor initial={coaching} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} bump={bump} />;
   }
 
   if (product.type === "course") {
@@ -84,7 +95,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
       emailBody: product.afterPurchase?.emailBody ?? "",
     };
     const curriculum = (await loadCurriculum(store.id, product._id)) ?? { modules: [] };
-    return <CourseEditor initial={course} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} curriculum={curriculum} videoUploadReady={bunnyConfig() !== null} fileUploadReady={fileUploadReady} />;
+    return <CourseEditor initial={course} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} curriculum={curriculum} videoUploadReady={bunnyConfig() !== null} fileUploadReady={fileUploadReady} bump={bump} />;
   }
 
   const initial: EditorProduct = {
@@ -113,7 +124,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
     emailBody: product.afterPurchase.emailBody ?? "",
   };
 
-  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} fileUploadReady={fileUploadReady} />;
+  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} fileUploadReady={fileUploadReady} bump={bump} />;
 }
 
 function EditorSkeleton() {

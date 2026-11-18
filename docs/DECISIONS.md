@@ -4,6 +4,30 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-089: Order bumps (Phase 2)
+- **Date:** 2026-11-18
+- **Decision (founder approved the plan 2026-11-18):** a product can offer one other product of the same store at checkout. The buyer ticks it and pays once.
+- **Settings:** an "Order bump" section on each product, in the Checkout form step of a digital product or the Publish step of a course or coaching call:
+  - an on/off switch, the product to offer (a digital product or course of the store, not itself), an offer price above Stripe's minimum, and an optional headline (cleaned, 120 characters at most);
+  - saved on its own (`saveBumpAction` → `ProductDoc.bump`), scoped to the session owner's store, and the target must be that store's;
+  - the Marketing page's card now points there.
+- **Checkout:**
+  - The offer shows only when the bump product is still published in the store (`findCheckoutBump`). A tick sends `addBump`.
+  - `startCheckout` reloads the bump from the database and adds the price saved on the product to the subtotal and total; the main item keeps its own price.
+  - A coupon applies to the main product only.
+  - Stripe gets one amount (direct charge, no application fee), and the payment page title reads "Main + Bump".
+  - The order records `bump` (product, title, price).
+- **Delivery:**
+  - When the order is paid (only through the payment path), `createBumpOrder` makes one $0 order for the bump product (`bumpOf` = parent; unique index, safe on replays) and sends its own access email. So the bump reaches the library, downloads and course access unchanged.
+  - A full refund of the parent also refunds the bump order, which removes access.
+- **Counting once:** creator lists, customers, exports and income leave out `bumpOf` orders (`NOT_BUMP` in `lib/orders/creator-queries.ts`). The parent order carries the money, and its drawer lists the main product and the bump separately.
+- **Schema:** `ProductDoc.bump`, `OrderDoc.bump`, `OrderDoc.bumpOf`, and a unique partial index `orders_bump_of_unique`. No migration.
+- **Known limits:**
+  - The checkout's coupon preview total does not include a ticked bump; the server's amount does.
+  - A coaching call cannot be the bump, because it needs a booked time.
+  - One bump per product.
+- **Why:** PRD section 9, Phase 2.
+
 ## D-088: Coupons (Phase 2)
 - **Date:** 2026-11-18
 - **Decision (founder approved the plan 2026-11-18):** creators make discount codes on the Marketing page; buyers enter them at checkout. Coupons are available on every plan, including the trial.
