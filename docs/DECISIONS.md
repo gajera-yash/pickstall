@@ -4,6 +4,48 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-083: Coaching calls, part K3: booking at checkout
+- **Date:** 2026-11-18
+- **Decision (founder approved the K3 plan 2026-11-18):**
+  - **Buyer flow:** the checkout page of a coaching call shows a day and time picker (`components/store/slot-picker.tsx`) with the slot engine's open times (D-082), in the buyer's own time zone. The picked start and the buyer's time zone go to the server as hidden fields. The button reads "Book and pay" (or "Book for free").
+  - **Server check:** `startCheckout` ignores the browser's time: it loads the store's busy times around the pick and accepts it only if `findSlot` offers that exact start now. The order stores the server's slot (`OrderDoc.booking`: start, end, buyer time zone).
+  - **New `bookings` collection** (`BookingDoc`), one booking per order, status held → confirmed / released / conflict. Indexes: unique `activeSlot` (store + start, only while held or confirmed), unique `orderId`, and `storeId + start`.
+  - **Hold:** the time is held for 65 minutes while the buyer pays (a Stripe checkout session expires after 60). A hold that ran out is let go when someone else wants that time. If the hold fails, the order is marked failed and the buyer is asked to pick again.
+  - **No double booking:** the unique index stops two calls starting together. Overlapping calls of different lengths are settled after the write: the booking created first keeps the time and the other lets go, and both sides use the same rule.
+  - **Confirm only from the payment path:** `onOrderPaid` (verified webhook, mock through the same handler, or the free-order path) confirms the booking, and a replay changes nothing. A failed or expired payment (`payment.failed`, `markOrderFailed`) releases it. The success page never confirms anything.
+  - **Late payment:** if the time was taken meanwhile, the booking becomes "conflict" and the order stays paid. The creator sorts it out in K5 (logged as `coaching.booking_conflict`).
+  - The "booking turns on in the next update" publish rule from D-081 is removed: coaching calls can be published, and the editor's last button is "Save and publish".
+  - The checkout context reads only the coaching booking rules, never the meeting link.
+- **Unchanged:** prices come from the database, charges are direct on the creator's Stripe account, there is no application fee, and the `PaymentProvider` interface and its code are not changed.
+- **Also fixed:** on phones the checkout grid column now stays inside the screen (`grid-cols-[minmax(0,1fr)]`).
+- **Known:** the dev-only "new Date() while prerendering" warning on the checkout route comes from the existing `loadCheckoutContext` database call (an open follow-up from before), not from this change. Emails, the .ics file, reminders and the library call card are K4; the creator's calls list and cancel/refund are K5.
+- **Why:** plan part K3 (D-081).
+
+## D-082: Coaching calls, part K2: the slot engine
+- **Date:** 2026-11-18
+- **Decision:** call start times are computed by one pure function, `availableSlots(settings, busy, now)` in `lib/coaching/slots.ts`, used by both the booking page (K3) and the server. Rules:
+  - Slots follow the weekly hours in the coach's time zone, back to back from the start of each range: each is `durationMinutes` long, with `bufferMinutes` of break before the next, and must end by the end of its range.
+  - Only starts between now plus the minimum notice and now plus the booking window are offered.
+  - A slot that overlaps a busy time (a booked or held call of any of the store's coaching products, from K3) is dropped, with the break kept on both sides.
+  - Daylight saving: a wall time that does not exist (clocks go forward) is skipped; a time that happens twice (clocks go back) uses the first.
+  - At most 5,000 slots are returned (90 days of 15-minute calls fits).
+- **Server check:** `findSlot` accepts only a start that the engine itself offers at that moment. K3 calls it before holding a time, so a time sent by a browser is never trusted on its own.
+- **Booking page helper:** `slotsByDay` groups slots by the buyer's own calendar day.
+- **No date library:** time zone maths uses `Intl` only (`lib/coaching/time-zones.ts`), so there is no new dependency. Tests cover India (no DST), New York on both DST days and the 90-day window.
+- **Why:** plan part K2 (D-081).
+
+## D-081: Coaching calls, part K1: product type, editor and availability
+- **Date:** 2026-11-18
+- **Decision (founder approved the plan 2026-11-18):** coaching calls use a built-in booking calendar (not a Calendly-style link), on every plan. In the first version only the creator cancels (with a refund); buyer rescheduling and Google Calendar sync come later. The work ships in five parts: K1 editor and availability, K2 slot engine, K3 booking at checkout (slot hold, webhook confirms), K4 emails, .ics and reminders, K5 calls list and cancel/refund.
+- **K1 (this entry):**
+  - New product type `"coaching"` with `ProductDoc.coaching` (`CoachingSettingsDoc`): call length (15/30/45/60/90 min), IANA time zone, weekly hours (ISO weekday plus `HH:MM` ranges, up to 3 a day, no overlap, each fits one call), break after each call, minimum notice, how far ahead buyers can book, and an https meeting link or "I'll send it later". New calls start at 30 minutes, weekdays 09:00 to 17:00, link sent later. No migration: there are no users yet, and nothing else in the product changes.
+  - **Time zone lives on the coaching product**, not on the store as the plan said: it is only needed by coaching, so it stays with it. The editor fills in the creator's browser zone until it is saved. Double-booking across a creator's calls is handled by the bookings collection in K3, not by the time zone.
+  - The meeting link is never in public reads; it goes to buyers after they book (K4).
+  - Coaching editor (`components/dashboard/coaching-editor.tsx`): Details, Availability, Price & publish, with a live card preview. One JSON payload, checked again on the server (`lib/coaching/schemas.ts`); the save is scoped to the session owner's store and `type: "coaching"` (`lib/coaching/queries.ts`). The digital product editor and file upload now skip both courses and coaching calls.
+  - **A coaching call cannot be published yet:** the publish rules add "Booking turns on in the next update" (`COACHING_BOOKING_PENDING`), so nothing can be sold without a booking calendar. K3 removes that rule.
+  - The type picker's "Coaching call" card is live; the product list labels coaching calls.
+- **Why:** founder request, 2026-11-18.
+
 ## D-080: Setup wizard matches the onboarding screen; one soft border everywhere
 - **Date:** 2026-11-18
 - **Decision (founder request, screenshot of /dashboard/setup):**

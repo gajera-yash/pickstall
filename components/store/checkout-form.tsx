@@ -4,6 +4,7 @@ import { Lock } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 
 import { PhoneField } from "@/components/auth/phone-field";
+import { SlotPicker } from "@/components/store/slot-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,14 +24,17 @@ type Props = {
   askPhone: boolean;
   questions: CheckoutQuestion[];
   submitLabel: string;
+  /** A coaching call (D-083): the open times from the slot engine and the call length. */
+  booking?: { slots: { start: string; end: string }[]; durationMinutes: number } | null;
 };
 
 /**
- * Checkout form (PRD F4): name and email always, optional phone and the creator's questions. Typed
+ * Checkout form (PRD F4): a coaching call's time first (D-083), then name and email always, optional
+ * phone and the creator's questions. Typed
  * values are kept after an error and focus moves to the first problem. The price is not on this
  * form at all: the server takes it from the product (D-047).
  */
-export function CheckoutForm({ username, productSlug, askPhone, questions, submitLabel }: Props) {
+export function CheckoutForm({ username, productSlug, askPhone, questions, submitLabel, booking }: Props) {
   const [state, action, pending] = useActionState<CheckoutState, FormData>(startCheckout.bind(null, username, productSlug), null);
   const error = state && !state.ok ? state : null;
   const fieldError = (field: string) => (error?.field === field ? error.error : null);
@@ -49,6 +53,8 @@ export function CheckoutForm({ username, productSlug, askPhone, questions, submi
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
+
+      {booking && <SlotPicker slots={booking.slots} durationMinutes={booking.durationMinutes} error={fieldError("slotStart")} />}
 
       <FormField id="name" label="Your name" error={fieldError("name")}>
         <Input id="name" name="name" autoComplete="name" required maxLength={BUYER_NAME_MAX} value={values.name ?? ""} onChange={(event) => set("name", event.target.value)} aria-invalid={fieldError("name") ? true : undefined} aria-describedby={describedBy("name", fieldError("name"))} />

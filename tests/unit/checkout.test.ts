@@ -19,6 +19,7 @@ const hoisted = vi.hoisted(() => {
     },
     providerForStore: vi.fn(),
     markFreeOrderPaid: vi.fn(),
+    bookings: { busyTimesForStore: vi.fn<(storeId: string) => Promise<{ start: Date; end: Date }[]>>(async () => []), holdSlot: vi.fn(async () => "held"), confirmBookingForOrder: vi.fn(async () => null), releaseBookingForOrder: vi.fn() },
   };
 });
 
@@ -37,6 +38,8 @@ vi.mock("@/lib/db/collections", () => ({
   })),
 }));
 vi.mock("@/lib/orders/queries", () => hoisted.queries);
+// Coaching bookings (D-083) have their own integration tests on a real MongoDB.
+vi.mock("@/lib/coaching/bookings", () => hoisted.bookings);
 vi.mock("@/lib/payments", async () => {
   const actual = await vi.importActual<typeof import("@/lib/payments")>("@/lib/payments");
   return { ...actual, providerForStore: hoisted.providerForStore };
@@ -282,6 +285,57 @@ describe("startCheckout", () => {
     rateLimit.takeRateLimit.mockResolvedValue(false);
     expect(await startCheckout("maya", "playbook", null, form())).toMatchObject({ ok: false });
     expect(hoisted.queries.createPendingOrder).not.toHaveBeenCalled();
+  });
+  describe("a coaching call (D-083)", () => {
+    // Mondays 09:00 to 11:00 UTC, 30-minute calls, no notice, booking up to 90 days ahead.
+    const coaching = { ...context, product: { ...context.product, type: "coaching", checkout: { headline: null, askPhone: false, questions: [] }, coaching: { durationMinutes: 30, timeZone: "UTC", weekly: [{ day: 1, start: "09:00", end: "11:00" }], bufferMinutes: 0, minNoticeHours: 0, bookingWindowDays: 90 } } };
+    const nextMonday = () => {
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() + ((8 - date.getUTCDay()) % 7 || 7));
+      date.setUTCHours(10, 0, 0, 0);
+      return date;
+    };
+
+    beforeEach(() => {
+      hoisted.queries.loadCheckoutContext.mockResolvedValue(coaching);
+    });
+
+    it("needs a picked time", async () => {
+      expect(await startCheckout("maya", "call", null, form())).toMatchObject({ ok: false, field: "slotStart" });
+      expect(hoisted.queries.createPendingOrder).not.toHaveBeenCalled();
+    });
+
+    it("refuses a time the slot engine does not offer, or one that is busy", async () => {
+      const start = nextMonday();
+      const offGrid = new Date(start.getTime() + 10 * 60_000).toISOString();
+      expect(await startCheckout("maya", "call", null, form({ slotStart: offGrid }))).toMatchObject({ ok: false, field: "slotStart" });
+      hoisted.bookings.busyTimesForStore.mockResolvedValueOnce([{ start, end: new Date(start.getTime() + 30 * 60_000) }]);
+      expect(await startCheckout("maya", "call", null, form({ slotStart: start.toISOString() }))).toMatchObject({ ok: false, field: "slotStart" });
+      expect(hoisted.queries.createPendingOrder).not.toHaveBeenCalled();
+    });
+
+    it("saves the server's slot on the order and holds it before the payment page", async () => {
+      const start = nextMonday();
+      const url = await redirectOf(() => startCheckout("maya", "call", null, form({ slotStart: start.toISOString(), buyerTimeZone: "Asia/Kolkata" })));
+      expect(url).toBe("/mock-pay/order-1");
+      const booking = { start, end: new Date(start.getTime() + 30 * 60_000), buyerTimeZone: "Asia/Kolkata" };
+      expect(hoisted.queries.createPendingOrder).toHaveBeenCalledWith(expect.objectContaining({ booking }));
+      expect(hoisted.bookings.holdSlot).toHaveBeenCalledWith({ storeId: "store-1", productId: "p1", orderId: "order-1", ...booking });
+      expect(hoisted.bookings.busyTimesForStore.mock.calls[0]?.[0]).toBe("store-1");
+    });
+
+    it("drops the order when someone else got the time first", async () => {
+      hoisted.bookings.holdSlot.mockResolvedValueOnce("taken");
+      hoisted.queries.markOrderFailed.mockResolvedValueOnce(undefined);
+      expect(await startCheckout("maya", "call", null, form({ slotStart: nextMonday().toISOString() }))).toMatchObject({ ok: false, field: "slotStart" });
+      expect(hoisted.queries.markOrderFailed).toHaveBeenCalledWith("order-1");
+      expect(provider.createCheckout).not.toHaveBeenCalled();
+    });
+
+    it("ignores a time zone it does not know", async () => {
+      await redirectOf(() => startCheckout("maya", "call", null, form({ slotStart: nextMonday().toISOString(), buyerTimeZone: "<script>" })));
+      expect(hoisted.bookings.holdSlot).toHaveBeenCalledWith(expect.objectContaining({ buyerTimeZone: null }));
+    });
   });
 });
 

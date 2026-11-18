@@ -1,3 +1,4 @@
+import { availabilityProblems } from "@/lib/coaching/settings";
 import type { ProductDoc } from "@/lib/db/collections";
 import { payableCents, type Priced } from "@/lib/products/pricing";
 
@@ -7,7 +8,10 @@ type Publishable = Pick<ProductDoc, "title" | "priceCents" | "salePriceCents" | 
   type?: ProductDoc["type"];
   /** For a course: how many lessons have something for students (a video, notes, a file or a link). */
   courseLessons?: number;
+  /** For a coaching call: its settings (D-081). */
+  coaching?: ProductDoc["coaching"];
 };
+
 
 /**
  * Whether paid products may be published: the creator's Stripe account must be connected, or we
@@ -38,8 +42,12 @@ export function publishProblems(product: Publishable, paymentsOk: boolean): stri
   // A course delivers its lessons (D-056): at least one must have something for students.
   if (product.type === "course") {
     if (!(product.courseLessons && product.courseLessons > 0)) problems.push("Add at least one lesson with a video, notes or a file.");
-  }
-  else if (!hasDelivery(product)) problems.push("Add a link or a file to deliver.");
+  } else if (product.type === "coaching") {
+    // A coaching call delivers a booked time (D-081): it needs a time zone and valid weekly hours.
+    const coaching = product.coaching;
+    if (!coaching?.timeZone) problems.push("Pick your time zone.");
+    if (coaching) problems.push(...availabilityProblems(coaching.weekly, coaching.durationMinutes));
+  } else if (!hasDelivery(product)) problems.push("Add a link or a file to deliver.");
   if (isPaid(product) && !paymentsOk) problems.push("Connect payments to publish a paid product.");
   return problems;
 }

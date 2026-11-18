@@ -8,6 +8,8 @@ import { OrderSummary } from "@/components/store/order-summary";
 import { StorePaused } from "@/components/store/store-paused";
 import { StoreFrame, cardStyle, resolveTheme } from "@/components/store/store-theme";
 import { APP_NAME } from "@/lib/config";
+import { busyTimesForStore } from "@/lib/coaching/bookings";
+import { availableSlots } from "@/lib/coaching/slots";
 import { canBuy, loadCheckoutContext } from "@/lib/orders/queries";
 import { payableCents } from "@/lib/products/pricing";
 
@@ -27,6 +29,15 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
   const theme = resolveTheme(store.theme);
   const { preset } = theme;
   const available = canBuy(context);
+  // A coaching call (D-083): the open times right now, with the store's booked and held calls taken out.
+  const coaching = product.type === "coaching" ? product.coaching : null;
+  let booking: { slots: { start: string; end: string }[]; durationMinutes: number } | null = null;
+  if (coaching) {
+    const now = new Date();
+    const busy = await busyTimesForStore(store._id, now, new Date(now.getTime() + (coaching.bookingWindowDays + 1) * 24 * 60 * 60_000), now).catch(() => null);
+    const slots = busy ? availableSlots(coaching, busy, now) : [];
+    booking = { slots: slots.map((slot) => ({ start: slot.start.toISOString(), end: slot.end.toISOString() })), durationMinutes: coaching.durationMinutes };
+  }
 
   return (
     <StoreFrame theme={theme} wide>
@@ -36,7 +47,7 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
           {product.title}
         </Link>
 
-        <div className="grid w-full gap-6 @3xl:grid-cols-[minmax(0,1fr)_360px] @3xl:items-start @3xl:gap-8">
+        <div className="grid w-full grid-cols-[minmax(0,1fr)] gap-6 @3xl:grid-cols-[minmax(0,1fr)_360px] @3xl:items-start @3xl:gap-8">
           <aside className="p-5 @3xl:sticky @3xl:top-8 @3xl:col-start-2 @3xl:row-start-1" style={cardStyle(theme)}>
             <OrderSummary product={product} storeName={store.name} currency={store.currency} theme={theme} />
           </aside>
@@ -47,7 +58,7 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
                 {product.checkout.headline || "Checkout"}
               </h1>
               <p className="text-sm" style={{ color: preset.muted }}>
-                Your details. Your receipt and access link go to your email.
+                {coaching ? "Pick a time, then your details. Your booking goes to your email." : "Your details. Your receipt and access link go to your email."}
               </p>
             </div>
 
@@ -59,7 +70,8 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
                   productSlug={product.slug}
                   askPhone={product.checkout.askPhone}
                   questions={product.checkout.questions}
-                  submitLabel={payableCents(product) === 0 ? "Get it free" : product.buttonText || "Pay now"}
+                  submitLabel={coaching ? (payableCents(product) === 0 ? "Book for free" : "Book and pay") : payableCents(product) === 0 ? "Get it free" : product.buttonText || "Pay now"}
+                  booking={booking}
                 />
               </div>
             ) : (

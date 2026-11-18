@@ -130,13 +130,41 @@ export type CourseSettingsDoc = {
   drip?: boolean;
 };
 
+/** One weekly time range when a coach takes calls (D-081). Times are "HH:MM" in the product's time zone. */
+export type CoachingWindowDoc = {
+  /** ISO weekday: 1 Monday ... 7 Sunday. */
+  day: number;
+  start: string;
+  end: string;
+};
+
+/** A coaching call's own settings (D-081). Only on products with type "coaching". */
+export type CoachingSettingsDoc = {
+  /** Length of one call in minutes (COACHING_DURATIONS). */
+  durationMinutes: number;
+  /** IANA time zone of the weekly hours, for example "Asia/Kolkata"; null until the creator saves. */
+  timeZone: string | null;
+  /** Weekly hours, at most 3 ranges a day, never overlapping. */
+  weekly: CoachingWindowDoc[];
+  /** Free minutes kept after each call. */
+  bufferMinutes: number;
+  /** A call can be booked at the earliest this many hours ahead. */
+  minNoticeHours: number;
+  /** Calls can be booked up to this many days ahead. */
+  bookingWindowDays: number;
+  /** https meeting link sent to the buyer (Zoom, Meet...); null means the coach sends it later. Never in public reads. */
+  meetingUrl: string | null;
+};
+
 export type ProductDoc = {
   _id: string;
   storeId: string;
-  /** "digital" (Phase 1) or "course" (course flow, D-054). */
-  type: "digital" | "course";
+  /** "digital" (Phase 1), "course" (course flow, D-054) or "coaching" (D-081). */
+  type: "digital" | "course" | "coaching";
   /** Course settings, only when type is "course". */
   course?: CourseSettingsDoc;
+  /** Coaching settings, only when type is "coaching". */
+  coaching?: CoachingSettingsDoc;
   title: string;
   /** Unique per store (index `products_store_slug_unique`). */
   slug: string;
@@ -211,8 +239,39 @@ export type OrderDoc = {
   amountRefundedCents?: number;
   /** How many times the buyer opened the delivery link (R7), checked against the product's download limit. */
   accessCount?: number;
+  /** A coaching call's booked time (D-083), frozen at checkout; the live state is in `bookings`. */
+  booking?: { start: Date; end: Date; buyerTimeZone: string | null } | null;
   createdAt: Date;
   paidAt: Date | null;
+};
+
+/**
+ * A coaching call's time slot (D-083), one per coaching order. "held" while the buyer pays (until
+ * `holdExpiresAt`), "confirmed" once the order is paid (only through the verified payment path),
+ * "released" when the payment failed or expired, and "conflict" when a late payment found its time
+ * taken (the creator sorts it out, K5).
+ */
+export type BookingDoc = {
+  _id: string;
+  storeId: string;
+  productId: string;
+  orderId: string;
+  start: Date;
+  end: Date;
+  status: "held" | "confirmed" | "released" | "conflict";
+  /**
+   * `<storeId>|<start ISO>` while the booking takes its time (held or confirmed), else null. A
+   * unique index on it means one store can never have two calls starting at the same moment.
+   */
+  activeSlot: string | null;
+  /** When a hold stops counting; null once confirmed or released. */
+  holdExpiresAt: Date | null;
+  /** When the order was paid and the time confirmed; with overlapping calls, the first confirmed keeps its time. */
+  confirmedAt?: Date | null;
+  /** The buyer's IANA time zone from the booking page, for emails (K4); null when not sent. */
+  buyerTimeZone: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 /** A provider webhook already handled. `_id` is the provider's event id, so a replay fails to insert (idempotency). */
@@ -396,6 +455,7 @@ export async function collections(): Promise<{
   lessons: Collection<LessonDoc>;
   lessonProgress: Collection<LessonProgressDoc>;
   notifications: Collection<NotificationDoc>;
+  bookings: Collection<BookingDoc>;
 }> {
   const db = await getDb();
   return {
@@ -418,5 +478,6 @@ export async function collections(): Promise<{
     lessons: db.collection<LessonDoc>("lessons"),
     lessonProgress: db.collection<LessonProgressDoc>("lessonProgress"),
     notifications: db.collection<NotificationDoc>("notifications"),
+    bookings: db.collection<BookingDoc>("bookings"),
   };
 }

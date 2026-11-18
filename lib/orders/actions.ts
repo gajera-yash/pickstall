@@ -5,6 +5,9 @@ import { randomUUID } from "node:crypto";
 import { redirect, unstable_rethrow } from "next/navigation";
 
 import { appOrigin } from "@/lib/app-origin";
+import { busyTimesForStore, holdSlot } from "@/lib/coaching/bookings";
+import { bookingInput } from "@/lib/coaching/schemas";
+import { findSlot } from "@/lib/coaching/slots";
 import { PAUSED_MESSAGES } from "@/lib/plans/access";
 import { CHECKOUT_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
@@ -31,6 +34,7 @@ import { isUuid } from "@/lib/media/media";
 export type CheckoutState = Result<never> | null;
 
 const GENERIC = "Couldn't start your checkout. Check your connection and try again.";
+const TIME_TAKEN = "That time isn't available any more. Pick another time.";
 
 /** Answers arrive as `answer-<questionId>` form fields. */
 function answersFromForm(formData: FormData): Record<string, unknown> {
@@ -77,6 +81,20 @@ export async function startCheckout(username: string, productSlug: string, _prev
     const answers = validateAnswers(context.product.checkout.questions, answersFromForm(formData));
     if (!answers.ok) return err(answers.error, `answer-${answers.questionId}`);
 
+    // A coaching call (D-083): the picked start must be one the slot engine offers right now, with
+    // the store's other bookings around it taken into account. The browser's time is never trusted.
+    let booking: { start: Date; end: Date; buyerTimeZone: string | null } | null = null;
+    if (context.product.type === "coaching") {
+      const picked = bookingInput.safeParse({ slotStart: formData.get("slotStart") ?? undefined, buyerTimeZone: formData.get("buyerTimeZone") ?? undefined });
+      if (!picked.success || !context.product.coaching) return err("Pick a time for your call.", "slotStart");
+      const now = new Date();
+      const around = 6 * 60 * 60_000;
+      const busy = await busyTimesForStore(context.store._id, new Date(picked.data.slotStart.getTime() - around), new Date(picked.data.slotStart.getTime() + around), now);
+      const slot = findSlot(context.product.coaching, busy, now, picked.data.slotStart);
+      if (!slot) return err(TIME_TAKEN, "slotStart");
+      booking = { start: slot.start, end: slot.end, buyerTimeZone: picked.data.buyerTimeZone };
+    }
+
     const free = amount.totalCents === 0;
     const provider = free ? null : providerForStore(context.store);
     if (!free && !provider) return err("Payments aren't set up for this store yet. Please check back soon.");
@@ -95,7 +113,17 @@ export async function startCheckout(username: string, productSlug: string, _prev
       totalCents: amount.totalCents,
       currency: context.store.currency,
       provider: free ? "free" : provider!.name,
+      ...(booking ? { booking } : {}),
     });
+
+    // Holds the time while the buyer pays; if someone else got it first, the order is dropped.
+    if (booking) {
+      const held = await holdSlot({ storeId: context.store._id, productId: context.product.id, orderId, ...booking });
+      if (held === "taken") {
+        await markOrderFailed(orderId).catch(() => undefined);
+        return err(TIME_TAKEN, "slotStart");
+      }
+    }
 
     const base = `/@${context.store.slug}/${context.product.slug}`;
     const appUrl = await appOrigin();

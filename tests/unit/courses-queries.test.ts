@@ -55,10 +55,10 @@ describe("course queries (ownership)", () => {
     expect(db.products.updateOne.mock.calls[0]?.[1]).toMatchObject({ $set: { slug: "old-link" } });
   });
 
-  it("never lets the digital editor write a course", async () => {
+  it("never lets the digital editor write a course or a coaching call", async () => {
     db.products.findOne.mockResolvedValue(null);
     await updateProduct("store-1", "c1", {} as Parameters<typeof updateProduct>[2]);
-    expect(db.products.findOne.mock.calls[0]?.[0]).toEqual({ _id: "c1", storeId: "store-1", type: { $ne: "course" }, deletedAt: null });
+    expect(db.products.findOne.mock.calls[0]?.[0]).toEqual({ _id: "c1", storeId: "store-1", type: { $nin: ["course", "coaching"] }, deletedAt: null });
   });
 
   it("creates a draft course with lifetime access", async () => {

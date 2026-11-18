@@ -65,6 +65,10 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("notifications").createIndex({ storeId: 1, createdAt: -1 }, { name: "notifications_store_created" }),
     db.collection("notifications").createIndex({ dedupeKey: 1 }, { unique: true, name: "notifications_dedupe_unique" }),
     db.collection("notifications").createIndex({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60, name: "notifications_ttl" }),
+    // Coaching bookings (D-083): one active booking per store and start time, one booking per order.
+    db.collection("bookings").createIndex({ activeSlot: 1 }, { unique: true, partialFilterExpression: { activeSlot: { $type: "string" } }, name: "bookings_active_slot_unique" }),
+    db.collection("bookings").createIndex({ orderId: 1 }, { unique: true, name: "bookings_order_unique" }),
+    db.collection("bookings").createIndex({ storeId: 1, start: 1 }, { name: "bookings_store_start" }),
     // Better Auth collections (it does not create indexes for MongoDB itself).
     db.collection("user").createIndex({ email: 1 }, { unique: true, name: "user_email_unique" }),
     db.collection("session").createIndex({ token: 1 }, { unique: true, name: "session_token_unique" }),

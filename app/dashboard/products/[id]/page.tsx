@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { CoachingEditor, type EditorCoaching } from "@/components/dashboard/coaching-editor";
 import { CourseEditor, type EditorCourse } from "@/components/dashboard/course-editor";
 import { ProductEditor, type EditorProduct } from "@/components/dashboard/product-editor";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
+import { defaultCoachingSettings } from "@/lib/coaching/settings";
 import { storeLink } from "@/lib/config";
 import { loadCurriculum } from "@/lib/courses/curriculum";
 import { findProductFile } from "@/lib/files/product-files";
@@ -16,7 +18,7 @@ import { findProduct, isUnnamedDraft } from "@/lib/products/queries";
 import { productIdInput } from "@/lib/products/schemas";
 import { bunnyConfig } from "@/lib/video/bunny";
 
-// Product editor (R3), or the course editor for a course (D-054). The product is looked up with the session owner's store id, so another
+// Product editor (R3), the course editor for a course (D-054) or the coaching editor (D-081). The product is looked up with the session owner's store id, so another
 // creator's product id shows the same 404 as one that does not exist.
 export default function ProductEditorPage({ params }: PageProps<"/dashboard/products/[id]">) {
   return (
@@ -36,6 +38,30 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
   if (!product) notFound();
   // A product that has never been named is fresh from "Create": it opens on step 1 with no steps checked.
   const isNew = isUnnamedDraft(product);
+
+  if (product.type === "coaching") {
+    const settings = product.coaching ?? defaultCoachingSettings();
+    const coaching: EditorCoaching = {
+      id: product._id,
+      status: product.status,
+      title: product.title,
+      descriptionDoc: product.descriptionDoc ?? docFromPlainText(product.description),
+      coverUrl: product.coverUrl ?? "",
+      durationMinutes: settings.durationMinutes,
+      timeZone: settings.timeZone ?? "",
+      weekly: settings.weekly,
+      bufferMinutes: settings.bufferMinutes,
+      minNoticeHours: settings.minNoticeHours,
+      bookingWindowDays: settings.bookingWindowDays,
+      meeting: settings.meetingUrl ? "link" : "later",
+      meetingUrl: settings.meetingUrl ?? "",
+      pricing: product.priceCents > 0 ? "paid" : "free",
+      price: product.priceCents > 0 ? centsToInput(product.priceCents, store.currency) : "",
+      discountOn: product.salePriceCents != null,
+      salePrice: centsToInput(product.salePriceCents ?? null, store.currency),
+    };
+    return <CoachingEditor initial={coaching} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} />;
+  }
 
   if (product.type === "course") {
     const course: EditorCourse = {
