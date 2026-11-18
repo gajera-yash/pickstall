@@ -57,7 +57,7 @@ export function StorePreview({
 
   return (
     <div aria-hidden="true" className={cn("mx-auto w-full max-w-[320px]", className)}>
-      <div className="rounded-[2.5rem] border border-line bg-surface p-2 shadow-popover">
+      <div className="rounded-[2.5rem] border border-line bg-surface p-2">
         <div className="relative overflow-hidden rounded-[2rem]" style={{ background: preset.background, color: preset.text }}>
           <div className="absolute top-2 left-1/2 h-5 w-24 -translate-x-1/2 rounded-full bg-ink/90" />
           <div className="flex min-h-[540px] flex-col items-center gap-4 px-5 pt-12 pb-5 text-center">

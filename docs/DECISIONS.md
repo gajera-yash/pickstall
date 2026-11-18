@@ -4,6 +4,15 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-080: Setup wizard matches the onboarding screen; one soft border everywhere
+- **Date:** 2026-11-18
+- **Decision (founder request, screenshot of /dashboard/setup):**
+  - The wizard's stepper uses the onboarding screen's steps (D-079): icon tiles with number badges (done = mint check, current = blue, rest gray), the names Store Details, Add Products, Set Payments and Go Live, and chevrons between them on wide screens. Both screens share `components/dashboard/setup/step-tile.tsx`.
+  - Every card, tile, list row, selected option and secondary button uses the same border as the sidebar "Upgrade to Pro" card: 1px `--line`. The current or selected item is shown with a `--blue-soft` fill (theme picker, current step) instead of a blue border; done items in "Your store so far" get a light gray fill and a mint check instead of a mint border and fill. The store preview phone loses its shadow.
+  - Secondary buttons change app-wide: 1px `--line` at rest, `--border-input` on hover (DESIGN.md 9.1 updated). Checkboxes and radios keep their stronger edge (D-067).
+- **Trade-off:** like D-067 for fields, a secondary button's resting border is below 3:1 contrast; its text label, hover and focus ring carry it.
+- **Why:** founder request, 2026-11-18: borders on cards, buttons and shapes looked different from each other.
+
 ## D-079: Onboarding screen and a locked dashboard until setup is done
 - **Date:** 2026-11-18
 - **Decision (founder request, reference screenshot):** while setup is incomplete, My Store shows an onboarding screen instead of the full page (supersedes the D-076 "full My Store during setup" rule): a storefront illustration, "Set up your store to get started", the four setup steps (Store Details, Add Products, Set Payments, Go Live) with real progress (done = mint check, next = blue number, rest gray) and "Set Up My Store" into `/dashboard/setup`.

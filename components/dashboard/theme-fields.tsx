@@ -58,7 +58,7 @@ export function ThemeFields({ themePreset, accent, onThemePreset, onAccent, fiel
                 key={id}
                 className={cn(
                   "flex cursor-pointer items-center gap-3 rounded-lg border border-line bg-surface p-3 transition-colors duration-(--dur-fast) hover:border-field-border hover:bg-bg-subtle",
-                  "has-data-[state=checked]:border-blue has-data-[state=checked]:bg-blue-soft",
+                  "has-data-[state=checked]:bg-blue-soft",
                 )}
               >
                 {/* The theme's layout, sketched in its own colors (theme data, lib/themes.ts). */}

@@ -17,7 +17,7 @@ export function SetupBar({ doneCount, requiredCount, nextLabel }: { doneCount: n
   if (pathname === "/dashboard" || pathname === SETUP_PATH || pathname.startsWith(`${SETUP_PATH}/`)) return null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-blue/30 bg-blue-soft px-4 py-3 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-3 rounded-lg border border-line bg-blue-soft px-4 py-3 sm:flex-row sm:items-center">
       <p className="flex flex-1 items-center gap-3 text-sm">
         <ListChecks aria-hidden="true" className="size-5 shrink-0 text-blue" />
         <span>

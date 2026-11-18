@@ -19,7 +19,7 @@ const buttonVariants = cva(
         default:
           "bg-primary text-primary-foreground not-disabled:hover:bg-blue-hover not-disabled:active:bg-blue-active",
         secondary:
-          "border border-input bg-surface text-ink not-disabled:hover:bg-bg-subtle",
+          "border border-line bg-surface text-ink not-disabled:hover:border-input not-disabled:hover:bg-bg-subtle",
         ghost: "text-ink not-disabled:hover:bg-bg-subtle",
         destructive: "bg-danger text-on-danger not-disabled:hover:opacity-90",
         // Marketing landing only (DESIGN.md 7): never in the app.

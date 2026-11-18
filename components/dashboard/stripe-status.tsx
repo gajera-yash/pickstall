@@ -60,7 +60,7 @@ export function StripeStatus({
           <AlertDescription>{shown.text}</AlertDescription>
         </Alert>
       )}
-      <div className="flex flex-col gap-4 rounded-md border border-line p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-lg border border-line p-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-3">
           {status.done ? (
             <CheckCircle2 aria-hidden="true" className="size-5 shrink-0 fill-mint text-surface" />

@@ -154,7 +154,7 @@ Built on shadcn/ui and restyled with tokens. States for every interactive compon
 | Variant | Style |
 |---|---|
 | Primary | bg `--blue`, text `--on-blue`, radius md. Hover `--blue-hover`, active `--blue-active` |
-| Secondary | bg `--surface`, 1px `--border-input`, text `--ink`. Hover bg `--bg-subtle` |
+| Secondary | bg `--surface`, 1px `--border` (the card border, D-080), text `--ink`. Hover border `--border-input`, bg `--bg-subtle` |
 | Ghost | no border, text `--ink`. Hover bg `--bg-subtle` |
 | Destructive | bg `--danger`, text white. Only in confirm dialogs |
 | Link | text `--blue`, underline |
@@ -348,5 +348,6 @@ Tokens live in `styles/tokens.css`; creator theme presets in `lib/themes.ts` (ty
 ---
 
 ## 20. Changelog
+- v2.2 (2026-11-18, D-080): one soft border everywhere in the app, like the sidebar Pro card: cards, step tiles, list rows, selected options and secondary buttons use 1px `--border`; selection is shown by a `--blue-soft` fill instead of a blue border; no shadow on the store preview phone. The setup wizard stepper uses the onboarding step tiles.
 - v2.1 (2026-10-29, D-028): logo colors kept (blue `#0056FF`, yellow `#FFC400`, Clean accent `#0056FF`) and written into sections 3, 3.1, 11 and 16; mobile keeps the bottom tab bar (section 5); input text 16 px; section 16 now mirrors the real token and Tailwind names.
 - v2.0: white professional theme (replaces v1.x): new tokens and contrast table, Stan-like auth and form layouts, dashboard shell, editor with live preview, first-run checklist, type picker, storefront themes, creator customization guardrails, light-only Phase 1.

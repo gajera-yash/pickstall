@@ -291,7 +291,7 @@ function SetupSummary({ items, hint }: { items: { label: string; done: boolean; 
       </CardHeader>
       <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => (
-          <li key={item.label} className={cn("flex items-center gap-3 rounded-md border px-3 py-2.5", item.done ? "border-mint/30 bg-mint-soft" : "border-line")}>
+          <li key={item.label} className={cn("flex items-center gap-3 rounded-lg border border-line px-3 py-2.5", item.done ? "bg-bg-subtle" : "bg-surface")}>
             {item.done ? (
               <CheckCircle2 aria-hidden="true" className="size-5 shrink-0 fill-mint text-surface" />
             ) : (
