@@ -268,6 +268,7 @@ async function OrderDrawer({ storeId, orderId, closeHref }: { storeId: string; o
           rows={[
             { label: "Price", value: money(order.subtotalCents), numeric: true },
             ...(order.discountCents > 0 ? [{ label: "Discount", value: `−${money(order.discountCents)}`, numeric: true }] : []),
+            ...(order.coupon ? [{ label: "Coupon", value: `${order.coupon.code} (−${money(order.coupon.discountCents)})` }] : []),
             { label: "Total", value: money(order.totalCents), numeric: true },
             { label: "Paid with", value: PAID_WITH[order.provider] },
             { label: "Paid on", value: order.paidAt ? formatDateTime(order.paidAt) : "Not paid" },

@@ -72,6 +72,7 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
                   questions={product.checkout.questions}
                   submitLabel={coaching ? (payableCents(product) === 0 ? "Book for free" : "Book and pay") : payableCents(product) === 0 ? "Get it free" : product.buttonText || "Pay now"}
                   booking={booking}
+                  coupons={payableCents(product) > 0}
                 />
               </div>
             ) : (

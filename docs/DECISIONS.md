@@ -4,6 +4,34 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-088: Coupons (Phase 2)
+- **Date:** 2026-11-18
+- **Decision (founder approved the plan 2026-11-18):** creators make discount codes on the Marketing page; buyers enter them at checkout. Coupons are available on every plan, including the trial.
+- **Coupon** (`CouponDoc`):
+  - a code, unique per store ignoring case;
+  - a percentage (1 to 100) or a fixed amount in the store currency;
+  - every product, or chosen products of the store;
+  - an optional total-use limit, an optional end date (end of the creator's day), and "one use per buyer email";
+  - an on/off switch.
+- **Checkout:**
+  - "Have a discount code?" → Apply calls `previewCoupon` (rate limited, 20 tries per 15 minutes per visitor) and shows the saving and the new total. Information only.
+  - `startCheckout` finds the code in that store, checks it, and computes the amount from the database: the coupon comes off the price the buyer would pay, after any sale price. A total above 0 but below Stripe's minimum charge is refused. A 100% coupon goes through the free path.
+  - The order records `coupon` (id, code, discount), and its discount is part of `discountCents`.
+- **No over-use:**
+  - At order creation one use is held with a single atomic update (active, unexpired, under its limit). A once-per-email code also needs a free unique `activeEmailKey`.
+  - A failed or expired payment (`payment.failed`, `markOrderFailed`) gives the use back.
+  - A paid order, through the verified webhook, mock or free path only, marks it redeemed.
+  - A refund keeps the use counted.
+  - Tested on a real MongoDB with 8 buyers against a 3-use limit.
+- **Payments:** unchanged. The `PaymentProvider` charges the server's lower amount as a direct charge with no application fee; no Stripe coupon objects are used.
+- **Creator side:** the order drawer shows the code and its discount. All coupon reads and writes filter by the session owner's store, and a coupon can only name that store's products.
+- **Schema:** new collections `coupons` (unique `storeId + codeKey`) and `couponRedemptions` (unique `orderId`; unique partial `activeEmailKey`), plus `OrderDoc.coupon`. No migration.
+- **Not in this part:**
+  - Editing or deleting a coupon: turn it off and make a new one.
+  - A coupon column in the CSV export.
+  - Order bumps, which come next as their own part.
+- **Why:** PRD section 9, Phase 2.
+
 ## D-087: Pre-QA fixes: Customize design, prerender errors, coaching wording, locks, publish redirect
 - **Date:** 2026-11-18
 - **Decision (founder report before handing the site to a QA tester):**

@@ -99,6 +99,8 @@ export type OrderDetail = OrderRow & {
   amountRefundedCents: number;
   /** Delivery of the buyer's access email (null when none was tried yet). */
   accessEmail: OrderEmailStatus;
+  /** The coupon used (D-088), or null. */
+  coupon: { code: string; discountCents: number } | null;
 };
 
 /** One order of this store for the details drawer, or null when it is not this store's. */
@@ -121,6 +123,7 @@ export async function findOrderDetail(storeId: string, orderId: string): Promise
     amountRefundedCents: doc.amountRefundedCents ?? 0,
     // Read only after the order was found with this store's id, so it is never another store's.
     accessEmail: await orderEmailStatus(doc._id),
+    coupon: doc.coupon ? { code: doc.coupon.code, discountCents: doc.coupon.discountCents } : null,
   };
 }
 

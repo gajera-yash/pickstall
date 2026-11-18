@@ -1,19 +1,21 @@
-import { Mail, Percent, ShoppingCart, type LucideIcon } from "lucide-react";
+import { Mail, ShoppingCart, type LucideIcon } from "lucide-react";
 import { Suspense } from "react";
 
+import { CouponManager, type ManagedCoupon } from "@/components/dashboard/coupon-manager";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { couponRows, listCoupons } from "@/lib/coupons/queries";
 import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
+import { listProducts } from "@/lib/products/queries";
 
 const TOOLS: { title: string; description: string; icon: LucideIcon }[] = [
-  { title: "Coupons", description: "Percent or fixed discounts with an expiry date and a usage limit.", icon: Percent },
   { title: "Order bumps", description: "Offer one more product at checkout with a single tick.", icon: ShoppingCart },
   { title: "Email list", description: "Collect emails on your store and send updates to your buyers.", icon: Mail },
 ];
 
-// Marketing (D-029). The tools are Phase 2 (PRD section 9), so each card says so honestly.
+// Marketing (D-029). Coupons work (D-088); the other tools are still to come, and their cards say so.
 export default function MarketingPage() {
   return (
     <>
@@ -26,9 +28,21 @@ export default function MarketingPage() {
 }
 
 async function MarketingContent() {
-  await requireUnlockedCreator("/dashboard/marketing");
+  const { store } = await requireUnlockedCreator("/dashboard/marketing");
+  const [coupons, products] = await Promise.all([listCoupons(store.id), listProducts(store.id)]);
+  const managed: ManagedCoupon[] = couponRows(coupons, products, store.currency);
+
   return (
-    <ul className="grid gap-4 md:grid-cols-3">
+    <div className="flex flex-col gap-6">
+      <CouponManager coupons={managed} products={products.map((product) => ({ id: product._id, title: product.title }))} currency={store.currency} />
+      <MoreTools />
+    </div>
+  );
+}
+
+function MoreTools() {
+  return (
+    <ul className="grid gap-4 md:grid-cols-2">
       {TOOLS.map(({ title, description, icon: Icon }) => (
         <li key={title}>
           <Card className="h-full gap-3">

@@ -241,8 +241,54 @@ export type OrderDoc = {
   accessCount?: number;
   /** A coaching call's booked time (D-083), frozen at checkout; the live state is in `bookings`. */
   booking?: { start: Date; end: Date; buyerTimeZone: string | null } | null;
+  /** The coupon used (D-088), frozen at checkout. Its discount is part of `discountCents`. */
+  coupon?: { couponId: string; code: string; discountCents: number } | null;
   createdAt: Date;
   paidAt: Date | null;
+};
+
+/**
+ * A creator's coupon code (D-088). The code is unique per store, ignoring case (`codeKey`). Money
+ * amounts are in the store's currency units. `redemptionCount` counts held and paid uses, so
+ * `maxRedemptions` is never exceeded, even when buyers check out at the same moment.
+ */
+export type CouponDoc = {
+  _id: string;
+  storeId: string;
+  /** As shown to buyers, upper case, for example "DIWALI20". */
+  code: string;
+  /** `code` upper-cased: unique per store (index `coupons_store_code_unique`). */
+  codeKey: string;
+  kind: "percent" | "amount";
+  /** 1 to 100 when kind is "percent", else null. */
+  percentOff: number | null;
+  /** In store currency units when kind is "amount", else null. */
+  amountOffCents: number | null;
+  /** Only these products, or null for every product of the store. */
+  productIds: string[] | null;
+  /** How many orders may use it in total, or null for no limit. */
+  maxRedemptions: number | null;
+  redemptionCount: number;
+  /** One use per buyer email. */
+  oncePerEmail: boolean;
+  /** Last moment it can be used, or null for no end. */
+  expiresAt: Date | null;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/** One order's use of a coupon (D-088): "held" at checkout, "redeemed" once paid, "released" when the payment failed. */
+export type CouponRedemptionDoc = {
+  _id: string;
+  storeId: string;
+  couponId: string;
+  orderId: string;
+  status: "held" | "redeemed" | "released";
+  /** `<couponId>|<email>` while held or redeemed for a once-per-email coupon, else null (unique index). */
+  activeEmailKey: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 /**
@@ -459,6 +505,8 @@ export async function collections(): Promise<{
   lessonProgress: Collection<LessonProgressDoc>;
   notifications: Collection<NotificationDoc>;
   bookings: Collection<BookingDoc>;
+  coupons: Collection<CouponDoc>;
+  couponRedemptions: Collection<CouponRedemptionDoc>;
 }> {
   const db = await getDb();
   return {
@@ -482,5 +530,7 @@ export async function collections(): Promise<{
     lessonProgress: db.collection<LessonProgressDoc>("lessonProgress"),
     notifications: db.collection<NotificationDoc>("notifications"),
     bookings: db.collection<BookingDoc>("bookings"),
+    coupons: db.collection<CouponDoc>("coupons"),
+    couponRedemptions: db.collection<CouponRedemptionDoc>("couponRedemptions"),
   };
 }

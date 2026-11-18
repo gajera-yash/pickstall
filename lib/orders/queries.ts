@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { connection } from "next/server";
 
 import { releaseBookingForOrder } from "@/lib/coaching/bookings";
+import { releaseCouponForOrder } from "@/lib/coupons/queries";
 import type { SlotSettings } from "@/lib/coaching/slots";
 import { collections, type CheckoutQuestionDoc, type OrderDoc, type ProductDoc, type StoreDoc } from "@/lib/db/collections";
 import { providerForStore } from "@/lib/payments";
@@ -167,6 +168,7 @@ export async function markOrderFailed(orderId: string): Promise<void> {
   const { orders } = await collections();
   await orders.updateOne({ _id: orderId, status: "pending" }, { $set: { status: "failed" } });
   await releaseBookingForOrder(orderId); // a coaching order gives its time back (D-083)
+  await releaseCouponForOrder(orderId); // and a coupon its use (D-088)
 }
 
 /** What the thank-you page may show: the order's status for this store only. The order id is an unguessable uuid. */

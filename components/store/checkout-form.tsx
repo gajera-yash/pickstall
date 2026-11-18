@@ -4,6 +4,7 @@ import { Lock } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 
 import { PhoneField } from "@/components/auth/phone-field";
+import { CouponField } from "@/components/store/coupon-field";
 import { SlotPicker } from "@/components/store/slot-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,8 @@ type Props = {
   submitLabel: string;
   /** A coaching call (D-083): the open times from the slot engine and the call length. */
   booking?: { slots: { start: string; end: string }[]; durationMinutes: number } | null;
+  /** Show "Have a discount code?" (D-088): only for a product that costs something. */
+  coupons?: boolean;
 };
 
 /**
@@ -34,7 +37,7 @@ type Props = {
  * values are kept after an error and focus moves to the first problem. The price is not on this
  * form at all: the server takes it from the product (D-047).
  */
-export function CheckoutForm({ username, productSlug, askPhone, questions, submitLabel, booking }: Props) {
+export function CheckoutForm({ username, productSlug, askPhone, questions, submitLabel, booking, coupons = false }: Props) {
   const [state, action, pending] = useActionState<CheckoutState, FormData>(startCheckout.bind(null, username, productSlug), null);
   const error = state && !state.ok ? state : null;
   const fieldError = (field: string) => (error?.field === field ? error.error : null);
@@ -104,6 +107,8 @@ export function CheckoutForm({ username, productSlug, askPhone, questions, submi
           </FormField>
         );
       })}
+
+      {coupons && <CouponField username={username} productSlug={productSlug} serverError={fieldError("couponCode")} />}
 
       <Button type="submit" size="lg" className="w-full" loading={pending}>
         <Lock aria-hidden="true" className="size-4" />

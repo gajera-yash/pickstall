@@ -3,6 +3,7 @@ import "server-only";
 import { confirmBookingForOrder, releaseBookingForOrder } from "@/lib/coaching/bookings";
 import { cancelBookingOfRefundedOrder } from "@/lib/coaching/calls";
 import { scheduleCallReminders } from "@/lib/coaching/reminders";
+import { redeemCouponForOrder, releaseCouponForOrder } from "@/lib/coupons/queries";
 import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { logger } from "@/lib/logger";
@@ -74,6 +75,7 @@ async function fromStoreAccount(event: { account?: string | null }, storeId: str
  * step here, keyed by the order id: a coaching call confirms its booked time (D-083).
  */
 async function onOrderPaid(orderId: string): Promise<void> {
+  await redeemCouponForOrder(orderId); // no coupon: nothing happens (D-088)
   // No booking (not a coaching order): nothing happens. A confirmed call gets its reminders (D-085).
   if ((await confirmBookingForOrder(orderId)) === "confirmed") await scheduleCallReminders(orderId);
   scheduleOrderConfirmation(orderId); // a replay is safe: one outbox row per order
@@ -128,8 +130,9 @@ async function applyEvent(providerName: PaymentProvider["name"], event: PaymentE
       const order = await orders.findOne(match, { projection: { storeId: 1 } });
       if (!order || !(await fromStoreAccount(event, order.storeId))) return;
       await orders.updateOne({ _id: order._id, status: "pending" }, { $set: { status: "failed" } });
-      // A failed or expired checkout gives its coaching time back (D-083).
+      // A failed or expired checkout gives its coaching time (D-083) and its coupon use (D-088) back.
       await releaseBookingForOrder(order._id);
+      await releaseCouponForOrder(order._id);
       return;
     }
 

@@ -6,6 +6,8 @@ import { redirect, unstable_rethrow } from "next/navigation";
 
 import { appOrigin } from "@/lib/app-origin";
 import { busyTimesForStore, holdSlot } from "@/lib/coaching/bookings";
+import { findCouponByCode, holdCoupon } from "@/lib/coupons/queries";
+import { couponDiscountCents, couponProblem, totalProblem } from "@/lib/coupons/rules";
 import { bookingInput } from "@/lib/coaching/schemas";
 import { findSlot } from "@/lib/coaching/slots";
 import { PAUSED_MESSAGES } from "@/lib/plans/access";
@@ -13,6 +15,7 @@ import { CHECKOUT_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { validateAnswers } from "@/lib/orders/answers";
 import { orderAmounts } from "@/lib/orders/pricing";
+import { payableCents } from "@/lib/products/pricing";
 import {
   attachProviderSession,
   canBuy,
@@ -75,8 +78,21 @@ export async function startCheckout(username: string, productSlug: string, _prev
     // A paused store takes no new orders, free ones included (D-072).
     if (!context.open) return err(PAUSED_MESSAGES.checkout);
 
+    // A coupon (D-088): found in this store by its code and checked on the server; only its own
+    // terms from the database decide the discount.
+    const code = typeof formData.get("couponCode") === "string" ? String(formData.get("couponCode")).trim() : "";
+    const coupon = code ? await findCouponByCode(context.store._id, code) : null;
+    if (code) {
+      const problem = couponProblem(coupon, context.product.id, new Date());
+      if (problem) return err(problem, "couponCode");
+    }
+
     // The price comes from the product in the database, never from the form (CLAUDE.md 7, D-047).
-    const amount = orderAmounts(context.product);
+    const amount = orderAmounts(context.product, coupon ? couponDiscountCents(payableCents(context.product), coupon) : 0);
+    if (coupon) {
+      const low = totalProblem(amount.totalCents, context.store.currency);
+      if (low) return err(low, "couponCode");
+    }
 
     const answers = validateAnswers(context.product.checkout.questions, answersFromForm(formData));
     if (!answers.ok) return err(answers.error, `answer-${answers.questionId}`);
@@ -114,7 +130,17 @@ export async function startCheckout(username: string, productSlug: string, _prev
       currency: context.store.currency,
       provider: free ? "free" : provider!.name,
       ...(booking ? { booking } : {}),
+      ...(coupon ? { coupon: { couponId: coupon._id, code: coupon.code, discountCents: amount.discountCents - orderAmounts(context.product).discountCents } } : {}),
     });
+
+    // Holds one use of the coupon (the limit is never exceeded); if it is used up meanwhile, the order is dropped.
+    if (coupon) {
+      const held = await holdCoupon({ storeId: context.store._id, couponId: coupon._id, orderId, email: buyer.email });
+      if (held !== "held") {
+        await markOrderFailed(orderId).catch(() => undefined);
+        return err(held === "already_used" ? "You have already used this code." : "This code has been used up.", "couponCode");
+      }
+    }
 
     // Holds the time while the buyer pays; if someone else got it first, the order is dropped.
     if (booking) {
