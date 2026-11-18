@@ -24,6 +24,14 @@ const body = Instrument_Sans({
 export const metadata: Metadata = {
   title: APP_NAME,
   description: "Storefront, digital products and courses for creators.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/brand/pickstall.jpg", type: "image/jpeg" },
+    ],
+    shortcut: "/brand/pickstall.jpg",
+    apple: "/brand/pickstall.jpg",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
