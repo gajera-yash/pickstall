@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { connection } from "next/server";
 
 import { releaseBookingForOrder } from "@/lib/coaching/bookings";
+import { releaseCouponForOrder } from "@/lib/coupons/queries";
 import type { SlotSettings } from "@/lib/coaching/slots";
 import { collections, type CheckoutQuestionDoc, type OrderDoc, type ProductDoc, type StoreDoc } from "@/lib/db/collections";
 import { providerForStore } from "@/lib/payments";
@@ -37,6 +38,8 @@ export type CheckoutContext = {
     type: ProductDoc["type"];
     /** A coaching call's booking rules (D-083); never its meeting link. Null for other products. */
     coaching: SlotSettings | null;
+    /** The order bump saved on the product (D-089); `findCheckoutBump` checks its target. */
+    bump: ProductDoc["bump"] | null;
   };
 };
 
@@ -80,12 +83,16 @@ const PRODUCT_FIELDS = {
   "coaching.bufferMinutes": 1,
   "coaching.minNoticeHours": 1,
   "coaching.bookingWindowDays": 1,
+  bump: 1,
 } as const;
 
 /** The published store and product for a checkout, or null. Never includes the delivery link. */
 export async function loadCheckoutContext(username: string, productSlug: string): Promise<CheckoutContext | null> {
   // typeof first: RegExp.test turns an array like ["maya"] into "maya" (R9, no operator or array input).
   if (typeof username !== "string" || typeof productSlug !== "string" || !SLUG.test(username) || !PRODUCT_SLUG.test(productSlug)) return null;
+  // Request data, before the database is touched: open or paused depends on the current time, and
+  // the database driver reads the clock, which Next refuses while prerendering.
+  await connection();
   const { stores, products } = await collections();
 
   const store = await stores.findOne({ slug: username, isPublished: true }, { projection: STORE_FIELDS });
@@ -95,7 +102,6 @@ export async function loadCheckoutContext(username: string, productSlug: string)
 
   // The plan fields only decide `open`; they are not passed on to the page.
   const { planTier, trialEndsAt, foundingEndsAt, billing, ...storeFields } = store;
-  await connection(); // open or paused depends on the current time
   return {
     store: storeFields,
     open: can(storeAccess({ planTier, trialEndsAt, foundingEndsAt, billing }), "sell"),
@@ -124,6 +130,7 @@ export async function loadCheckoutContext(username: string, productSlug: string)
               bookingWindowDays: product.coaching.bookingWindowDays,
             }
           : null,
+      bump: product.bump ?? null,
     },
   };
 }
@@ -165,17 +172,23 @@ export async function markOrderFailed(orderId: string): Promise<void> {
   const { orders } = await collections();
   await orders.updateOne({ _id: orderId, status: "pending" }, { $set: { status: "failed" } });
   await releaseBookingForOrder(orderId); // a coaching order gives its time back (D-083)
+  await releaseCouponForOrder(orderId); // and a coupon its use (D-088)
 }
 
 /** What the thank-you page may show: the order's status for this store only. The order id is an unguessable uuid. */
-export async function findOrderForThankYou(storeId: string, orderId: string): Promise<{ status: OrderDoc["status"]; productId: string } | null> {
+export async function findOrderForThankYou(
+  storeId: string,
+  orderId: string,
+): Promise<{ status: OrderDoc["status"]; productId: string; booking: { start: Date; end: Date; buyerTimeZone: string | null } | null } | null> {
   const { orders } = await collections();
-  const doc = await orders.findOne({ _id: orderId, storeId }, { projection: { status: 1, productId: 1 } });
-  return doc ? { status: doc.status, productId: doc.productId } : null;
+  const doc = await orders.findOne({ _id: orderId, storeId }, { projection: { status: 1, productId: 1, booking: 1 } });
+  // A coaching order's booked time (D-087), so the page can show it; never the meeting link.
+  return doc ? { status: doc.status, productId: doc.productId, booking: doc.booking ?? null } : null;
 }
 
 /** Development-only mock payment page: a pending mock order with its product title and total. */
 export async function findPendingMockOrder(orderId: string): Promise<{ id: string; storeId: string; title: string; totalCents: number; currency: string; productId: string } | null> {
+  await connection(); // request data: never prerendered
   const { orders } = await collections();
   const doc = await orders.findOne({ _id: orderId, provider: "mock", status: "pending" });
   return doc ? { id: doc._id, storeId: doc.storeId, title: doc.item.title, totalCents: doc.totalCents, currency: doc.currency, productId: doc.productId } : null;

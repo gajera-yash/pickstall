@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 
+import { BumpSection, type BumpCandidate, type BumpSettings } from "@/components/dashboard/bump-section";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { RichTextEditor } from "@/components/dashboard/rich-text-editor";
@@ -44,6 +45,7 @@ import {
 } from "@/lib/coaching/settings";
 import type { CoachingWindowDoc } from "@/lib/db/collections";
 import { safeImageSrc } from "@/lib/media/media";
+import { PUBLISHED_HREF } from "@/lib/products/create-errors";
 import { changeProductStatus, removeProduct } from "@/lib/products/actions";
 import { parseMoneyToCents } from "@/lib/products/money";
 import { savingPercent, type Priced } from "@/lib/products/pricing";
@@ -110,6 +112,8 @@ type Props = {
   paymentsOk: boolean;
   /** A call that was just created opens on step 1 with nothing checked yet. */
   isNew: boolean;
+  /** Order bump settings and the products that can be offered (D-089). */
+  bump: { initial: BumpSettings; candidates: BumpCandidate[] };
 };
 
 /**
@@ -118,7 +122,7 @@ type Props = {
  * ahead, meeting link), 3 Price & publish, beside a live card preview. The whole form saves as one
  * JSON payload that the server checks again. Buyers pick a time at checkout (D-083).
  */
-export function CoachingEditor({ initial, currency, paymentsOk, isNew }: Props) {
+export function CoachingEditor({ initial, currency, paymentsOk, isNew, bump }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSetup = searchParams.get("from") === "setup";
@@ -185,6 +189,11 @@ export function CoachingEditor({ initial, currency, paymentsOk, isNew }: Props) 
       }
       set("status", status);
       setSuccess(status === "published" ? "Published. Buyers can book once your store page is live." : "Back to draft. It is hidden from your store.");
+      if (status === "published") {
+        // Published: back to the products list (D-087), or to the next setup step from the wizard.
+        router.push(fromSetup ? "/dashboard/setup?step=connect-payments" : PUBLISHED_HREF);
+        return;
+      }
       router.refresh();
     });
   };
@@ -519,6 +528,8 @@ export function CoachingEditor({ initial, currency, paymentsOk, isNew }: Props) 
                   )}
                 </fieldset>
               )}
+
+              <BumpSection productId={values.id} currency={currency} initial={bump.initial} candidates={bump.candidates} />
 
               <section aria-labelledby="ready-title" className="flex flex-col gap-3 rounded-lg border border-line p-4">
                 <h3 id="ready-title" className="font-display text-h4">

@@ -42,6 +42,8 @@ export type PublicProduct = {
   type: ProductDoc["type"];
   /** A course's public facts (category, access period, how many lessons); null for a digital product. */
   course: { category: CourseCategory | null; accessDays: number | null; lessonCount: number } | null;
+  /** A coaching call's length (D-087); never its meeting link. Null for other products. Optional for preview callers. */
+  coaching?: { durationMinutes: number } | null;
 };
 
 /** A published course's outline for its public page (D-056): titles only, never lesson content. */
@@ -65,7 +67,7 @@ const STORE_FIELDS = {
   "billing.currentPeriodEnd": 1,
   "billing.cancelAtPeriodEnd": 1,
 } as const;
-const PRODUCT_FIELDS = { slug: 1, title: 1, description: 1, descriptionDoc: 1, coverUrl: 1, priceCents: 1, salePriceCents: 1, buttonText: 1, type: 1, "course.category": 1, "course.accessDays": 1 } as const;
+const PRODUCT_FIELDS = { slug: 1, title: 1, description: 1, descriptionDoc: 1, coverUrl: 1, priceCents: 1, salePriceCents: 1, buttonText: 1, type: 1, "course.category": 1, "course.accessDays": 1, "coaching.durationMinutes": 1 } as const;
 
 const SLUG = /^[a-z0-9-]{3,30}$/;
 const PRODUCT_SLUG = /^[a-z0-9-]{1,60}$/;
@@ -73,11 +75,12 @@ const PRODUCT_SLUG = /^[a-z0-9-]{1,60}$/;
 /** A published store by its username, or null (a draft store looks exactly like a missing one). */
 export async function findPublicStore(slug: string): Promise<PublicStore | null> {
   if (typeof slug !== "string" || !SLUG.test(slug)) return null;
+  // Request data, before the database is touched: open or paused depends on the current time, and the
+  // database driver reads the clock, which Next refuses while prerendering.
+  await connection();
   const { stores } = await collections();
   const doc = await stores.findOne({ slug, isPublished: true }, { projection: STORE_FIELDS });
   if (!doc) return null;
-  // Open or paused depends on the current time, so this is request data (no prerendered answer).
-  await connection();
   return {
     id: doc._id,
     slug: doc.slug,
@@ -92,7 +95,7 @@ export async function findPublicStore(slug: string): Promise<PublicStore | null>
 }
 
 function toPublicProduct(
-  doc: Pick<ProductDoc, "_id" | "slug" | "title" | "description" | "descriptionDoc" | "coverUrl" | "priceCents" | "salePriceCents" | "buttonText" | "type" | "course">,
+  doc: Pick<ProductDoc, "_id" | "slug" | "title" | "description" | "descriptionDoc" | "coverUrl" | "priceCents" | "salePriceCents" | "buttonText" | "type" | "course" | "coaching">,
   lessonCounts: Map<string, number> = new Map(),
 ): PublicProduct {
   return {
@@ -108,6 +111,7 @@ function toPublicProduct(
     buttonText: doc.buttonText,
     type: doc.type ?? "digital",
     course: doc.type === "course" ? { category: doc.course?.category ?? null, accessDays: doc.course?.accessDays ?? null, lessonCount: lessonCounts.get(doc._id) ?? 0 } : null,
+    coaching: doc.type === "coaching" ? { durationMinutes: doc.coaching?.durationMinutes ?? 30 } : null,
   };
 }
 

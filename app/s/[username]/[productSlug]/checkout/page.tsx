@@ -8,9 +8,11 @@ import { OrderSummary } from "@/components/store/order-summary";
 import { StorePaused } from "@/components/store/store-paused";
 import { StoreFrame, cardStyle, resolveTheme } from "@/components/store/store-theme";
 import { APP_NAME } from "@/lib/config";
+import { findCheckoutBump } from "@/lib/bumps/queries";
 import { busyTimesForStore } from "@/lib/coaching/bookings";
 import { availableSlots } from "@/lib/coaching/slots";
 import { canBuy, loadCheckoutContext } from "@/lib/orders/queries";
+import { formatMoney } from "@/lib/products/money";
 import { payableCents } from "@/lib/products/pricing";
 
 // Checkout page at /@username/product/checkout (rewrite in next.config.ts). Only published products
@@ -29,6 +31,9 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
   const theme = resolveTheme(store.theme);
   const { preset } = theme;
   const available = canBuy(context);
+  // An order bump (D-089): only when its product is still published in this store.
+  const offer = await findCheckoutBump(store._id, product.bump).catch(() => null);
+  const bump = offer ? { title: offer.title, coverUrl: offer.coverUrl, price: formatMoney(offer.priceCents, store.currency), headline: offer.headline } : null;
   // A coaching call (D-083): the open times right now, with the store's booked and held calls taken out.
   const coaching = product.type === "coaching" ? product.coaching : null;
   let booking: { slots: { start: string; end: string }[]; durationMinutes: number } | null = null;
@@ -72,6 +77,8 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
                   questions={product.checkout.questions}
                   submitLabel={coaching ? (payableCents(product) === 0 ? "Book for free" : "Book and pay") : payableCents(product) === 0 ? "Get it free" : product.buttonText || "Pay now"}
                   booking={booking}
+                  coupons={payableCents(product) > 0}
+                  bump={bump}
                 />
               </div>
             ) : (

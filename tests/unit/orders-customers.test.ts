@@ -97,7 +97,7 @@ describe("order and customer queries stay inside the store (ownership)", () => {
     db.orders.findOne.mockResolvedValue({ buyerEmail: "maya@example.com" });
     db.orders.find.mockReturnValue(cursor([orderDoc({ _id: "o2", totalCents: 1000 }), orderDoc({ _id: "o1", buyerPhone: "+1 555", paidAt: new Date("2026-10-01T00:00:00Z") })]));
     const customer = await findCustomerDetail("store-1", ORDER);
-    expect(db.orders.find.mock.calls[0]?.[0]).toEqual({ storeId: "store-1", buyerEmail: "maya@example.com", status: "paid" });
+    expect(db.orders.find.mock.calls[0]?.[0]).toEqual({ storeId: "store-1", buyerEmail: "maya@example.com", status: "paid", bumpOf: null });
     expect(customer).toMatchObject({ key: "o2", orderCount: 2, totalCents: 2500, phone: "+1 555", firstOrderAt: new Date("2026-10-01T00:00:00Z") });
   });
 
@@ -108,7 +108,7 @@ describe("order and customer queries stay inside the store (ownership)", () => {
     const page = await listCustomers("store-1", { product: PRODUCT, after, limit: 1 });
 
     const pipeline = db.orders.aggregate.mock.calls[0]?.[0] as Record<string, unknown>[];
-    expect(pipeline[0]).toEqual({ $match: { storeId: "store-1", status: "paid" } });
+    expect(pipeline[0]).toEqual({ $match: { storeId: "store-1", status: "paid", bumpOf: null } });
     expect(pipeline).toContainEqual({ $match: { productIds: PRODUCT } });
     expect(pipeline).toContainEqual({ $match: { $or: [{ lastOrderAt: { $lt: after.at } }, { lastOrderAt: after.at, lastOrderId: { $lt: ORDER } }] } });
     expect(page.customers.map((customer) => customer.key)).toEqual(["b"]);

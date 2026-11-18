@@ -266,8 +266,14 @@ async function OrderDrawer({ storeId, orderId, closeHref }: { storeId: string; o
       <DetailSection title="Payment">
         <DetailList
           rows={[
-            { label: "Price", value: money(order.subtotalCents), numeric: true },
+            ...(order.bump
+              ? [
+                  { label: order.title, value: money(order.subtotalCents - order.bump.priceCents), numeric: true },
+                  { label: `Order bump: ${order.bump.title}`, value: money(order.bump.priceCents), numeric: true },
+                ]
+              : [{ label: "Price", value: money(order.subtotalCents), numeric: true }]),
             ...(order.discountCents > 0 ? [{ label: "Discount", value: `−${money(order.discountCents)}`, numeric: true }] : []),
+            ...(order.coupon ? [{ label: "Coupon", value: `${order.coupon.code} (−${money(order.coupon.discountCents)})` }] : []),
             { label: "Total", value: money(order.totalCents), numeric: true },
             { label: "Paid with", value: PAID_WITH[order.provider] },
             { label: "Paid on", value: order.paidAt ? formatDateTime(order.paidAt) : "Not paid" },

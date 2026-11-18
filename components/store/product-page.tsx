@@ -9,6 +9,7 @@ import { RichTextView } from "@/components/store/rich-text";
 import { StoreFrame, borderColor, cardStyle, resolveTheme, type StoreTheme } from "@/components/store/store-theme";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import { durationLabel } from "@/lib/coaching/settings";
 import { accessLabel } from "@/lib/courses/settings";
 import { safeImageSrc } from "@/lib/media/media";
 import type { PublicCurriculum, PublicProduct, PublicStore } from "@/lib/stores/public";
@@ -113,7 +114,9 @@ function BuyBox({ store, product, theme, buyable, curriculum }: { store: PublicS
         accessLabel(course.accessDays),
         "Learn at your own pace",
       ]
-    : ["Delivered by email right after payment", "Also kept in your library"];
+    : product.type === "coaching"
+      ? [`A ${durationLabel(product.coaching?.durationMinutes ?? 30)} one-to-one call`, "Pick a time that suits you at checkout", "Booking and calendar invite by email"]
+      : ["Delivered by email right after payment", "Also kept in your library"];
 
   return (
     <>
@@ -155,7 +158,7 @@ function BuyBox({ store, product, theme, buyable, curriculum }: { store: PublicS
 function Price({ product, store, theme, className }: { product: PublicProduct; store: PublicStore; theme: StoreTheme; className: string }) {
   return (
     <p className={`font-display ${className}`}>
-      {product.type === "course" && product.priceCents === 0 ? (
+      {product.priceCents === 0 ? (
         "Free"
       ) : (
         <PriceTag product={product} currency={store.currency} regularStyle={{ color: theme.preset.muted }} />
@@ -169,7 +172,7 @@ function checkoutHref(store: PublicStore, product: PublicProduct): string {
 }
 
 function buttonLabel(product: PublicProduct): string {
-  return product.buttonText || "Buy now";
+  return product.buttonText || (product.type === "coaching" ? "Book a call" : "Buy now");
 }
 
 function buttonStyle(theme: StoreTheme): CSSProperties {

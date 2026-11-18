@@ -9,3 +9,6 @@ export const PRODUCT_CREATE_ERRORS: Record<string, string> = {
 export function productCreateError(code: unknown): string | undefined {
   return typeof code === "string" && Object.hasOwn(PRODUCT_CREATE_ERRORS, code) ? PRODUCT_CREATE_ERRORS[code] : undefined;
 }
+
+/** Where an editor goes after publishing (D-087): the products list, which then says it was published. */
+export const PUBLISHED_HREF = "/dashboard/products?published=1";

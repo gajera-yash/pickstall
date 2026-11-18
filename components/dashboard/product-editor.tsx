@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 
+import { BumpSection, type BumpCandidate, type BumpSettings } from "@/components/dashboard/bump-section";
 import { ConfirmationEmailFields } from "@/components/dashboard/confirmation-email-fields";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
@@ -25,6 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { CHECKOUT_QUESTIONS_MAX } from "@/lib/config";
+import { PUBLISHED_HREF } from "@/lib/products/create-errors";
 import { changeProductStatus, removeProduct, saveProduct, type SaveProductState } from "@/lib/products/actions";
 import { safeImageSrc } from "@/lib/media/media";
 import { parseMoneyToCents } from "@/lib/products/money";
@@ -85,6 +87,8 @@ type Props = {
   isNew: boolean;
   /** False on the live site until file storage exists (D-077): delivery by link only. */
   fileUploadReady: boolean;
+  /** Order bump settings and the products that can be offered (D-089). */
+  bump: { initial: BumpSettings; candidates: BumpCandidate[] };
 };
 
 /**
@@ -93,7 +97,7 @@ type Props = {
  * and then publishes, so nothing typed is lost. The whole form is one JSON payload; the server
  * cleans and validates every field again and checks the publish rules on the saved product.
  */
-export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew, fileUploadReady }: Props) {
+export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew, fileUploadReady, bump }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSetup = searchParams.get("from") === "setup";
@@ -130,8 +134,9 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
       }
       set("status", status);
       setNotice({ kind: "success", text: status === "published" ? "Published. Buyers will see it once your store page is live." : status === "archived" ? "Archived." : "Back to draft." });
-      if (status === "published" && fromSetup) {
-        router.push("/dashboard/setup?step=connect-payments");
+      if (status === "published") {
+        // Published: back to the products list (D-087), or to the next setup step from the wizard.
+        router.push(fromSetup ? "/dashboard/setup?step=connect-payments" : PUBLISHED_HREF);
         return;
       }
       router.refresh();
@@ -149,9 +154,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
     } else if (state?.ok && state.data.published) {
       set("status", "published");
       setNotice({ kind: "success", text: "Published. Buyers will see it once your store page is live." });
-      if (fromSetup) {
-        router.push("/dashboard/setup?step=connect-payments");
-      }
+      router.push(fromSetup ? "/dashboard/setup?step=connect-payments" : PUBLISHED_HREF);
     } else if (state?.ok && goAfterSave) {
       open(goAfterSave);
     }
@@ -427,6 +430,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
                 errorFor={(index) => fieldError(`question-${index}`)}
                 listError={fieldError("questions")}
               />
+              <BumpSection productId={values.id} currency={currency} initial={bump.initial} candidates={bump.candidates} />
             </>
           )}
 

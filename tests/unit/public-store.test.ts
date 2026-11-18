@@ -108,6 +108,28 @@ describe("public store reads", () => {
     for (const key of PRIVATE_KEYS) expect(product).not.toHaveProperty(key);
     expect(await findPublicProduct("s1", "Bad Slug!")).toBeNull();
   });
+
+  it("shows a coaching call's length but never its meeting link or hours (D-087)", async () => {
+    db.productFindOne.mockResolvedValue({
+      _id: "c1",
+      slug: "call",
+      title: "Portfolio review",
+      description: null,
+      coverUrl: null,
+      priceCents: 0,
+      salePriceCents: null,
+      buttonText: "Book a call",
+      type: "coaching",
+      coaching: { durationMinutes: 45, meetingUrl: "https://zoom.us/j/secret", weekly: [], timeZone: "UTC" },
+    });
+    const product = await findPublicProduct("s1", "call");
+    expect(product?.coaching).toEqual({ durationMinutes: 45 });
+    expect(JSON.stringify(product)).not.toContain("zoom.us");
+    const options = db.productFindOne.mock.calls.at(-1)?.[1] as { projection: Record<string, number> };
+    expect(options.projection).toHaveProperty("coaching.durationMinutes");
+    expect(options.projection).not.toHaveProperty("coaching.meetingUrl");
+    expect(options.projection).not.toHaveProperty("coaching");
+  });
 });
 
 describe("price label (D-047)", () => {

@@ -130,7 +130,8 @@ describe("creator queries are scoped to the store (ownership)", () => {
       expect(first?.$match?.storeId).toBe("store-1");
     }
     expect(db.distinct.mock.calls[0]?.[1]).toMatchObject({ storeId: "store-1", status: "paid", currency: "usd" });
-    expect(db.countDocuments).toHaveBeenCalledWith({ storeId: "store-1", status: "paid" });
+    // Bump orders (D-089) are left out: their money is in the parent order.
+    expect(db.countDocuments).toHaveBeenCalledWith({ storeId: "store-1", status: "paid", bumpOf: null });
   });
 
   it("customers only come from paid orders", async () => {

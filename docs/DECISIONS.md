@@ -4,6 +4,73 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-089: Order bumps (Phase 2)
+- **Date:** 2026-11-18
+- **Decision (founder approved the plan 2026-11-18):** a product can offer one other product of the same store at checkout. The buyer ticks it and pays once.
+- **Settings:** an "Order bump" section on each product, in the Checkout form step of a digital product or the Publish step of a course or coaching call:
+  - an on/off switch, the product to offer (a digital product or course of the store, not itself), an offer price above Stripe's minimum, and an optional headline (cleaned, 120 characters at most);
+  - saved on its own (`saveBumpAction` → `ProductDoc.bump`), scoped to the session owner's store, and the target must be that store's;
+  - the Marketing page's card now points there.
+- **Checkout:**
+  - The offer shows only when the bump product is still published in the store (`findCheckoutBump`). A tick sends `addBump`.
+  - `startCheckout` reloads the bump from the database and adds the price saved on the product to the subtotal and total; the main item keeps its own price.
+  - A coupon applies to the main product only.
+  - Stripe gets one amount (direct charge, no application fee), and the payment page title reads "Main + Bump".
+  - The order records `bump` (product, title, price).
+- **Delivery:**
+  - When the order is paid (only through the payment path), `createBumpOrder` makes one $0 order for the bump product (`bumpOf` = parent; unique index, safe on replays) and sends its own access email. So the bump reaches the library, downloads and course access unchanged.
+  - A full refund of the parent also refunds the bump order, which removes access.
+- **Counting once:** creator lists, customers, exports and income leave out `bumpOf` orders (`NOT_BUMP` in `lib/orders/creator-queries.ts`). The parent order carries the money, and its drawer lists the main product and the bump separately.
+- **Schema:** `ProductDoc.bump`, `OrderDoc.bump`, `OrderDoc.bumpOf`, and a unique partial index `orders_bump_of_unique`. No migration.
+- **Known limits:**
+  - The checkout's coupon preview total does not include a ticked bump; the server's amount does.
+  - A coaching call cannot be the bump, because it needs a booked time.
+  - One bump per product.
+- **Why:** PRD section 9, Phase 2.
+
+## D-088: Coupons (Phase 2)
+- **Date:** 2026-11-18
+- **Decision (founder approved the plan 2026-11-18):** creators make discount codes on the Marketing page; buyers enter them at checkout. Coupons are available on every plan, including the trial.
+- **Coupon** (`CouponDoc`):
+  - a code, unique per store ignoring case;
+  - a percentage (1 to 100) or a fixed amount in the store currency;
+  - every product, or chosen products of the store;
+  - an optional total-use limit, an optional end date (end of the creator's day), and "one use per buyer email";
+  - an on/off switch.
+- **Checkout:**
+  - "Have a discount code?" → Apply calls `previewCoupon` (rate limited, 20 tries per 15 minutes per visitor) and shows the saving and the new total. Information only.
+  - `startCheckout` finds the code in that store, checks it, and computes the amount from the database: the coupon comes off the price the buyer would pay, after any sale price. A total above 0 but below Stripe's minimum charge is refused. A 100% coupon goes through the free path.
+  - The order records `coupon` (id, code, discount), and its discount is part of `discountCents`.
+- **No over-use:**
+  - At order creation one use is held with a single atomic update (active, unexpired, under its limit). A once-per-email code also needs a free unique `activeEmailKey`.
+  - A failed or expired payment (`payment.failed`, `markOrderFailed`) gives the use back.
+  - A paid order, through the verified webhook, mock or free path only, marks it redeemed.
+  - A refund keeps the use counted.
+  - Tested on a real MongoDB with 8 buyers against a 3-use limit.
+- **Payments:** unchanged. The `PaymentProvider` charges the server's lower amount as a direct charge with no application fee; no Stripe coupon objects are used.
+- **Creator side:** the order drawer shows the code and its discount. All coupon reads and writes filter by the session owner's store, and a coupon can only name that store's products.
+- **Schema:** new collections `coupons` (unique `storeId + codeKey`) and `couponRedemptions` (unique `orderId`; unique partial `activeEmailKey`), plus `OrderDoc.coupon`. No migration.
+- **Not in this part:**
+  - Editing or deleting a coupon: turn it off and make a new one.
+  - A coupon column in the CSV export.
+  - Order bumps, which come next as their own part.
+- **Why:** PRD section 9, Phase 2.
+
+## D-087: Pre-QA fixes: Customize design, prerender errors, coaching wording, locks, publish redirect
+- **Date:** 2026-11-18
+- **Decision (founder report before handing the site to a QA tester):**
+  - **"Customize design" did nothing** while My Store was open: the tabs read `?tab=` only on first load. `MyStoreTabs` now follows the URL (state adjusted while rendering), and the button and command menu open `/dashboard?tab=design#my-store-tabs`.
+  - **Prerender errors (red dev "Issue"):** `findPublicStore`, `loadCheckoutContext` and `findPendingMockOrder` now call `await connection()` before the database is touched (the driver reads the clock, which Next refuses while prerendering). This affected the store, product, checkout, thank-you and mock-pay pages. The old `/dashboard/store` redirect page sets `instant = false`.
+  - **Coaching on buyer pages:**
+    - Store cards show a calendar icon and "Coaching call · 30 min".
+    - The product page lists what the call is, instead of "Delivered by email", and its default button text is "Book a call".
+    - The thank-you page shows the booked time and calendar steps.
+    - Public products expose only `coaching.durationMinutes`, never the meeting link or the hours (tested).
+  - **Any free product** shows "Free" on its product page.
+  - **Settings sub-nav:** Store and Payments show a lock and are not links while setup is incomplete (D-079).
+  - **After publishing**, the digital, course and coaching editors go to `/dashboard/products?published=1`, which shows a "Published" message; from the setup wizard they still go to the next setup step.
+- **Why:** founder request, 2026-11-18.
+
 ## D-086: Coaching calls, part K5: calls list and cancel with refund
 - **Date:** 2026-11-18
 - **Decision:**

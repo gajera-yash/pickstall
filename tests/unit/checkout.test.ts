@@ -19,6 +19,8 @@ const hoisted = vi.hoisted(() => {
     },
     providerForStore: vi.fn(),
     markFreeOrderPaid: vi.fn(),
+    bumps: { findCheckoutBump: vi.fn(async (): Promise<unknown> => null), createBumpOrder: vi.fn(async () => null), refundBumpOrder: vi.fn() },
+    coupons: { findCouponByCode: vi.fn(async (): Promise<unknown> => null), holdCoupon: vi.fn(async (): Promise<string> => "held"), releaseCouponForOrder: vi.fn(), redeemCouponForOrder: vi.fn() },
     bookings: { busyTimesForStore: vi.fn<(storeId: string) => Promise<{ start: Date; end: Date }[]>>(async () => []), holdSlot: vi.fn(async () => "held"), confirmBookingForOrder: vi.fn(async () => null), releaseBookingForOrder: vi.fn() },
   };
 });
@@ -40,6 +42,8 @@ vi.mock("@/lib/db/collections", () => ({
 vi.mock("@/lib/orders/queries", () => hoisted.queries);
 // Coaching bookings (D-083) have their own integration tests on a real MongoDB.
 vi.mock("@/lib/coaching/bookings", () => hoisted.bookings);
+vi.mock("@/lib/coupons/queries", () => hoisted.coupons);
+vi.mock("@/lib/bumps/queries", () => hoisted.bumps);
 vi.mock("@/lib/coaching/calls", () => ({ cancelBookingOfRefundedOrder: vi.fn(async () => undefined) }));
 vi.mock("@/lib/payments", async () => {
   const actual = await vi.importActual<typeof import("@/lib/payments")>("@/lib/payments");
@@ -287,6 +291,68 @@ describe("startCheckout", () => {
     expect(await startCheckout("maya", "playbook", null, form())).toMatchObject({ ok: false });
     expect(hoisted.queries.createPendingOrder).not.toHaveBeenCalled();
   });
+  describe("an order bump (D-089)", () => {
+    const bump = { productId: "b1", title: "Workbook", coverUrl: null, priceCents: 900, headline: null };
+
+    it("adds the bump at the price saved on the product, only when ticked", async () => {
+      hoisted.queries.loadCheckoutContext.mockResolvedValue({ ...context, product: { ...context.product, bump: { productId: "b1", priceCents: 900, headline: null } } });
+      hoisted.bumps.findCheckoutBump.mockResolvedValueOnce(bump);
+      await redirectOf(() => startCheckout("maya", "playbook", null, form({ addBump: "on", bumpPrice: "1" })));
+      expect(hoisted.bumps.findCheckoutBump).toHaveBeenCalledWith("store-1", { productId: "b1", priceCents: 900, headline: null });
+      expect(hoisted.queries.createPendingOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ item: { title: "Playbook", unitPriceCents: 1900 }, subtotalCents: 2800, discountCents: 0, totalCents: 2800, bump: { productId: "b1", title: "Workbook", priceCents: 900 } }),
+      );
+      expect(provider.createCheckout).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 2800, title: "Playbook + Workbook" }));
+    });
+
+    it("charges no bump when it is not ticked, or no longer available", async () => {
+      await redirectOf(() => startCheckout("maya", "playbook", null, form()));
+      expect(hoisted.bumps.findCheckoutBump).not.toHaveBeenCalled();
+      hoisted.bumps.findCheckoutBump.mockResolvedValueOnce(null);
+      await redirectOf(() => startCheckout("maya", "playbook", null, form({ addBump: "on" })));
+      expect(hoisted.queries.createPendingOrder).toHaveBeenLastCalledWith(expect.objectContaining({ totalCents: 1900 }));
+      expect(hoisted.queries.createPendingOrder.mock.lastCall?.[0]).not.toHaveProperty("bump");
+    });
+  });
+
+  describe("a coupon (D-088)", () => {
+    const coupon = { _id: "c1", code: "SAVE20", kind: "percent", percentOff: 20, amountOffCents: null, active: true, expiresAt: null, productIds: null, maxRedemptions: null, redemptionCount: 0 };
+
+    it("charges the price minus the coupon, computed from the database, and holds a use", async () => {
+      hoisted.coupons.findCouponByCode.mockResolvedValueOnce(coupon);
+      expect(await redirectOf(() => startCheckout("maya", "playbook", null, form({ couponCode: "save20", totalCents: "1" })))).toBe("/mock-pay/order-1");
+      expect(hoisted.coupons.findCouponByCode).toHaveBeenCalledWith("store-1", "save20");
+      expect(hoisted.queries.createPendingOrder).toHaveBeenCalledWith(expect.objectContaining({ subtotalCents: 1900, discountCents: 380, totalCents: 1520, coupon: { couponId: "c1", code: "SAVE20", discountCents: 380 } }));
+      expect(provider.createCheckout).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 1520 }));
+      expect(hoisted.coupons.holdCoupon).toHaveBeenCalledWith({ storeId: "store-1", couponId: "c1", orderId: "order-1", email: "maya@example.com" });
+    });
+
+    it("refuses an unknown, expired or other-product code without an order", async () => {
+      expect(await startCheckout("maya", "playbook", null, form({ couponCode: "NOPE" }))).toMatchObject({ ok: false, field: "couponCode" });
+      hoisted.coupons.findCouponByCode.mockResolvedValueOnce({ ...coupon, expiresAt: new Date("2000-01-01") });
+      expect(await startCheckout("maya", "playbook", null, form({ couponCode: "SAVE20" }))).toMatchObject({ ok: false, error: "This code has expired." });
+      hoisted.coupons.findCouponByCode.mockResolvedValueOnce({ ...coupon, productIds: ["other"] });
+      expect(await startCheckout("maya", "playbook", null, form({ couponCode: "SAVE20" }))).toMatchObject({ ok: false, field: "couponCode" });
+      expect(hoisted.queries.createPendingOrder).not.toHaveBeenCalled();
+    });
+
+    it("drops the order when the code was used up or already used by this email", async () => {
+      hoisted.coupons.findCouponByCode.mockResolvedValueOnce(coupon);
+      hoisted.coupons.holdCoupon.mockResolvedValueOnce("already_used");
+      hoisted.queries.markOrderFailed.mockResolvedValueOnce(undefined);
+      expect(await startCheckout("maya", "playbook", null, form({ couponCode: "SAVE20" }))).toMatchObject({ ok: false, error: "You have already used this code." });
+      expect(hoisted.queries.markOrderFailed).toHaveBeenCalledWith("order-1");
+      expect(provider.createCheckout).not.toHaveBeenCalled();
+    });
+
+    it("sends a 100% coupon through the free path", async () => {
+      hoisted.coupons.findCouponByCode.mockResolvedValueOnce({ ...coupon, percentOff: 100 });
+      hoisted.providerForStore.mockReturnValue(null);
+      expect(await redirectOf(() => startCheckout("maya", "playbook", null, form({ couponCode: "SAVE20" })))).toBe("/@maya/playbook/thank-you?order=order-1");
+      expect(hoisted.queries.createPendingOrder).toHaveBeenCalledWith(expect.objectContaining({ totalCents: 0, provider: "free" }));
+    });
+  });
+
   describe("a coaching call (D-083)", () => {
     // Mondays 09:00 to 11:00 UTC, 30-minute calls, no notice, booking up to 90 days ahead.
     const coaching = { ...context, product: { ...context.product, type: "coaching", checkout: { headline: null, askPhone: false, questions: [] }, coaching: { durationMinutes: 30, timeZone: "UTC", weekly: [{ day: 1, start: "09:00", end: "11:00" }], bufferMinutes: 0, minNoticeHours: 0, bookingWindowDays: 90 } } };

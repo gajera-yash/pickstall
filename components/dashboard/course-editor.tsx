@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
+import { BumpSection, type BumpCandidate, type BumpSettings } from "@/components/dashboard/bump-section";
 import { ConfirmationEmailFields } from "@/components/dashboard/confirmation-email-fields";
 import { CurriculumBuilder } from "@/components/dashboard/curriculum-builder";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
@@ -37,6 +38,7 @@ import {
 } from "@/lib/courses/editor-steps";
 import { COURSE_CATEGORIES, COURSE_CATEGORY_LABELS, COURSE_LIMITS, accessLabel, type CourseCategory } from "@/lib/courses/settings";
 import { safeImageSrc } from "@/lib/media/media";
+import { PUBLISHED_HREF } from "@/lib/products/create-errors";
 import { changeProductStatus, removeProduct } from "@/lib/products/actions";
 import { parseMoneyToCents } from "@/lib/products/money";
 import { savingPercent, type Priced } from "@/lib/products/pricing";
@@ -86,6 +88,8 @@ type Props = {
   videoUploadReady: boolean;
   /** False on the live site until file storage exists (D-077). */
   fileUploadReady: boolean;
+  /** Order bump settings and the products that can be offered (D-089). */
+  bump: { initial: BumpSettings; candidates: BumpCandidate[] };
 };
 
 /**
@@ -93,7 +97,7 @@ type Props = {
  * 2 Pricing, 3 Curriculum, 4 Publish, beside a live card preview. Steps 1 and 2 save as one JSON
  * payload that the server checks again; the curriculum builder (G2) and publishing (G3) follow.
  */
-export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum: initialCurriculum, videoUploadReady, fileUploadReady }: Props) {
+export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum: initialCurriculum, videoUploadReady, fileUploadReady, bump }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSetup = searchParams.get("from") === "setup";
@@ -125,8 +129,9 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
       }
       set("status", status);
       setSuccess(status === "published" ? "Published. Students can buy it once your store page is live." : "Back to draft. It is hidden from your store.");
-      if (status === "published" && fromSetup) {
-        router.push("/dashboard/setup?step=connect-payments");
+      if (status === "published") {
+        // Published: back to the products list (D-087), or to the next setup step from the wizard.
+        router.push(fromSetup ? "/dashboard/setup?step=connect-payments" : PUBLISHED_HREF);
         return;
       }
       router.refresh();
@@ -449,6 +454,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
           {step === "publish" && (
             <>
               <StepHeading title="Publish" body="How the course opens for students, a look at the student view, then publish." />
+              <BumpSection productId={values.id} currency={currency} initial={bump.initial} candidates={bump.candidates} />
               <ReleaseSection courseId={values.id} drip={values.drip} modules={curriculum.modules} onSaved={(drip, modules) => (set("drip", drip), setCurriculum({ modules }))} />
               <ConfirmationEmailFields
                 subject={values.emailSubject}

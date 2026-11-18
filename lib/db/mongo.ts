@@ -69,6 +69,12 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("bookings").createIndex({ activeSlot: 1 }, { unique: true, partialFilterExpression: { activeSlot: { $type: "string" } }, name: "bookings_active_slot_unique" }),
     db.collection("bookings").createIndex({ orderId: 1 }, { unique: true, name: "bookings_order_unique" }),
     db.collection("bookings").createIndex({ storeId: 1, start: 1 }, { name: "bookings_store_start" }),
+    // Coupons (D-088): one code per store ignoring case; one use per order; one active use per email when asked.
+    db.collection("coupons").createIndex({ storeId: 1, codeKey: 1 }, { unique: true, name: "coupons_store_code_unique" }),
+    db.collection("couponRedemptions").createIndex({ orderId: 1 }, { unique: true, name: "coupon_redemptions_order_unique" }),
+    db.collection("couponRedemptions").createIndex({ activeEmailKey: 1 }, { unique: true, partialFilterExpression: { activeEmailKey: { $type: "string" } }, name: "coupon_redemptions_email_unique" }),
+    // Order bumps (D-089): at most one bump order per parent order.
+    db.collection("orders").createIndex({ bumpOf: 1 }, { unique: true, partialFilterExpression: { bumpOf: { $type: "string" } }, name: "orders_bump_of_unique" }),
     // Better Auth collections (it does not create indexes for MongoDB itself).
     db.collection("user").createIndex({ email: 1 }, { unique: true, name: "user_email_unique" }),
     db.collection("session").createIndex({ token: 1 }, { unique: true, name: "session_token_unique" }),
