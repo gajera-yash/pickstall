@@ -3,7 +3,7 @@ import { z } from "zod";
 import { COURSE_CATEGORIES, COURSE_LIMITS } from "@/lib/courses/settings";
 import { parseMoneyToCents } from "@/lib/products/money";
 import { isEmptyDoc, plainTextOf, richDocSchema } from "@/lib/products/rich-text";
-import { PRODUCT_LIMITS, discountProblem, moneyField, text } from "@/lib/products/schemas";
+import { PRODUCT_LIMITS, discountProblem, emailText, moneyField, text } from "@/lib/products/schemas";
 import { cleanText } from "@/lib/products/text";
 import { imageField } from "@/lib/stores/schemas";
 
@@ -35,6 +35,9 @@ export const courseDetailsInputFor = (currency: string) =>
       salePrice: z.string().max(20),
       access: z.enum(["lifetime", "days"], { error: "Pick how long buyers keep access." }),
       accessDays: z.string().max(10),
+      // Confirmation email (D-078), the same rules as a digital product's.
+      emailSubject: emailText(PRODUCT_LIMITS.emailSubject, "Email subject"),
+      emailBody: emailText(PRODUCT_LIMITS.emailBody, "Email message", { multiline: true }),
     })
     .transform((input, ctx) => {
       // Free courses cost 0 and have no discount; paid ones need a price above 0 within Stripe's limits.
@@ -81,6 +84,8 @@ export const courseDetailsInputFor = (currency: string) =>
         priceCents,
         salePriceCents,
         course: { category: input.category === "" ? null : input.category, tags: input.tags, accessDays },
+        emailSubject: input.emailSubject ?? null,
+        emailBody: input.emailBody ?? null,
       };
     });
 

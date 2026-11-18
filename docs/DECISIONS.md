@@ -4,6 +4,13 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-078: Courses get the creator's confirmation email
+- **Date:** 2026-11-18
+- **Decision (founder request):** the course editor's Publish step has the same "Confirmation email" box as digital products: an optional subject and message with `{{customer_name}}`, `{{product_title}}` and `{{download_link}}` (for a course, the link where the student creates a password and opens the course). One shared component (`ConfirmationEmailFields`) is used by both editors.
+- **How it saves:** the email is part of the course details payload, so "Save and publish" and every course save keep it; a "Save email" button saves it on a course that is already published. The server checks it with the same `emailText` rules as digital products (only the three variables, 120 / 2,000 characters, no HTML) and writes only `afterPurchase.emailSubject` and `afterPurchase.emailBody` (dotted paths) on the session store's own course.
+- **Sending:** unchanged. `sendOrderConfirmation` already used the product's saved subject and message for any product type; the store name and access link are always added. No schema change: course documents already have `afterPurchase` (older ones get it on their next save).
+- **Why:** founder request, 2026-11-18.
+
 ## D-077: Images in MongoDB; file uploads off on the live site (founder decision)
 - **Date:** 2026-11-17
 - **Decision:**

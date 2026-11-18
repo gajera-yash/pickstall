@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 
+import { ConfirmationEmailFields } from "@/components/dashboard/confirmation-email-fields";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { ProductFileField } from "@/components/dashboard/product-file-field";
@@ -460,25 +461,13 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
               <Field id="redirectUrl" label="Redirect after purchase (optional)" error={fieldError("redirectUrl")} hint="Send buyers to your own page instead. Must start with https://">
                 <Input id="redirectUrl" type="url" inputMode="url" value={values.redirectUrl} onChange={(event) => set("redirectUrl", event.target.value)} placeholder="https://" aria-invalid={!!fieldError("redirectUrl")} />
               </Field>
-              <div className="flex flex-col gap-4 rounded-md border border-line p-4">
-                <div className="flex flex-col gap-1">
-                  <p className="font-semibold">Confirmation email</p>
-                  <p className="text-sm text-mute">You can use these variables. The access link and your store name are always included.</p>
-                  <ul className="flex flex-wrap gap-2 pt-1">
-                    {["{{customer_name}}", "{{product_title}}", "{{download_link}}"].map((variable) => (
-                      <li key={variable}>
-                        <code className="rounded-sm bg-bg-subtle px-2 py-1 font-mono text-xs text-ink">{variable}</code>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <Field id="emailSubject" label="Subject (optional)" error={fieldError("emailSubject")} hint={`${values.emailSubject.length}/${PRODUCT_LIMITS.emailSubject}`}>
-                  <Input id="emailSubject" value={values.emailSubject} maxLength={PRODUCT_LIMITS.emailSubject} onChange={(event) => set("emailSubject", event.target.value)} placeholder="Your {{product_title}} is ready" />
-                </Field>
-                <Field id="emailBody" label="Message (optional)" error={fieldError("emailBody")} hint={`${values.emailBody.length}/${PRODUCT_LIMITS.emailBody}`}>
-                  <Textarea id="emailBody" rows={5} value={values.emailBody} maxLength={PRODUCT_LIMITS.emailBody} onChange={(event) => set("emailBody", event.target.value)} placeholder={"Hi {{customer_name}},\n\nThanks for buying {{product_title}}. Get it here: {{download_link}}"} />
-                </Field>
-              </div>
+              <ConfirmationEmailFields
+                subject={values.emailSubject}
+                body={values.emailBody}
+                onSubject={(value) => set("emailSubject", value)}
+                onBody={(value) => set("emailBody", value)}
+                fieldError={fieldError}
+              />
 
               <Accordion type="single" collapsible className="rounded-md border border-line">
                 <AccordionItem value="more">
