@@ -1,5 +1,6 @@
 import { ImageIcon } from "lucide-react";
 
+import { SummaryTotal } from "@/components/store/checkout-totals";
 import { borderColor, type StoreTheme } from "@/components/store/store-theme";
 import { formatMoney } from "@/lib/products/money";
 import { discountCentsOf, payableCents, type Priced } from "@/lib/products/pricing";
@@ -26,11 +27,10 @@ export function ProductThumb({ product, theme, className = "size-16" }: { produc
  * Order summary on the checkout page (D-069): the product, its regular price, the discount and the
  * total. Information only: the server recomputes the amount from the product when the order starts.
  */
-export function OrderSummary({ product, storeName, currency, theme }: { product: SummaryProduct; storeName: string; currency: string; theme: StoreTheme }) {
+export function OrderSummary({ product, storeName, currency, theme, bump = null }: { product: SummaryProduct; storeName: string; currency: string; theme: StoreTheme; bump?: { title: string; priceCents: number } | null }) {
   const { preset } = theme;
   const total = payableCents(product);
   const discount = discountCentsOf(product);
-  const money = (cents: number) => (cents === 0 ? "Free" : formatMoney(cents, currency));
 
   return (
     <section aria-labelledby="order-summary" className="flex flex-col gap-4">
@@ -59,10 +59,8 @@ export function OrderSummary({ product, storeName, currency, theme }: { product:
             </div>
           </>
         )}
-        <div className="flex items-baseline justify-between gap-3 border-t pt-3" style={{ borderColor: borderColor(preset) }}>
-          <dt className="font-semibold">Total</dt>
-          <dd className="font-display text-money-m">{money(total)}</dd>
-        </div>
+        {/* The coupon and bump lines and the total follow the checkout form (D-090). */}
+        <SummaryTotal baseTotalCents={total} currency={currency} bump={bump} mutedColor={preset.muted} lineColor={borderColor(preset)} />
       </dl>
     </section>
   );

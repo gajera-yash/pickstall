@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getDb } from "@/lib/db/mongo";
+import { ensureConnected, mongoDb } from "@/lib/db/mongo";
 
 // Health check (D-075) for an uptime monitor: is the app up, and can it reach the database?
 // The answer carries no versions, hosts or error text.
@@ -24,7 +24,11 @@ export async function checkHealth(ping: () => Promise<unknown> = pingDatabase, t
   }
 }
 
+/**
+ * Connects and pings, without waiting for the app's index setup (getDb), which can take seconds on
+ * the first request after a deploy and made the check report a false "unreachable" (D-090).
+ */
 async function pingDatabase(): Promise<unknown> {
-  const db = await getDb();
-  return db.command({ ping: 1 });
+  await ensureConnected();
+  return mongoDb.command({ ping: 1 });
 }

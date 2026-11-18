@@ -77,3 +77,13 @@ describe("creator coupon form", () => {
     expect(result.error?.issues[0]?.path[0]).toBe(field);
   });
 });
+
+describe("checkout summary total (D-090)", () => {
+  it("follows an applied coupon and a ticked bump", async () => {
+    const { summaryTotalCents } = await import("@/components/store/checkout-totals");
+    expect(summaryTotalCents(150000, null, null)).toBe(150000);
+    expect(summaryTotalCents(150000, { totalCents: 135000 }, null)).toBe(135000);
+    expect(summaryTotalCents(150000, { totalCents: 135000 }, 90000)).toBe(225000);
+    expect(summaryTotalCents(0, null, 90000)).toBe(90000);
+  });
+});

@@ -20,7 +20,7 @@ const MARKETING_PATH = "/dashboard/marketing";
 /** Coupon checks per visitor: enough to fix a typo, too few to guess codes (CLAUDE.md 8). */
 const PREVIEW_LIMIT = { max: 20, windowMinutes: 15 } as const;
 
-export type CouponPreview = { code: string; label: string; discount: string; total: string; free: boolean };
+export type CouponPreview = { code: string; label: string; discount: string; total: string; free: boolean; discountCents: number; totalCents: number };
 
 /**
  * Checks a code at checkout and shows the new total (D-088). Information only: `startCheckout`
@@ -49,6 +49,8 @@ export async function previewCoupon(username: string, productSlug: string, rawCo
       discount: formatMoney(discount, currency),
       total: amount.totalCents === 0 ? "Free" : formatMoney(amount.totalCents, currency),
       free: amount.totalCents === 0,
+      discountCents: discount,
+      totalCents: amount.totalCents,
     });
   } catch (error) {
     logger.error("coupons.preview_failed", { name: error instanceof Error ? error.name : undefined });

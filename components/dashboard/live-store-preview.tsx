@@ -4,6 +4,7 @@ import { Monitor, Smartphone } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { StorePage } from "@/components/store/store-page";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { PublicProduct, PublicStore } from "@/lib/stores/public";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,15 @@ export function LiveStorePreview({ store, products, maxHeight, className }: { st
         </ToggleGroupItem>
       </ToggleGroup>
       <div ref={box} aria-hidden="true" className="relative w-full overflow-hidden rounded-lg border border-line bg-bg-subtle" style={{ height: height || 240 }}>
+        {/* Until the box is measured (after the page's script loads), a placeholder instead of a blank box (D-090). */}
+        {scale === 0 && (
+          <div className="absolute inset-0 flex flex-col items-center gap-3 p-6">
+            <Skeleton className="size-14 rounded-full" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-40" />
+            <Skeleton className="mt-2 h-24 w-full rounded-md" />
+          </div>
+        )}
         <div
           ref={page}
           inert

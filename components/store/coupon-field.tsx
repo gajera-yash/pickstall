@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useCheckoutTotals } from "@/components/store/checkout-totals";
 import { previewCoupon, type CouponPreview } from "@/lib/coupons/actions";
 
 /**
@@ -19,6 +20,7 @@ export function CouponField({ username, productSlug, serverError }: { username: 
   const [applied, setApplied] = useState<CouponPreview | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const totals = useCheckoutTotals();
 
   const apply = () => {
     setProblem(null);
@@ -27,9 +29,11 @@ export function CouponField({ username, productSlug, serverError }: { username: 
       if (!result.ok) {
         setProblem(result.error);
         setApplied(null);
+        totals?.setCoupon(null);
         return;
       }
       setApplied(result.data);
+      totals?.setCoupon({ code: result.data.code, discountCents: result.data.discountCents, totalCents: result.data.totalCents });
     });
   };
 
@@ -46,10 +50,11 @@ export function CouponField({ username, productSlug, serverError }: { username: 
               {applied.code} · {applied.label}
             </span>
             <span className="text-mute">
-              You save {applied.discount}. New total: <span className="font-semibold text-ink">{applied.total}</span>
+              {/* The order summary shows the new total, with an order bump if ticked (D-090). */}
+              You save {applied.discount}.
             </span>
           </span>
-          <Button type="button" variant="ghost" size="icon-sm" onClick={() => (setApplied(null), setCode(""))} aria-label={`Remove code ${applied.code}`}>
+          <Button type="button" variant="ghost" size="icon-sm" onClick={() => (setApplied(null), setCode(""), totals?.setCoupon(null))} aria-label={`Remove code ${applied.code}`}>
             <X aria-hidden="true" className="size-4" />
           </Button>
         </div>
