@@ -4,6 +4,25 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-086: Coaching calls, part K5: calls list and cancel with refund
+- **Date:** 2026-11-18
+- **Decision:**
+  - **Upcoming calls** card at the top of Orders (`components/dashboard/upcoming-calls.tsx`), shown only when the store has calls. It lists confirmed calls still ahead and every "conflict" ("Needs a new time"), soonest first, in the coach's time zone. A row opens the order drawer.
+  - **Order drawer, "Call" section:** the time, the booking state, and for a paid order with a confirmed or conflict call, **"Cancel call and refund"** (or "Cancel call" for a free one), behind a confirmation dialog.
+  - **`cancelCall` action** (`lib/coaching/call-actions.ts`): uses the session owner's store only and is rate limited with the refund limit.
+    - A paid call is refunded in full **first**, through the same path as the Refund button. That path moved into the server-only `requestFullRefund` (`lib/orders/refunds.ts`), which `refundOrder` now calls too; its behaviour is unchanged, so there is still one refund path and the Stripe idempotency key per order.
+    - Only once the provider accepts the refund is the booking set to `cancelled`. That frees the time; reminders skip it because they check the booking first.
+    - The buyer then gets a "Your call was cancelled" email (once, outbox kind `call-cancelled`).
+    - If the refund fails, the call is kept. A free call is just cancelled.
+  - **Refund from anywhere cancels the call:** a verified full refund event (from the drawer or the Stripe Dashboard) also cancels the booking (`cancelBookingOfRefundedOrder` in the payment path).
+  - **Buyer's library:** a cancelled call says the coach cancelled it and whether it was refunded.
+  - **Schema:** `BookingDoc.status` adds `"cancelled"` (with `cancelledAt`), and `EmailOutboxDoc.kind` adds `"call-cancelled"`. No migration.
+- **Not in K5:**
+  - Rescheduling, by the buyer or the coach (founder: later).
+  - A creator email for new bookings: the creator still gets the in-app "New sale" notification.
+  - A full calls history page: past calls stay in Orders.
+- **Why:** plan part K5 (D-081).
+
 ## D-085: Coaching call reminders through Inngest
 - **Date:** 2026-11-18
 - **Decision (founder chose Inngest, free plan, 2026-11-18):**
