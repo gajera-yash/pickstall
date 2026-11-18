@@ -53,6 +53,9 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
       access: product.course?.accessDays ? "days" : "lifetime",
       accessDays: product.course?.accessDays ? String(product.course.accessDays) : "",
       drip: product.course?.drip ?? false,
+      // Courses saved before D-078 may have no afterPurchase yet.
+      emailSubject: product.afterPurchase?.emailSubject ?? "",
+      emailBody: product.afterPurchase?.emailBody ?? "",
     };
     const curriculum = (await loadCurriculum(store.id, product._id)) ?? { modules: [] };
     return <CourseEditor initial={course} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} curriculum={curriculum} videoUploadReady={bunnyConfig() !== null} fileUploadReady={fileUploadReady} />;

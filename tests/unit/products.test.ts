@@ -349,4 +349,11 @@ describe("product actions use the session owner's store only", () => {
     queries.createDraftProduct.mockResolvedValue("limit");
     expect(await redirectOf(() => createProductAndEdit())).toBe("/dashboard/products?error=limit");
   });
+
+  it("sends problems from the setup wizard back to its product step, not the locked products list (D-079)", async () => {
+    queries.createDraftProduct.mockResolvedValue("limit");
+    const fromSetup = new FormData();
+    fromSetup.set("from", "setup");
+    expect(await redirectOf(() => createProductAndEdit(fromSetup))).toBe("/dashboard/setup?step=first-product&error=limit");
+  });
 });

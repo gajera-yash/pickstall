@@ -144,6 +144,13 @@ export async function markRefundRequested(storeId: string, orderId: string): Pro
   await orders.updateOne({ _id: orderId, storeId }, { $set: { refundRequestedAt: new Date() } });
 }
 
+/** True when the store has at least one paid or refunded order (D-079: such a store is never locked). */
+export async function storeHasOrders(storeId: string): Promise<boolean> {
+  const { orders } = await collections();
+  const order = await orders.findOne({ storeId, status: { $in: ["paid", "refunded"] } }, { projection: { _id: 1 } });
+  return order !== null;
+}
+
 export async function countOrdersByStatus(storeId: string): Promise<Record<OrderStatusFilter, number>> {
   const { orders } = await collections();
   const rows = await orders.aggregate<{ _id: OrderStatusFilter; count: number }>([{ $match: { storeId } }, { $group: { _id: "$status", count: { $sum: 1 } } }]).toArray();

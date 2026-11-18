@@ -9,14 +9,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { requireCreator } from "@/lib/auth/guards";
+import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
+import { productCreateError } from "@/lib/products/create-errors";
 import { listProducts } from "@/lib/products/queries";
-
-const ERRORS: Record<string, string> = {
-  limit: "You have reached the product limit for your store.",
-  slow: "Slow down a little, then try again.",
-  error: "Couldn't create the product. Check your connection and try again.",
-};
 
 // Products (D-030): every product of the store with its price and status.
 export default function ProductsPage({ searchParams }: PageProps<"/dashboard/products">) {
@@ -42,9 +37,9 @@ export default function ProductsPage({ searchParams }: PageProps<"/dashboard/pro
 }
 
 async function ProductsContent({ searchParams }: Pick<PageProps<"/dashboard/products">, "searchParams">) {
-  const [{ store }, params] = await Promise.all([requireCreator("/dashboard/products"), searchParams]);
+  const [{ store }, params] = await Promise.all([requireUnlockedCreator("/dashboard/products"), searchParams]);
   const products = await listProducts(store.id);
-  const error = typeof params.error === "string" ? ERRORS[params.error] : undefined;
+  const error = productCreateError(params.error);
 
   return (
     <>

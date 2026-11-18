@@ -24,7 +24,14 @@ export async function updateCourseDetails(storeId: string, id: string, input: Co
     salePriceCents: input.salePriceCents,
     updatedAt: new Date(),
     // Dotted paths, so saving steps 1-2 never touches the drip setting of step 4.
-    ...({ "course.category": input.course.category, "course.tags": input.course.tags, "course.accessDays": input.course.accessDays } as Partial<ProductDoc>),
+    ...({
+      "course.category": input.course.category,
+      "course.tags": input.course.tags,
+      "course.accessDays": input.course.accessDays,
+      // Only the email fields of afterPurchase (D-078); courses have no thank-you page or redirect.
+      "afterPurchase.emailSubject": input.emailSubject,
+      "afterPurchase.emailBody": input.emailBody,
+    } as Partial<ProductDoc>),
   });
 }
 

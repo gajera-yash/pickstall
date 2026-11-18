@@ -37,14 +37,16 @@ async function allowed(ownerId: string): Promise<boolean> {
 /** Creates an empty draft digital product and opens its editor. */
 export async function createProductAndEdit(formData?: FormData): Promise<void> {
   const { user, store } = await requireCreator("/dashboard/products/new");
-  if (!(await allowed(user.id))) redirect("/dashboard/products?error=slow");
+  const from = formData?.get("from");
+  // From the setup wizard, problems go back there: the products list is locked during setup (D-079).
+  const errorPath = from === "setup" ? "/dashboard/setup?step=first-product&error=" : "/dashboard/products?error=";
+  if (!(await allowed(user.id))) redirect(`${errorPath}slow`);
   const result = await createDraftProduct(store.id, { buttonText: "Buy now" }).catch((error: unknown) => {
     logger.error("products.create_failed", { name: errorName(error) });
     return "error" as const;
   });
-  if (typeof result === "string") redirect(`/dashboard/products?error=${result}`);
+  if (typeof result === "string") redirect(`${errorPath}${result}`);
   revalidatePath("/dashboard", "layout");
-  const from = formData?.get("from");
   const query = from === "setup" ? "?from=setup" : "";
   redirect(`/dashboard/products/${result.id}${query}`);
 }

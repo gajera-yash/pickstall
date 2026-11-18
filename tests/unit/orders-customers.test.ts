@@ -114,6 +114,14 @@ describe("order and customer queries stay inside the store (ownership)", () => {
     expect(page.customers.map((customer) => customer.key)).toEqual(["b"]);
     expect(page.next).toEqual({ at: new Date("2026-10-01T00:00:00Z"), id: "b" });
   });
+  it("checks for orders (D-079 setup lock) only inside the store", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/orders/creator-queries")>("@/lib/orders/creator-queries");
+    db.orders.findOne.mockResolvedValueOnce(null);
+    await expect(actual.storeHasOrders("store-1")).resolves.toBe(false);
+    db.orders.findOne.mockResolvedValueOnce({ _id: ORDER });
+    await expect(actual.storeHasOrders("store-1")).resolves.toBe(true);
+    expect(db.orders.findOne.mock.calls[0]?.[0]).toEqual({ storeId: "store-1", status: { $in: ["paid", "refunded"] } });
+  });
 });
 
 describe("orders CSV", () => {

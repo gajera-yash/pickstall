@@ -4,7 +4,7 @@ import { StoreLinkCard } from "@/components/dashboard/store-link-card";
 import { StoreSetupForm } from "@/components/dashboard/store-setup-form";
 import { UsernameCard } from "@/components/dashboard/username-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { requireCreator } from "@/lib/auth/guards";
+import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { storeLink } from "@/lib/config";
 import { isCurrencyLocked } from "@/lib/stores/currency-lock";
 
@@ -19,7 +19,7 @@ export default function StoreSettingsPage() {
 }
 
 async function StoreSettingsContent() {
-  const { store } = await requireCreator("/dashboard/settings");
+  const { store } = await requireUnlockedCreator("/dashboard/settings");
   const currencyLocked = await isCurrencyLocked(store.id).catch(() => true);
   return (
     <>

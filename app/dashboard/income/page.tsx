@@ -8,7 +8,7 @@ import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { requireCreator } from "@/lib/auth/guards";
+import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { incomeStats, listOrders } from "@/lib/orders/creator-queries";
 import { lastSum, sum } from "@/lib/orders/series";
 import { formatMoney } from "@/lib/products/money";
@@ -44,7 +44,7 @@ function Stat({ label, value, icon: Icon, tone }: { label: string; value: string
 }
 
 async function IncomeContent({ searchParams }: Pick<PageProps<"/dashboard/income">, "searchParams">) {
-  const [{ store }, raw] = await Promise.all([requireCreator("/dashboard/income"), searchParams]);
+  const [{ store }, raw] = await Promise.all([requireUnlockedCreator("/dashboard/income"), searchParams]);
   const requested = Number(typeof raw.days === "string" ? raw.days : "30");
   const days = (RANGES as readonly number[]).includes(requested) ? requested : 30;
 

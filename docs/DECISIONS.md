@@ -4,6 +4,22 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-079: Onboarding screen and a locked dashboard until setup is done
+- **Date:** 2026-11-18
+- **Decision (founder request, reference screenshot):** while setup is incomplete, My Store shows an onboarding screen instead of the full page (supersedes the D-076 "full My Store during setup" rule): a storefront illustration, "Set up your store to get started", the four setup steps (Store Details, Add Products, Set Payments, Go Live) with real progress (done = mint check, next = blue number, rest gray) and "Set Up My Store" into `/dashboard/setup`.
+- **When it unlocks:** `buildChecklist().complete` (D-045 steps, all from store data, nothing new stored) OR the store has a paid or refunded order. The founder confirmed there are no users yet, so no migration is needed; the order rule means a store that has sold never loses its orders when a step is undone later (unpublished, bio removed).
+- **Locks:** every sidebar and bottom-bar section except My Store shows a lock, is not a link (`role="link"`, `aria-disabled`, still focusable) and has the tooltip "Finish setting up your store first". Server side, `requireUnlockedCreator(path)` (`lib/dashboard/setup-gate.ts`) redirects Products, Orders, Customers, Income, Marketing, Analytics, Settings > Store and Settings > Payments to `/dashboard`. Open while locked (`lib/dashboard/setup-lock.ts`): My Store, the setup wizard, the product editor and preview (the "Add products" step opens it), Settings > Account (sign out, delete account) and Settings > Plan (billing). The CSV export routes are not locked: a locked store has no orders, so they export nothing. Server actions stay open because the setup wizard uses them.
+- **Top bar and footer while locked:** search and "View my store" are hidden (nothing to find or show yet); the bell and account menu stay. The sidebar footer says "Store not set up".
+- **Product create errors** from the setup wizard now go back to its product step (`?step=first-product&error=`), which shows them, instead of the locked products list.
+- **"Watch 2 min setup guide"** from the reference is left out until there is a video.
+
+## D-078: Courses get the creator's confirmation email
+- **Date:** 2026-11-18
+- **Decision (founder request):** the course editor's Publish step has the same "Confirmation email" box as digital products: an optional subject and message with `{{customer_name}}`, `{{product_title}}` and `{{download_link}}` (for a course, the link where the student creates a password and opens the course). One shared component (`ConfirmationEmailFields`) is used by both editors.
+- **How it saves:** the email is part of the course details payload, so "Save and publish" and every course save keep it; a "Save email" button saves it on a course that is already published. The server checks it with the same `emailText` rules as digital products (only the three variables, 120 / 2,000 characters, no HTML) and writes only `afterPurchase.emailSubject` and `afterPurchase.emailBody` (dotted paths) on the session store's own course.
+- **Sending:** unchanged. `sendOrderConfirmation` already used the product's saved subject and message for any product type; the store name and access link are always added. No schema change: course documents already have `afterPurchase` (older ones get it on their next save).
+- **Why:** founder request, 2026-11-18.
+
 ## D-077: Images in MongoDB; file uploads off on the live site (founder decision)
 - **Date:** 2026-11-17
 - **Decision:**

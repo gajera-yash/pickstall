@@ -30,6 +30,8 @@ const valid = {
   salePrice: "",
   access: "lifetime",
   accessDays: "",
+  emailSubject: "",
+  emailBody: "",
 };
 
 const parse = (overrides: Record<string, unknown> = {}, currency = "usd") => courseDetailsInputFor(currency).safeParse({ ...valid, ...overrides });
@@ -89,12 +91,22 @@ describe("course details input", () => {
     expect(firstIssue(parse({ title: "   " }))).toMatchObject({ field: "title" });
     expect(parse({ title: "<script>x</script>Design" }).data).toMatchObject({ title: expect.not.stringContaining("<") });
   });
+
+  it("takes the confirmation email with the same rules as a digital product (D-078)", () => {
+    expect(parse().data).toMatchObject({ emailSubject: null, emailBody: null });
+    const ok = parse({ emailSubject: "Welcome to {{ product_title }}", emailBody: "Hi {{customer_name}},\n<b>Start</b> here: {{download_link}}" });
+    expect(ok.data).toMatchObject({ emailSubject: "Welcome to {{ product_title }}", emailBody: "Hi {{customer_name}},\nStart here: {{download_link}}" });
+    expect(firstIssue(parse({ emailBody: "Your code: {{coupon}}" }))).toMatchObject({ field: "emailBody", message: expect.stringContaining("{{customer_name}}") });
+    expect(firstIssue(parse({ emailSubject: "x".repeat(121) }))).toMatchObject({ field: "emailSubject" });
+    expect(firstIssue(parse({ emailBody: "x".repeat(2001) }))).toMatchObject({ field: "emailBody" });
+  });
 });
 
 describe("course editor steps", () => {
   it("opens the step that holds a field with a problem", () => {
     expect(courseStepOfField("category")).toBe("basic");
     expect(courseStepOfField("accessDays")).toBe("pricing");
+    expect(courseStepOfField("emailBody")).toBe("publish");
     expect(courseStepOfField("nope")).toBeNull();
     expect(nextCourseStep("pricing")).toBe("curriculum");
     expect(nextCourseStep("publish")).toBeNull();

@@ -29,7 +29,8 @@ export function text(max: number, label: string, options: { multiline?: boolean 
     .transform((value) => (value === "" ? undefined : value));
 }
 
-const emailText = (max: number, label: string, options: { multiline?: boolean } = {}) =>
+/** Creator email text (D-014): cleaned, length-limited, only the three allowed variables. */
+export const emailText = (max: number, label: string, options: { multiline?: boolean } = {}) =>
   text(max, label, options).refine((value) => value === undefined || unknownEmailVariables(value).length === 0, {
     error: `${label}: only {{customer_name}}, {{product_title}} and {{download_link}} can be used.`,
   });

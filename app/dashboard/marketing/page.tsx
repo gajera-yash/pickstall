@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { requireCreator } from "@/lib/auth/guards";
+import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 
 const TOOLS: { title: string; description: string; icon: LucideIcon }[] = [
   { title: "Coupons", description: "Percent or fixed discounts with an expiry date and a usage limit.", icon: Percent },
@@ -26,7 +26,7 @@ export default function MarketingPage() {
 }
 
 async function MarketingContent() {
-  await requireCreator("/dashboard/marketing");
+  await requireUnlockedCreator("/dashboard/marketing");
   return (
     <ul className="grid gap-4 md:grid-cols-3">
       {TOOLS.map(({ title, description, icon: Icon }) => (

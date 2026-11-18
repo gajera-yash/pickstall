@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { requireCreator } from "@/lib/auth/guards";
+import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { findCustomerDetail, listCustomers, type CustomerRow } from "@/lib/orders/creator-queries";
 import { encodeCustomerCursor, parseCustomerParams, withQuery, type CustomerParams } from "@/lib/orders/params";
 import { formatMoney } from "@/lib/products/money";
@@ -47,7 +47,7 @@ const listHref = (params: CustomerParams, extra: { after?: string; customer?: st
   withQuery(PATH, { q: params.q, product: params.product, after: extra.after ?? (params.after ? encodeCustomerCursor(params.after) : undefined), customer: extra.customer });
 
 async function CustomersContent({ searchParams }: Pick<PageProps<"/dashboard/customers">, "searchParams">) {
-  const [{ store }, raw] = await Promise.all([requireCreator(PATH), searchParams]);
+  const [{ store }, raw] = await Promise.all([requireUnlockedCreator(PATH), searchParams]);
   const params = parseCustomerParams(raw);
   const [page, products] = await Promise.all([listCustomers(store.id, { q: params.q, product: params.product, after: params.after }), listProducts(store.id)]);
   const filtered = Boolean(params.q || params.product);

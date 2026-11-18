@@ -54,6 +54,30 @@ describe("order access email", () => {
     expect(mail.emails).toHaveLength(1);
   });
 
+  it("uses a course creator's own email too, saved through the course editor (D-078)", async () => {
+    const { updateCourseDetails } = await import("@/lib/courses/queries");
+    const store = await seedStore({ name: "Maya's Academy" });
+    const course = await seedProduct(store._id, { type: "course", title: "UI course", status: "published", course: { category: "design", tags: [], accessDays: null } });
+    const saved = await updateCourseDetails(store._id, course._id, {
+      title: "UI course",
+      description: null,
+      descriptionDoc: null,
+      coverUrl: null,
+      priceCents: 0,
+      salePriceCents: null,
+      course: { category: "design", tags: [], accessDays: null },
+      emailSubject: "Welcome to {{product_title}}",
+      emailBody: "Hi {{customer_name}}, your course is open: {{download_link}}",
+    });
+    expect(saved).toBe("saved");
+    const order = await seedOrder({ ...course, title: "UI course" }, { buyerEmail: `student-${randomUUID().slice(0, 6)}@example.com`, buyerName: "Asha" });
+
+    expect(await sendOrderConfirmation(order._id)).toBe("sent");
+    expect(mail.emails[0]?.subject).toBe("Welcome to UI course");
+    expect(mail.emails[0]?.text).toMatch(/^Hi Asha, your course is open: https?:\/\/\S+\/welcome\/\S+/);
+    expect(mail.emails[0]?.text).toContain("Sent for Maya's Academy through Pickstall");
+  });
+
   it("a failed send shows as failed and goes out on the next try", async () => {
     const { store, order } = await paidOrder();
     mail.fail = true;

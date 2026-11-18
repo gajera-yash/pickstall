@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
+import { ConfirmationEmailFields } from "@/components/dashboard/confirmation-email-fields";
 import { CurriculumBuilder } from "@/components/dashboard/curriculum-builder";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
@@ -60,6 +61,9 @@ export type EditorCourse = {
   accessDays: string;
   /** Drip (D-056): modules open N days after purchase instead of all at once. */
   drip: boolean;
+  /** Confirmation email (D-078); empty means the default email. */
+  emailSubject: string;
+  emailBody: string;
 };
 
 const STATUS_BADGE: Record<EditorCourse["status"], { label: string; variant: "live" | "draft" }> = {
@@ -103,6 +107,8 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [goAfterSave, setGoAfterSave] = useState<CourseStep | null>(null);
+  // "Save email" in the Publish step (D-078): only that button shows the spinner.
+  const [savingEmail, setSavingEmail] = useState(false);
   // "Save and publish": the details are saved first, then the course is published.
   const publishAfterSave = useRef(false);
   const [statusPending, startStatus] = useTransition();
@@ -149,6 +155,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
       open(goAfterSave);
     }
     setGoAfterSave(null);
+    setSavingEmail(false);
   }
 
   // "Save and publish": publish once that save comes back fine, after rendering (changeStatus starts
@@ -181,6 +188,8 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
     salePrice: values.pricing === "paid" && values.discountOn ? values.salePrice : "",
     access: values.access,
     accessDays: values.access === "days" ? values.accessDays : "",
+    emailSubject: values.emailSubject,
+    emailBody: values.emailBody,
   });
 
   const priceCents = values.pricing === "free" ? 0 : parseMoneyToCents(values.price, currency);
@@ -441,6 +450,20 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
             <>
               <StepHeading title="Publish" body="How the course opens for students, a look at the student view, then publish." />
               <ReleaseSection courseId={values.id} drip={values.drip} modules={curriculum.modules} onSaved={(drip, modules) => (set("drip", drip), setCurriculum({ modules }))} />
+              <ConfirmationEmailFields
+                subject={values.emailSubject}
+                body={values.emailBody}
+                onSubject={(value) => set("emailSubject", value)}
+                onBody={(value) => set("emailBody", value)}
+                fieldError={fieldError}
+                linkLabel="create a password and open the course"
+                footer={
+                  // Saves the whole course form (the email is part of it); "Save and publish" saves it too.
+                  <Button type="submit" variant="secondary" className="self-start" loading={pending && savingEmail} disabled={busy} onClick={() => setSavingEmail(true)}>
+                    Save email
+                  </Button>
+                }
+              />
               <section aria-labelledby="ready-title" className={cn("flex flex-col gap-3 rounded-md border p-4", blockers.length === 0 ? "border-mint/40 bg-mint-soft" : "border-line")}>
                 <h3 id="ready-title" className="font-display text-h4">
                   {values.status === "published" ? "This course is live" : blockers.length === 0 ? "Ready to publish" : "Before you publish"}

@@ -30,6 +30,8 @@ const FIELD_STEP: Record<string, CourseStep> = {
   salePrice: "pricing",
   access: "pricing",
   accessDays: "pricing",
+  emailSubject: "publish",
+  emailBody: "publish",
 };
 
 /** The step that holds a form field, so a failed save can open it. */

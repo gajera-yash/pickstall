@@ -5,7 +5,7 @@ import { KpiSection } from "@/components/dashboard/kpi-section";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { requireCreator } from "@/lib/auth/guards";
+import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { incomeStats } from "@/lib/orders/creator-queries";
 
 const zeros = () => Array.from({ length: 90 }, () => 0);
@@ -23,7 +23,7 @@ export default function AnalyticsPage() {
 }
 
 async function AnalyticsContent() {
-  const { store } = await requireCreator("/dashboard/analytics");
+  const { store } = await requireUnlockedCreator("/dashboard/analytics");
   const stats = await incomeStats(store.id, store.currency, 90).catch(() => null);
   return (
     <>

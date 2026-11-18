@@ -19,6 +19,8 @@ const input = {
   priceCents: 2900,
   salePriceCents: null,
   course: { category: "design" as const, tags: [], accessDays: 30 },
+  emailSubject: "Welcome to {{product_title}}",
+  emailBody: null,
 };
 
 describe("course queries (ownership)", () => {
@@ -36,6 +38,9 @@ describe("course queries (ownership)", () => {
     expect(filter).toEqual({ _id: "c1", storeId: "store-1", type: "course", deletedAt: null });
     expect(update).toMatchObject({ $set: { slug: "design-basics", priceCents: 2900, "course.accessDays": 30, "course.category": "design" } });
     expect(update).not.toHaveProperty("$set.course");
+    // Only the email fields (D-078), so nothing else under afterPurchase is overwritten.
+    expect(update).toMatchObject({ $set: { "afterPurchase.emailSubject": "Welcome to {{product_title}}", "afterPurchase.emailBody": null } });
+    expect(update).not.toHaveProperty("$set.afterPurchase");
   });
 
   it("returns not_found for another store's course or a digital product", async () => {
