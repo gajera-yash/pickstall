@@ -50,7 +50,7 @@ async function TypePicker() {
               <Button
                 type="submit"
                 variant="secondary"
-                className="h-full w-full flex-col items-stretch justify-start gap-3 rounded-lg border-blue p-5 text-left font-normal whitespace-normal ring-1 ring-blue not-disabled:hover:bg-blue-soft"
+                className="group h-full w-full flex-col items-stretch justify-start gap-3 rounded-lg border border-line p-5 text-left font-normal whitespace-normal transition-all duration-(--dur-fast) not-disabled:hover:border-blue not-disabled:hover:bg-blue-soft not-disabled:hover:ring-1 not-disabled:hover:ring-blue focus-visible:border-blue focus-visible:ring-1 focus-visible:ring-blue"
               >
                 <TypeCardBody title={title} description={description} Icon={Icon} live badge="Start" />
               </Button>
@@ -70,7 +70,7 @@ function TypeCardBody({ title, description, Icon, live, badge }: { title: string
   return (
     <>
       <div className="flex items-center justify-between gap-2">
-        <span aria-hidden="true" className={cn("flex size-12 items-center justify-center rounded-full", live ? "bg-blue text-on-blue" : "bg-bg-subtle text-mute")}>
+        <span aria-hidden="true" className={cn("flex size-12 items-center justify-center rounded-full transition-colors duration-(--dur-fast)", live ? "bg-blue-soft text-blue group-hover:bg-blue group-hover:text-on-blue" : "bg-bg-subtle text-mute")}>
           <Icon className="size-6" />
         </span>
         <Badge variant={live ? "live" : "soon"}>{badge}</Badge>
