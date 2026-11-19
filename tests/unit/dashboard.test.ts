@@ -49,6 +49,8 @@ describe("first-run checklist (D-009, D-045)", () => {
     expect(buildChecklist({ ...fresh, bio: "Hi" }).items[0]?.done).toBe(true);
     expect(buildChecklist({ ...fresh, avatarUrl: "https://example.test/a.png" }).items[0]?.done).toBe(true);
     expect(buildChecklist({ ...fresh, bio: "   " }).items[0]?.done).toBe(false);
+    // Photo and bio are optional (D-091): saving the store details finishes the step too.
+    expect(buildChecklist({ ...fresh, profileSaved: true }).items[0]?.done).toBe(true);
   });
 
   it("points at the first step that is not done", () => {

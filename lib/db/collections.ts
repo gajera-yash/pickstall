@@ -46,6 +46,8 @@ export type StoreDoc = {
    * until `scripts/migrations/2026-11-15-store-identity-keys.mjs` has run.
    */
   ownerEmailKey?: string;
+  /** When the creator first saved Store details (D-091): setup step 1 is done then, photo and bio being optional. */
+  profileSavedAt?: Date | null;
   slug: string;
   name: string;
   bio: string | null;

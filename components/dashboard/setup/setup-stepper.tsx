@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
+import { StepPending } from "@/components/dashboard/setup/step-feedback";
 import { SETUP_STEP_META, StepTile } from "@/components/dashboard/setup/step-tile";
 import { Progress } from "@/components/ui/progress";
 import type { Checklist, ChecklistItemId } from "@/lib/dashboard/checklist";
@@ -33,11 +34,12 @@ export function SetupStepper({ checklist, current }: { checklist: Checklist; cur
                 href={item.href}
                 aria-current={active ? "step" : undefined}
                 className={cn(
-                  "flex h-full flex-col items-start gap-3 rounded-lg border border-line p-3 pt-4 transition-colors duration-(--dur-fast) sm:flex-row sm:items-center",
+                  "relative flex h-full flex-col items-start gap-3 rounded-lg border border-line p-3 pt-4 transition-colors duration-(--dur-fast) sm:flex-row sm:items-center",
                   active ? "bg-blue-soft" : "bg-surface hover:bg-bg-subtle",
                 )}
               >
                 <StepTile id={item.id} number={index + 1} done={item.done} current={active} size="sm" onTint />
+                <StepPending />
                 <span className="flex min-w-0 flex-col">
                   <span className="font-display text-h4 text-ink">{SETUP_STEP_META[item.id].title}</span>
                   <span className={cn("text-xs font-medium", item.done ? "text-mint" : active ? "text-blue" : "text-mute")}>{status}</span>

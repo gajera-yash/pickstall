@@ -22,6 +22,8 @@ export type ChecklistItem = {
 export type ChecklistInput = {
   bio: string | null;
   avatarUrl: string | null;
+  /** Store details saved at least once (D-091). */
+  profileSaved?: boolean;
   chargesEnabled: boolean;
   isPublished: boolean;
   productCount: number;
@@ -48,8 +50,9 @@ export function buildChecklist(input: ChecklistInput): Checklist {
       id: "store-setup",
       label: "Set up your store",
       description: "Your name, photo, bio, theme and social links.",
-      // Done once the creator has personalized the store: a photo or a bio.
-      done: Boolean(input.avatarUrl || input.bio?.trim()),
+      // Done once the creator has saved this step (photo and bio are optional, D-091), or for stores
+      // set up before that, once it has a photo or a bio.
+      done: Boolean(input.profileSaved || input.avatarUrl || input.bio?.trim()),
       available: true,
       href: stepHref("store-setup"),
     },

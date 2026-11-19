@@ -6,6 +6,7 @@ import { StorePreview, type PreviewProduct } from "@/components/dashboard/store-
 import { StoreSetupForm } from "@/components/dashboard/store-setup-form";
 import { StripeStatus, stripeOutcomeOf, type StripeOutcome } from "@/components/dashboard/stripe-status";
 import { PublishButton } from "@/components/dashboard/setup/publish-step";
+import { ScrollToTopOnStep } from "@/components/dashboard/setup/step-feedback";
 import { SetupStepper } from "@/components/dashboard/setup/setup-stepper";
 import { priceLabel } from "@/lib/products/pricing";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -52,6 +53,7 @@ async function SetupContent({ searchParams }: { searchParams: PageProps<"/dashbo
         </p>
       </div>
 
+      <ScrollToTopOnStep step={step.id} />
       <SetupStepper checklist={checklist} current={step.id} />
 
       {step.id === "store-setup" && (

@@ -144,17 +144,20 @@ NEXT_PUBLIC_GOOGLE_AUTH_ENABLED
 EMAIL_FROM                           # server only
 IP_HASH_SECRET                       # server only
 STRIPE_SECRET_KEY                    # server only
-STRIPE_PLATFORM_WEBHOOK_SECRET       # server only
-STRIPE_CONNECT_WEBHOOK_SECRET        # server only
-STRIPE_CONNECT_CLIENT_ID
+STRIPE_PLATFORM_WEBHOOK_SECRET       # server only (webhook "Your account": plans, test-mode sales)
+STRIPE_CONNECT_WEBHOOK_SECRET        # server only (webhook "Connected accounts": creators' sales)
+STRIPE_CONNECT_CLIENT_ID             # Connect OAuth client id (ca_...)
+STRIPE_PLATFORM_ACCOUNT_ID           # server only, test mode: our own account as a store's seller
 BUNNY_STREAM_LIBRARY_ID              # server only
 BUNNY_STREAM_API_KEY                 # server only
 BUNNY_STREAM_TOKEN_KEY               # server only (signs playback links)
 BUNNY_STREAM_READONLY_KEY            # server only (verifies Bunny webhooks)
 RESEND_API_KEY                       # server only
-INNGEST_EVENT_KEY / INNGEST_SIGNING_KEY
+INNGEST_EVENT_KEY / INNGEST_SIGNING_KEY   # server only (call reminders); INNGEST_DEV=1 for the local dev server
 NEXT_PUBLIC_POSTHOG_KEY
-SENTRY_DSN
+SENTRY_DSN / NEXT_PUBLIC_SENTRY_DSN
+SENTRY_AUTH_TOKEN / SENTRY_ORG / SENTRY_PROJECT   # build only (source maps)
+DEV_ALLOWED_HOSTS                    # development only
 ```
 Use Stripe **test mode** keys until the founder says live mode is approved.
 

@@ -27,6 +27,8 @@ export type CreatorStore = {
   isPublished: boolean;
   /** Free trial, founding period or paused (D-072). Gate features with `can(store.access, ...)`. */
   access: StoreAccess;
+  /** Store details saved at least once (D-091): setup step 1 is done. */
+  profileSaved: boolean;
 };
 
 /** The store owned by this user, or null. */
@@ -52,6 +54,7 @@ export async function findStoreByOwner(ownerId: string): Promise<CreatorStore | 
     },
     isPublished: doc.isPublished,
     access: storeAccess(doc),
+    profileSaved: Boolean(doc.profileSavedAt),
   };
 }
 
@@ -68,6 +71,8 @@ export async function updateStoreProfile(ownerId: string, input: StoreProfileInp
         currency: input.currency,
         socialLinks: input.socialLinks,
         updatedAt: new Date(),
+        // Saving the details finishes setup step 1, with or without a photo or bio (D-091).
+        profileSavedAt: new Date(),
       },
       // The old single link now lives in socialLinks (D-028).
       $unset: { link: "" },

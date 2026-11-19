@@ -24,11 +24,12 @@ export type SetupState = {
  * Setup progress for the creator's own store. `store` must come from requireCreator, so the product
  * query is already scoped to the session owner's store. An unreachable database reads as no products.
  */
-export async function loadSetupState(store: Pick<CreatorStore, "id" | "bio" | "avatarUrl" | "stripeChargesEnabled" | "isPublished">): Promise<SetupState> {
+export async function loadSetupState(store: Pick<CreatorStore, "id" | "bio" | "avatarUrl" | "stripeChargesEnabled" | "isPublished"> & Partial<Pick<CreatorStore, "profileSaved">>): Promise<SetupState> {
   const products = (await listProducts(store.id).catch(() => [])).filter((product) => product.status !== "archived");
   const checklist = buildChecklist({
     bio: store.bio,
     avatarUrl: store.avatarUrl,
+    profileSaved: store.profileSaved ?? false,
     chargesEnabled: store.stripeChargesEnabled,
     isPublished: store.isPublished,
     productCount: products.length,

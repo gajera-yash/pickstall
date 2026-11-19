@@ -4,6 +4,30 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-092: Stripe set up for the two money flows (webhooks, Connect OAuth)
+- **Date:** 2026-11-19
+- **Decision (founder):** Pickstall uses Stripe in two ways, as the code already does:
+  1. A creator pays for a Pickstall plan → the founder's Stripe account (Stripe Billing).
+  2. A buyer pays for a creator's product, course or call → the creator's own Stripe account (Connect Standard, direct charge, no application fee, no transfers).
+- **Set up in the Stripe sandbox (`acct_1UUlFe…`), 2026-11-19:**
+  - Webhook `pickstall-platform` ("Your account") → `https://www.pickstall.store/api/webhooks/stripe`, 12 events: four `checkout.session.*`, `charge.refunded`, five `customer.subscription.*`, `invoice.paid`, `invoice.payment_failed`. Secret: `STRIPE_PLATFORM_WEBHOOK_SECRET`.
+  - Webhook `pickstall-connect` ("Connected accounts") → `https://www.pickstall.store/api/webhooks/stripe-connect`, 7 events: four `checkout.session.*`, `charge.refunded`, `account.updated`, `account.application.deauthorized`. Secret: `STRIPE_CONNECT_WEBHOOK_SECRET`.
+  - Connect OAuth turned on (by the founder), with the redirect `https://www.pickstall.store/api/connect/stripe/callback`. Client id: `STRIPE_CONNECT_CLIENT_ID`.
+  - URLs use `www`: the bare domain redirects, and Stripe does not follow redirects.
+- **Cause of the "pending" orders (D-091):** no webhook destination existed, so Stripe never told the site about payments. The two stuck checkout events were resent to `pickstall-platform` with the Stripe Shell (`stripe events resend … --webhook-endpoint=…`). Both were answered 200 "ok", and all orders show as paid.
+- **Watch:** those deliveries took about 10 s each, likely a cold start including index setup. Stripe allows it, but the webhook should stay fast.
+- `.env.example` and `CLAUDE.md` section 9 describe each Stripe variable and which flow it is for.
+- **Why:** founder request, 2026-11-19.
+
+## D-091: Sign-in code template, setup wizard feedback, optional Step 1
+- **Date:** 2026-11-19
+- **Decision (founder bug list):**
+  - **Sign-in code email** uses the founder's Resend template, alias `verification-code` (`template.id` accepts an id or an alias; the template must be published). The code is passed as the variable `CODE`; the variable name must match the template. If Resend refuses the template (not published, or a different variable name), the same code goes out as a plain email, so sign-in never breaks, and `email.sign_in_template_failed` is logged.
+  - **Setup wizard:** the step just clicked shows a spinner until the next step loads (`useLinkStatus`), and changing steps scrolls to the top of the page.
+  - **Step 1 (Store details):** photo and bio are really optional. "Save and continue" is enabled without them, and saving the step sets `StoreDoc.profileSavedAt`, which marks the step done. Older stores with a photo or bio still count as done. No migration.
+- **Investigated, not a code change:** paid orders staying "pending" on the live site. An order becomes paid only when a verified Stripe event reaches our webhook (CLAUDE.md 7); a pending order means the event did not arrive or was refused. Stripe's delivery log shows our answer for each event ("ok", "ignored", "bad_signature", "error"), which names the setting to fix. Stores using the test seller shortcut need the platform endpoint (`/api/webhooks/stripe`, `STRIPE_PLATFORM_WEBHOOK_SECRET`, `STRIPE_PLATFORM_ACCOUNT_ID`); stores connected through Connect need the Connect endpoint (`/api/webhooks/stripe-connect`, `STRIPE_CONNECT_WEBHOOK_SECRET`, events from connected accounts). Both need `checkout.session.completed`, `checkout.session.expired` and `charge.refunded`.
+- **Why:** founder request, 2026-11-19.
+
 ## D-090: Fixes from the live check (checkout summary, preview placeholder, health check)
 - **Date:** 2026-11-18
 - **Decision (from checking the live site in the founder's Chrome):**

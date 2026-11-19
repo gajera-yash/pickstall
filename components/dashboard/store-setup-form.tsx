@@ -83,7 +83,6 @@ export function StoreSetupForm({ initial, slug, theme, mode = "settings", contin
   const current = snapshot(values, social, design);
   const dirty = current !== saved;
   // Step 1 counts as done with a photo or a bio (lib/dashboard/checklist.ts), so the wizard asks for one.
-  const personalized = Boolean(values.avatarUrl.trim() || values.bio.trim());
   const links = linksFrom(social);
   const linkCount = links.length;
 
@@ -157,7 +156,7 @@ export function StoreSetupForm({ initial, slug, theme, mode = "settings", contin
               { label: "Theme", done: true, detail: THEME_PRESETS[design.preset].name },
               { label: "Social links", done: linkCount > 0, detail: linkCount > 0 ? `${linkCount} added` : "Optional" },
             ]}
-            hint={personalized ? null : "Add a profile photo or a short bio to finish this step."}
+            hint={null}
           />
         )}
 
@@ -239,7 +238,7 @@ export function StoreSetupForm({ initial, slug, theme, mode = "settings", contin
 
         <div className="flex flex-wrap items-center gap-3">
           {setup ? (
-            <Button type="submit" loading={pending} disabled={!personalized || !accentReadable(design.accent)}>
+            <Button type="submit" loading={pending} disabled={!accentReadable(design.accent)}>
               {pending ? "Saving..." : "Save and continue"}
               {!pending && <ArrowRight aria-hidden="true" />}
             </Button>
