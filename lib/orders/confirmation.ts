@@ -7,7 +7,7 @@ import { buildIcs, formatCallTime } from "@/lib/coaching/ics";
 import { publicEnv } from "@/lib/env";
 import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
-import { sendEmail } from "@/lib/email/send";
+import { EmailSendError, sendEmail } from "@/lib/email/send";
 import { renderOrderEmail, type CallDetails } from "@/lib/email/templates";
 import { logger } from "@/lib/logger";
 
@@ -40,6 +40,8 @@ export async function sendOrderConfirmation(orderId: string): Promise<"sent" | "
       if (retry.matchedCount === 0) return "skipped";
     }
 
+    // Which part failed, for the log (the access link, the email itself, ...).
+    let stage = "load";
     try {
       const [product, store, booking] = await Promise.all([
         products.findOne({ _id: order.productId, storeId: order.storeId }, { projection: { afterPurchase: 1, "coaching.meetingUrl": 1, "coaching.timeZone": 1 } }),
@@ -56,7 +58,9 @@ export async function sendOrderConfirmation(orderId: string): Promise<"sent" | "
               meetingUrl: product?.coaching?.meetingUrl ?? null,
             }
           : null;
+      stage = "access_link";
       const token = await createAccessToken({ orderId, email: order.buyerEmail, name: order.buyerName });
+      stage = "render";
       const email = renderOrderEmail({
         storeName: store?.name ?? "Pickstall store",
         vars: { customerName: order.buyerName, productTitle: order.item.title, accessLink: new URL(`/welcome/${token}`, publicEnv.NEXT_PUBLIC_APP_URL).href },
@@ -85,12 +89,13 @@ export async function sendOrderConfirmation(orderId: string): Promise<"sent" | "
           : undefined;
       // Development only: the link is also logged, because test emails may not be deliverable.
       if (process.env.NODE_ENV !== "production") logger.debug("order_email.dev_link", { link: email.text.match(/https?:\/\/\S+\/welcome\/\S+/)?.[0] });
+      stage = "send";
       await sendEmail({ to: order.buyerEmail, ...email, ...(attachments ? { attachments } : {}) });
       await emailOutbox.updateOne({ _id: key }, { $set: { status: "sent", sentAt: new Date() } });
       return "sent";
     } catch (error) {
       await emailOutbox.updateOne({ _id: key }, { $set: { status: "failed" } }).catch(() => undefined);
-      logger.error("order_email.failed", { name: error instanceof Error ? error.name : undefined });
+      logger.error("order_email.failed", { orderId, stage, name: error instanceof Error ? error.name : undefined, reason: error instanceof EmailSendError ? error.reason : undefined });
       return "failed";
     }
   } catch (error) {

@@ -20,8 +20,15 @@ export function safeNextPath(value: unknown, fallback = "/"): string {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
-/** `/login`, with a safe `next` so the user lands back where they started. */
-export function loginPath(next?: string): string {
+/**
+ * `/login`, with a safe `next` so the user lands back where they started. With `expired`, the login
+ * page says the session ended (used when a signed-in action finds the session gone).
+ */
+export function loginPath(next?: string, options: { expired?: boolean } = {}): string {
   const target = safeNextPath(next, "");
-  return target && target !== "/" ? `/login?next=${encodeURIComponent(target)}` : "/login";
+  const params = new URLSearchParams();
+  if (target && target !== "/") params.set("next", target);
+  if (options.expired) params.set("error", "expired");
+  const query = params.toString();
+  return query ? `/login?${query}` : "/login";
 }

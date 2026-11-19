@@ -325,7 +325,7 @@ async function OrderDrawer({ storeId, orderId, closeHref }: { storeId: string; o
           />
           {order.accessEmail?.status !== "sent" && order.accessEmail?.status !== "sending" && (
             <>
-              <p className="text-sm text-mute">The buyer didn&apos;t get the email with their access link. Send it again once your email settings are fixed.</p>
+              <p className="text-sm text-mute">The email with the buyer&apos;s access link could not be sent. Send it again, and if it still fails, contact Pickstall support.</p>
               <ResendEmailButton orderId={order.id} />
             </>
           )}

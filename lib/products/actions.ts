@@ -12,11 +12,11 @@ import { countLessonsWithContent } from "@/lib/courses/curriculum";
 import { removeFilesOfProduct } from "@/lib/files/product-files";
 import { can, PAUSED_MESSAGES, planProblem } from "@/lib/plans/access";
 import { checkPublish } from "@/lib/products/publish";
-import { createDraftProduct, deleteProduct, findProduct, setProductStatus, updateProduct, type DeleteProductResult } from "@/lib/products/queries";
+import { createDraftProduct, deleteProduct, findEmptyDraft, findProduct, setProductStatus, updateProduct, type DeleteProductResult } from "@/lib/products/queries";
 import { productIdInput, productInputFor, productStatusInput } from "@/lib/products/schemas";
 import { countPublishedCourses } from "@/lib/plans/usage";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
-import { err, ok, type Result } from "@/lib/result";
+import { err, fieldErrors, ok, type Result } from "@/lib/result";
 
 /** `published` is true when the save also published the product (intent=publish, D-048). */
 export type SaveProductState = Result<{ savedAt: number; published: boolean }> | null;
@@ -51,6 +51,9 @@ async function createAndEdit(formData: FormData | undefined, type: "digital" | "
   // From the setup wizard, problems go back there: the products list is locked during setup (D-079).
   const errorPath = from === "setup" ? "/dashboard/setup?step=first-product&error=" : "/dashboard/products?error=";
   if (!(await allowed(user.id))) redirect(`${errorPath}slow`);
+  // From the setup wizard, an untouched empty draft is opened again rather than adding another one.
+  const reused = from === "setup" && type === "digital" ? await findEmptyDraft(store.id, "digital").catch(() => null) : null;
+  if (reused) redirect(`/dashboard/products/${reused.id}?from=setup`);
   const result = await createDraftProduct(store.id, type === "lead_magnet" ? { buttonText: "Send it to me", type } : { buttonText: "Buy now" }).catch((error: unknown) => {
     logger.error("products.create_failed", { name: errorName(error) });
     return "error" as const;
@@ -84,10 +87,14 @@ export async function saveProduct(productId: string, _prev: SaveProductState, fo
   // Prices are read in the store's own currency (D-046).
   const parsed = productInputFor(store.currency).safeParse(json);
   if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const [first, index] = issue?.path ?? [];
-    const field = first === "questions" && typeof index === "number" ? `question-${index}` : typeof first === "string" ? first : undefined;
-    return err(issue?.message ?? "Check the form and try again.", field);
+    // Every problem at once (one message per field), so the creator can fix them in one go.
+    const fields: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const [first, index] = issue.path;
+      const field = first === "questions" && typeof index === "number" ? `question-${index}` : typeof first === "string" ? first : undefined;
+      if (field) fields[field] ??= issue.message;
+    }
+    return fieldErrors(fields, parsed.error.issues[0]?.message || "Check the form and try again.");
   }
   if (!(await allowed(user.id))) return err("Slow down a little, then try again.");
 

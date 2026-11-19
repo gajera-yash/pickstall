@@ -3,19 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireCreator } from "@/lib/auth/guards";
+import { requireCreator, requireCreatorForAction } from "@/lib/auth/guards";
 import { STRIPE_CONNECT_RATE_LIMIT, USERNAME_CHANGE_RATE_LIMIT } from "@/lib/config";
 import { recordAudit } from "@/lib/audit/log";
 import { logger } from "@/lib/logger";
 import { can, PAUSED_MESSAGES } from "@/lib/plans/access";
 import { rateLimitKey, releaseRateLimit, takeRateLimit } from "@/lib/rate-limit";
-import { err, ok, type Result } from "@/lib/result";
+import { err, fieldErrors, ok, type Result } from "@/lib/result";
 import { SLUG_TAKEN_MESSAGE, slugSchema } from "@/lib/slug";
 import { testSellerAccountId } from "@/lib/payments/test-account";
 import { connectAuthorizeUrl, connectAvailable } from "@/lib/payments/connect";
 import { changeStoreSlug, setStorePublished, setStoreStripeConnection, updateStorePageDesign, updateStoreProfile } from "@/lib/stores/queries";
 import { CONNECT_RETURN_PATHS, connectRedirectUri, createConnectState, releaseAccount } from "@/lib/stores/stripe-connect";
-import { pageDesignInput, storeProfileInput } from "@/lib/stores/schemas";
+import { pageDesignInput, storeNameSchema, storeProfileInput } from "@/lib/stores/schemas";
 import { isCurrencyLocked } from "@/lib/stores/currency-lock";
 import { socialLinksFromForm } from "@/lib/stores/social-handles";
 
@@ -25,6 +25,7 @@ export type ChangeUsernameState = Result<{ username: string }> | null;
 
 const STORE_SETUP_PATH = "/dashboard/settings";
 const MY_STORE_PATH = "/dashboard";
+const PUBLISH_STEP_PATH = "/dashboard/setup?step=publish";
 
 const SAVE_FAILED = "Couldn't save your changes. Check your connection and try again.";
 const NO_STORE = "We couldn't find your store. Reload the page and try again.";
@@ -43,7 +44,11 @@ export async function saveStoreSetup(_prev: StoreSetupState, formData: FormData)
   const { user, store } = await requireCreator(STORE_SETUP_PATH);
 
   const social = socialLinksFromForm(formData);
-  if (!social.ok) return err(social.error, social.field);
+  if (!social.ok) {
+    // Report a missing or bad store name together with the social link problem (QA 2026-11).
+    const name = storeNameSchema.safeParse(formData.get("name") ?? "");
+    return fieldErrors({ ...(name.success ? {} : { name: name.error.issues[0]?.message ?? "Enter a store name." }), [social.field]: social.error });
+  }
   const parsed = storeProfileInput.safeParse({
     name: formData.get("name") ?? "",
     bio: formData.get("bio") ?? "",
@@ -221,8 +226,9 @@ export async function disconnectStripe(): Promise<Result<{ connected: false }>> 
 }
 
 /** Publishes or unpublishes the creator's own store page (the last step of the first-run checklist). */
-export async function setStorePublishedAction(isPublished: boolean): Promise<Result<{ isPublished: boolean }>> {
-  const { user, store } = await requireCreator(MY_STORE_PATH);
+export async function setStorePublishedAction(isPublished: boolean, from?: "setup"): Promise<Result<{ isPublished: boolean }>> {
+  // A session that ended meanwhile goes to login with "Your session expired", then back here to try again.
+  const { user, store } = await requireCreatorForAction(from === "setup" ? PUBLISH_STEP_PATH : MY_STORE_PATH);
   if (typeof isPublished !== "boolean") return err(SAVE_FAILED);
   // Unpublishing always works; publishing needs an open store (D-072).
   if (isPublished && !can(store.access, "publish")) return err(PAUSED_MESSAGES.publish);

@@ -175,7 +175,9 @@ describe("publish the store", () => {
     expect(await setStorePublishedAction("yes" as unknown as boolean)).toMatchObject({ ok: false });
     expect(storeQueries.setStorePublished).not.toHaveBeenCalled();
     mockSession(null);
-    expect(await redirectOf(() => setStorePublishedAction(true))).toBe("/login?next=%2Fdashboard");
+    expect(await redirectOf(() => setStorePublishedAction(true))).toBe("/login?next=%2Fdashboard&error=expired");
+    // From the setup wizard, sign-in leads back to its publish step (QA 2026-11).
+    expect(await redirectOf(() => setStorePublishedAction(true, "setup"))).toBe("/login?next=%2Fdashboard%2Fsetup%3Fstep%3Dpublish&error=expired");
   });
 
   it("hides database errors", async () => {

@@ -3,7 +3,7 @@
 import { Archive, ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, ChevronUp, Circle, CreditCard, FileText, FileUp, ImageIcon, Link2, Lock, Mail, Phone, Plus, Rocket, Settings2, ShoppingCart, Trash2, Undo2, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition, type MouseEvent } from "react";
 
 import { BumpSection, type BumpCandidate, type BumpSettings } from "@/components/dashboard/bump-section";
 import { UpsellSection, type UpsellSettings } from "@/components/dashboard/upsell-section";
@@ -36,6 +36,9 @@ import { plainTextOf, type RichDoc } from "@/lib/products/rich-text";
 import { PRODUCT_STEPS, PRODUCT_STEP_LABELS, PRODUCT_STEP_SHORT_LABELS, detailsMissing, nextStep, previousStep, stepOfField, stepsDone, type ProductStep } from "@/lib/products/editor-steps";
 import { publishProblems } from "@/lib/products/publish";
 import { PRODUCT_LIMITS } from "@/lib/products/schemas";
+import { shownProductSlug } from "@/lib/products/slug";
+import { errorFor } from "@/lib/result";
+import { httpsUrlMessage, isHttpsUrl } from "@/lib/stores/schemas";
 import type { ProductFileInfo } from "@/lib/files/types";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +81,12 @@ const STATUS_BADGE: Record<EditorProduct["status"], { label: string; variant: "l
 
 const STEP_ICONS: Record<ProductStep, typeof FileText> = { details: FileText, checkout: ShoppingCart, publish: Rocket };
 
+/** Where publishing during setup goes: the next setup step, which says the product was published. */
+const SETUP_PUBLISHED_HREF = "/dashboard/setup?published=1";
+const NO_DELIVERY = "Add a link or a file to deliver.";
+const LINK_FIX = "Fix the delivery link: it must start with https://";
+const REDIRECT_FIX = "Fix the redirect link: it must start with https://";
+
 type Props = {
   initial: EditorProduct;
   currency: string;
@@ -92,6 +101,8 @@ type Props = {
   bump: { initial: BumpSettings; candidates: BumpCandidate[] };
   /** Upsell after purchase (D-099); `locked` on plans without upsells. */
   upsell?: { initial: UpsellSettings; locked: boolean };
+  /** True while first-run setup still locks the dashboard (D-079): after publishing, go back to setup. */
+  setupLocked?: boolean;
   /** A lead magnet (D-094): always free, no price fields and no order bump. */
   leadMagnet?: boolean;
 };
@@ -102,10 +113,12 @@ type Props = {
  * and then publishes, so nothing typed is lost. The whole form is one JSON payload; the server
  * cleans and validates every field again and checks the publish rules on the saved product.
  */
-export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew, fileUploadReady, bump, upsell, leadMagnet = false }: Props) {
+export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew, fileUploadReady, bump, upsell, leadMagnet = false, setupLocked = false }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSetup = searchParams.get("from") === "setup";
+  // After publishing: back to setup while it is still open (the products list is locked then, D-079).
+  const afterPublishHref = fromSetup || setupLocked ? SETUP_PUBLISHED_HREF : PUBLISHED_HREF;
   const [values, setValues] = useState(initial);
   const [step, setStep] = useState<ProductStep>("details");
   const [furthest, setFurthest] = useState<ProductStep>(isNew ? "details" : "publish");
@@ -116,6 +129,9 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
   const [confirmDelete, setConfirmDelete] = useState(false);
   // The step "Save and continue" asked for; it opens once that save comes back fine.
   const [goAfterSave, setGoAfterSave] = useState<ProductStep | null>(null);
+  // Links checked in the browser show their problem once the creator leaves the field or tries to publish.
+  const [touched, setTouched] = useState<ReadonlySet<string>>(() => new Set());
+  const touch = (field: string) => setTouched((current) => (current.has(field) ? current : new Set(current).add(field)));
 
   const set = <K extends keyof EditorProduct>(key: K, value: EditorProduct[K]) => setValues((current) => ({ ...current, [key]: value }));
   const open = (target: ProductStep) => {
@@ -127,7 +143,14 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
   const showSaved = useAutoHide(state?.ok && !state.data.published ? state : null);
   // Errors stay until the next action; success notices hide themselves.
   const showNotice = useAutoHide(notice?.kind === "success" ? notice : null) || notice?.kind === "error";
-  const fieldError = (field: string) => (error?.field === field ? error.error : null);
+  const linkTyped = values.externalUrl.trim();
+  const linkInvalid = values.deliveryType === "link" && linkTyped !== "" && !isHttpsUrl(linkTyped);
+  const redirectInvalid = values.redirectUrl.trim() !== "" && !isHttpsUrl(values.redirectUrl);
+  const localErrors: Record<string, string | null> = {
+    externalUrl: linkInvalid ? httpsUrlMessage("link") : null,
+    redirectUrl: redirectInvalid ? httpsUrlMessage("link") : null,
+  };
+  const fieldError = (field: string) => errorFor(error, field) ?? (touched.has(field) ? (localErrors[field] ?? null) : null);
 
   const changeStatus = (status: EditorProduct["status"]) => {
     setNotice(null);
@@ -141,7 +164,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
       setNotice({ kind: "success", text: status === "published" ? "Published. Buyers will see it once your store page is live." : status === "archived" ? "Archived." : "Back to draft." });
       if (status === "published") {
         // Published: back to the products list (D-087), or to the next setup step from the wizard.
-        router.push(fromSetup ? "/dashboard/setup?step=connect-payments" : PUBLISHED_HREF);
+        router.push(afterPublishHref);
         return;
       }
       router.refresh();
@@ -159,7 +182,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
     } else if (state?.ok && state.data.published) {
       set("status", "published");
       setNotice({ kind: "success", text: "Published. Buyers will see it once your store page is live." });
-      router.push(fromSetup ? "/dashboard/setup?step=connect-payments" : PUBLISHED_HREF);
+      router.push(afterPublishHref);
     } else if (state?.ok && goAfterSave) {
       open(goAfterSave);
     }
@@ -169,6 +192,11 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
   useEffect(() => {
     if (state && !state.ok && state.field) document.getElementById(state.field)?.focus();
   }, [state]);
+
+  // Bring a new error message into view: it shows above the steps.
+  useEffect(() => {
+    if (notice?.kind === "error") window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [notice]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -215,7 +243,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
   const saleHint = saving > 0 ? `Buyers pay this instead. That is ${saving}% off.` : "Buyers pay this instead of the price above.";
   const busy = pending || statusPending;
 
-  const delivered = values.deliveryType === "file" ? values.file !== null : values.externalUrl.trim() !== "";
+  const delivered = values.deliveryType === "file" ? values.file !== null : linkTyped !== "" && !linkInvalid;
   const missingDetails = detailsMissing({ title: values.title, priceValid: priceCents !== null, hasDelivery: delivered });
   const done = stepsDone({ detailsOk: missingDetails.length === 0, furthest, published: values.status === "published" });
   const toPublish = publishProblems(
@@ -223,14 +251,29 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
       title: values.title,
       priceCents: priceCents ?? 0,
       salePriceCents: salePriceCents ?? null,
-      externalUrl: values.externalUrl.trim() || null,
+      externalUrl: values.deliveryType === "link" && delivered ? linkTyped : null,
       deliveryType: values.deliveryType,
       fileId: values.file?.id ?? null,
       type: leadMagnet ? "lead_magnet" : "digital",
     },
     paymentsOk,
   );
-  const blockers = [...new Set([...missingDetails, ...toPublish])];
+  // A link that is there but not https gets its own message instead of "add a link".
+  const blockers = [
+    ...new Set([...missingDetails, ...toPublish].map((problem) => (linkInvalid && problem === NO_DELIVERY ? LINK_FIX : problem))),
+    ...(redirectInvalid ? [REDIRECT_FIX] : []),
+  ];
+  // "Save and publish" with something missing says what, instead of a faded button doing nothing.
+  const explainBlockers = (event: MouseEvent<HTMLButtonElement>) => {
+    setGoAfterSave(null);
+    if (blockers.length === 0) {
+      setNotice(null);
+      return;
+    }
+    event.preventDefault();
+    setTouched(new Set(["externalUrl", "redirectUrl"]));
+    setNotice({ kind: "error", text: `Not published yet. ${blockers.join(" ")}` });
+  };
   const next = nextStep(step);
   const previous = previousStep(step);
 
@@ -358,7 +401,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
                   <ProductFileField productId={values.id} file={values.file} onChange={(file) => set("file", file)} />
                 ) : (
                   <Field id="externalUrl" label="Delivery link" error={fieldError("externalUrl")} hint={leadMagnet ? "Where people go after signing up (Google Drive, Notion, Dropbox...). Only they see it." : "Where buyers go after paying (Google Drive, Notion, Dropbox...). Only buyers see it."}>
-                    <Input id="externalUrl" type="url" inputMode="url" value={values.externalUrl} onChange={(event) => set("externalUrl", event.target.value)} placeholder="https://" aria-invalid={!!fieldError("externalUrl")} />
+                    <Input id="externalUrl" type="url" inputMode="url" value={values.externalUrl} onChange={(event) => set("externalUrl", event.target.value)} onBlur={() => touch("externalUrl")} placeholder="https://" aria-invalid={!!fieldError("externalUrl")} />
                   </Field>
                 )}
               </fieldset>
@@ -477,7 +520,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
                 <Textarea id="thankYou" rows={3} value={values.thankYou} maxLength={PRODUCT_LIMITS.thankYou} onChange={(event) => set("thankYou", event.target.value)} placeholder="Thank you! Your files are on their way." />
               </Field>
               <Field id="redirectUrl" label="Redirect after purchase (optional)" error={fieldError("redirectUrl")} hint="Send buyers to your own page instead. Must start with https://">
-                <Input id="redirectUrl" type="url" inputMode="url" value={values.redirectUrl} onChange={(event) => set("redirectUrl", event.target.value)} placeholder="https://" aria-invalid={!!fieldError("redirectUrl")} />
+                <Input id="redirectUrl" type="url" inputMode="url" value={values.redirectUrl} onChange={(event) => set("redirectUrl", event.target.value)} onBlur={() => touch("redirectUrl")} placeholder="https://" aria-invalid={!!fieldError("redirectUrl")} />
               </Field>
               <ConfirmationEmailFields
                 subject={values.emailSubject}
@@ -498,7 +541,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
                   <AccordionContent className="flex flex-col gap-5 border-t border-line p-4">
                   <Field id="slug" label="Product link" hint="Made from the title. It stays the same once you publish.">
                     <p className="flex min-h-11 items-center rounded-md border border-line bg-bg-subtle px-3 font-mono text-sm break-all text-ink">
-                      {storeLink}/{values.slug}
+                      {storeLink}/{shownProductSlug(values.status, values.slug, values.title)}
                     </p>
                   </Field>
                   <Field id="downloadLimit" label="Download limit (optional)" error={fieldError("downloadLimit")} hint={`How many times one buyer can download. Leave empty for no limit (max ${PRODUCT_LIMITS.downloadLimitMax}).`}>
@@ -565,7 +608,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
                 </Button>
               </div>
             ) : (
-              <Button type="submit" name="intent" value="publish" loading={busy} disabled={blockers.length > 0 || values.status === "archived"} onClick={() => setGoAfterSave(null)}>
+              <Button type="submit" name="intent" value="publish" loading={busy} disabled={values.status === "archived"} aria-describedby={blockers.length > 0 ? "ready-title" : undefined} onClick={explainBlockers}>
                 <Rocket aria-hidden="true" className="size-4" />
                 {fromSetup ? "Save, publish & continue setup" : "Save and publish"}
               </Button>
@@ -757,6 +800,9 @@ function PreviewField({ label, children }: { label: string; children: React.Reac
 /** Live card preview, drawn with our tokens (the creator's own theme applies on the store page itself). */
 function ProductPreview({ values, currency, price }: { values: EditorProduct; currency: string; price: Priced | null }) {
   const cover = safeImageSrc(values.coverUrl);
+  const link = values.externalUrl.trim();
+  const linkOk = link !== "" && isHttpsUrl(link);
+  const linkBad = link !== "" && !linkOk;
 
   return (
     <Card className="gap-4">
@@ -783,14 +829,16 @@ function ProductPreview({ values, currency, price }: { values: EditorProduct; cu
       </div>
       <ul className="flex flex-col gap-1.5 text-sm text-mute">
         <li className="flex items-center gap-2">
-          {(values.deliveryType === "file" ? values.file : values.externalUrl.trim()) ? <Check aria-hidden="true" className="size-4 text-mint" /> : <Link2 aria-hidden="true" className="size-4" />}
+          {(values.deliveryType === "file" ? values.file : linkOk) ? <Check aria-hidden="true" className="size-4 text-mint" /> : <Link2 aria-hidden="true" className={cn("size-4", linkBad && "text-warning")} />}
           {values.deliveryType === "file"
             ? values.file
               ? `File added: ${values.file.name}`
               : "Upload a file to publish"
-            : values.externalUrl.trim()
+            : linkOk
               ? "Delivery link added"
-              : "Add a delivery link to publish"}
+              : linkBad
+                ? LINK_FIX
+                : "Add a delivery link to publish"}
         </li>
         <li className="flex items-center gap-2">
           <CreditCard aria-hidden="true" className="size-4" />

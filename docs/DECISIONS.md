@@ -4,6 +4,18 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-102: Fixes from the QA sheet (setup, product editor, store details)
+- **Date:** 2026-11-19
+- **Decision:**
+  - **Setup "Add your first product"** counts only a product that has been named. An untouched "Untitled product" draft does not count (a store that is already live keeps counting it, so it is never locked again). From the wizard, "Create a digital product" opens the newest untouched empty draft again instead of making another one (`findEmptyDraft`). Create buttons show a spinner and cannot be clicked twice (`PendingSubmit`).
+  - **Publishing a product while setup is open** returns to `/dashboard/setup?published=1`, which shows "Product published", never the locked products list.
+  - **Session expired during a signed-in action:** `requireCreatorForAction(returnTo)` sends the creator to `/login?next=...&error=expired`; the login page says "Your session expired", and after sign-in they land back where they were (store publish: the setup publish step).
+  - **Forms report every field problem at once:** `Result` gains optional `fields` (`fieldErrors`, `errorFor` in `lib/result.ts`). A server message on a store-details field disappears once that field changes. An empty store name is caught in the browser with a message under the field.
+  - **Product editor:** delivery and redirect links are checked in the browser with the server's https rule (`isHttpsUrl`). "Save and publish" is no longer silently disabled: with anything missing it lists the problems. The product link shown under More settings follows the title while the product is a draft (`lib/products/slug.ts`).
+  - **Order access email:** a failed send logs the stage and Resend's error code and message (email addresses masked), so the cause shows in the logs and Sentry.
+- **Why:** QA testing on pickstall.store (founder's QA sheet, 2026-11-19).
+- **Consequences:** no schema change. The "Pay Pickstall" title on Stripe Checkout with the shared test account and the "Failed to fetch" console message on the store page were not changed (see the QA report).
+
 ## D-101: Store page sections (Phase 3, block 9: block page editor v1)
 - **Date:** 2026-11-19
 - **Decision (founder approved the plan, 2026-11-19):**

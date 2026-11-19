@@ -9,6 +9,7 @@ import { defaultCoachingSettings } from "@/lib/coaching/settings";
 import { collections, type ProductDoc } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import type { ProductInput } from "@/lib/products/schemas";
+import { slugFromTitle } from "@/lib/products/slug";
 
 // Product reads and writes for the signed-in creator. MongoDB has no row-level security, so the
 // `storeId` filter IS the access check: callers pass the storeId of `requireCreator()` (the
@@ -23,18 +24,7 @@ function toCreatorProduct(doc: ProductDoc): CreatorProduct {
   return rest;
 }
 
-/** Slug from a title: lowercase letters, numbers and hyphens, at most 50 characters. */
-export function slugFromTitle(title: string): string {
-  const slug = title
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 50)
-    .replace(/-+$/, "");
-  return slug || "product";
-}
+export { slugFromTitle };
 
 /** Not deleted by the creator (D-059). Matches a missing or null `deletedAt`. */
 const NOT_DELETED = { deletedAt: null };
@@ -67,6 +57,32 @@ const DRAFT_TITLES: Record<ProductDoc["type"], string> = { digital: "Untitled pr
 /** True for a product fresh from "Create" that has never been named (the editor opens on step 1). */
 export function isUnnamedDraft(product: Pick<ProductDoc, "status" | "title" | "type">): boolean {
   return product.status === "draft" && product.title === DRAFT_TITLES[product.type];
+}
+
+/**
+ * The newest draft of `type` in this store that is exactly as "Create" left it (never named, no
+ * price, description, cover, link or file), or null. The setup wizard opens it again instead of
+ * making another empty draft (QA 2026-11: repeated clicks left extra "Untitled product" drafts).
+ */
+export async function findEmptyDraft(storeId: string, type: ProductDoc["type"] = "digital"): Promise<{ id: string } | null> {
+  const { products } = await collections();
+  const doc = await products.findOne(
+    {
+      storeId,
+      type,
+      status: "draft",
+      title: DRAFT_TITLES[type],
+      priceCents: 0,
+      description: null,
+      descriptionDoc: null,
+      coverUrl: null,
+      externalUrl: null,
+      fileId: null,
+      ...NOT_DELETED,
+    },
+    { projection: { _id: 1 }, sort: { createdAt: -1 } },
+  );
+  return doc ? { id: doc._id } : null;
 }
 
 /**

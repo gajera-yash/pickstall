@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { useRemoveRow } from "@/components/dashboard/removable-row";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,6 +24,7 @@ export function ProductRowActions({ product }: { product: Row }) {
   const [confirming, setConfirming] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const removeRow = useRemoveRow();
   const title = product.title.trim() || "Untitled product";
 
   const setStatus = (status: Row["status"]) =>
@@ -41,6 +43,7 @@ export function ProductRowActions({ product }: { product: Row }) {
         return;
       }
       setConfirming(false);
+      removeRow(); // gone from the list at once; the refresh below brings the server's list
       router.refresh();
     });
 

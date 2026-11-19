@@ -28,6 +28,20 @@ export function usesTestSender(from: string | undefined): boolean {
   return !from || /@resend\.dev>?\s*$/i.test(from.trim());
 }
 
+/** A failed send, with Resend's error code (for example "validation_error") as `reason` for the logs. */
+export class EmailSendError extends Error {
+  constructor(readonly reason: string) {
+    super("Could not send the email.");
+    this.name = "EmailSendError";
+  }
+}
+
+/** Resend's error message for the logs, with any email address masked (never log full emails). */
+export function maskedProviderMessage(message: unknown): string | undefined {
+  if (typeof message !== "string") return undefined;
+  return message.replace(/[^\s@<>"'`]+@[^\s@<>"'`]+/g, "[email]").slice(0, 300);
+}
+
 /**
  * Sends an email with Resend. Without RESEND_API_KEY, development only logs that it would send (the
  * sign-in code email has its own dev log); production without a key is an error. Never logs the body.
@@ -52,9 +66,10 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
     ...(email.attachments?.length ? { attachments: email.attachments.map((file) => ({ filename: file.filename, content: Buffer.from(file.content, "utf8"), contentType: file.contentType })) } : {}),
   });
   if (error) {
-    // Resend's error name says why (for example "validation_error" for an unverified sender).
-    logger.error("email.send_failed", { name: error.name, testSender: usesTestSender(serverEnv.EMAIL_FROM) });
-    throw new Error("Could not send the email.");
+    // Resend's error name and message say why (for example "validation_error" for an unverified
+    // sender domain, or a rate limit). Addresses in the message are masked.
+    logger.error("email.send_failed", { name: error.name, detail: maskedProviderMessage(error.message), testSender: usesTestSender(serverEnv.EMAIL_FROM) });
+    throw new EmailSendError(error.name);
   }
 }
 

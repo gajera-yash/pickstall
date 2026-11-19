@@ -2,7 +2,7 @@
 
 import { ArrowRight, Check, CheckCircle2, Circle, Eye, Store } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type FormEvent } from "react";
 
 import { CurrencyPicker } from "@/components/dashboard/currency-picker";
 import { SocialLinksFields, type SocialValues } from "@/components/dashboard/social-links-fields";
@@ -18,9 +18,10 @@ import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { SOCIAL_LINK_KINDS, type Currency, type SocialLinkKind } from "@/lib/config";
+import { errorFor } from "@/lib/result";
 import { saveStoreSetup, type StoreSetupState } from "@/lib/stores/actions";
 import { STORE_BIO_MAX_LENGTH, STORE_NAME_MAX_LENGTH } from "@/lib/stores/schemas";
-import { checkSocialValue, displayValueFor } from "@/lib/stores/social-handles";
+import { checkSocialValue, displayValueFor, socialFieldName } from "@/lib/stores/social-handles";
 import { THEME_PRESETS, type ThemePresetId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +48,8 @@ type Props = {
   /** True once the store has a product: prices are in this currency, so it cannot change (D-046). */
   currencyLocked?: boolean;
 };
+
+const NAME_REQUIRED = "Enter a store name.";
 
 /** One value per platform row, filled from the saved links (usernames, email or website). */
 const toSocialValues = (links: Values["socialLinks"]): SocialValues => {
@@ -90,7 +93,21 @@ export function StoreSetupForm({ initial, slug, theme, mode = "settings", contin
   const setSocialValue = (kind: SocialLinkKind, value: string) => setSocial((prev) => ({ ...prev, [kind]: value }));
 
   const error = state && !state.ok ? state : null;
-  const fieldError = (field: string) => (error?.field === field ? error.error : null);
+  // What was sent with the last save: a server message stays on a field only until that field changes
+  // (QA 2026-11: the Instagram error stayed on the emptied, optional field).
+  const [sent, setSent] = useState<{ values: typeof values; social: SocialValues } | null>(null);
+  const unchangedSince = (field: string) => {
+    if (!sent) return true;
+    const kind = SOCIAL_LINK_KINDS.find((item) => socialFieldName(item) === field);
+    if (kind) return sent.social[kind] === social[kind];
+    return field in values ? sent.values[field as keyof typeof values] === values[field as keyof typeof values] : true;
+  };
+  // Checked in the browser before sending, so an empty name gets its message under the field.
+  const [nameMissing, setNameMissing] = useState(false);
+  const fieldError = (field: string) => {
+    if (field === "name" && nameMissing && !values.name.trim()) return NAME_REQUIRED;
+    return unchangedSince(field) ? errorFor(error, field) : null;
+  };
   const designError = (field: "themePreset" | "accent") => fieldError(field);
   const formError = error && !error.field ? error.error : null;
   const justSaved = useAutoHide(state?.ok ? state : null) && !dirty;
@@ -115,6 +132,18 @@ export function StoreSetupForm({ initial, slug, theme, mode = "settings", contin
     if (state && !state.ok && state.field) document.getElementById(state.field)?.focus();
   }, [state]);
 
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    if (!values.name.trim()) {
+      event.preventDefault();
+      setNameMissing(true);
+      document.getElementById("name")?.focus();
+      return;
+    }
+    setNameMissing(false);
+    setSubmitted(current);
+    setSent({ values, social });
+  };
+
   // Unsaved-changes guard (DESIGN.md 9.13).
   useEffect(() => {
     if (!dirty) return;
@@ -135,7 +164,7 @@ export function StoreSetupForm({ initial, slug, theme, mode = "settings", contin
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
-      <form action={action} onSubmit={() => setSubmitted(current)} noValidate className="flex min-w-0 flex-col gap-6">
+      <form action={action} onSubmit={submit} noValidate className="flex min-w-0 flex-col gap-6">
         {justSaved && (
           <Alert variant="success">
             <AlertDescription>Your store is saved.</AlertDescription>
@@ -166,7 +195,7 @@ export function StoreSetupForm({ initial, slug, theme, mode = "settings", contin
             <p className="text-sm text-mute">What buyers see at the top of your store page.</p>
           </CardHeader>
 
-          <FormField id="name" label="Store name" error={fieldError("name")} hint={`${values.name.length}/${STORE_NAME_MAX_LENGTH}`}>
+          <FormField id="name" label="Store name" error={fieldError("name")} hint={`${values.name.trim().length}/${STORE_NAME_MAX_LENGTH}`}>
             <IconInput
               icon={Store}
               id="name"

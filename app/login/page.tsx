@@ -20,6 +20,10 @@ const NOTICES: Record<string, LoginNotice> = {
     title: "Couldn't start Google sign-in",
     description: "Use your email instead.",
   },
+  expired: {
+    title: "Your session expired",
+    description: "Sign in again. You'll go back to where you were, so you can finish what you started.",
+  },
 };
 
 const linkClass = "text-blue underline underline-offset-4 hover:text-blue-hover";

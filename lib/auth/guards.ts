@@ -47,6 +47,16 @@ export async function requireUser(next?: string): Promise<AuthUser> {
 }
 
 /**
+ * requireCreator for a server action started from a signed-in page. If the session has ended in the
+ * meantime, the login page says so ("Your session expired") and sends the creator back to
+ * `returnTo` afterwards, so they can do it again (QA 2026-11: publish was lost with no message).
+ */
+export async function requireCreatorForAction(returnTo: string): Promise<{ user: AuthUser; store: CreatorStore }> {
+  if (!(await getCurrentUser())) redirect(loginPath(returnTo, { expired: true }));
+  return requireCreator(returnTo);
+}
+
+/**
  * Signed-in user who owns a store (docs/DECISIONS.md D-003), or a redirect to /login or
  * the username step. The store is looked up by the session's user id, so it is always their own.
  */

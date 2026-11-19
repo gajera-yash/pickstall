@@ -16,7 +16,7 @@ export function PublishButton() {
   const publish = () => {
     setProblem(null);
     startTransition(async () => {
-      const result = await setStorePublishedAction(true);
+      const result = await setStorePublishedAction(true, "setup");
       if (!result.ok) {
         setProblem(result.error);
         return;

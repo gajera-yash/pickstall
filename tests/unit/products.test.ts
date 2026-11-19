@@ -5,6 +5,7 @@ import { formData, mockSession, rateLimit, redirectOf, userId, OPEN_ACCESS, PAUS
 const queries = vi.hoisted(() => ({
   createDraftProduct: vi.fn(),
   deleteProduct: vi.fn(),
+  findEmptyDraft: vi.fn(async () => null),
   findProduct: vi.fn(),
   setProductStatus: vi.fn(),
   updateProduct: vi.fn(),
@@ -356,5 +357,20 @@ describe("product actions use the session owner's store only", () => {
     const fromSetup = new FormData();
     fromSetup.set("from", "setup");
     expect(await redirectOf(() => createProductAndEdit(fromSetup))).toBe("/dashboard/setup?step=first-product&error=limit");
+  });
+
+  it("opens the untouched empty draft again from the setup wizard instead of adding another (QA 2026-11)", async () => {
+    queries.findEmptyDraft.mockResolvedValueOnce({ id: PRODUCT_ID } as never);
+    const fromSetup = new FormData();
+    fromSetup.set("from", "setup");
+    expect(await redirectOf(() => createProductAndEdit(fromSetup))).toBe(`/dashboard/products/${PRODUCT_ID}?from=setup`);
+    expect(queries.findEmptyDraft).toHaveBeenCalledWith("store-1", "digital");
+    expect(queries.createDraftProduct).not.toHaveBeenCalled();
+  });
+
+  it("returns every field problem of a save at once (QA 2026-11)", async () => {
+    const result = await saveProduct(PRODUCT_ID, null, form({ title: "", externalUrl: "not a url", price: "-5abc" }));
+    expect(result).toMatchObject({ ok: false, fields: { title: expect.any(String), externalUrl: expect.any(String), price: expect.any(String) } });
+    expect(queries.updateProduct).not.toHaveBeenCalled();
   });
 });

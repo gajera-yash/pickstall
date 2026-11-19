@@ -3,7 +3,7 @@ import "server-only";
 import { buildChecklist, type Checklist } from "@/lib/dashboard/checklist";
 import { connectAvailable } from "@/lib/payments/connect";
 import { testSellerAccountId } from "@/lib/payments/test-account";
-import { listProducts, type CreatorProduct } from "@/lib/products/queries";
+import { isUnnamedDraft, listProducts, type CreatorProduct } from "@/lib/products/queries";
 import type { CreatorStore } from "@/lib/stores/queries";
 
 /**
@@ -32,7 +32,9 @@ export async function loadSetupState(store: Pick<CreatorStore, "id" | "bio" | "a
     profileSaved: store.profileSaved ?? false,
     chargesEnabled: store.stripeChargesEnabled,
     isPublished: store.isPublished,
-    productCount: products.length,
+    // An empty "Untitled product" fresh from Create is not a product yet (QA 2026-11), so the step
+    // stays open until one is named. A store already live keeps counting it, so it is not locked again.
+    productCount: store.isPublished ? products.length : products.filter((product) => !isUnnamedDraft(product)).length,
     paymentsAvailable: paymentsConnectable(),
   });
   return { checklist, products };

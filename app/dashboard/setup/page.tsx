@@ -12,6 +12,7 @@ import { priceLabel } from "@/lib/products/pricing";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PendingSubmit } from "@/components/ui/pending-submit";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator, type CreatorStore } from "@/lib/auth/guards";
@@ -55,6 +56,13 @@ async function SetupContent({ searchParams }: { searchParams: PageProps<"/dashbo
 
       <ScrollToTopOnStep step={step.id} />
       <SetupStepper checklist={checklist} current={step.id} />
+
+      {/* Back from publishing a product (the editor sends ?published=1). */}
+      {params.published === "1" && (
+        <Alert variant="success">
+          <AlertDescription>Product published. Buyers will see it once your store is live.</AlertDescription>
+        </Alert>
+      )}
 
       {step.id === "store-setup" && (
         <StoreSetupForm
@@ -127,7 +135,7 @@ function ProductStep({ step, products, currency, error }: { step: ChecklistItem;
           {products.map((product) => (
             <li key={product._id} className="flex flex-wrap items-center gap-3 px-4 py-3">
               <Package aria-hidden="true" className="size-5 shrink-0 text-mute" />
-              <Link href={`/dashboard/products/${product._id}`} className="min-w-0 flex-1 truncate font-semibold hover:text-blue">
+              <Link href={`/dashboard/products/${product._id}?from=setup`} className="min-w-0 flex-1 truncate font-semibold hover:text-blue">
                 {product.title || "Untitled product"}
               </Link>
               <span className="text-sm text-mute tabular-nums">{priceLabel(product, currency)}</span>
@@ -140,10 +148,10 @@ function ProductStep({ step, products, currency, error }: { step: ChecklistItem;
       <div className="flex flex-wrap items-center gap-3">
         <form action={createProductAndEdit}>
           <input type="hidden" name="from" value="setup" />
-          <Button type="submit" variant={step.done ? "secondary" : "default"}>
+          <PendingSubmit variant={step.done ? "secondary" : "default"}>
             <Plus aria-hidden="true" />
             {step.done ? "Add another product" : "Create a digital product"}
-          </Button>
+          </PendingSubmit>
         </form>
         {step.done && <NextLink />}
       </div>

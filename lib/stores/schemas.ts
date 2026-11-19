@@ -39,24 +39,26 @@ export function imageField(label: string) {
     .transform((value) => (value === "" ? undefined : value));
 }
 
+/** True for a full https link with a real host and no user name or password (D-014). */
+export function isHttpsUrl(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" && url.hostname.includes(".") && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+/** The message for a link that is not a full https link. */
+export const httpsUrlMessage = (label: string) => `Enter a full ${label} that starts with https://`;
+
 /** Optional https URL (D-014: no http, no javascript: or data: links). Empty becomes undefined. */
 export function httpsUrlSchema(label: string) {
   return z
     .string()
     .trim()
     .max(STORE_URL_MAX_LENGTH, { error: `Use ${STORE_URL_MAX_LENGTH} characters or fewer.` })
-    .refine(
-      (value) => {
-        if (value === "") return true;
-        try {
-          const url = new URL(value);
-          return url.protocol === "https:" && url.hostname.includes(".") && !url.username && !url.password;
-        } catch {
-          return false;
-        }
-      },
-      { error: `Enter a full ${label} that starts with https://` },
-    )
+    .refine((value) => value === "" || isHttpsUrl(value), { error: httpsUrlMessage(label) })
     .transform((value) => (value === "" ? undefined : value));
 }
 

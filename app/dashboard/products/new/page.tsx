@@ -4,7 +4,7 @@ import { Suspense } from "react";
 
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { PendingSubmit } from "@/components/ui/pending-submit";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
 import { can } from "@/lib/plans/access";
@@ -54,13 +54,12 @@ async function TypePicker() {
             </Link>
           ) : live ? (
             <form action={id === "course" ? createCourseAndEdit : id === "coaching" ? createCoachingAndEdit : id === "emails" ? createLeadMagnetAndEdit : createProductAndEdit} className="h-full">
-              <Button
-                type="submit"
+              <PendingSubmit
                 variant="secondary"
                 className="group h-full w-full flex-col items-stretch justify-start gap-3 rounded-lg border border-line p-5 text-left font-normal whitespace-normal transition-all duration-(--dur-fast) not-disabled:hover:border-blue not-disabled:hover:bg-blue-soft not-disabled:hover:ring-1 not-disabled:hover:ring-blue focus-visible:outline-none"
               >
                 <TypeCardBody title={title} description={description} Icon={Icon} live badge="Start" />
-              </Button>
+              </PendingSubmit>
             </form>
           ) : (
             <div className="flex h-full flex-col gap-3 rounded-lg border border-line bg-surface p-5 opacity-80">

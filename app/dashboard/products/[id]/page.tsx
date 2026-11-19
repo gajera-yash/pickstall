@@ -11,6 +11,7 @@ import { listBumpCandidates } from "@/lib/bumps/queries";
 import { defaultCoachingSettings } from "@/lib/coaching/settings";
 import { storeLink } from "@/lib/config";
 import { loadCurriculum } from "@/lib/courses/curriculum";
+import { loadSetupGate } from "@/lib/dashboard/setup-gate";
 import { findProductFile } from "@/lib/files/product-files";
 import { fileStorageAvailable } from "@/lib/files/storage";
 import { centsToInput } from "@/lib/products/money";
@@ -135,7 +136,9 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
     emailBody: product.afterPurchase.emailBody ?? "",
   };
 
-  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} fileUploadReady={fileUploadReady} bump={bump} upsell={upsell} leadMagnet={product.type === "lead_magnet"} />;
+  // While setup still locks the dashboard (D-079), publishing goes back to setup, not the locked products list.
+  const { unlocked } = await loadSetupGate(store);
+  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} fileUploadReady={fileUploadReady} bump={bump} upsell={upsell} leadMagnet={product.type === "lead_magnet"} setupLocked={!unlocked} />;
 }
 
 function EditorSkeleton() {
