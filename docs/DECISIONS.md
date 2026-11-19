@@ -4,6 +4,54 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-095: Broadcasts, one-click unsubscribe, welcome email, bounce and complaint webhook (Phase 3, block 2)
+- **Date:** 2026-11-19
+- **Decision (founder approved the plan, 2026-11-19):**
+  - **Broadcasts** at `/dashboard/marketing/broadcasts`. The creator writes a subject and a plain-text message (cleaned of tags; `{{customer_name}}` is the only variable), sees a preview, sends a test to their own email (10 an hour), then confirms sending to everyone subscribed.
+    - Limits: 3 broadcasts per store per 24 hours, and none while the list is over the plan's subscriber limit.
+  - **Sending:** the Inngest function `broadcast-send` (concurrency 1, which keeps us under Resend's 10 requests/second) runs one step per batch of 100.
+    - People are taken in `_id` order after a saved `cursor`.
+    - Each Resend `batch.send` has the idempotency key `broadcast-<id>-<cursor>`, so a retried step sends nothing twice.
+    - Development without Inngest sends after the response. Production without Inngest refuses to start.
+  - **Every list email:**
+    - It comes from "{store} via Pickstall" `<EMAIL_FROM address>`, with replies to the creator's sign-in email.
+    - The footer is always present: the store name, why they get it and an unsubscribe link.
+    - It carries the RFC 8058 headers `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`.
+    - Tags `kind`, `store_id` and `subscriber_id` come back with webhooks.
+  - **Unsubscribe:** every subscriber gets a random 32-character `unsubscribeToken` (unique index), given on insert or lazily before the first send.
+    - `/u/<token>` asks before unsubscribing, because mail scanners open links.
+    - `POST /api/unsubscribe/<token>` unsubscribes at once (one-click returns 200 with an empty body; the page's form returns to `/u/<token>?done=1`).
+    - The email address is never shown. `unsubscribeReason` is one of user, creator, bounced or complained.
+  - **Welcome email:** an optional `stores.welcomeEmail { enabled, subject, body }`, set on the Subscribers page. It is sent once per person (`welcomedAt` is claimed first) after a new subscription, via `after()`, so the sale is never slowed.
+  - **Resend webhook** `POST /api/webhooks/resend`:
+    - Svix signature checked with `resend.webhooks.verify` and `RESEND_WEBHOOK_SECRET`; deduped through `webhookEvents` (`resend:<svix-id>`).
+    - `email.complained` and permanent `email.bounced` on broadcast or welcome emails unsubscribe that person in the tagged store only.
+  - New collection `broadcasts` (index `broadcasts_store_created`); subscriber index `subscribers_store_status_id`.
+- **Founder setup:** Resend → Webhooks → add `https://www.pickstall.store/api/webhooks/resend` with the events `email.bounced` and `email.complained`, then put its signing secret in Vercel as `RESEND_WEBHOOK_SECRET`. Inngest must be configured in production for broadcasts.
+- **Risk noted:** every creator sends from the shared Pickstall domain. Consent-only lists, the daily cap, auto-unsubscribe on bounces and complaints, and one-click unsubscribe protect its reputation. Resend plan limits apply as lists grow.
+
+## D-094: Email list and "Collect emails" lead magnets (Phase 3, block 1)
+- **Date:** 2026-11-19
+- **Decision (founder approved the plan, 2026-11-19):**
+  - New product type `lead_magnet`, shown as "Collect emails" in the type picker. It is a digital product (file or link delivery, same editor) that is always free.
+    - `updateProduct` forces price 0 and no discount. The publish rules refuse a price.
+    - There is no order bump: the editor hides it and the checkout ignores it.
+  - Its checkout goes through the normal free-order path (order → paid → library and confirmation email). There is no shortcut.
+  - **Consent:**
+    - Lead magnet (founder chose option a): the form says plainly that signing up includes emails, and submitting is the consent.
+    - Every other checkout: an **unticked** "Email me updates and offers from {store}" box.
+    - The server builds the consent words itself (`lib/subscribers/rules.ts`) and saves them on the order as `marketingConsent { at, text }`.
+  - New `subscribers` collection:
+    - Unique on `storeId` + `emailKey` (`subscribers_store_email_unique`), plus `subscribers_store_created` for the list.
+    - Each entry saves its source (lead magnet or purchase, with the product) and its consent.
+    - `addSubscriberForOrder` runs in `onOrderPaid`. It is an idempotent upsert that re-subscribes with the fresh consent, and a list error is only logged, never blocking the sale.
+  - Dashboard → Marketing → **Email list** opens `/dashboard/marketing/subscribers`:
+    - Count against the plan limit (`subscriberLimit(access)`, from `PLAN_LIMITS`; only subscribed people count).
+    - Search, "Load more", CSV export (formula-neutralized) and per-row Unsubscribe or Delete.
+  - Every query filters by the session's store id. Tests in `tests/unit/subscribers.test.ts` and `checkout.test.ts`.
+- **Not in this block:** sending emails to the list, unsubscribe links and broadcasts (block 2). Until then the list only collects. The plan limit is shown, not yet enforced.
+- **Why:** Phase 3 growth tools; lead magnets are in the Starter plan (PRD F9).
+
 ## D-093: Product and lesson files in a private Cloudflare R2 bucket
 - **Date:** 2026-11-19
 - **Decision (founder approved the plan, 2026-11-19):**

@@ -28,11 +28,14 @@ export function callText(call: CallDetails, storeName: string): string {
 }
 
 /** Makes the (already escaped) https links in a text clickable. */
-function linkify(escaped: string): string {
+export function linkify(escaped: string): string {
   return escaped.replace(/https:\/\/[^\s<]+/g, (url) => `<a href="${url}" style="color:#0056ff">${url}</a>`);
 }
 
 export type RenderedEmail = { subject: string; text: string; html: string };
+
+/** Inline colors for list emails (D-095): email HTML cannot use the CSS tokens. */
+export const LIST_EMAIL_COLORS = { text: "#111827", muted: "#6b7280", border: "#e5e7eb" } as const;
 
 const VARIABLE = /\{\{\s*(customer_name|product_title|download_link)\s*\}\}/g;
 

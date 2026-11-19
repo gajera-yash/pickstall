@@ -34,14 +34,23 @@ async function allowed(ownerId: string): Promise<boolean> {
   return takeRateLimit(rateLimitKey("product-write:owner", ownerId), max, windowMinutes);
 }
 
+/** Creates an empty draft lead magnet (D-094) and opens the digital editor for it. */
+export async function createLeadMagnetAndEdit(formData?: FormData): Promise<void> {
+  return createAndEdit(formData, "lead_magnet");
+}
+
 /** Creates an empty draft digital product and opens its editor. */
 export async function createProductAndEdit(formData?: FormData): Promise<void> {
+  return createAndEdit(formData, "digital");
+}
+
+async function createAndEdit(formData: FormData | undefined, type: "digital" | "lead_magnet"): Promise<void> {
   const { user, store } = await requireCreator("/dashboard/products/new");
   const from = formData?.get("from");
   // From the setup wizard, problems go back there: the products list is locked during setup (D-079).
   const errorPath = from === "setup" ? "/dashboard/setup?step=first-product&error=" : "/dashboard/products?error=";
   if (!(await allowed(user.id))) redirect(`${errorPath}slow`);
-  const result = await createDraftProduct(store.id, { buttonText: "Buy now" }).catch((error: unknown) => {
+  const result = await createDraftProduct(store.id, type === "lead_magnet" ? { buttonText: "Send it to me", type } : { buttonText: "Buy now" }).catch((error: unknown) => {
     logger.error("products.create_failed", { name: errorName(error) });
     return "error" as const;
   });

@@ -35,7 +35,9 @@ export function ProductKind({ product, theme }: { product: PublicProduct; theme:
         ? `Course · ${course.lessonCount} ${course.lessonCount === 1 ? "lesson" : "lessons"}`
         : product.type === "coaching"
           ? `Coaching call · ${durationLabel(product.coaching?.durationMinutes ?? 30)}`
-          : "Digital product"}
+          : product.type === "lead_magnet"
+            ? "Free download"
+            : "Digital product"}
     </span>
   );
 }
@@ -57,7 +59,7 @@ export function PriceAndButton({ product, theme, currency }: { product: PublicPr
         <PriceTag product={product} currency={currency} className="font-display text-money-m" regularStyle={{ color: preset.muted }} />
       )}
       <span className="flex h-11 items-center px-5 text-button" style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}>
-        {product.buttonText || (product.type === "course" ? "Enroll now" : product.type === "coaching" ? "Book a call" : "Buy now")}
+        {product.buttonText || (product.type === "course" ? "Enroll now" : product.type === "coaching" ? "Book a call" : product.type === "lead_magnet" ? "Get it free" : "Buy now")}
       </span>
     </span>
   );

@@ -124,7 +124,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
     emailBody: product.afterPurchase.emailBody ?? "",
   };
 
-  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} fileUploadReady={fileUploadReady} bump={bump} />;
+  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} fileUploadReady={fileUploadReady} bump={bump} leadMagnet={product.type === "lead_magnet"} />;
 }
 
 function EditorSkeleton() {

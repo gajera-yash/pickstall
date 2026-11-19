@@ -154,6 +154,7 @@ BUNNY_STREAM_API_KEY                 # server only
 BUNNY_STREAM_TOKEN_KEY               # server only (signs playback links)
 BUNNY_STREAM_READONLY_KEY            # server only (verifies Bunny webhooks)
 RESEND_API_KEY                       # server only
+RESEND_WEBHOOK_SECRET                # server only (verifies Resend bounce and complaint webhooks, D-095)
 INNGEST_EVENT_KEY / INNGEST_SIGNING_KEY   # server only (call reminders); INNGEST_DEV=1 for the local dev server
 NEXT_PUBLIC_POSTHOG_KEY
 SENTRY_DSN / NEXT_PUBLIC_SENTRY_DSN

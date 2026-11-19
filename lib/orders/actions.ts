@@ -27,6 +27,7 @@ import {
   markOrderFailed,
   productPathForOrder,
 } from "@/lib/orders/queries";
+import { consentForCheckout } from "@/lib/subscribers/rules";
 import { buyerInput } from "@/lib/orders/schemas";
 import { providerForStore } from "@/lib/payments";
 import { mockAllowed, signMockBody } from "@/lib/payments/mock";
@@ -93,7 +94,8 @@ export async function startCheckout(username: string, productSlug: string, _prev
     const mainAmount = orderAmounts(context.product, coupon ? couponDiscountCents(payableCents(context.product), coupon) : 0);
     // An order bump the buyer ticked (D-089): only the one saved on this product, still published in
     // this store, at the price saved with it. The coupon applies to the main product only.
-    const bump = formData.get("addBump") === "on" ? await findCheckoutBump(context.store._id, context.product.bump) : null;
+    // A lead magnet stays free: it never offers a bump (D-094).
+    const bump = context.product.type !== "lead_magnet" && formData.get("addBump") === "on" ? await findCheckoutBump(context.store._id, context.product.bump) : null;
     const amount = bump ? withBump(mainAmount, bump.priceCents) : mainAmount;
     if (coupon) {
       const low = totalProblem(amount.totalCents, context.store.currency);
@@ -118,6 +120,9 @@ export async function startCheckout(username: string, productSlug: string, _prev
     }
 
     const free = amount.totalCents === 0;
+    // Consent to the store's emails (D-094): signing up for a lead magnet, or the unticked-by-default
+    // "Email me updates" box. The words come from the server, matching what the form showed.
+    const marketingConsent = consentForCheckout(context.store.name, context.product, formData.get("marketingConsent") === "on");
     const provider = free ? null : providerForStore(context.store);
     if (!free && !provider) return err("Payments aren't set up for this store yet. Please check back soon.");
     if (!free && !canBuy(context)) return err("Payments aren't set up for this store yet. Please check back soon.");
@@ -136,6 +141,7 @@ export async function startCheckout(username: string, productSlug: string, _prev
       currency: context.store.currency,
       provider: free ? "free" : provider!.name,
       ...(booking ? { booking } : {}),
+      ...(marketingConsent ? { marketingConsent } : {}),
       ...(coupon ? { coupon: { couponId: coupon._id, code: coupon.code, discountCents: amount.discountCents - orderAmounts(context.product).discountCents } } : {}),
       ...(bump ? { bump: { productId: bump.productId, title: bump.title, priceCents: bump.priceCents } } : {}),
     });

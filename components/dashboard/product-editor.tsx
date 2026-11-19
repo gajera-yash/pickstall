@@ -89,6 +89,8 @@ type Props = {
   fileUploadReady: boolean;
   /** Order bump settings and the products that can be offered (D-089). */
   bump: { initial: BumpSettings; candidates: BumpCandidate[] };
+  /** A lead magnet (D-094): always free, no price fields and no order bump. */
+  leadMagnet?: boolean;
 };
 
 /**
@@ -97,7 +99,7 @@ type Props = {
  * and then publishes, so nothing typed is lost. The whole form is one JSON payload; the server
  * cleans and validates every field again and checks the publish rules on the saved product.
  */
-export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew, fileUploadReady, bump }: Props) {
+export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew, fileUploadReady, bump, leadMagnet = false }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSetup = searchParams.get("from") === "setup";
@@ -175,9 +177,10 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
     coverUrl: values.coverUrl,
     externalUrl: values.externalUrl,
     deliveryType: values.deliveryType,
-    price: values.price,
+    // A lead magnet is free; the server forces this too.
+    price: leadMagnet ? "0" : values.price,
     discountOn: values.discountOn,
-    salePrice: values.discountOn ? values.salePrice : "",
+    salePrice: !leadMagnet && values.discountOn ? values.salePrice : "",
     buttonText: values.buttonText,
     downloadLimit: values.downloadLimit,
     headline: values.headline,
@@ -202,8 +205,8 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
   };
 
   const badge = STATUS_BADGE[values.status];
-  const priceCents = parseMoneyToCents(values.price, currency);
-  const salePriceCents = values.discountOn ? parseMoneyToCents(values.salePrice, currency) : null;
+  const priceCents = leadMagnet ? 0 : parseMoneyToCents(values.price, currency);
+  const salePriceCents = !leadMagnet && values.discountOn ? parseMoneyToCents(values.salePrice, currency) : null;
   const previewPrice = priceCents === null ? null : { priceCents, salePriceCents };
   const saving = previewPrice ? savingPercent(previewPrice) : 0;
   const saleHint = saving > 0 ? `Buyers pay this instead. That is ${saving}% off.` : "Buyers pay this instead of the price above.";
@@ -220,6 +223,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
       externalUrl: values.externalUrl.trim() || null,
       deliveryType: values.deliveryType,
       fileId: values.file?.id ?? null,
+      type: leadMagnet ? "lead_magnet" : "digital",
     },
     paymentsOk,
   );
@@ -356,6 +360,11 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
                 )}
               </fieldset>
 
+              {leadMagnet ? (
+                <p className="rounded-md border border-line bg-bg-subtle px-4 py-3 text-sm text-mute">
+                  This is free. People enter their name and email to get it, and join your email list. You will find them under Marketing, Subscribers.
+                </p>
+              ) : (
               <fieldset className="flex flex-col gap-4">
                 <legend className="mb-2 text-sm font-semibold">Price</legend>
                 <Field id="price" label="Price" error={fieldError("price")} hint={`In ${currency.toUpperCase()}. Use 0 for a free product.`}>
@@ -376,9 +385,10 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
                   </Field>
                 )}
               </fieldset>
+              )}
 
               <Field id="buttonText" label="Button text" error={fieldError("buttonText")} hint={`${values.buttonText.length}/${PRODUCT_LIMITS.buttonText}. Shown on your store and product page.`}>
-                <Input id="buttonText" value={values.buttonText} maxLength={PRODUCT_LIMITS.buttonText} onChange={(event) => set("buttonText", event.target.value)} placeholder="Buy now" />
+                <Input id="buttonText" value={values.buttonText} maxLength={PRODUCT_LIMITS.buttonText} onChange={(event) => set("buttonText", event.target.value)} placeholder={leadMagnet ? "Send it to me" : "Buy now"} />
               </Field>
             </>
           )}
@@ -430,7 +440,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
                 errorFor={(index) => fieldError(`question-${index}`)}
                 listError={fieldError("questions")}
               />
-              <BumpSection productId={values.id} currency={currency} initial={bump.initial} candidates={bump.candidates} />
+              {!leadMagnet && <BumpSection productId={values.id} currency={currency} initial={bump.initial} candidates={bump.candidates} />}
             </>
           )}
 

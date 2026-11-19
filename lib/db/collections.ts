@@ -48,6 +48,11 @@ export type StoreDoc = {
   ownerEmailKey?: string;
   /** When the creator first saved Store details (D-091): setup step 1 is done then, photo and bio being optional. */
   profileSavedAt?: Date | null;
+  /**
+   * The email sent once to each new subscriber (D-095). Missing: off. Creator text, sanitized and
+   * length-limited; the footer with the store name and unsubscribe link is always added.
+   */
+  welcomeEmail?: { enabled: boolean; subject: string; body: string } | null;
   slug: string;
   name: string;
   bio: string | null;
@@ -161,8 +166,11 @@ export type CoachingSettingsDoc = {
 export type ProductDoc = {
   _id: string;
   storeId: string;
-  /** "digital" (Phase 1), "course" (course flow, D-054) or "coaching" (D-081). */
-  type: "digital" | "course" | "coaching";
+  /**
+   * "digital" (Phase 1), "course" (course flow, D-054), "coaching" (D-081) or "lead_magnet" (D-094):
+   * a free digital product that grows the creator's email list. A lead magnet is always free.
+   */
+  type: "digital" | "course" | "coaching" | "lead_magnet";
   /** Course settings, only when type is "course". */
   course?: CourseSettingsDoc;
   /** Coaching settings, only when type is "coaching". */
@@ -229,6 +237,11 @@ export type OrderDoc = {
   buyerName: string;
   buyerPhone: string | null;
   answers: OrderAnswerDoc[];
+  /**
+   * The buyer agreed to emails from the store (D-094): the "Email me updates" tick, or signing up
+   * for a lead magnet. Saved with the exact words shown. Missing or null: no consent.
+   */
+  marketingConsent?: { at: Date; text: string } | null;
   subtotalCents: number;
   discountCents: number;
   totalCents: number;
@@ -507,6 +520,59 @@ export type AuditLogDoc = {
   at: Date;
 };
 
+/**
+ * Someone on a creator's email list (D-094). Added when a buyer agrees to emails at checkout or
+ * signs up for a lead magnet, always with the consent words they saw. Unique per store and email
+ * (index `subscribers_store_email_unique`). Creators are the data controller for this data.
+ */
+export type SubscriberDoc = {
+  _id: string;
+  storeId: string;
+  /** As entered (trimmed); `emailKey` is the lower-case form used for uniqueness. */
+  email: string;
+  emailKey: string;
+  name: string | null;
+  status: "subscribed" | "unsubscribed";
+  /** Where they first joined: a product (lead magnet or purchase). */
+  source: { kind: "lead_magnet" | "purchase"; productId: string; productTitle: string };
+  /** The latest consent: when, and the exact words shown. */
+  consent: { at: Date; text: string };
+  unsubscribedAt: Date | null;
+  /** Why they left the list (D-095). Missing on entries from before it. */
+  unsubscribeReason?: "user" | "creator" | "bounced" | "complained" | null;
+  /**
+   * Random token in this person's unsubscribe links (D-095); unique (index
+   * `subscribers_unsubscribe_token_unique`). Given when they are first emailed.
+   */
+  unsubscribeToken?: string;
+  /** The welcome email (D-095) went out, so it is never sent twice. */
+  welcomedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
+ * An email a creator sends to their subscribed list (D-095). Sent in batches of 100 by an Inngest
+ * job; `cursor` is the last subscriber id sent, so a retried job continues where it stopped.
+ */
+export type BroadcastDoc = {
+  _id: string;
+  storeId: string;
+  subject: string;
+  body: string;
+  /** The creator's sign-in email when they sent it: replies go there. */
+  replyTo: string | null;
+  status: "draft" | "sending" | "sent" | "failed";
+  /** Subscribed people when sending started. */
+  recipientCount: number;
+  sentCount: number;
+  cursor: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+};
+
 export async function collections(): Promise<{
   profiles: Collection<ProfileDoc>;
   stores: Collection<StoreDoc>;
@@ -530,6 +596,8 @@ export async function collections(): Promise<{
   bookings: Collection<BookingDoc>;
   coupons: Collection<CouponDoc>;
   couponRedemptions: Collection<CouponRedemptionDoc>;
+  subscribers: Collection<SubscriberDoc>;
+  broadcasts: Collection<BroadcastDoc>;
 }> {
   const db = await getDb();
   return {
@@ -554,6 +622,8 @@ export async function collections(): Promise<{
     notifications: db.collection<NotificationDoc>("notifications"),
     bookings: db.collection<BookingDoc>("bookings"),
     coupons: db.collection<CouponDoc>("coupons"),
+    subscribers: db.collection<SubscriberDoc>("subscribers"),
+    broadcasts: db.collection<BroadcastDoc>("broadcasts"),
     couponRedemptions: db.collection<CouponRedemptionDoc>("couponRedemptions"),
   };
 }

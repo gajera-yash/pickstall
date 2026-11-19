@@ -73,6 +73,13 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("bookings").createIndex({ storeId: 1, start: 1 }, { name: "bookings_store_start" }),
     // Coupons (D-088): one code per store ignoring case; one use per order; one active use per email when asked.
     db.collection("coupons").createIndex({ storeId: 1, codeKey: 1 }, { unique: true, name: "coupons_store_code_unique" }),
+    // Email list (D-094): one entry per store and email; the dashboard lists the newest first.
+    db.collection("subscribers").createIndex({ storeId: 1, emailKey: 1 }, { unique: true, name: "subscribers_store_email_unique" }),
+    db.collection("subscribers").createIndex({ storeId: 1, createdAt: -1 }, { name: "subscribers_store_created" }),
+    // Broadcasts and unsubscribe links (D-095).
+    db.collection("subscribers").createIndex({ unsubscribeToken: 1 }, { unique: true, partialFilterExpression: { unsubscribeToken: { $type: "string" } }, name: "subscribers_unsubscribe_token_unique" }),
+    db.collection("subscribers").createIndex({ storeId: 1, status: 1, _id: 1 }, { name: "subscribers_store_status_id" }),
+    db.collection("broadcasts").createIndex({ storeId: 1, createdAt: -1 }, { name: "broadcasts_store_created" }),
     db.collection("couponRedemptions").createIndex({ orderId: 1 }, { unique: true, name: "coupon_redemptions_order_unique" }),
     db.collection("couponRedemptions").createIndex({ activeEmailKey: 1 }, { unique: true, partialFilterExpression: { activeEmailKey: { $type: "string" } }, name: "coupon_redemptions_email_unique" }),
     // Order bumps (D-089): at most one bump order per parent order.

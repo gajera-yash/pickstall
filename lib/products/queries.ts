@@ -62,7 +62,7 @@ export type CreateProductResult = { id: string } | "limit" | "error";
 // Courses (D-054) and coaching calls (D-081) have their own editors; the digital product editor never writes them.
 const OWN_EDITOR_TYPES: ProductDoc["type"][] = ["course", "coaching"];
 
-const DRAFT_TITLES: Record<ProductDoc["type"], string> = { digital: "Untitled product", course: "Untitled course", coaching: "Untitled coaching call" };
+const DRAFT_TITLES: Record<ProductDoc["type"], string> = { digital: "Untitled product", course: "Untitled course", coaching: "Untitled coaching call", lead_magnet: "Untitled freebie" };
 
 /** True for a product fresh from "Create" that has never been named (the editor opens on step 1). */
 export function isUnnamedDraft(product: Pick<ProductDoc, "status" | "title" | "type">): boolean {
@@ -122,8 +122,10 @@ export type SaveProductResult = "saved" | "not_found";
 export async function updateProduct(storeId: string, id: string, input: ProductInput): Promise<SaveProductResult> {
   const { products } = await collections();
   // The digital editor never writes a course (courses save through lib/courses/queries.ts).
-  const current = await products.findOne({ _id: id, storeId, type: { $nin: OWN_EDITOR_TYPES }, ...NOT_DELETED }, { projection: { status: 1, slug: 1, title: 1 } });
+  const current = await products.findOne({ _id: id, storeId, type: { $nin: OWN_EDITOR_TYPES }, ...NOT_DELETED }, { projection: { status: 1, slug: 1, title: 1, type: 1 } });
   if (!current) return "not_found";
+  // A lead magnet is always free (D-094), whatever the form sends.
+  const leadMagnet = current.type === "lead_magnet";
 
   const set: Partial<ProductDoc> = {
     title: input.title ?? current.title,
@@ -132,8 +134,8 @@ export async function updateProduct(storeId: string, id: string, input: ProductI
     coverUrl: input.coverUrl ?? null,
     externalUrl: input.externalUrl ?? null,
     deliveryType: input.deliveryType,
-    priceCents: input.priceCents,
-    salePriceCents: input.salePriceCents,
+    priceCents: leadMagnet ? 0 : input.priceCents,
+    salePriceCents: leadMagnet ? null : input.salePriceCents,
     buttonText: input.buttonText ?? null,
     downloadLimit: input.downloadLimit ?? null,
     checkout: { headline: input.headline ?? null, askPhone: input.askPhone, questions: input.questions },

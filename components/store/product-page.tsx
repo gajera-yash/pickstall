@@ -116,7 +116,9 @@ function BuyBox({ store, product, theme, buyable, curriculum }: { store: PublicS
       ]
     : product.type === "coaching"
       ? [`A ${durationLabel(product.coaching?.durationMinutes ?? 30)} one-to-one call`, "Pick a time that suits you at checkout", "Booking and calendar invite by email"]
-      : ["Delivered by email right after payment", "Also kept in your library"];
+      : product.type === "lead_magnet"
+        ? ["Free: just your name and email", "Sent to your inbox right away", "Also kept in your library"]
+        : ["Delivered by email right after payment", "Also kept in your library"];
 
   return (
     <>
@@ -172,7 +174,7 @@ function checkoutHref(store: PublicStore, product: PublicProduct): string {
 }
 
 function buttonLabel(product: PublicProduct): string {
-  return product.buttonText || (product.type === "coaching" ? "Book a call" : "Buy now");
+  return product.buttonText || (product.type === "coaching" ? "Book a call" : product.type === "lead_magnet" ? "Get it free" : "Buy now");
 }
 
 function buttonStyle(theme: StoreTheme): CSSProperties {

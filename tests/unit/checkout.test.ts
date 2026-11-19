@@ -246,6 +246,16 @@ describe("startCheckout", () => {
     expect(provider.createCheckout).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 1900 }));
   });
 
+  it("saves email consent only when the buyer ticks the box, with the server's own words (D-094)", async () => {
+    await redirectOf(() => startCheckout("maya", "playbook", null, form()));
+    expect(hoisted.queries.createPendingOrder.mock.calls[0]![0].marketingConsent).toBeUndefined();
+    vi.clearAllMocks();
+    hoisted.queries.createPendingOrder.mockResolvedValue("order-2");
+    provider.createCheckout.mockResolvedValue({ url: "/mock-pay/order-2", providerSessionId: "mock_order-2" });
+    await redirectOf(() => startCheckout("maya", "playbook", null, form({ marketingConsent: "on" })));
+    expect(hoisted.queries.createPendingOrder).toHaveBeenCalledWith(expect.objectContaining({ marketingConsent: { at: expect.any(Date), text: expect.stringMatching(/^Email me updates/) } }));
+  });
+
   it("takes no order from a paused store, free products included (D-072)", async () => {
     hoisted.queries.loadCheckoutContext.mockResolvedValue({ ...context, open: false });
     expect(await startCheckout("maya", "guide", null, form())).toMatchObject({ ok: false, error: expect.stringMatching(/isn't taking orders/) });

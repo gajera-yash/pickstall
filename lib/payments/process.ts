@@ -7,6 +7,7 @@ import { scheduleCallReminders } from "@/lib/coaching/reminders";
 import { redeemCouponForOrder, releaseCouponForOrder } from "@/lib/coupons/queries";
 import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
+import { addSubscriberForOrder } from "@/lib/subscribers/queries";
 import { logger } from "@/lib/logger";
 import { providerByName } from "@/lib/payments";
 import { notifyOrderPaid, notifyRefund } from "@/lib/notifications/queries";
@@ -84,6 +85,9 @@ async function onOrderPaid(orderId: string): Promise<void> {
   const bumpOrderId = await createBumpOrder(orderId);
   if (bumpOrderId) scheduleOrderConfirmation(bumpOrderId);
   await notifyOrderPaid(orderId); // one "New sale" per order (dedupe key); never throws (D-061)
+  // The email list (D-094): only with the consent saved on the order; an upsert, so replays are safe.
+  // A list problem must never undo or block the sale, so it is only logged.
+  await addSubscriberForOrder(orderId).catch((error: unknown) => logger.error("subscribers.add_failed", { orderId, name: error instanceof Error ? error.name : undefined }));
 }
 
 async function applyEvent(providerName: PaymentProvider["name"], event: PaymentEvent): Promise<void> {

@@ -1,7 +1,7 @@
 // Can this store sell right now? (D-072, D-073). Pure, so pages, actions and tests share one rule.
 // All plan gating goes through `can()` (CLAUDE.md 5); never compare plan names elsewhere.
 
-import { TRIAL_DAYS, type PaidPlan } from "@/lib/config";
+import { PLAN_LIMITS, TRIAL_DAYS, type PaidPlan } from "@/lib/config";
 import type { StoreDoc } from "@/lib/db/collections";
 
 /**
@@ -76,3 +76,11 @@ export const PAUSED_MESSAGES = {
   publish: "Your store is paused because it has no active plan. Choose a plan to publish again.",
   checkout: "This store isn't taking orders right now. Please check back soon.",
 } as const;
+
+/**
+ * How many subscribed people the store's email list may hold (D-094, PRD F9): the paid plan's
+ * limit, or the trial's while there is no paid plan.
+ */
+export function subscriberLimit(access: Pick<StoreAccess, "plan">): number {
+  return PLAN_LIMITS[access.plan ?? "trial"].emailSubscribers;
+}

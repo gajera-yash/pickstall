@@ -1,4 +1,4 @@
-import { CalendarCheck, ChevronRight, Download, ImageIcon, PlayCircle } from "lucide-react";
+import { CalendarCheck, ChevronRight, Download, ImageIcon, Mail, PlayCircle } from "lucide-react";
 import Link from "next/link";
 
 import { ProductRowActions } from "@/components/dashboard/product-row-actions";
@@ -43,6 +43,11 @@ export function ProductList({ products, currency, storeSlug }: { products: Creat
                     <span className="inline-flex items-center gap-1">
                       <CalendarCheck aria-hidden="true" className="size-3.5" />
                       Coaching call
+                    </span>
+                  ) : product.type === "lead_magnet" ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Mail aria-hidden="true" className="size-3.5" />
+                      Collect emails
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1">

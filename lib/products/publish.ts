@@ -48,7 +48,9 @@ export function publishProblems(product: Publishable, paymentsOk: boolean): stri
     if (!coaching?.timeZone) problems.push("Pick your time zone.");
     if (coaching) problems.push(...availabilityProblems(coaching.weekly, coaching.durationMinutes));
   } else if (!hasDelivery(product)) problems.push("Add a link or a file to deliver.");
-  if (isPaid(product) && !paymentsOk) problems.push("Connect payments to publish a paid product.");
+  // A lead magnet is free by definition (D-094); the editor never sets a price for it.
+  if (product.type === "lead_magnet" && isPaid(product)) problems.push("A free download can't have a price.");
+  else if (isPaid(product) && !paymentsOk) problems.push("Connect payments to publish a paid product.");
   return problems;
 }
 

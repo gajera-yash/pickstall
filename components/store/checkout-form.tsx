@@ -32,6 +32,11 @@ type Props = {
   coupons?: boolean;
   /** An order bump to offer (D-089). */
   bump?: BumpOfferData | null;
+  /**
+   * Email list consent (D-094): an unticked "Email me updates" box, or for a lead magnet a plain
+   * notice that signing up includes emails. The server saves its own copy of the same words.
+   */
+  consent?: { kind: "checkbox" | "notice"; text: string } | null;
 };
 
 /**
@@ -40,7 +45,7 @@ type Props = {
  * values are kept after an error and focus moves to the first problem. The price is not on this
  * form at all: the server takes it from the product (D-047).
  */
-export function CheckoutForm({ username, productSlug, askPhone, questions, submitLabel, booking, coupons = false, bump = null }: Props) {
+export function CheckoutForm({ username, productSlug, askPhone, questions, submitLabel, booking, coupons = false, bump = null, consent = null }: Props) {
   const [state, action, pending] = useActionState<CheckoutState, FormData>(startCheckout.bind(null, username, productSlug), null);
   const error = state && !state.ok ? state : null;
   const fieldError = (field: string) => (error?.field === field ? error.error : null);
@@ -114,6 +119,16 @@ export function CheckoutForm({ username, productSlug, askPhone, questions, submi
       {bump && <BumpOffer bump={bump} />}
 
       {coupons && <CouponField username={username} productSlug={productSlug} serverError={fieldError("couponCode")} />}
+
+      {consent?.kind === "checkbox" && (
+        <div className="flex items-start gap-3">
+          <Checkbox id="marketingConsent" name="marketingConsent" className="mt-0.5" />
+          <label htmlFor="marketingConsent" className="text-sm text-mute">
+            {consent.text}
+          </label>
+        </div>
+      )}
+      {consent?.kind === "notice" && <p className="text-sm text-mute">{consent.text}</p>}
 
       <Button type="submit" size="lg" className="w-full" loading={pending}>
         <Lock aria-hidden="true" className="size-4" />

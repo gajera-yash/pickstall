@@ -146,7 +146,7 @@ export type NewOrder = Pick<
   OrderDoc,
   "storeId" | "productId" | "item" | "buyerEmail" | "buyerName" | "buyerPhone" | "answers" | "subtotalCents" | "discountCents" | "totalCents" | "currency" | "provider"
 > &
-  Partial<Pick<OrderDoc, "booking">>;
+  Partial<Pick<OrderDoc, "booking" | "marketingConsent">>;
 
 /** Creates a pending order. Amounts are what the server computed from the product (lib/orders/pricing.ts). */
 export async function createPendingOrder(input: NewOrder): Promise<string> {
