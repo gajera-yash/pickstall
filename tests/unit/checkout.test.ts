@@ -44,6 +44,8 @@ vi.mock("@/lib/orders/queries", () => hoisted.queries);
 vi.mock("@/lib/coaching/bookings", () => hoisted.bookings);
 vi.mock("@/lib/coupons/queries", () => hoisted.coupons);
 vi.mock("@/lib/bumps/queries", () => hoisted.bumps);
+const cart = vi.hoisted(() => ({ scheduleCartReminder: vi.fn(async () => undefined) }));
+vi.mock("@/lib/abandoned-cart/job", () => cart);
 vi.mock("@/lib/coaching/calls", () => ({ cancelBookingOfRefundedOrder: vi.fn(async () => undefined) }));
 vi.mock("@/lib/payments", async () => {
   const actual = await vi.importActual<typeof import("@/lib/payments")>("@/lib/payments");
@@ -235,6 +237,8 @@ describe("startCheckout", () => {
     );
     expect(provider.createCheckout).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 1900, orderId: "order-1" }));
     expect(hoisted.queries.attachProviderSession).toHaveBeenCalledWith("order-1", "mock_order-1");
+    // A paid checkout queues its abandoned cart check (D-096).
+    expect(cart.scheduleCartReminder).toHaveBeenCalledWith("order-1", expect.any(Date));
   });
 
   it("charges the discounted price from the database, whatever amount the form sends (D-047)", async () => {

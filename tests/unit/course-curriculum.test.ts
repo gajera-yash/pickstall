@@ -20,7 +20,7 @@ const db = vi.hoisted(() => {
 });
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/db/collections", () => ({ collections: vi.fn(async () => db) }));
-const bunny = vi.hoisted(() => ({ bunnyConfig: vi.fn(), fetchVideoStatus: vi.fn() }));
+const bunny = vi.hoisted(() => ({ bunnyConfig: vi.fn(), fetchVideoInfo: vi.fn() }));
 vi.mock("@/lib/video/bunny", () => bunny);
 vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 const notifications = vi.hoisted(() => ({ notify: vi.fn(async () => undefined) }));
@@ -151,19 +151,19 @@ describe("Bunny status updates", () => {
 describe("asking Bunny about pending videos", () => {
   it("checks only this store's course videos that are still waiting, and saves what Bunny says", async () => {
     bunny.bunnyConfig.mockReturnValue({ libraryId: "759", apiKey: "k", tokenKey: null, readOnlyKey: null });
-    bunny.fetchVideoStatus.mockResolvedValue("ready");
+    bunny.fetchVideoInfo.mockResolvedValue({ status: "ready", lengthSeconds: 75 });
     db.lessons.updateMany.mockResolvedValue({ modifiedCount: 1 });
     const pending = [{ _id: L1, storeId: "store-1", productId: "course-1", title: "Welcome", video: { kind: "bunny", videoId: VIDEO, status: "processing" } }];
     db.lessons.find.mockReturnValue({ limit: () => ({ toArray: async () => pending }), toArray: async () => pending });
     await refreshPendingVideos("store-1", "course-1");
     expect(db.lessons.find.mock.calls[0]?.[0]).toEqual({ storeId: "store-1", productId: "course-1", "video.kind": "bunny", "video.status": { $in: ["uploading", "processing"] } });
-    expect(bunny.fetchVideoStatus).toHaveBeenCalledWith(expect.anything(), VIDEO);
-    expect(db.lessons.updateMany.mock.calls[0]?.[1]).toMatchObject({ $set: { "video.status": "ready" } });
+    expect(bunny.fetchVideoInfo).toHaveBeenCalledWith(expect.anything(), VIDEO);
+    expect(db.lessons.updateMany.mock.calls[0]?.[1]).toMatchObject({ $set: { "video.status": "ready", "video.durationSeconds": 75 } });
   });
 
   it("does nothing without Bunny settings", async () => {
     bunny.bunnyConfig.mockReturnValue(null);
     await refreshPendingVideos("store-1", "course-1");
-    expect(bunny.fetchVideoStatus).not.toHaveBeenCalled();
+    expect(bunny.fetchVideoInfo).not.toHaveBeenCalled();
   });
 });

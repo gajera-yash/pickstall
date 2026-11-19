@@ -16,7 +16,7 @@ import { frameStyle, resolveTheme } from "@/components/store/store-theme";
 import { STORE_LAYOUTS, THEME_PRESETS, THEME_PRESET_IDS } from "@/lib/themes";
 import { lessonCountsOf, type PublicProduct, type PublicStore } from "@/lib/stores/public";
 
-const store: PublicStore = { id: "s1", slug: "maya", name: "Maya", bio: "Design lessons", avatarUrl: null, socialLinks: [], theme: { preset: "clean", accent: "#0056FF" }, currency: "usd", isOpen: true };
+const store: PublicStore = { id: "s1", slug: "maya", name: "Maya", bio: "Design lessons", avatarUrl: null, socialLinks: [], theme: { preset: "clean", accent: "#0056FF" }, currency: "usd", isOpen: true, pixels: null, pageBlocks: [] };
 const product: PublicProduct = { id: "p1", slug: "ui-course", title: "UI course", description: "Learn UI", descriptionDoc: null, coverUrl: null, priceCents: 4900, salePriceCents: null, buttonText: "Enroll", type: "course", course: { category: "design", accessDays: null, lessonCount: 12 } };
 
 describe("store themes and layouts", () => {
@@ -33,6 +33,23 @@ describe("store themes and layouts", () => {
     const serif = frameStyle({ ...theme, preset: { ...theme.preset, displayFont: "serif" } });
     expect(serif.className).toBe("font-store-serif-var");
     expect(serif.style).toMatchObject({ "--font-bricolage": "var(--font-store-serif)" });
+  });
+
+  it("draws page sections above and below the products in every theme (D-101)", () => {
+    const pageBlocks = [
+      { id: "intro001", type: "text" as const, heading: "Start here", body: "Intro text" },
+      { id: "products1", type: "products" as const },
+      { id: "quote001", type: "testimonial" as const, quote: "Best course", name: "Asha" },
+    ];
+    for (const preset of THEME_PRESET_IDS) {
+      const html = renderToStaticMarkup(createElement(StorePage, { store: { ...store, pageBlocks, theme: { preset, accent: THEME_PRESETS[preset].accent } }, products: [product] }));
+      const intro = html.indexOf("Start here");
+      const productAt = html.indexOf("UI course");
+      const quote = html.indexOf("Best course");
+      expect(intro, preset).toBeGreaterThan(-1);
+      expect(intro, preset).toBeLessThan(productAt);
+      expect(quote, preset).toBeGreaterThan(productAt);
+    }
   });
 
   it("renders the public page with its <main>, and the preview without one", () => {

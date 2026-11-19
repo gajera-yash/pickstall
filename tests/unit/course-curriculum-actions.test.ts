@@ -15,6 +15,7 @@ const curriculum = vi.hoisted(() => ({
   setLessonUpload: vi.fn(),
   updateLesson: vi.fn(),
 }));
+vi.mock("@/lib/plans/usage", () => ({ countCourses: vi.fn(async () => 0), countPublishedCourses: vi.fn(async () => 0), videoSecondsUsed: vi.fn(async () => 0) }));
 vi.mock("@/lib/courses/curriculum", () => curriculum);
 vi.mock("@/lib/courses/attachments", () => ({ removeAttachmentsOfLessons: vi.fn(async () => undefined), removeLessonAttachment: vi.fn() }));
 const bunny = vi.hoisted(() => ({ bunnyConfig: vi.fn(), createVideo: vi.fn(), deleteVideo: vi.fn(async () => undefined), uploadSignature: vi.fn(() => "sig"), BUNNY_TUS_ENDPOINT: "https://video.bunnycdn.com/tusupload" }));
@@ -32,7 +33,7 @@ const lesson = (overrides: Record<string, unknown> = {}) => JSON.stringify({ tit
 beforeEach(() => {
   vi.clearAllMocks();
   mockSession({ id: userId, email: "maya@example.com" });
-  storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya", currency: "usd", stripeChargesEnabled: false });
+  storeQueries.findStoreByOwner.mockResolvedValue({ access: { state: "trial", endsAt: null, daysLeft: null, plan: null, cancelsAtPeriodEnd: false }, id: "store-1", slug: "maya", currency: "usd", stripeChargesEnabled: false });
   rateLimit.takeRateLimit.mockResolvedValue(true);
   curriculum.loadCurriculum.mockResolvedValue({ modules: [{ id: "m1", title: "Intro", dripDays: null, lessons: [{ id: LESSON }] }] });
   curriculum.updateLesson.mockResolvedValue({ replacedBunnyVideoId: null });

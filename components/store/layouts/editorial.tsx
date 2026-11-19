@@ -1,4 +1,6 @@
 import { ArrowRight } from "lucide-react";
+import { StoreBlocks } from "@/components/store/store-blocks";
+import { splitBlocks } from "@/lib/page-blocks/rules";
 import Link from "next/link";
 
 import { PriceAndButton, ProductCover, ProductKind } from "@/components/store/layouts/parts";
@@ -13,6 +15,7 @@ import { PriceTag } from "@/components/store/price-tag";
  */
 export function EditorialLayout({ store, products, theme, preview }: StoreLayoutProps) {
   const { preset } = theme;
+  const { before, after } = splitBlocks(store.pageBlocks);
   const rule = { borderColor: borderColor(preset) };
   const [featured, ...rest] = products;
 
@@ -23,6 +26,7 @@ export function EditorialLayout({ store, products, theme, preview }: StoreLayout
           <StoreHeader store={store} />
         </div>
 
+        <StoreBlocks blocks={before} theme={theme} />
         {!featured ? (
           <p className="text-center text-body-l" style={{ color: preset.muted }}>
             New work is coming soon.
@@ -78,6 +82,7 @@ export function EditorialLayout({ store, products, theme, preview }: StoreLayout
             )}
           </>
         )}
+        <StoreBlocks blocks={after} theme={theme} />
       </div>
     </StoreFrame>
   );

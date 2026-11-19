@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 
 import { BumpSection, type BumpCandidate, type BumpSettings } from "@/components/dashboard/bump-section";
+import { UpsellSection, type UpsellSettings } from "@/components/dashboard/upsell-section";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { RichTextEditor } from "@/components/dashboard/rich-text-editor";
@@ -114,6 +115,8 @@ type Props = {
   isNew: boolean;
   /** Order bump settings and the products that can be offered (D-089). */
   bump: { initial: BumpSettings; candidates: BumpCandidate[] };
+  /** Upsell after purchase (D-099); `locked` on plans without upsells. */
+  upsell?: { initial: UpsellSettings; locked: boolean };
 };
 
 /**
@@ -122,7 +125,7 @@ type Props = {
  * ahead, meeting link), 3 Price & publish, beside a live card preview. The whole form saves as one
  * JSON payload that the server checks again. Buyers pick a time at checkout (D-083).
  */
-export function CoachingEditor({ initial, currency, paymentsOk, isNew, bump }: Props) {
+export function CoachingEditor({ initial, currency, paymentsOk, isNew, bump, upsell }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSetup = searchParams.get("from") === "setup";
@@ -530,6 +533,7 @@ export function CoachingEditor({ initial, currency, paymentsOk, isNew, bump }: P
               )}
 
               <BumpSection productId={values.id} currency={currency} initial={bump.initial} candidates={bump.candidates} />
+              {upsell && <UpsellSection productId={values.id} currency={currency} initial={upsell.initial} candidates={bump.candidates} locked={upsell.locked} />}
 
               <section aria-labelledby="ready-title" className="flex flex-col gap-3 rounded-lg border border-line p-4">
                 <h3 id="ready-title" className="font-display text-h4">

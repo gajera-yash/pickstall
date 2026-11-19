@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { StoreBlocks } from "@/components/store/store-blocks";
+import { splitBlocks } from "@/lib/page-blocks/rules";
 
 import { PriceAndButton, ProductCover, ProductKind } from "@/components/store/layouts/parts";
 import type { StoreLayoutProps } from "@/components/store/layouts/types";
@@ -12,6 +14,7 @@ import { StoreFrame, cardStyle } from "@/components/store/store-theme";
  */
 export function GlassLayout({ store, products, theme, preview }: StoreLayoutProps) {
   const { preset } = theme;
+  const { before, after } = splitBlocks(store.pageBlocks);
 
   return (
     <StoreFrame theme={theme} preview={preview} wide>
@@ -20,6 +23,7 @@ export function GlassLayout({ store, products, theme, preview }: StoreLayoutProp
           <StoreHeader store={store} />
         </div>
 
+        <StoreBlocks blocks={before} theme={theme} />
         {products.length === 0 ? (
           <p className="mx-auto w-full max-w-2xl p-6 text-center" style={{ ...cardStyle(theme), color: preset.muted }}>
             Products are coming soon. Check back later.
@@ -49,6 +53,7 @@ export function GlassLayout({ store, products, theme, preview }: StoreLayoutProp
             ))}
           </ul>
         )}
+        <StoreBlocks blocks={after} theme={theme} />
       </div>
     </StoreFrame>
   );

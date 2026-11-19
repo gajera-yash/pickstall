@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { StoreBlocks } from "@/components/store/store-blocks";
+import { splitBlocks } from "@/lib/page-blocks/rules";
 
 import { PriceAndButton, ProductCover, ProductKind } from "@/components/store/layouts/parts";
 import type { StoreLayoutProps } from "@/components/store/layouts/types";
@@ -12,6 +14,7 @@ import { StoreFrame, cardStyle } from "@/components/store/store-theme";
  */
 export function BrutalistLayout({ store, products, theme, preview }: StoreLayoutProps) {
   const { preset } = theme;
+  const { before, after } = splitBlocks(store.pageBlocks);
   const ink = { borderColor: preset.text };
 
   return (
@@ -25,6 +28,7 @@ export function BrutalistLayout({ store, products, theme, preview }: StoreLayout
           {products.length} {products.length === 1 ? "product" : "products"} · new drops
         </p>
 
+        <StoreBlocks blocks={before} theme={theme} />
         {products.length === 0 ? (
           <p className="p-6 text-center font-semibold" style={cardStyle(theme)}>
             Products are coming soon. Check back later.
@@ -66,6 +70,7 @@ export function BrutalistLayout({ store, products, theme, preview }: StoreLayout
             ))}
           </ul>
         )}
+        <StoreBlocks blocks={after} theme={theme} />
       </div>
     </StoreFrame>
   );

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
 import { BumpSection, type BumpCandidate, type BumpSettings } from "@/components/dashboard/bump-section";
+import { UpsellSection, type UpsellSettings } from "@/components/dashboard/upsell-section";
 import { ConfirmationEmailFields } from "@/components/dashboard/confirmation-email-fields";
 import { CurriculumBuilder } from "@/components/dashboard/curriculum-builder";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
@@ -90,6 +91,8 @@ type Props = {
   fileUploadReady: boolean;
   /** Order bump settings and the products that can be offered (D-089). */
   bump: { initial: BumpSettings; candidates: BumpCandidate[] };
+  /** Upsell after purchase (D-099); `locked` on plans without upsells. */
+  upsell?: { initial: UpsellSettings; locked: boolean };
 };
 
 /**
@@ -97,7 +100,7 @@ type Props = {
  * 2 Pricing, 3 Curriculum, 4 Publish, beside a live card preview. Steps 1 and 2 save as one JSON
  * payload that the server checks again; the curriculum builder (G2) and publishing (G3) follow.
  */
-export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum: initialCurriculum, videoUploadReady, fileUploadReady, bump }: Props) {
+export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum: initialCurriculum, videoUploadReady, fileUploadReady, bump, upsell }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSetup = searchParams.get("from") === "setup";
@@ -455,6 +458,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
             <>
               <StepHeading title="Publish" body="How the course opens for students, a look at the student view, then publish." />
               <BumpSection productId={values.id} currency={currency} initial={bump.initial} candidates={bump.candidates} />
+              {upsell && <UpsellSection productId={values.id} currency={currency} initial={upsell.initial} candidates={bump.candidates} locked={upsell.locked} />}
               <ReleaseSection courseId={values.id} drip={values.drip} modules={curriculum.modules} onSaved={(drip, modules) => (set("drip", drip), setCurriculum({ modules }))} />
               <ConfirmationEmailFields
                 subject={values.emailSubject}

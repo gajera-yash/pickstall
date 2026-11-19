@@ -9,6 +9,11 @@ import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/config";
 import { formatCallTime } from "@/lib/coaching/ics";
 import { isUuid } from "@/lib/media/media";
+import { StorePixels } from "@/components/store/store-pixels";
+import { pixelValue } from "@/lib/pixels/rules";
+import { formatMoney, priceDecimals } from "@/lib/products/money";
+import { findUpsellOffer } from "@/lib/upsells/queries";
+import { UpsellOffer } from "@/components/store/upsell-offer";
 import { findOrderForThankYou, loadCheckoutContext } from "@/lib/orders/queries";
 
 export const instant = false;
@@ -46,6 +51,8 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
   const pending = order.status === "pending";
   const button = { borderRadius: Math.min(preset.radiusPx, 12) };
   const Icon = paid ? CheckCircle2 : pending ? Clock : XCircle;
+  // Upsell after purchase (D-099): only for a paid order that still qualifies.
+  const offer = paid ? await findUpsellOffer(store._id, orderId).catch(() => null) : null;
 
   return (
     <StoreFrame theme={theme}>
@@ -79,6 +86,22 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
             </span>
           </div>
         </div>
+
+        {offer && (
+          <UpsellOffer
+            username={store.slug}
+            productSlug={product.slug}
+            orderId={orderId}
+            title={offer.title}
+            headline={offer.headline}
+            price={offer.priceCents === 0 ? "Free" : formatMoney(offer.priceCents, store.currency)}
+            regular={offer.regularCents > offer.priceCents ? formatMoney(offer.regularCents, store.currency) : null}
+            accent={theme.accent}
+            onAccent={theme.onAccent}
+            muted={preset.muted}
+            radius={Math.min(preset.radiusPx, 12)}
+          />
+        )}
 
         {paid && (
           <section aria-labelledby="next-steps" className="flex flex-col gap-3">
@@ -128,6 +151,15 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
           </Link>
         </div>
       </div>
+      {context.pixels && (
+        <StorePixels
+          storeId={store._id}
+          storeName={store.name}
+          pixels={context.pixels}
+          // Purchase only for a paid order, with the amount from the order itself, once per order.
+          event={paid ? { kind: "purchase", contentId: product.id, orderId, value: pixelValue(order.totalCents, priceDecimals(order.currency)), currency: order.currency } : undefined}
+        />
+      )}
     </StoreFrame>
   );
 }

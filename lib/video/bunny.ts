@@ -86,15 +86,26 @@ export function statusFromVideoApi(status: number): "processing" | "ready" | "fa
  * video counts as failed.
  */
 export async function fetchVideoStatus(config: Pick<BunnyConfig, "libraryId" | "apiKey">, videoId: string): Promise<"processing" | "ready" | "failed" | null> {
+  return (await fetchVideoInfo(config, videoId))?.status ?? null;
+}
+
+/**
+ * The video's status and its length in whole seconds (Get Video's `length`, "the duration of the
+ * video in seconds", D-098). Null for a bad id or an unknown status.
+ */
+export async function fetchVideoInfo(config: Pick<BunnyConfig, "libraryId" | "apiKey">, videoId: string): Promise<{ status: "processing" | "ready" | "failed"; lengthSeconds: number | null } | null> {
   if (!BUNNY_VIDEO_ID.test(videoId)) return null;
   const response = await fetch(`${API}/library/${config.libraryId}/videos/${videoId}`, {
     headers: { AccessKey: config.apiKey, Accept: "application/json" },
     signal: AbortSignal.timeout(10_000),
   });
-  if (response.status === 404) return "failed";
+  if (response.status === 404) return { status: "failed", lengthSeconds: null };
   if (!response.ok) throw new Error(`Bunny get video failed (${response.status}).`);
-  const body = (await response.json()) as { status?: unknown };
-  return typeof body.status === "number" ? statusFromVideoApi(body.status) : null;
+  const body = (await response.json()) as { status?: unknown; length?: unknown };
+  const status = typeof body.status === "number" ? statusFromVideoApi(body.status) : null;
+  if (!status) return null;
+  const lengthSeconds = typeof body.length === "number" && Number.isFinite(body.length) && body.length >= 0 ? Math.round(body.length) : null;
+  return { status, lengthSeconds };
 }
 
 /** Creates an empty video in the library and returns its id. */

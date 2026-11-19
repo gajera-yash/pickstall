@@ -4,6 +4,7 @@ import { ensureUnsubscribeTokens, listEmailsFor } from "@/lib/broadcasts/deliver
 import { collections } from "@/lib/db/collections";
 import { sendListEmails } from "@/lib/email/send";
 import { logger } from "@/lib/logger";
+import { can, storeAccess } from "@/lib/plans/access";
 
 /**
  * Sends the store's welcome email (D-095) to one new subscriber, once: `welcomedAt` is claimed
@@ -13,9 +14,10 @@ import { logger } from "@/lib/logger";
 export async function sendWelcomeEmail(storeId: string, subscriberId: string): Promise<"sent" | "skipped" | "failed"> {
   try {
     const { stores, subscribers } = await collections();
-    const store = await stores.findOne({ _id: storeId }, { projection: { name: 1, welcomeEmail: 1 } });
+    const store = await stores.findOne({ _id: storeId }, { projection: { name: 1, welcomeEmail: 1, planTier: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1 } });
     const welcome = store?.welcomeEmail;
-    if (!store || !welcome?.enabled) return "skipped";
+    // Automations are a Pro feature (D-098): off on other plans even if it was saved on.
+    if (!store || !welcome?.enabled || !can(storeAccess(store), "automations")) return "skipped";
     const claimed = await subscribers.findOneAndUpdate(
       { _id: subscriberId, storeId, status: "subscribed", welcomedAt: { $in: [null] } },
       { $set: { welcomedAt: new Date() } },

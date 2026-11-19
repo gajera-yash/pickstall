@@ -1,5 +1,6 @@
 import "server-only";
 
+import { safePixels, type StorePixels } from "@/lib/pixels/rules";
 import { randomUUID } from "node:crypto";
 
 import { connection } from "next/server";
@@ -23,6 +24,8 @@ export type CheckoutContext = {
   store: Pick<StoreDoc, "_id" | "slug" | "name" | "theme" | "currency" | "stripeAccountId" | "stripeChargesEnabled" | "bio" | "avatarUrl" | "socialLinks" | "link">;
   /** False while the store is paused after its free trial (D-072): no new orders, free ones included. */
   open: boolean;
+  /** Pixel IDs for the checkout and thank-you pages (D-097), or null. */
+  pixels: StorePixels | null;
   product: {
     id: string;
     slug: string;
@@ -61,6 +64,7 @@ const STORE_FIELDS = {
   "billing.status": 1,
   "billing.currentPeriodEnd": 1,
   "billing.cancelAtPeriodEnd": 1,
+  pixels: 1,
 } as const;
 const PRODUCT_FIELDS = {
   slug: 1,
@@ -101,10 +105,12 @@ export async function loadCheckoutContext(username: string, productSlug: string)
   if (!product) return null;
 
   // The plan fields only decide `open`; they are not passed on to the page.
-  const { planTier, trialEndsAt, foundingEndsAt, billing, ...storeFields } = store;
+  const { planTier, trialEndsAt, foundingEndsAt, billing, pixels, ...storeFields } = store;
+  const access = storeAccess({ planTier, trialEndsAt, foundingEndsAt, billing });
   return {
     store: storeFields,
-    open: can(storeAccess({ planTier, trialEndsAt, foundingEndsAt, billing }), "sell"),
+    open: can(access, "sell"),
+    pixels: can(access, "pixels") ? safePixels(pixels) : null,
     product: {
       id: product._id,
       slug: product.slug,
@@ -146,7 +152,7 @@ export type NewOrder = Pick<
   OrderDoc,
   "storeId" | "productId" | "item" | "buyerEmail" | "buyerName" | "buyerPhone" | "answers" | "subtotalCents" | "discountCents" | "totalCents" | "currency" | "provider"
 > &
-  Partial<Pick<OrderDoc, "booking" | "marketingConsent">>;
+  Partial<Pick<OrderDoc, "booking" | "marketingConsent" | "upsellOf">>;
 
 /** Creates a pending order. Amounts are what the server computed from the product (lib/orders/pricing.ts). */
 export async function createPendingOrder(input: NewOrder): Promise<string> {
@@ -179,11 +185,12 @@ export async function markOrderFailed(orderId: string): Promise<void> {
 export async function findOrderForThankYou(
   storeId: string,
   orderId: string,
-): Promise<{ status: OrderDoc["status"]; productId: string; booking: { start: Date; end: Date; buyerTimeZone: string | null } | null } | null> {
+): Promise<{ status: OrderDoc["status"]; productId: string; booking: { start: Date; end: Date; buyerTimeZone: string | null } | null; totalCents: number; currency: string } | null> {
   const { orders } = await collections();
-  const doc = await orders.findOne({ _id: orderId, storeId }, { projection: { status: 1, productId: 1, booking: 1 } });
-  // A coaching order's booked time (D-087), so the page can show it; never the meeting link.
-  return doc ? { status: doc.status, productId: doc.productId, booking: doc.booking ?? null } : null;
+  const doc = await orders.findOne({ _id: orderId, storeId }, { projection: { status: 1, productId: 1, booking: 1, totalCents: 1, currency: 1 } });
+  // A coaching order's booked time (D-087), so the page can show it; never the meeting link. The
+  // amount is for the purchase pixel event (D-097).
+  return doc ? { status: doc.status, productId: doc.productId, booking: doc.booking ?? null, totalCents: doc.totalCents, currency: doc.currency } : null;
 }
 
 /** Development-only mock payment page: a pending mock order with its product title and total. */

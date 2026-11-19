@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, CreditCard, Lock, Store, UserRound, type LucideIcon } from "lucide-react";
+import { BadgeCheck, CreditCard, Database, Lock, Store, UserRound, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -9,7 +9,7 @@ import { SETTINGS_SECTIONS, isSettingsSectionActive, type SettingsSectionId } fr
 import { LOCKED_HINT, isPathOpenWhileLocked } from "@/lib/dashboard/setup-lock";
 import { cn } from "@/lib/utils";
 
-const ICONS: Record<SettingsSectionId, LucideIcon> = { store: Store, payments: CreditCard, plan: BadgeCheck, account: UserRound };
+const ICONS: Record<SettingsSectionId, LucideIcon> = { store: Store, payments: CreditCard, plan: BadgeCheck, data: Database, account: UserRound };
 
 const ITEM = "flex min-h-11 items-center gap-2.5 rounded-md px-3 text-base font-medium whitespace-nowrap transition-colors duration-(--dur-fast) lg:min-h-10";
 

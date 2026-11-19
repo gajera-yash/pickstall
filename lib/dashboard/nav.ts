@@ -26,6 +26,7 @@ export const SETTINGS_SECTIONS = [
   { id: "store", label: "Store", href: "/dashboard/settings" },
   { id: "payments", label: "Payments", href: "/dashboard/settings/payments" },
   { id: "plan", label: "Plan", href: "/dashboard/settings/plan" },
+  { id: "data", label: "Data", href: "/dashboard/settings/data" },
   { id: "account", label: "Account", href: "/dashboard/settings/account" },
 ] as const;
 

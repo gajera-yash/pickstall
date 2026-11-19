@@ -2,12 +2,17 @@ import { Mail, Megaphone, ShoppingCart, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { CartReminderSettings } from "@/components/dashboard/cart-reminder-settings";
 import { CouponManager, type ManagedCoupon } from "@/components/dashboard/coupon-manager";
+import { PixelSettings } from "@/components/dashboard/pixel-settings";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cartStats, findCartSettings } from "@/lib/abandoned-cart/queries";
 import { couponRows, listCoupons } from "@/lib/coupons/queries";
+import { findPixelSettings } from "@/lib/pixels/queries";
+import { can } from "@/lib/plans/access";
 import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { listProducts } from "@/lib/products/queries";
 
@@ -51,12 +56,14 @@ export default function MarketingPage() {
 
 async function MarketingContent() {
   const { store } = await requireUnlockedCreator("/dashboard/marketing");
-  const [coupons, products] = await Promise.all([listCoupons(store.id), listProducts(store.id)]);
+  const [coupons, products, cart, stats, pixels] = await Promise.all([listCoupons(store.id), listProducts(store.id), findCartSettings(store.id), cartStats(store.id), findPixelSettings(store.id)]);
   const managed: ManagedCoupon[] = couponRows(coupons, products, store.currency);
 
   return (
     <div className="flex flex-col gap-6">
       <CouponManager coupons={managed} products={products.map((product) => ({ id: product._id, title: product.title }))} currency={store.currency} />
+      <CartReminderSettings storeName={store.name} initial={cart} stats={stats} locked={!can(store.access, "automations")} />
+      <PixelSettings initial={pixels} />
       <MoreTools />
     </div>
   );

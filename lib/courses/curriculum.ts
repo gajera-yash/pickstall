@@ -186,7 +186,7 @@ function bunnyIdsOf(docs: Pick<LessonDoc, "video">[]): string[] {
  * The Bunny webhook's status update for a video (not store-scoped: Bunny is the caller, and the
  * signature was checked). A late "processing" never undoes "ready", and "failed" never undoes "ready".
  */
-export async function setBunnyVideoStatus(videoId: string, status: "processing" | "ready" | "failed"): Promise<number> {
+export async function setBunnyVideoStatus(videoId: string, status: "processing" | "ready" | "failed", lengthSeconds: number | null = null): Promise<number> {
   const { lessons } = await collections();
   const from: Record<typeof status, ("uploading" | "processing" | "ready" | "failed")[]> = {
     processing: ["uploading"],
@@ -196,7 +196,7 @@ export async function setBunnyVideoStatus(videoId: string, status: "processing" 
   const filter = { "video.kind": "bunny" as const, "video.videoId": videoId, "video.status": { $in: from[status] } };
   // The lessons about to change, for the creator's "video ready / failed" notification (D-061).
   const changing = status === "processing" ? [] : await lessons.find(filter, { projection: { storeId: 1, productId: 1, title: 1 } }).toArray();
-  const result = await lessons.updateMany(filter, { $set: { "video.status": status, updatedAt: new Date() } });
+  const result = await lessons.updateMany(filter, { $set: { "video.status": status, updatedAt: new Date(), ...(status === "ready" && lengthSeconds !== null ? { "video.durationSeconds": lengthSeconds } : {}) } });
   for (const lesson of changing) {
     await notify({
       storeId: lesson.storeId,

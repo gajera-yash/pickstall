@@ -7,6 +7,10 @@ import { APP_NAME } from "@/lib/config";
 import { publicEnv } from "@/lib/env";
 import { absoluteImageUrl } from "@/lib/media/media";
 import { canBuy, loadCheckoutContext } from "@/lib/orders/queries";
+import { StorePixels } from "@/components/store/store-pixels";
+import { pixelValue } from "@/lib/pixels/rules";
+import { priceDecimals } from "@/lib/products/money";
+import { payableCents } from "@/lib/products/pricing";
 import { findPublicCurriculum, findPublicProduct, findPublicStore } from "@/lib/stores/public";
 
 // Public product page at /@username/product-slug (rewrite in next.config.ts). Only a published
@@ -38,5 +42,17 @@ export default async function PublicProductPage({ params }: PageProps<"/s/[usern
   const product = await findPublicProduct(store.id, productSlug);
   if (!product) notFound();
   const [context, curriculum] = await Promise.all([loadCheckoutContext(username, productSlug), product.type === "course" ? findPublicCurriculum(store.id, product.id) : null]);
-  return <ProductPage store={store} product={product} buyable={context ? canBuy(context) : false} curriculum={curriculum} />;
+  return (
+    <>
+      <ProductPage store={store} product={product} buyable={context ? canBuy(context) : false} curriculum={curriculum} />
+      {store.pixels && (
+        <StorePixels
+          storeId={store.id}
+          storeName={store.name}
+          pixels={store.pixels}
+          event={{ kind: "view_content", contentId: product.id, value: pixelValue(payableCents(product), priceDecimals(store.currency)), currency: store.currency }}
+        />
+      )}
+    </>
+  );
 }

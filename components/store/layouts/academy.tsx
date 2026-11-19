@@ -1,4 +1,6 @@
 import { AcademyCatalog } from "@/components/store/layouts/academy-catalog";
+import { StoreBlocks } from "@/components/store/store-blocks";
+import { splitBlocks } from "@/lib/page-blocks/rules";
 import type { StoreLayoutProps } from "@/components/store/layouts/types";
 import { StoreHeader } from "@/components/store/store-header";
 import { StoreFrame, cardStyle } from "@/components/store/store-theme";
@@ -9,6 +11,7 @@ import { StoreFrame, cardStyle } from "@/components/store/store-theme";
  */
 export function AcademyLayout({ store, products, theme, preview }: StoreLayoutProps) {
   const { preset } = theme;
+  const { before, after } = splitBlocks(store.pageBlocks);
   const courses = products.filter((product) => product.type === "course").length;
   const others = products.length - courses;
 
@@ -33,6 +36,7 @@ export function AcademyLayout({ store, products, theme, preview }: StoreLayoutPr
         </dl>
       </div>
 
+      <StoreBlocks blocks={before} theme={theme} />
       {products.length === 0 ? (
         <p className="w-full p-6 text-center" style={{ ...cardStyle(theme), color: preset.muted }}>
           Courses are coming soon. Check back later.
@@ -40,6 +44,7 @@ export function AcademyLayout({ store, products, theme, preview }: StoreLayoutPr
       ) : (
         <AcademyCatalog storeSlug={store.slug} products={products} theme={theme} currency={store.currency} />
       )}
+      <StoreBlocks blocks={after} theme={theme} />
     </StoreFrame>
   );
 }

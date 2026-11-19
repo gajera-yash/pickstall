@@ -4,7 +4,7 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 import { devAllowedOrigins } from "./lib/dev-hosts";
-import { contentSecurityPolicy, PAGE_CSP_SOURCE, securityHeaders } from "./lib/security/headers";
+import { contentSecurityPolicy, PAGE_CSP_SOURCE, securityHeaders, STORE_CSP_SOURCE } from "./lib/security/headers";
 
 const isDev = process.env.NODE_ENV !== "production";
 
@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/:path*", headers: securityHeaders(isDev) },
       { source: PAGE_CSP_SOURCE, headers: [{ key: "Content-Security-Policy", value: contentSecurityPolicy(isDev) }] },
+      { source: STORE_CSP_SOURCE, headers: [{ key: "Content-Security-Policy", value: contentSecurityPolicy(isDev, { pixels: true }) }] },
     ];
   },
   // Public store URLs are /@username and /@username/product (D-010). An app/@username folder would

@@ -13,16 +13,28 @@ export type HeaderPair = { key: string; value: string };
  *   link or to Stripe Checkout, and browsers apply form-action to the redirect too.
  * - Development also needs eval (React debugging) and the hot-reload websocket.
  */
-export function contentSecurityPolicy(isDev: boolean): string {
+/**
+ * Hosts a creator's pixels need (D-097), on store pages only. Google's list is from its CSP guide
+ * (developers.google.com/tag-platform/security/guides/csp, with Ads); Meta documents its script
+ * host and www.facebook.com (the /tr endpoint). Scripts are fixed snippets fed with checked IDs.
+ */
+const PIXEL_HOSTS = {
+  script: ["https://connect.facebook.net", "https://www.googletagmanager.com"],
+  connect: ["https://connect.facebook.net", "https://www.facebook.com", "https://www.googletagmanager.com", "https://*.google-analytics.com", "https://*.google.com", "https://*.g.doubleclick.net", "https://pagead2.googlesyndication.com"],
+  frame: ["https://www.googletagmanager.com"],
+} as const;
+
+export function contentSecurityPolicy(isDev: boolean, options: { pixels?: boolean } = {}): string {
+  const pixels = options.pixels ? PIXEL_HOSTS : { script: [], connect: [], frame: [] };
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
-    "script-src": ["'self'", "'unsafe-inline'", ...(isDev ? ["'unsafe-eval'"] : [])],
+    "script-src": ["'self'", "'unsafe-inline'", ...(isDev ? ["'unsafe-eval'"] : []), ...pixels.script],
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "data:", "blob:", "https:"],
     "font-src": ["'self'", "data:"],
     // video.bunnycdn.com: browser uploads course videos straight to Bunny via TUS (D-055).
     // *.r2.cloudflarestorage.com: product and lesson files go to signed R2 links (D-093).
-    "connect-src": ["'self'", "https://video.bunnycdn.com", "https://*.r2.cloudflarestorage.com", ...(isDev ? ["ws:", "wss:"] : [])],
+    "connect-src": ["'self'", "https://video.bunnycdn.com", "https://*.r2.cloudflarestorage.com", ...(isDev ? ["ws:", "wss:"] : []), ...pixels.connect],
     "media-src": ["'self'"],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],
@@ -30,7 +42,7 @@ export function contentSecurityPolicy(isDev: boolean): string {
     "frame-ancestors": ["'none'"],
     // Course lesson players only (D-056): Bunny Stream, YouTube (no-cookie) and Vimeo. Embed URLs are
     // always built by the server from checked video ids, never taken from creator text.
-    "frame-src": ["https://player.mediadelivery.net", "https://www.youtube-nocookie.com", "https://player.vimeo.com"],
+    "frame-src": ["https://player.mediadelivery.net", "https://www.youtube-nocookie.com", "https://player.vimeo.com", ...pixels.frame],
     "worker-src": ["'self'", "blob:"],
     "manifest-src": ["'self'"],
   };
@@ -58,5 +70,11 @@ export function securityHeaders(isDev: boolean): HeaderPair[] {
   ];
 }
 
-/** The page CSP applies to everything except uploaded images. */
-export const PAGE_CSP_SOURCE = "/((?!media/).*)";
+/**
+ * The page CSP applies to everything except uploaded images and the public store pages, which get
+ * the store CSP with the pixel hosts (D-097). Only one CSP header ever reaches a page: two would
+ * both be enforced.
+ */
+export const PAGE_CSP_SOURCE = "/((?!media/|@|s/).*)";
+/** Public store pages: /@username/... (rewritten to /s/...). */
+export const STORE_CSP_SOURCE = "/(@.*|s/.*)";

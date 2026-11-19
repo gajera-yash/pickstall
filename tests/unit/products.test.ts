@@ -10,6 +10,7 @@ const queries = vi.hoisted(() => ({
   updateProduct: vi.fn(),
   storeQueries: vi.fn(),
 }));
+vi.mock("@/lib/plans/usage", () => ({ countCourses: vi.fn(async () => 0), countPublishedCourses: vi.fn(async () => 0), videoSecondsUsed: vi.fn(async () => 0) }));
 vi.mock("@/lib/products/queries", () => queries);
 const productFiles = vi.hoisted(() => ({ removeFilesOfProduct: vi.fn(async () => undefined) }));
 vi.mock("@/lib/files/product-files", () => productFiles);

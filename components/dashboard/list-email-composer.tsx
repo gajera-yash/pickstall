@@ -1,6 +1,7 @@
 "use client";
 
 import { Eye, Send } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -158,7 +159,7 @@ export function BroadcastComposer({ storeName, subscribed, blocked }: { storeNam
 }
 
 /** The welcome email new subscribers get once (D-095). */
-export function WelcomeEmailForm({ storeName, initial }: { storeName: string; initial: { enabled: boolean; subject: string; body: string } }) {
+export function WelcomeEmailForm({ storeName, initial, locked = false }: { storeName: string; initial: { enabled: boolean; subject: string; body: string }; locked?: boolean }) {
   const router = useRouter();
   const [enabled, setEnabled] = useState(initial.enabled);
   const [subject, setSubject] = useState(initial.subject);
@@ -170,7 +171,7 @@ export function WelcomeEmailForm({ storeName, initial }: { storeName: string; in
   const save = () =>
     startSave(async () => {
       setError(null);
-      const result = await saveWelcomeEmailAction({ enabled, subject, body });
+      const result = await saveWelcomeEmailAction({ enabled: enabled && !locked, subject, body });
       if (result.ok) {
         setMessage({ kind: "success", text: result.data.enabled ? "Saved. New subscribers get this email." : "Saved. The welcome email is off." });
         router.refresh();
@@ -189,8 +190,18 @@ export function WelcomeEmailForm({ storeName, initial }: { storeName: string; in
           </span>
           <span className="text-sm text-mute">Sent once to each new subscriber, right after they join.</span>
         </span>
-        <Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Send a welcome email" />
+        <Switch checked={enabled && !locked} onCheckedChange={setEnabled} disabled={locked} aria-label="Send a welcome email" />
       </label>
+      {locked && (
+        <p className="text-sm text-mute">
+          Part of Pro.{" "}
+          <Link href="/dashboard/settings/plan" className="font-semibold text-blue underline underline-offset-4">
+            Upgrade your plan
+          </Link>{" "}
+          to turn it on.
+        </p>
+      )}
+
       <EmailFields idPrefix="welcome" subject={subject} body={body} onSubject={setSubject} onBody={setBody} storeName={storeName} error={error} />
       <Feedback message={message} />
       <Button type="button" className="self-end" onClick={save} loading={saving}>

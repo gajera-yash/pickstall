@@ -10,6 +10,7 @@ import { PRODUCT_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { createDraftProduct } from "@/lib/products/queries";
 import { productIdInput } from "@/lib/products/schemas";
+import { planProblem } from "@/lib/plans/access";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 
@@ -34,6 +35,8 @@ async function allowed(ownerId: string): Promise<boolean> {
 export async function createCoachingAndEdit(): Promise<void> {
   const { user, store } = await requireCreator("/dashboard/products/new");
   if (!(await allowed(user.id))) redirect("/dashboard/products?error=slow");
+  // Coaching calls are a Pro feature (D-098).
+  if (planProblem(store.access, { type: "coaching" })) redirect("/dashboard/products?error=plan_coaching");
   const result = await createDraftProduct(store.id, { buttonText: "Book a call", type: "coaching" }).catch((error: unknown) => {
     logger.error("coaching.create_failed", { name: errorName(error) });
     return "error" as const;

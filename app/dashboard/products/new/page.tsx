@@ -7,19 +7,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
+import { can } from "@/lib/plans/access";
 import { createCoachingAndEdit } from "@/lib/coaching/actions";
 import { createCourseAndEdit } from "@/lib/courses/actions";
 import { createLeadMagnetAndEdit, createProductAndEdit } from "@/lib/products/actions";
 import { cn } from "@/lib/utils";
 
-type ProductType = { id: string; title: string; description: string; icon: LucideIcon; live: boolean };
+type ProductType = { id: string; title: string; description: string; icon: LucideIcon; live: boolean; feature?: "coaching" };
 
 // Type registry for the picker (D-012, DESIGN.md 10.8). Digital product is the Phase 1 type; its
 // editor ships with R3, so for now every card says what it will be and none leads to an empty page.
 const TYPES: ProductType[] = [
   { id: "digital", title: "Digital product", description: "PDFs, templates, presets, audio or any file. Or a private link.", icon: Download, live: true },
   { id: "course", title: "Course", description: "Video lessons in modules, with progress for each student.", icon: PlayCircle, live: true },
-  { id: "coaching", title: "Coaching call", description: "Sell 1:1 time with booking built in.", icon: CalendarCheck, live: true },
+  { id: "coaching", title: "Coaching call", description: "Sell 1:1 time with booking built in.", icon: CalendarCheck, live: true, feature: "coaching" },
   { id: "membership", title: "Membership", description: "Monthly access to content and a community.", icon: UsersRound, live: false },
   { id: "emails", title: "Collect emails", description: "Give away a free guide or file and grow your email list.", icon: Mail, live: true },
   { id: "link", title: "Link", description: "Send buyers to any page: a booking tool, a group or a site.", icon: Link2, live: false },
@@ -41,12 +42,17 @@ export default function NewProductPage() {
 }
 
 async function TypePicker() {
-  await requireCreator("/dashboard/products/new");
+  const { store } = await requireCreator("/dashboard/products/new");
   return (
     <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {TYPES.map(({ id, title, description, icon: Icon, live }) => (
+      {TYPES.map(({ id, title, description, icon: Icon, live, feature }) => (
         <li key={id}>
-          {live ? (
+          {live && feature && !can(store.access, feature) ? (
+            // A Pro feature on a plan without it (D-098): the card leads to the plan page.
+            <Link href="/dashboard/settings/plan" className="flex h-full flex-col gap-3 rounded-lg border border-line bg-surface p-5 hover:border-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue">
+              <TypeCardBody title={title} description={`${description} Part of Pro.`} Icon={Icon} live={false} badge="Pro" />
+            </Link>
+          ) : live ? (
             <form action={id === "course" ? createCourseAndEdit : id === "coaching" ? createCoachingAndEdit : id === "emails" ? createLeadMagnetAndEdit : createProductAndEdit} className="h-full">
               <Button
                 type="submit"

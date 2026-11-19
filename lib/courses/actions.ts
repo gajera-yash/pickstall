@@ -12,6 +12,8 @@ import { COURSE_LIMITS } from "@/lib/courses/settings";
 import { courseDetailsInputFor } from "@/lib/courses/schemas";
 import { logger } from "@/lib/logger";
 import { createDraftProduct } from "@/lib/products/queries";
+import { planProblem } from "@/lib/plans/access";
+import { countCourses } from "@/lib/plans/usage";
 import { productIdInput } from "@/lib/products/schemas";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
@@ -37,6 +39,8 @@ async function allowed(ownerId: string): Promise<boolean> {
 export async function createCourseAndEdit(): Promise<void> {
   const { user, store } = await requireCreator("/dashboard/products/new");
   if (!(await allowed(user.id))) redirect("/dashboard/products?error=slow");
+  // The plan's course limit (D-098); existing courses are never touched.
+  if (planProblem(store.access, { type: "course", courses: await countCourses(store.id) })) redirect("/dashboard/products?error=plan_courses");
   const result = await createDraftProduct(store.id, { buttonText: "Enroll now", type: "course" }).catch((error: unknown) => {
     logger.error("courses.create_failed", { name: errorName(error) });
     return "error" as const;

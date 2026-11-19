@@ -7,6 +7,7 @@ import { after } from "next/server";
 import { collections, type SubscriberDoc } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { escapeRegex } from "@/lib/orders/csv";
+import { cleanImportRow } from "@/lib/subscribers/import-rules";
 import { emailKeyOf, type SubscriberRow } from "@/lib/subscribers/rules";
 import { newUnsubscribeToken } from "@/lib/subscribers/token";
 import { sendWelcomeEmail } from "@/lib/subscribers/welcome";
@@ -116,4 +117,79 @@ export async function deleteSubscriber(storeId: string, id: string): Promise<boo
   const { subscribers } = await collections();
   const result = await subscribers.deleteOne({ _id: id, storeId });
   return result.deletedCount === 1;
+}
+
+export type ImportResult = { added: number; existing: number; invalid: number; overLimit: number };
+
+/**
+ * Adds imported people to the store's list (D-100). Valid, new emails only: someone already on the
+ * list (subscribed or not) is left exactly as they are, so an unsubscribe is never undone. No more
+ * than `room` people are added (the plan's subscriber limit). No welcome email is sent.
+ */
+export async function importSubscribers(
+  storeId: string,
+  rows: { email: unknown; name: unknown }[],
+  options: { consentText: string; fileName: string; room: number; now?: Date },
+): Promise<ImportResult> {
+  const { subscribers } = await collections();
+  const now = options.now ?? new Date();
+  const seen = new Set<string>();
+  const valid: { email: string; name: string | null; emailKey: string }[] = [];
+  let invalid = 0;
+  for (const raw of rows) {
+    const row = cleanImportRow(raw);
+    if (!row) {
+      invalid += 1;
+      continue;
+    }
+    const emailKey = emailKeyOf(row.email);
+    if (seen.has(emailKey)) continue;
+    seen.add(emailKey);
+    valid.push({ ...row, emailKey });
+  }
+
+  // People already on the list are not added again (and do not use up room).
+  const existingKeys = new Set<string>();
+  for (let i = 0; i < valid.length; i += 1000) {
+    const keys = valid.slice(i, i + 1000).map((row) => row.emailKey);
+    const found = await subscribers.find({ storeId, emailKey: { $in: keys } }, { projection: { emailKey: 1 } }).toArray();
+    for (const doc of found) existingKeys.add(doc.emailKey);
+  }
+  const fresh = valid.filter((row) => !existingKeys.has(row.emailKey));
+  const room = Math.max(0, options.room);
+  const toAdd = fresh.slice(0, room);
+
+  let added = 0;
+  for (let i = 0; i < toAdd.length; i += 500) {
+    const batch = toAdd.slice(i, i + 500);
+    const result = await subscribers.bulkWrite(
+      batch.map((row) => ({
+        updateOne: {
+          // $setOnInsert only: if the email joined meanwhile, nothing about them changes.
+          filter: { storeId, emailKey: row.emailKey },
+          update: {
+            $setOnInsert: {
+              _id: randomUUID(),
+              storeId,
+              emailKey: row.emailKey,
+              email: row.email,
+              name: row.name,
+              status: "subscribed" as const,
+              source: { kind: "import" as const, productId: "", productTitle: options.fileName },
+              consent: { at: now, text: options.consentText },
+              unsubscribedAt: null,
+              unsubscribeReason: null,
+              unsubscribeToken: newUnsubscribeToken(),
+              createdAt: now,
+              updatedAt: now,
+            },
+          },
+          upsert: true,
+        },
+      })),
+      { ordered: false },
+    );
+    added += result.upsertedCount;
+  }
+  return { added, existing: existingKeys.size + (toAdd.length - added), invalid, overLimit: fresh.length - toAdd.length };
 }

@@ -6,6 +6,7 @@ import { StorePaused } from "@/components/store/store-paused";
 import { APP_NAME } from "@/lib/config";
 import { publicEnv } from "@/lib/env";
 import { absoluteImageUrl } from "@/lib/media/media";
+import { StorePixels } from "@/components/store/store-pixels";
 import { findPublicStore, listPublicProducts } from "@/lib/stores/public";
 
 // Public store page, served at /@username by a rewrite in next.config.ts (D-010). A draft or unknown
@@ -34,5 +35,10 @@ export default async function PublicStorePage({ params }: PageProps<"/s/[usernam
   if (!store) notFound();
   if (!store.isOpen) return <StorePaused storeName={store.name} theme={store.theme} />;
   const products = await listPublicProducts(store.id);
-  return <StorePage store={store} products={products} />;
+  return (
+    <>
+      <StorePage store={store} products={products} />
+      {store.pixels && <StorePixels storeId={store.id} storeName={store.name} pixels={store.pixels} />}
+    </>
+  );
 }

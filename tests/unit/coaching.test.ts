@@ -6,6 +6,7 @@ import { formData, mockSession, rateLimit, redirectOf, storeQueries, userId } fr
 // coaching actions (always the session owner's store).
 
 const coachingQueries = vi.hoisted(() => ({ updateCoachingDetails: vi.fn() }));
+vi.mock("@/lib/plans/usage", () => ({ countCourses: vi.fn(async () => 0), countPublishedCourses: vi.fn(async () => 0), videoSecondsUsed: vi.fn(async () => 0) }));
 vi.mock("@/lib/coaching/queries", () => coachingQueries);
 const productQueries = vi.hoisted(() => ({ createDraftProduct: vi.fn() }));
 vi.mock("@/lib/products/queries", () => productQueries);
@@ -170,7 +171,7 @@ describe("coaching actions use the session owner's store only", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSession({ id: userId, email: "maya@example.com" });
-    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya", currency: "usd", stripeChargesEnabled: false });
+    storeQueries.findStoreByOwner.mockResolvedValue({ access: { state: "trial", endsAt: null, daysLeft: null, plan: null, cancelsAtPeriodEnd: false }, id: "store-1", slug: "maya", currency: "usd", stripeChargesEnabled: false });
     rateLimit.takeRateLimit.mockResolvedValue(true);
   });
 
@@ -178,6 +179,18 @@ describe("coaching actions use the session owner's store only", () => {
     productQueries.createDraftProduct.mockResolvedValue({ id: CALL_ID });
     expect(await redirectOf(() => createCoachingAndEdit())).toBe(`/dashboard/products/${CALL_ID}`);
     expect(productQueries.createDraftProduct).toHaveBeenCalledWith("store-1", { buttonText: "Book a call", type: "coaching" });
+  });
+
+  it("does not create a call on a plan without coaching (D-098)", async () => {
+    storeQueries.findStoreByOwner.mockResolvedValue({
+      access: { state: "active", endsAt: null, daysLeft: null, plan: "starter", cancelsAtPeriodEnd: false },
+      id: "store-1",
+      slug: "maya",
+      currency: "usd",
+      stripeChargesEnabled: false,
+    });
+    expect(await redirectOf(() => createCoachingAndEdit())).toBe("/dashboard/products?error=plan_coaching");
+    expect(productQueries.createDraftProduct).not.toHaveBeenCalled();
   });
 
   it("saves with the session's store id, ignoring any storeId in the payload", async () => {

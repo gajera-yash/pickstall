@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { contentSecurityPolicy, PAGE_CSP_SOURCE, securityHeaders } from "@/lib/security/headers";
+import { contentSecurityPolicy, PAGE_CSP_SOURCE, securityHeaders, STORE_CSP_SOURCE } from "@/lib/security/headers";
 
 const header = (isDev: boolean, key: string) => securityHeaders(isDev).find((h) => h.key === key)?.value;
 
@@ -52,7 +52,23 @@ describe("contentSecurityPolicy", () => {
   it("leaves uploaded images to their own stricter policy", () => {
     const matcher = new RegExp(`^${PAGE_CSP_SOURCE}$`);
     expect(matcher.test("/dashboard")).toBe(true);
-    expect(matcher.test("/@maya")).toBe(true);
+    expect(matcher.test("/settings")).toBe(true);
+    expect(matcher.test("/signup")).toBe(true);
     expect(matcher.test("/media/0b9e8d2c-1111-4222-8333-444455556666")).toBe(false);
+  });
+
+  it("gives store pages their own CSP with the pixel hosts, and no page gets both (D-097)", () => {
+    const page = new RegExp(`^${PAGE_CSP_SOURCE}$`);
+    const storeMatcher = new RegExp(`^${STORE_CSP_SOURCE}$`);
+    for (const path of ["/@maya", "/@maya/playbook", "/@maya/playbook/checkout", "/s/maya/playbook/thank-you"]) {
+      expect(storeMatcher.test(path)).toBe(true);
+      expect(page.test(path)).toBe(false);
+    }
+    for (const path of ["/dashboard", "/library", "/settings"]) expect(storeMatcher.test(path)).toBe(false);
+    const store = contentSecurityPolicy(false, { pixels: true });
+    expect(store).toContain("https://connect.facebook.net");
+    expect(store).toContain("https://www.googletagmanager.com");
+    expect(prod).not.toContain("facebook");
+    expect(prod).not.toContain("googletagmanager");
   });
 });

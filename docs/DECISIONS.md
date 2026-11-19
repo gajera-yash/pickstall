@@ -4,6 +4,132 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-101: Store page sections (Phase 3, block 9: block page editor v1)
+- **Date:** 2026-11-19
+- **Decision (founder approved the plan, 2026-11-19):**
+  - Optional `stores.pageBlocks[]`, validated by `pageBlocksInput` (`lib/page-blocks/rules.ts`, client-safe). Each section has an id and one of these types:
+    - `text` (heading up to 80, body up to 2000; https links become clickable)
+    - `image` (an upload `/media/...` or https, with alt text)
+    - `video` (only a checked YouTube or Vimeo id; the embed URL is rebuilt from it, and the CSP frame-src already allows these hosts)
+    - `links` (1-6 buttons, https only)
+    - `testimonial` (quote and name)
+    - `products`: the marker for where the product list goes. There is always exactly one, and it cannot be removed.
+  - At most 12 sections besides the products. All text is cleaned of tags and length-limited, and React escapes it. Links open with `rel="noopener noreferrer nofollow ugc"`.
+  - **Store page:** every one of the 8 layouts draws `StoreBlocks` before and after its product list (`splitBlocks`), in the theme's card style, colors, display font and radius. A store without sections looks exactly as before.
+  - **Editor:** My Store → Page design → "Page sections". The creator adds a section from a menu, edits it in place, moves it with up/down buttons (keyboard-friendly; no drag yet), removes it and saves. The server checks everything again (`savePageBlocksAction`, only the session's store), and the live preview updates after saving.
+- **Not in v1:** drag and drop, columns, separate landing pages, rich text in sections.
+- **Why:** Phase 3 block-based page editor (PRD section 9).
+
+## D-100: Import a subscriber list, and one Data page with every export (Phase 3, block 8)
+- **Date:** 2026-11-19
+- **Decision (founder: the creator confirms consent, option a, 2026-11-19):**
+  - **Import (Marketing → Subscribers → Import a list):**
+    - The browser reads the CSV (5 MB, 10,000 rows; parser in `lib/subscribers/import-rules.ts`, no new dependency).
+    - The columns are guessed from the header, and the creator picks the email and name columns with a 5-row preview.
+    - Only those two columns are sent, in parts of 2,000 rows, so each request stays under the 1 MB server action limit.
+  - **On the server** (`importSubscribersAction` → `importSubscribers`):
+    - Every row is checked again: a valid email, and the name cleaned and cut to 80 characters.
+    - Duplicates are dropped, and only emails not already on the list are added (`$setOnInsert` upserts), so an unsubscribe is never undone.
+    - The plan's subscriber limit caps the number added.
+    - No welcome email is sent.
+  - **Consent:** the creator must tick "These people agreed to get emails from me". Each person is saved as subscribed, with source `import` (the file name) and the consent text "Imported by the creator from {file} on {date}. The creator confirmed these people agreed to get their emails." This is a founder decision that departs from PRD section 9, where imported contacts are not marketable until re-permission.
+  - **Settings → Data:** every CSV export in one place: products (new: title, type, price, status, public link; never delivery links or files), orders, customers and subscribers, plus a link to "Download my data" and to the import.
+- **Not done:** Gumroad API import of products (needs Gumroad's docs verified and a creator token; postponed like TikTok and custom domains).
+
+## D-099: Upsell after purchase (Phase 3, block 7)
+- **Date:** 2026-11-19
+- **Decision (founder approved the plan, 2026-11-19):**
+  - Optional `products.upsell { productId, priceCents, headline }` on any product. It can name another digital product or course of the same store. A price of 0 makes it a free gift. It is set in the editors next to the order bump (`UpsellSection`).
+  - **Offer:** the thank-you page shows it (`findUpsellOffer`) only when all of these hold:
+    - The order is paid, is not itself a bump or upsell order, and was paid in the last 2 hours.
+    - The offered product is published and of an allowed type.
+    - The buyer has not bought it already.
+    - The store can sell and its plan includes `upsells` (Pro; the trial and founding creators get it, D-098).
+  - **"Yes, add it"** (`startUpsellCheckout`): the server checks the offer again and creates a normal pending order (`upsellOf: <paid order id>`). The price comes from the product in the database, and the buyer comes from the paid order, so nothing is asked again. It then goes through the same provider checkout (a new Stripe Checkout page; the card is entered again) or the free-order path, and the same webhook → paid → library → email.
+  - There is no one-click charge: off-session charging would need saved cards on the creator's account, which is a payment-logic change for a later, separately approved block.
+  - `orders_upsell_of` is a non-unique index: a buyer may retry after a failed or abandoned checkout. The offer hides itself once the buyer owns the product, so a double purchase needs two tabs paid at once (refundable).
+  - Upsell orders are normal paid orders: they count in income and customers, unlike bump orders.
+- **Unchanged:** no application fee, no transfers, direct charges on the creator's account; the `PaymentProvider` interface is unchanged.
+
+## D-098: Plan limits enforced (Phase 3, block 5)
+- **Date:** 2026-11-19
+- **Decision (founder approved the plan; the free trial gets Pro features, 2026-11-19):**
+  - `lib/config.ts` `PLAN_LIMITS` now carries `features` as well as the limits. All gating goes through `planLimits(access)`, `can(access, feature)`, `planProblem` and `videoHoursProblem` in `lib/plans/access.ts`.
+
+    | | Trial / founding | Starter | Pro |
+    |---|---|---|---|
+    | Courses | unlimited | 5 | unlimited |
+    | Course video | 100 h | 20 h | 100 h |
+    | Subscribers | 10,000 | 1,000 | 10,000 |
+    | Coaching calls | yes | no | yes |
+    | Automations | yes | no | yes |
+
+    Automations are the welcome email and the abandoned cart reminder. A paused store gets none of them.
+  - **Enforced at:**
+    - Creating a course (count of courses incl. drafts) and creating a coaching call (`?error=plan_courses` / `plan_coaching`).
+    - Publishing (`changeProductStatus`): coaching needs Pro, and a course needs room among the published courses.
+    - Starting a Bunny upload: total `video.durationSeconds` against the plan's hours.
+    - Turning on the welcome email or abandoned cart: the actions refuse, and the jobs also skip on a plan without automations.
+    - Broadcasts, as before: no sending over the subscriber limit.
+  - **Downgrades never delete or unpublish anything.** Existing courses, calls and videos keep working, and subscribers keep being collected; only new or extra ones are blocked.
+  - **Video length:**
+    - `fetchVideoInfo` reads Bunny Get Video's `length` ("the duration of the video in seconds") and status.
+    - `setBunnyVideoStatus` saves `video.durationSeconds` when a video is ready. The poll passes it; the Bunny webhook has no length, so it calls Get Video once, and a failure only leaves the length out.
+    - `scripts/migrations/2026-11-19-video-durations.mjs` backfills older ready videos. Dry run by default; `--apply` writes. **The founder runs it.**
+  - **UI:**
+    - Settings → Plan shows a usage card (courses, video hours, subscribers, coaching and automations) and plan blurbs that list the limits.
+    - The product type picker shows Coaching call as "Pro" (linking to the plan page) on plans without it.
+    - The welcome email and abandoned cart switches are locked, with an upgrade link.
+- **Why:** PRD F9 plan limits, through one helper (CLAUDE.md 5).
+
+## D-097: Meta and Google pixels on store pages, after consent (Phase 3, block 4)
+- **Date:** 2026-11-19
+- **Decision (founder approved the plan, 2026-11-19):**
+  - Creators enter a **Meta Pixel ID** and/or a **Google tag ID** (Marketing → Pixels). IDs only, strict patterns (`^\d{6,20}$`; `^(G|AW|GT|DC)-[A-Z0-9]{4,20}$`), checked again before reaching a page (`safePixels`).
+  - Our own fixed snippets use these IDs, and creator scripts are never allowed. Data: optional `stores.pixels { metaPixelId, googleTagId }`.
+  - **Where:** only on the store's public pages: store, product, checkout and thank-you. Never on platform pages, the library or the dashboard (the dashboard preview passes `pixels: null`). Gated with `can(access, "pixels")`, so there are none while the store is paused.
+  - **Consent:**
+    - `StorePixels` renders nothing on the server.
+    - In the browser it shows an Allow / Decline banner, and loads nothing until Allow. The choice is kept per store in local storage (`ps_pixels_<storeId>`).
+    - "Cookie settings" at the bottom of the page reopens it. Withdrawing calls `fbq('consent','revoke')` and reloads without the scripts.
+    - While the banner shows, the platform cookie notice is hidden for that view (`suppressCookieNotice`), so the two never stack.
+  - **Events:**
+    - PageView: on start.
+    - Product page: Meta `ViewContent` / Google `view_item`.
+    - Checkout: `InitiateCheckout` / `begin_checkout`.
+    - Thank-you page, only for a **paid** order: `Purchase` with `{eventID: orderId}` / `purchase` with `transaction_id`. The value and currency come from the order (integer cents converted with `priceDecimals`), and it fires once per order (local storage key).
+  - **Snippets:** Meta's documented base code (connect.facebook.net/en_US/fbevents.js). The Google tag `gtag.js` with `gtag('config', ID)`: Google marks `config` deprecated but says existing installs keep working.
+  - **CSP:** store pages (`/@…`, `/s/…`) get their own CSP with the pixel hosts. Google's hosts are from its CSP guide (with Ads); Meta documents `connect.facebook.net` and `www.facebook.com`. Every other page keeps the old CSP. The two header rules never match the same path.
+  - **Legal:** the Cookie Policy gains a "Creators' pixels" section, and the Privacy Policy says what Meta and Google receive when a visitor allows them. Cloudflare R2 is added to the providers list.
+- **Not done:**
+  - **TikTok:** its official docs could not be fetched (every page failed), so it is not built; it follows once the docs can be verified.
+  - Server-side Conversions API: needs vendor tokens, so it is not built.
+  - Meta's full runtime host list is not documented. Check the browser's network tab during testing, and add hosts to the store CSP if a pixel request is blocked.
+- **Why:** Phase 3 growth tools; pixels are in the Starter plan (PRD F9).
+
+## D-096: Abandoned cart reminder (Phase 3, block 3)
+- **Date:** 2026-11-19
+- **Decision (founder, 2026-11-19):**
+  - **Who:** one reminder goes to **everyone who started a paid checkout** and did not finish, not only buyers who ticked "Email me updates" (founder chose option b over the safer option a). The email says plainly that it is the only reminder.
+  - **How:** after the provider's checkout session is created, `scheduleCartReminder` sends the Inngest event `checkout/started`.
+    - The function `abandoned-cart-reminder` sleeps until two hours after the start (Stripe sessions expire after 60 minutes), then runs `sendCartReminder`.
+    - Without Inngest (development) nothing is queued.
+    - There is **no Stripe change**: Stripe's own recovery feature is not used.
+  - **Sent only when** all of these hold:
+    - The order is pending or failed, costs something, is not a bump's order, and was never reminded.
+    - The store is published, has reminders on and can sell.
+    - The product is still published.
+    - The buyer has not paid for it since, was not reminded for it in the last 7 days, and has not unsubscribed from the store's list.
+  - The order is claimed first (`reminderSentAt`), and the Resend idempotency key is `cart-<orderId>`, so it goes out once.
+  - **Email:**
+    - The creator's optional subject and message (only `{{customer_name}}` and `{{product_title}}`) or the default text.
+    - Always added: a "Finish your order" button to `/@store/product/checkout`, and the line "You started a checkout at {store}. This is the only reminder you'll get for it."
+    - Sent as "{store} via Pickstall".
+  - **Settings:** an "Abandoned cart" card on the Marketing page with on/off (default off), the optional text and a preview. It shows the last 30 days: reminders sent, and how many of those buyers later paid for the same product.
+  - New optional fields: `stores.abandonedCart`, `orders.reminderSentAt`. New partial index `orders_store_reminded`.
+- **Risk noted:** reminders to buyers who did not tick consent may count as marketing in some countries (GDPR in the EU). There is one reminder only, it says so, and it never goes to anyone who unsubscribed from the store.
+- **Why:** Phase 3 growth tools (PRD section 9).
+
 ## D-095: Broadcasts, one-click unsubscribe, welcome email, bounce and complaint webhook (Phase 3, block 2)
 - **Date:** 2026-11-19
 - **Decision (founder approved the plan, 2026-11-19):**

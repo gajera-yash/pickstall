@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { StoreBlocks } from "@/components/store/store-blocks";
+import { splitBlocks } from "@/lib/page-blocks/rules";
 
 import { PriceAndButton, ProductCover, ProductKind } from "@/components/store/layouts/parts";
 import type { StoreLayoutProps } from "@/components/store/layouts/types";
@@ -13,6 +15,7 @@ import { cn } from "@/lib/utils";
  */
 export function BentoLayout({ store, products, theme, preview }: StoreLayoutProps) {
   const { preset } = theme;
+  const { before, after } = splitBlocks(store.pageBlocks);
 
   return (
     <StoreFrame theme={theme} preview={preview} wide>
@@ -20,6 +23,12 @@ export function BentoLayout({ store, products, theme, preview }: StoreLayoutProp
         <li className="flex flex-col justify-center p-6 @4xl:col-span-2" style={cardStyle(theme)}>
           <StoreHeader store={store} align="start" />
         </li>
+
+        {before.length > 0 && (
+          <li className="@2xl:col-span-2 @4xl:col-span-4">
+            <StoreBlocks blocks={before} theme={theme} />
+          </li>
+        )}
 
         {products.length === 0 && (
           <li className="flex items-center p-6 @4xl:col-span-2" style={{ ...cardStyle(theme), color: preset.muted }}>
@@ -51,6 +60,12 @@ export function BentoLayout({ store, products, theme, preview }: StoreLayoutProp
             </li>
           );
         })}
+
+        {after.length > 0 && (
+          <li className="@2xl:col-span-2 @4xl:col-span-4">
+            <StoreBlocks blocks={after} theme={theme} />
+          </li>
+        )}
       </ul>
     </StoreFrame>
   );

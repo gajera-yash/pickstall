@@ -8,11 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
-import { PAID_PLANS, PLANNED_PRICE_CENTS, SUPPORT_EMAIL, TRIAL_DAYS, type PaidPlan } from "@/lib/config";
+import { PAID_PLANS, PLAN_LIMITS, PLANNED_PRICE_CENTS, SUPPORT_EMAIL, TRIAL_DAYS, type PaidPlan } from "@/lib/config";
 import { formatWholeDollars } from "@/lib/landing/demo";
 import { billingConfigured } from "@/lib/payments/billing";
 import { liveKey } from "@/lib/payments/test-account";
-import type { StoreAccess } from "@/lib/plans/access";
+import { can, planLimits, type StoreAccess } from "@/lib/plans/access";
+import { countCourses, videoSecondsUsed } from "@/lib/plans/usage";
+import { countSubscribed } from "@/lib/subscribers/queries";
+import { Progress } from "@/components/ui/progress";
 import { openBillingPortal, startSubscription } from "@/lib/plans/actions";
 import { billingOfOwner } from "@/lib/plans/billing-queries";
 
@@ -28,8 +31,8 @@ export default function PlanSettingsPage({ searchParams }: PageProps<"/dashboard
 }
 
 const PLAN_LABELS: Record<PaidPlan, { name: string; blurb: string }> = {
-  starter: { name: "Starter", blurb: "Everything you need to open and sell." },
-  pro: { name: "Pro", blurb: "The full toolkit to grow, as it ships." },
+  starter: { name: "Starter", blurb: `Digital products, lead magnets, coupons, order bumps and pixels; ${PLAN_LIMITS.starter.maxCourses} courses, ${PLAN_LIMITS.starter.videoHours} hours of video, ${PLAN_LIMITS.starter.emailSubscribers.toLocaleString("en")} subscribers.` },
+  pro: { name: "Pro", blurb: `Everything in Starter, plus coaching calls, upsells, automations, unlimited courses, ${PLAN_LIMITS.pro.videoHours} hours of video and ${PLAN_LIMITS.pro.emailSubscribers.toLocaleString("en")} subscribers.` },
 };
 
 /** Messages after a button or the trip to Stripe. Only these keys are shown; anything else is ignored. */
@@ -74,6 +77,9 @@ async function PlanContent({ searchParams }: Pick<PageProps<"/dashboard/settings
   const outcome = outcomeKey ? OUTCOMES[outcomeKey] : null;
   const current = store.access.plan;
   const ready = billingConfigured();
+  // What the store uses of its plan (D-098). Never blocks the page if the database is slow.
+  const [courses, videoSeconds, subscribed] = await Promise.all([countCourses(store.id).catch(() => 0), videoSecondsUsed(store.id).catch(() => 0), countSubscribed(store.id).catch(() => 0)]);
+  const limits = planLimits(store.access);
 
   return (
     <Card>
@@ -91,6 +97,18 @@ async function PlanContent({ searchParams }: Pick<PageProps<"/dashboard/settings
           <AlertDescription>{outcome.text}</AlertDescription>
         </Alert>
       )}
+
+      <section aria-labelledby="usage-title" className="flex flex-col gap-3 rounded-md border border-line p-4">
+        <h3 id="usage-title" className="font-semibold">
+          Your usage{current ? "" : " (the free period includes Pro)"}
+        </h3>
+        <UsageRow label="Courses" used={courses} max={limits.maxCourses} />
+        <UsageRow label="Hours of course video" used={Math.round((videoSeconds / 3600) * 10) / 10} max={limits.videoHours} />
+        <UsageRow label="Email subscribers" used={subscribed} max={limits.emailSubscribers} />
+        <p className="text-sm text-mute">
+          Coaching calls: {can(store.access, "coaching") ? "included" : "Pro"} · Upsells: {can(store.access, "upsells") ? "included" : "Pro"} · Automations: {can(store.access, "automations") ? "included" : "Pro"}
+        </p>
+      </section>
 
       <ul className="grid gap-3 sm:grid-cols-2">
         {PAID_PLANS.map((plan) => {
@@ -140,5 +158,21 @@ async function PlanContent({ searchParams }: Pick<PageProps<"/dashboard/settings
         .
       </p>
     </Card>
+  );
+}
+
+/** One limit of the plan: "3 of 5", or "3 (unlimited)", with a bar when it has a limit. */
+function UsageRow({ label, used, max }: { label: string; used: number; max: number | null }) {
+  const full = max !== null && used >= max;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline justify-between gap-2 text-sm">
+        <span>{label}</span>
+        <span className={`tabular-nums ${full ? "font-semibold text-danger" : "text-mute"}`}>
+          {used.toLocaleString("en")} {max === null ? "(unlimited)" : `of ${max.toLocaleString("en")}`}
+        </span>
+      </div>
+      {max !== null && <Progress value={Math.min(100, Math.round((used / max) * 100))} max={100} aria-label={`${label} used`} />}
+    </div>
   );
 }

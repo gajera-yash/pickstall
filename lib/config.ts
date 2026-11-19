@@ -217,23 +217,27 @@ export const TRIAL_WARNING_DAYS = 5;
 export const PLANS = ["trial", "starter", "pro", "business"] as const;
 export type Plan = (typeof PLANS)[number];
 
+/** Features some plans do not include (PRD F9). Everything else is in every plan. */
+export type PlanFeature = "coaching" | "automations" | "upsells";
+
 type PlanLimits = {
   /** `null` means unlimited. */
   maxCourses: number | null;
   videoHours: number;
   emailSubscribers: number;
+  features: readonly PlanFeature[];
 };
 
 /**
- * Placeholder limits from PRD F9. Not enforced in Phase 1 (billing is Phase 3).
- * Video hours and subscriber counts must be checked against Mux and Resend costs.
- * Trial limits are not decided in the PRD; they mirror Starter for now.
+ * Plan limits from PRD F9, enforced since D-098 through lib/plans (never compare plan names
+ * elsewhere). The free trial and founding creators get Pro (founder decision, D-098).
+ * Video hours and subscriber counts must be checked against Bunny and Resend costs.
  */
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
-  trial: { maxCourses: 5, videoHours: 20, emailSubscribers: 1_000 },
-  starter: { maxCourses: 5, videoHours: 20, emailSubscribers: 1_000 },
-  pro: { maxCourses: null, videoHours: 100, emailSubscribers: 10_000 },
-  business: { maxCourses: null, videoHours: 300, emailSubscribers: 50_000 },
+  trial: { maxCourses: null, videoHours: 100, emailSubscribers: 10_000, features: ["coaching", "automations", "upsells"] },
+  starter: { maxCourses: 5, videoHours: 20, emailSubscribers: 1_000, features: [] },
+  pro: { maxCourses: null, videoHours: 100, emailSubscribers: 10_000, features: ["coaching", "automations", "upsells"] },
+  business: { maxCourses: null, videoHours: 300, emailSubscribers: 50_000, features: ["coaching", "automations", "upsells"] },
 };
 
 /**

@@ -13,8 +13,10 @@ import { findCheckoutBump } from "@/lib/bumps/queries";
 import { busyTimesForStore } from "@/lib/coaching/bookings";
 import { availableSlots } from "@/lib/coaching/slots";
 import { canBuy, loadCheckoutContext } from "@/lib/orders/queries";
-import { formatMoney } from "@/lib/products/money";
+import { formatMoney, priceDecimals } from "@/lib/products/money";
 import { payableCents } from "@/lib/products/pricing";
+import { pixelValue } from "@/lib/pixels/rules";
+import { StorePixels } from "@/components/store/store-pixels";
 import { leadMagnetConsentText, purchaseConsentText } from "@/lib/subscribers/rules";
 
 // Checkout page at /@username/product/checkout (rewrite in next.config.ts). Only published products
@@ -101,6 +103,14 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
         </div>
         </CheckoutTotalsProvider>
       </div>
+      {context.pixels && (
+        <StorePixels
+          storeId={store._id}
+          storeName={store.name}
+          pixels={context.pixels}
+          event={{ kind: "begin_checkout", contentId: product.id, value: pixelValue(payableCents(product), priceDecimals(store.currency)), currency: store.currency }}
+        />
+      )}
     </StoreFrame>
   );
 }

@@ -208,3 +208,15 @@ export async function deleteProduct(storeId: string, id: string): Promise<Delete
   );
   return result.matchedCount === 1 ? "hidden" : "not_found";
 }
+
+export type ProductExportRow = Pick<ProductDoc, "title" | "type" | "status" | "slug" | "priceCents" | "salePriceCents" | "createdAt">;
+
+/** The store's products for the CSV export (D-100): public fields only, never delivery links or files. */
+export async function listProductsForExport(storeId: string): Promise<ProductExportRow[]> {
+  const { products } = await collections();
+  return products
+    .find({ storeId, ...NOT_DELETED }, { projection: { title: 1, type: 1, status: 1, slug: 1, priceCents: 1, salePriceCents: 1, createdAt: 1 } })
+    .sort({ sortOrder: 1 })
+    .limit(1000)
+    .toArray();
+}

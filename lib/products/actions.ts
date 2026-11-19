@@ -10,10 +10,11 @@ import { logger } from "@/lib/logger";
 import { removeCourseContent } from "@/lib/courses/cleanup";
 import { countLessonsWithContent } from "@/lib/courses/curriculum";
 import { removeFilesOfProduct } from "@/lib/files/product-files";
-import { can, PAUSED_MESSAGES } from "@/lib/plans/access";
+import { can, PAUSED_MESSAGES, planProblem } from "@/lib/plans/access";
 import { checkPublish } from "@/lib/products/publish";
 import { createDraftProduct, deleteProduct, findProduct, setProductStatus, updateProduct, type DeleteProductResult } from "@/lib/products/queries";
 import { productIdInput, productInputFor, productStatusInput } from "@/lib/products/schemas";
+import { countPublishedCourses } from "@/lib/plans/usage";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 
@@ -132,6 +133,13 @@ export async function changeProductStatus(productId: string, status: string): Pr
 
     if (next.data === "published") {
       if (!can(store.access, "publish")) return err(PAUSED_MESSAGES.publish);
+      // The plan (D-098): Pro for coaching calls, and the course limit (after a downgrade, the
+      // courses already published stay; no more can be published).
+      if (product.type === "course" || product.type === "coaching") {
+        const courses = product.type === "course" ? await countPublishedCourses(store.id, id.data) : undefined;
+        const problem = planProblem(store.access, { type: product.type, courses });
+        if (problem) return err(problem);
+      }
       // A course is checked with its lessons (D-056).
       const courseLessons = product.type === "course" ? await countLessonsWithContent(store.id, id.data) : undefined;
       const check = checkPublish({ ...product, courseLessons }, store);

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { can } from "@/lib/plans/access";
 import { Suspense } from "react";
 
 import { CoachingEditor, type EditorCoaching } from "@/components/dashboard/coaching-editor";
@@ -49,6 +50,16 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
     },
     candidates: await listBumpCandidates(store.id, product._id).catch(() => []),
   };
+  // Upsell after purchase (D-099): offered with the same candidates as the bump; Pro.
+  const upsell = {
+    initial: {
+      enabled: Boolean(product.upsell),
+      productId: product.upsell?.productId ?? "",
+      price: product.upsell ? centsToInput(product.upsell.priceCents, store.currency) : "",
+      headline: product.upsell?.headline ?? "",
+    },
+    locked: !can(store.access, "upsells"),
+  };
 
   if (product.type === "coaching") {
     const settings = product.coaching ?? defaultCoachingSettings();
@@ -71,7 +82,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
       discountOn: product.salePriceCents != null,
       salePrice: centsToInput(product.salePriceCents ?? null, store.currency),
     };
-    return <CoachingEditor initial={coaching} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} bump={bump} />;
+    return <CoachingEditor initial={coaching} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} bump={bump} upsell={upsell} />;
   }
 
   if (product.type === "course") {
@@ -95,7 +106,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
       emailBody: product.afterPurchase?.emailBody ?? "",
     };
     const curriculum = (await loadCurriculum(store.id, product._id)) ?? { modules: [] };
-    return <CourseEditor initial={course} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} curriculum={curriculum} videoUploadReady={bunnyConfig() !== null} fileUploadReady={fileUploadReady} bump={bump} />;
+    return <CourseEditor initial={course} currency={store.currency} paymentsOk={paymentsReady(store)} isNew={isNew} curriculum={curriculum} videoUploadReady={bunnyConfig() !== null} fileUploadReady={fileUploadReady} bump={bump} upsell={upsell} />;
   }
 
   const initial: EditorProduct = {
@@ -124,7 +135,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
     emailBody: product.afterPurchase.emailBody ?? "",
   };
 
-  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} fileUploadReady={fileUploadReady} bump={bump} leadMagnet={product.type === "lead_magnet"} />;
+  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} fileUploadReady={fileUploadReady} bump={bump} upsell={upsell} leadMagnet={product.type === "lead_magnet"} />;
 }
 
 function EditorSkeleton() {

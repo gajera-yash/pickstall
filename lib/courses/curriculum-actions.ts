@@ -24,6 +24,8 @@ import { parseVideoLink } from "@/lib/courses/video-links";
 import { logger } from "@/lib/logger";
 import { richDocSchemaWith, isEmptyDoc } from "@/lib/products/rich-text";
 import { text } from "@/lib/products/schemas";
+import { videoHoursProblem, type StoreAccess } from "@/lib/plans/access";
+import { videoSecondsUsed } from "@/lib/plans/usage";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import { httpsUrlSchema } from "@/lib/stores/schemas";
@@ -47,10 +49,10 @@ function errorName(error: unknown): string | undefined {
   return error instanceof Error ? error.name : undefined;
 }
 
-async function session(courseId: string): Promise<{ storeId: string; ownerId: string } | null> {
+async function session(courseId: string): Promise<{ storeId: string; ownerId: string; access: StoreAccess } | null> {
   const { user, store } = await requireCreator(`/dashboard/products/${courseId}`);
   if (!id.safeParse(courseId).success) return null;
-  return { storeId: store.id, ownerId: user.id };
+  return { storeId: store.id, ownerId: user.id, access: store.access };
 }
 
 async function allowed(ownerId: string, limit: { max: number; windowMinutes: number } = COURSE_EDIT_RATE_LIMIT, scope = "course-edit:owner"): Promise<boolean> {
@@ -216,6 +218,9 @@ export async function startLessonVideoUpload(courseId: string, lessonId: string,
   const config = bunnyConfig();
   if (!config) return err("Video upload isn't set up yet. Paste a YouTube or Vimeo link for now.");
   if (!(await allowed(who.ownerId, COURSE_VIDEO_UPLOAD_RATE_LIMIT, "course-video:owner"))) return err("Too many uploads. Try again in a while.");
+  // The plan's hours of course video (D-098); videos already uploaded are never removed.
+  const hours = videoHoursProblem(who.access, await videoSecondsUsed(who.storeId));
+  if (hours) return err(hours);
 
   try {
     const lessons = await loadCurriculum(who.storeId, courseId);

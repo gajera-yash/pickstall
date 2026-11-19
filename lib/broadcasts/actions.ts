@@ -9,7 +9,7 @@ import { requireCreator } from "@/lib/auth/guards";
 import { publicEnv } from "@/lib/env";
 import { sendListEmails } from "@/lib/email/send";
 import { logger } from "@/lib/logger";
-import { subscriberLimit } from "@/lib/plans/access";
+import { AUTOMATIONS_PRO, can, subscriberLimit } from "@/lib/plans/access";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { err, ok, type Result } from "@/lib/result";
 import { countSubscribed } from "@/lib/subscribers/queries";
@@ -79,6 +79,8 @@ export async function saveWelcomeEmailAction(raw: unknown): Promise<Result<{ ena
   const enabled = typeof raw === "object" && raw !== null && (raw as { enabled?: unknown }).enabled === true;
   const input = parse(raw);
   if (!input.ok) return input;
+  // A Pro feature (D-098): it can always be saved off, only turned on with the plan.
+  if (enabled && !can(store.access, "automations")) return err(AUTOMATIONS_PRO);
   if (!(await takeRateLimit(rateLimitKey("welcome-write:owner", user.id), 30, 10))) return err("Slow down a little, then try again.");
   try {
     await saveWelcomeEmail(store.id, { enabled, subject: input.data.subject, body: input.data.body });

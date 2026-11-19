@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { PageBlock } from "@/lib/page-blocks/rules";
+import { safePixels, type StorePixels } from "@/lib/pixels/rules";
 import { connection } from "next/server";
 
 import type { CourseCategory } from "@/lib/courses/settings";
@@ -24,6 +26,10 @@ export type PublicStore = {
   currency: StoreDoc["currency"];
   /** False while the store is paused after its free trial (D-072). Only this flag is public, no plan details. */
   isOpen: boolean;
+  /** Pixel IDs for the store's pages (D-097), only well-formed ones, none while paused. */
+  pixels: StorePixels | null;
+  /** Page sections around the products (D-101); empty: the page as before. */
+  pageBlocks: PageBlock[];
 };
 
 export type PublicProduct = {
@@ -66,6 +72,8 @@ const STORE_FIELDS = {
   "billing.status": 1,
   "billing.currentPeriodEnd": 1,
   "billing.cancelAtPeriodEnd": 1,
+  pixels: 1,
+  pageBlocks: 1,
 } as const;
 const PRODUCT_FIELDS = { slug: 1, title: 1, description: 1, descriptionDoc: 1, coverUrl: 1, priceCents: 1, salePriceCents: 1, buttonText: 1, type: 1, "course.category": 1, "course.accessDays": 1, "coaching.durationMinutes": 1 } as const;
 
@@ -91,6 +99,8 @@ export async function findPublicStore(slug: string): Promise<PublicStore | null>
     theme: doc.theme,
     currency: doc.currency,
     isOpen: can(storeAccess(doc), "sell"),
+    pixels: can(storeAccess(doc), "pixels") ? safePixels(doc.pixels) : null,
+    pageBlocks: doc.pageBlocks ?? [],
   };
 }
 

@@ -27,6 +27,7 @@ import {
   markOrderFailed,
   productPathForOrder,
 } from "@/lib/orders/queries";
+import { scheduleCartReminder } from "@/lib/abandoned-cart/job";
 import { consentForCheckout } from "@/lib/subscribers/rules";
 import { buyerInput } from "@/lib/orders/schemas";
 import { providerForStore } from "@/lib/payments";
@@ -182,6 +183,8 @@ export async function startCheckout(username: string, productSlug: string, _prev
           connectedAccountId: context.store.stripeAccountId,
         });
         await attachProviderSession(orderId, session.providerSessionId);
+        // One reminder two hours later if this paid checkout is not finished (D-096); never throws.
+        await scheduleCartReminder(orderId, new Date());
         redirect(session.url);
       } catch (error) {
         unstable_rethrow(error); // redirect() throws a control-flow signal; only real failures continue

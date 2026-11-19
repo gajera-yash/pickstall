@@ -21,8 +21,9 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          {APP_NAME} only uses cookies that are strictly necessary for the site to work and stay secure. We do not use advertising or tracking
-          cookies, and no third party sets cookies through our pages. On the secure site the names may start with &quot;__Secure-&quot;.
+          {APP_NAME} itself only uses cookies that are strictly necessary for the site to work and stay secure. We do not use advertising or
+          tracking cookies of our own. Creators can add ad pixels to their own store pages; see &quot;Creators&apos; pixels&quot; below. On the
+          secure site the names may start with &quot;__Secure-&quot;.
         </p>
         <div className="overflow-x-auto rounded-lg border border-line">
           <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
@@ -49,6 +50,23 @@ const sections: LegalSection[] = [
     ),
   },
   {
+    id: "pixels",
+    title: "Creators' pixels",
+    body: (
+      <>
+        <p>
+          A creator may add a Meta (Facebook) Pixel or a Google tag to their own store pages, to measure their ads. These set cookies from Meta or
+          Google under those companies&apos; policies. They load only on that creator&apos;s store pages, and only after you choose &quot;Allow&quot;
+          in the banner there. They never load on {APP_NAME}&apos;s own pages, your library or the dashboard.
+        </p>
+        <p>
+          The creator decides to use them and is responsible for the data they collect. Your choice is kept in your browser (local storage) for each
+          store; use &quot;Cookie settings&quot; at the bottom of the store page to change it.
+        </p>
+      </>
+    ),
+  },
+  {
     id: "embeds",
     title: "Videos from other services",
     body: (
@@ -64,7 +82,7 @@ const sections: LegalSection[] = [
     body: (
       <p>
         Because these cookies are necessary, the site cannot work without them; you can still block or delete cookies in your browser settings, but
-        you will not be able to stay signed in. If we ever add optional cookies, we will ask you first.
+        you will not be able to stay signed in. Optional cookies, like a creator&apos;s pixels, are only set after you allow them.
       </p>
     ),
   },

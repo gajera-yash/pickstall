@@ -23,7 +23,7 @@ vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: 
 
 import { handleBunnyWebhook } from "@/lib/courses/bunny-webhook";
 import { embedUrlFor, parseVideoLink, watchUrlFor } from "@/lib/courses/video-links";
-import { bunnyConfig, fetchVideoStatus, playbackUrl, statusFromVideoApi, statusFromWebhook, uploadSignature, verifyWebhookSignature } from "@/lib/video/bunny";
+import { bunnyConfig, fetchVideoInfo, fetchVideoStatus, playbackUrl, statusFromVideoApi, statusFromWebhook, uploadSignature, verifyWebhookSignature } from "@/lib/video/bunny";
 
 const VIDEO = "eb1c4f77-0cda-46be-b47d-1118ad7c2ffe";
 const sha = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -64,6 +64,14 @@ describe("Bunny signing", () => {
     fetchMock.mockResolvedValueOnce(new Response("", { status: 404 }));
     expect(await fetchVideoStatus(config, VIDEO)).toBe("failed");
     expect(await fetchVideoStatus(config, "../evil")).toBeNull();
+    fetchMock.mockRestore();
+  });
+
+  it("reads the video's length in seconds for the plan's video hours (D-098)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(JSON.stringify({ status: 4, length: 125.4 }), { status: 200 }));
+    expect(await fetchVideoInfo(config, VIDEO)).toEqual({ status: "ready", lengthSeconds: 125 });
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ status: 2 }), { status: 200 }));
+    expect(await fetchVideoInfo(config, VIDEO)).toEqual({ status: "processing", lengthSeconds: null });
     fetchMock.mockRestore();
   });
 
@@ -123,10 +131,19 @@ describe("Bunny webhook", () => {
     expect(db.webhookEvents.insertOne).not.toHaveBeenCalled();
   });
 
-  it("records the event, then marks the video ready", async () => {
+  it("records the event, then marks the video ready with its length from Bunny (D-098)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(JSON.stringify({ status: 4, length: 90 }), { status: 200 }));
     expect((await send(event)).status).toBe(200);
     expect(db.webhookEvents.insertOne).toHaveBeenCalledWith(expect.objectContaining({ _id: "bunny:evt-1", source: "bunny" }));
-    expect(curriculum.setBunnyVideoStatus).toHaveBeenCalledWith(VIDEO, "ready");
+    expect(curriculum.setBunnyVideoStatus).toHaveBeenCalledWith(VIDEO, "ready", 90);
+    fetchMock.mockRestore();
+  });
+
+  it("still marks the video ready when Bunny's length cannot be read", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("offline"));
+    expect((await send(event)).status).toBe(200);
+    expect(curriculum.setBunnyVideoStatus).toHaveBeenCalledWith(VIDEO, "ready", null);
+    fetchMock.mockRestore();
   });
 
   it("does nothing for a redelivered event", async () => {

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { StoreBlocks } from "@/components/store/store-blocks";
+import { splitBlocks } from "@/lib/page-blocks/rules";
 
 import { PriceAndButton, ProductCover, ProductKind } from "@/components/store/layouts/parts";
 import type { StoreLayoutProps } from "@/components/store/layouts/types";
@@ -11,6 +13,7 @@ import { StoreFrame, cardStyle } from "@/components/store/store-theme";
  */
 export function SplitLayout({ store, products, theme, preview }: StoreLayoutProps) {
   const { preset } = theme;
+  const { before, after } = splitBlocks(store.pageBlocks);
 
   return (
     <StoreFrame theme={theme} preview={preview} wide>
@@ -23,6 +26,7 @@ export function SplitLayout({ store, products, theme, preview }: StoreLayoutProp
         </aside>
 
         <section aria-labelledby="studio-products" className="flex min-w-0 flex-col gap-4">
+          <StoreBlocks blocks={before} theme={theme} />
           <h2 id="studio-products" className="font-display text-h3" style={{ fontWeight: preset.displayWeight }}>
             Products
           </h2>
@@ -55,6 +59,7 @@ export function SplitLayout({ store, products, theme, preview }: StoreLayoutProp
               ))}
             </ul>
           )}
+          <StoreBlocks blocks={after} theme={theme} />
         </section>
       </div>
     </StoreFrame>

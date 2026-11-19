@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 
 // Cookie notice (D-074). Every cookie we set is strictly necessary (see /cookies), so the law asks for
 // information, not consent. Closing it is remembered in local storage (not a cookie). If optional
-// cookies (analytics, ads) are ever added, this must become a real accept / decline choice first.
+// cookies (analytics, ads) are ever added, this must become a real accept / decline choice first:
+// creators' pixels (D-097) have their own accept / decline banner on their store pages.
 
 const KEY = "ps_cookie_notice_closed";
 const listeners = new Set<() => void>();
@@ -34,6 +35,15 @@ function close() {
   } catch {
     // Private mode or blocked storage: it stays hidden until the next visit.
   }
+  listeners.forEach((notify) => notify());
+}
+
+/**
+ * Hides the notice for this page view without remembering it (D-097): a store page with pixels shows
+ * its own consent banner, which covers cookies, so two banners never stack.
+ */
+export function suppressCookieNotice() {
+  closedThisVisit = true;
   listeners.forEach((notify) => notify());
 }
 

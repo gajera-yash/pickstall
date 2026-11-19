@@ -80,10 +80,14 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("subscribers").createIndex({ unsubscribeToken: 1 }, { unique: true, partialFilterExpression: { unsubscribeToken: { $type: "string" } }, name: "subscribers_unsubscribe_token_unique" }),
     db.collection("subscribers").createIndex({ storeId: 1, status: 1, _id: 1 }, { name: "subscribers_store_status_id" }),
     db.collection("broadcasts").createIndex({ storeId: 1, createdAt: -1 }, { name: "broadcasts_store_created" }),
+    // Abandoned cart reminders (D-096): the 7-day check per buyer and product, and the stats.
+    db.collection("orders").createIndex({ storeId: 1, reminderSentAt: -1 }, { partialFilterExpression: { reminderSentAt: { $type: "date" } }, name: "orders_store_reminded" }),
     db.collection("couponRedemptions").createIndex({ orderId: 1 }, { unique: true, name: "coupon_redemptions_order_unique" }),
     db.collection("couponRedemptions").createIndex({ activeEmailKey: 1 }, { unique: true, partialFilterExpression: { activeEmailKey: { $type: "string" } }, name: "coupon_redemptions_email_unique" }),
     // Order bumps (D-089): at most one bump order per parent order.
     db.collection("orders").createIndex({ bumpOf: 1 }, { unique: true, partialFilterExpression: { bumpOf: { $type: "string" } }, name: "orders_bump_of_unique" }),
+    // Upsell orders of a paid order (D-099). Not unique: a buyer may retry after a failed checkout.
+    db.collection("orders").createIndex({ upsellOf: 1 }, { partialFilterExpression: { upsellOf: { $type: "string" } }, name: "orders_upsell_of" }),
     // Better Auth collections (it does not create indexes for MongoDB itself).
     db.collection("user").createIndex({ email: 1 }, { unique: true, name: "user_email_unique" }),
     db.collection("session").createIndex({ token: 1 }, { unique: true, name: "session_token_unique" }),

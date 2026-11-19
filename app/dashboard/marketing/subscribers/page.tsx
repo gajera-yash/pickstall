@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { formatDay, Initial, ListCard } from "@/components/dashboard/orders-ui";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { WelcomeEmailForm } from "@/components/dashboard/list-email-composer";
+import { SubscriberImport } from "@/components/dashboard/subscriber-import";
 import { SubscriberRowActions } from "@/components/dashboard/subscriber-row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { findWelcomeEmail } from "@/lib/broadcasts/queries";
 import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { withQuery } from "@/lib/orders/params";
-import { subscriberLimit } from "@/lib/plans/access";
+import { can, subscriberLimit } from "@/lib/plans/access";
 import { countSubscribed, listSubscribers, type SubscriberListItem } from "@/lib/subscribers/queries";
 
 // The creator's email list (D-094): everyone who signed up for a lead magnet or ticked "Email me
@@ -91,7 +92,9 @@ async function SubscribersContent({ searchParams }: Pick<PageProps<"/dashboard/m
         </div>
       </ListCard>
 
-      <WelcomeEmailForm storeName={store.name} initial={welcome ?? { enabled: false, subject: `Welcome to ${store.name}`, body: WELCOME_DRAFT }} />
+      <SubscriberImport />
+
+      <WelcomeEmailForm storeName={store.name} initial={welcome ?? { enabled: false, subject: `Welcome to ${store.name}`, body: WELCOME_DRAFT }} locked={!can(store.access, "automations")} />
 
       <form action={PATH} className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <InputGroup className="h-10 sm:w-72">
@@ -164,7 +167,7 @@ function SubscribersTable({ items }: { items: SubscriberListItem[] }) {
                 </TableCell>
                 <TableCell className="max-w-60">
                   <span className="block truncate">{item.sourceTitle}</span>
-                  <span className="block text-xs text-mute">{item.sourceKind === "lead_magnet" ? "Free download" : "At checkout"}</span>
+                  <span className="block text-xs text-mute">{item.sourceKind === "lead_magnet" ? "Free download" : item.sourceKind === "import" ? "Imported" : "At checkout"}</span>
                 </TableCell>
                 <TableCell>
                   <StatusBadge item={item} />

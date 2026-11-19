@@ -1,4 +1,5 @@
 import "server-only";
+import type { PageBlock } from "@/lib/page-blocks/rules";
 import type { RichDoc } from "@/lib/products/rich-text";
 
 import type { Binary, Collection } from "mongodb";
@@ -53,6 +54,21 @@ export type StoreDoc = {
    * length-limited; the footer with the store name and unsubscribe link is always added.
    */
   welcomeEmail?: { enabled: boolean; subject: string; body: string } | null;
+  /**
+   * One reminder to buyers who started a paid checkout and did not finish (D-096). Missing: off.
+   * Empty subject or body: the default text. The checkout button and store name are always added.
+   */
+  abandonedCart?: { enabled: boolean; subject: string; body: string } | null;
+  /**
+   * Ad and analytics pixels on the store's own pages (D-097): IDs only, put into our fixed
+   * snippets, loaded only after the visitor accepts. Never creator scripts. Missing: none.
+   */
+  pixels?: { metaPixelId: string | null; googleTagId: string | null } | null;
+  /**
+   * Store page sections around the products (D-101): text, image, video, links, testimonials and
+   * the one "products" marker. Missing or empty: the page as before. Validated by lib/page-blocks.
+   */
+  pageBlocks?: PageBlock[] | null;
   slug: string;
   name: string;
   bio: string | null;
@@ -180,6 +196,11 @@ export type ProductDoc = {
    * price. Only digital products and courses can be the bump. Missing or null: no bump.
    */
   bump?: { productId: string; priceCents: number; headline: string | null } | null;
+  /**
+   * Upsell (D-099): one other product offered on the thank-you page after a paid order, at this
+   * price, bought with a fresh checkout. Only digital products and courses. Missing or null: none.
+   */
+  upsell?: { productId: string; priceCents: number; headline: string | null } | null;
   title: string;
   /** Unique per store (index `products_store_slug_unique`). */
   slug: string;
@@ -242,6 +263,8 @@ export type OrderDoc = {
    * for a lead magnet. Saved with the exact words shown. Missing or null: no consent.
    */
   marketingConsent?: { at: Date; text: string } | null;
+  /** When the abandoned cart reminder for this unfinished checkout went out (D-096); set once. */
+  reminderSentAt?: Date | null;
   subtotalCents: number;
   discountCents: number;
   totalCents: number;
@@ -270,6 +293,8 @@ export type OrderDoc = {
    * reaches the buyer's library like any purchase. Creator lists and income leave these out.
    */
   bumpOf?: string | null;
+  /** Set on an order bought from the upsell offer of the paid order with this id (D-099). */
+  upsellOf?: string | null;
   createdAt: Date;
   paidAt: Date | null;
 };
@@ -449,7 +474,8 @@ export type CourseModuleDoc = {
  * webhook), or a YouTube / Vimeo video kept as its id only. Never in public reads.
  */
 export type LessonVideoDoc =
-  | { kind: "bunny"; videoId: string; status: "uploading" | "processing" | "ready" | "failed" }
+  // durationSeconds: Bunny's `length` once the video is ready (D-098), for the plan's video hours.
+  | { kind: "bunny"; videoId: string; status: "uploading" | "processing" | "ready" | "failed"; durationSeconds?: number }
   | { kind: "youtube"; id: string }
   | { kind: "vimeo"; id: string; hash: string | null };
 
@@ -534,7 +560,8 @@ export type SubscriberDoc = {
   name: string | null;
   status: "subscribed" | "unsubscribed";
   /** Where they first joined: a product (lead magnet or purchase). */
-  source: { kind: "lead_magnet" | "purchase"; productId: string; productTitle: string };
+  /** Where they first joined: a product (lead magnet or purchase), or a CSV import (D-100: productId "", productTitle the file name). */
+  source: { kind: "lead_magnet" | "purchase" | "import"; productId: string; productTitle: string };
   /** The latest consent: when, and the exact words shown. */
   consent: { at: Date; text: string };
   unsubscribedAt: Date | null;

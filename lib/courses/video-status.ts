@@ -3,7 +3,7 @@ import "server-only";
 import { setBunnyVideoStatus } from "@/lib/courses/curriculum";
 import { collections } from "@/lib/db/collections";
 import { logger } from "@/lib/logger";
-import { bunnyConfig, fetchVideoStatus } from "@/lib/video/bunny";
+import { bunnyConfig, fetchVideoInfo } from "@/lib/video/bunny";
 
 const MAX_CHECKS = 10;
 
@@ -23,8 +23,8 @@ export async function refreshPendingVideos(storeId: string, courseId: string): P
   for (const lesson of pending) {
     if (lesson.video?.kind !== "bunny") continue;
     try {
-      const status = await fetchVideoStatus(config, lesson.video.videoId);
-      if (status) await setBunnyVideoStatus(lesson.video.videoId, status);
+      const info = await fetchVideoInfo(config, lesson.video.videoId);
+      if (info) await setBunnyVideoStatus(lesson.video.videoId, info.status, info.lengthSeconds);
     } catch (error) {
       logger.warn("courses.bunny_status_failed", { name: error instanceof Error ? error.name : undefined });
     }

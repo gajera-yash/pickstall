@@ -6,6 +6,7 @@ import { formData, mockSession, rateLimit, redirectOf, storeQueries, userId } fr
 // course actions.
 
 const courseQueries = vi.hoisted(() => ({ updateCourseDetails: vi.fn() }));
+vi.mock("@/lib/plans/usage", () => ({ countCourses: vi.fn(async () => 0), countPublishedCourses: vi.fn(async () => 0), videoSecondsUsed: vi.fn(async () => 0) }));
 vi.mock("@/lib/courses/queries", () => courseQueries);
 const productQueries = vi.hoisted(() => ({ createDraftProduct: vi.fn() }));
 vi.mock("@/lib/products/queries", () => productQueries);
@@ -151,7 +152,7 @@ describe("course actions use the session owner's store only", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSession({ id: userId, email: "maya@example.com" });
-    storeQueries.findStoreByOwner.mockResolvedValue({ id: "store-1", slug: "maya", currency: "usd", stripeChargesEnabled: false });
+    storeQueries.findStoreByOwner.mockResolvedValue({ access: { state: "trial", endsAt: null, daysLeft: null, plan: null, cancelsAtPeriodEnd: false }, id: "store-1", slug: "maya", currency: "usd", stripeChargesEnabled: false });
     rateLimit.takeRateLimit.mockResolvedValue(true);
   });
 

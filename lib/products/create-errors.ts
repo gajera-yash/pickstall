@@ -3,6 +3,9 @@
 export const PRODUCT_CREATE_ERRORS: Record<string, string> = {
   limit: "You have reached the product limit for your store.",
   slow: "Slow down a little, then try again.",
+  // Plan limits (D-098).
+  plan_courses: "Your plan's course limit is reached. Upgrade to Pro for unlimited courses.",
+  plan_coaching: "Coaching calls are part of Pro. Upgrade your plan to sell calls.",
   error: "Couldn't create the product. Check your connection and try again.",
 };
 

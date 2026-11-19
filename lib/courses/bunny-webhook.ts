@@ -6,7 +6,7 @@ import { setBunnyVideoStatus } from "@/lib/courses/curriculum";
 import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { logger } from "@/lib/logger";
-import { BUNNY_VIDEO_ID, bunnyConfig, statusFromWebhook, verifyWebhookSignature } from "@/lib/video/bunny";
+import { BUNNY_VIDEO_ID, bunnyConfig, fetchVideoInfo, statusFromWebhook, verifyWebhookSignature } from "@/lib/video/bunny";
 
 // Bunny Stream webhook (D-055): video encoding status for lesson uploads. Signature checked first
 // (HMAC-SHA256 of the raw body with the library's read-only key), then the event id is recorded in
@@ -51,7 +51,10 @@ export async function handleBunnyWebhook(rawBody: Buffer, signature: string | nu
   }
 
   try {
-    await setBunnyVideoStatus(event.data.VideoGuid, status);
+    // The webhook has no length; a ready video's length comes from Get Video (D-098). If that call
+    // fails the video is still marked ready, just without a length.
+    const lengthSeconds = status === "ready" ? ((await fetchVideoInfo(config, event.data.VideoGuid).catch(() => null))?.lengthSeconds ?? null) : null;
+    await setBunnyVideoStatus(event.data.VideoGuid, status, lengthSeconds);
   } catch (error) {
     // Let Bunny retry: forget the event so the redelivery is handled.
     await webhookEvents.deleteOne({ _id: eventId }).catch(() => undefined);

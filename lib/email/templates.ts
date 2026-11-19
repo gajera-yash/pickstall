@@ -35,7 +35,7 @@ export function linkify(escaped: string): string {
 export type RenderedEmail = { subject: string; text: string; html: string };
 
 /** Inline colors for list emails (D-095): email HTML cannot use the CSS tokens. */
-export const LIST_EMAIL_COLORS = { text: "#111827", muted: "#6b7280", border: "#e5e7eb" } as const;
+export const LIST_EMAIL_COLORS = { text: "#111827", muted: "#6b7280", border: "#e5e7eb", button: "#0056ff", onButton: "#ffffff" } as const;
 
 const VARIABLE = /\{\{\s*(customer_name|product_title|download_link)\s*\}\}/g;
 

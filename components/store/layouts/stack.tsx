@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { StoreBlocks } from "@/components/store/store-blocks";
+import { splitBlocks } from "@/lib/page-blocks/rules";
 
 import { PriceTag } from "@/components/store/price-tag";
 import { StoreHeader } from "@/components/store/store-header";
@@ -13,6 +15,7 @@ import { safeImageSrc } from "@/lib/media/media";
  */
 export function StackLayout({ store, products, theme, preview }: StoreLayoutProps) {
   const { preset } = theme;
+  const { before, after } = splitBlocks(store.pageBlocks);
 
   return (
     <StoreFrame theme={theme} preview={preview} wide>
@@ -20,6 +23,7 @@ export function StackLayout({ store, products, theme, preview }: StoreLayoutProp
       <div className="w-full @3xl:border-b @3xl:pb-10" style={{ borderColor: borderColor(preset) }}>
         <StoreHeader store={store} align="banner" />
       </div>
+      <StoreBlocks blocks={before} theme={theme} />
       {products.length === 0 ? (
         <p className="w-full p-6 text-center" style={{ ...cardStyle(theme), color: preset.muted }}>
           Products are coming soon. Check back later.
@@ -56,6 +60,7 @@ export function StackLayout({ store, products, theme, preview }: StoreLayoutProp
           ))}
         </ul>
       )}
+      <StoreBlocks blocks={after} theme={theme} />
       </div>
     </StoreFrame>
   );

@@ -15,10 +15,12 @@ import { SetupOnboarding } from "@/components/dashboard/setup-onboarding";
 import { WelcomeHero } from "@/components/dashboard/welcome-hero";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { findPageBlocks } from "@/lib/page-blocks/queries";
 import { requireCreator } from "@/lib/auth/guards";
 import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
 import { incomeStats } from "@/lib/orders/creator-queries";
+import { PageSectionsEditor } from "@/components/dashboard/page-sections-editor";
 import { ProductList } from "@/components/dashboard/product-list";
 import { SOCIAL_LINK_LABELS, storeLink } from "@/lib/config";
 import { loadSetupGate } from "@/lib/dashboard/setup-gate";
@@ -53,7 +55,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
   const name = firstName(profile?.fullName) ?? store.name;
   const link = storeLink(store.slug);
 
-  const stats = await incomeStats(store.id, store.currency, 90).catch(() => null);
+  const [stats, pageBlocks] = await Promise.all([incomeStats(store.id, store.currency, 90).catch(() => null), findPageBlocks(store.id).catch(() => [])]);
   const productCount = products.length;
   // Real numbers from paid orders; days without sales (or an unreachable database) are zeros.
   const series: KpiSeries = stats ? stats.series : { revenueCents: zeros(), orders: zeros(), customers: zeros() };
@@ -69,6 +71,9 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
     currency: store.currency,
     // The preview shows the page itself; a paused store gets the banner in the dashboard instead.
     isOpen: true,
+    // The dashboard preview never loads pixels.
+    pixels: null,
+    pageBlocks,
   };
   const published = products.filter((product) => product.status === "published");
   const lessonCounts = await lessonCountsOf(store.id, published).catch(() => new Map<string, number>());
@@ -106,7 +111,10 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
           productCount={productCount}
           products={products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} storeSlug={store.slug} />}
           design={
-            <PageDesignForm initial={{ themePreset: store.theme.preset, accent: store.theme.accent }} />
+            <>
+              <PageDesignForm initial={{ themePreset: store.theme.preset, accent: store.theme.accent }} />
+              <PageSectionsEditor initial={pageBlocks} />
+            </>
           }
           links={<LinksTab links={store.socialLinks} />}
           analytics={<AnalyticsTab isPublished={store.isPublished} />}
