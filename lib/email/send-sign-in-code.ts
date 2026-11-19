@@ -8,10 +8,10 @@ import { logger } from "@/lib/logger";
 
 /**
  * The sign-in code email designed in Resend (D-091): the published template with the alias
- * "verification-code". Resend accepts a template's id or alias. The code goes in as `CODE`
+ * "verification-code". Resend accepts a template's id or alias. The code goes in as `code` ({{code}} in the template)
  * (Resend variable names: letters, numbers and underscores).
  */
-export const SIGN_IN_TEMPLATE = { id: "verification-code", codeVariable: "CODE" } as const;
+export const SIGN_IN_TEMPLATE = { id: "verification-code", codeVariable: "code" } as const;
 
 /**
  * Emails the 6-digit sign-in code with the Resend template. If Resend refuses the template (not
