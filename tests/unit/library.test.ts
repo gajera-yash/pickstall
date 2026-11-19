@@ -69,7 +69,7 @@ describe("grantAccess (the only place the delivery link leaves the server)", () 
     db.productsFindOne.mockResolvedValue({ externalUrl: "https://old.example.com", deliveryType: "file", fileId: "f1", downloadLimit: null });
     db.filesFindOne.mockResolvedValue({ _id: "f1" });
     expect(await grantAccess("maya@example.com", ORDER)).toEqual({ ok: true, kind: "file", storeId: "s1", fileId: "f1" });
-    expect(db.filesFindOne).toHaveBeenCalledWith({ _id: "f1", storeId: "s1" }, expect.anything());
+    expect(db.filesFindOne).toHaveBeenCalledWith({ _id: "f1", storeId: "s1", status: { $ne: "pending" } }, expect.anything());
 
     // A missing file is unavailable and does not use up a download.
     vi.clearAllMocks();

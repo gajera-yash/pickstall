@@ -29,6 +29,12 @@ export const serverEnvSchema = publicEnvSchema.extend({
   UPLOAD_DIR: optional(z.string().min(1)),
   // Where product files buyers download are saved (D-050). Private: never served as-is. Default: .data/product-files.
   PRODUCT_FILES_DIR: optional(z.string().min(1)),
+  // Cloudflare R2 for product and lesson files (D-093): a private bucket, reached with an R2 API
+  // token's S3 keys. All four turn R2 on; without them development falls back to the disk folder.
+  R2_ACCOUNT_ID: optional(z.string().regex(/^[0-9a-f]{32}$/, { error: "Must be the 32-character Cloudflare account id" })),
+  R2_ACCESS_KEY_ID: optional(z.string().min(16)),
+  R2_SECRET_ACCESS_KEY: optional(z.string().min(32)),
+  R2_BUCKET: optional(z.string().regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/, { error: "Must be an R2 bucket name" })),
   // Bunny Stream for course videos (D-055, D-058). Library id + API key turn upload on.
   BUNNY_STREAM_LIBRARY_ID: optional(z.string().regex(/^\d{1,12}$/, { error: "Must be the numeric library id" })),
   BUNNY_STREAM_API_KEY: optional(z.string().min(8)),

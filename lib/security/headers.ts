@@ -21,7 +21,8 @@ export function contentSecurityPolicy(isDev: boolean): string {
     "img-src": ["'self'", "data:", "blob:", "https:"],
     "font-src": ["'self'", "data:"],
     // video.bunnycdn.com: browser uploads course videos straight to Bunny via TUS (D-055).
-    "connect-src": ["'self'", "https://video.bunnycdn.com", ...(isDev ? ["ws:", "wss:"] : [])],
+    // *.r2.cloudflarestorage.com: product and lesson files go to signed R2 links (D-093).
+    "connect-src": ["'self'", "https://video.bunnycdn.com", "https://*.r2.cloudflarestorage.com", ...(isDev ? ["ws:", "wss:"] : [])],
     "media-src": ["'self'"],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],

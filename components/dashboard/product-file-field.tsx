@@ -3,6 +3,7 @@
 import { FileUp, Paperclip, RefreshCw, Trash2 } from "lucide-react";
 import { useId, useRef, useState } from "react";
 
+import { uploadFile } from "@/components/dashboard/upload-file";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint } from "@/components/ui/field";
 import { Progress } from "@/components/ui/progress";
@@ -28,28 +29,12 @@ export function ProductFileField({ productId, file, onChange }: { productId: str
       setProblem(`Use a file under ${PRODUCT_FILE_MAX_BYTES / 1024 / 1024} MB.`);
       return;
     }
-    // XMLHttpRequest, because fetch cannot report upload progress.
-    const request = new XMLHttpRequest();
-    request.open("PUT", `/api/products/${productId}/file`);
-    request.setRequestHeader("X-File-Name", encodeURIComponent(picked.name));
-    request.upload.onprogress = (event) => event.lengthComputable && setProgress(Math.round((event.loaded / event.total) * 100));
-    request.onload = () => {
-      setProgress(null);
-      let body: { file?: ProductFileInfo; error?: string } = {};
-      try {
-        body = JSON.parse(request.responseText) as typeof body;
-      } catch {
-        // A non-JSON reply (a proxy error page, say) falls through to the generic message.
-      }
-      if (request.status === 201 && body.file) onChange(body.file);
-      else setProblem(body.error ?? "Couldn't upload that file. Try again.");
-    };
-    request.onerror = () => {
-      setProgress(null);
-      setProblem("Couldn't upload that file. Check your connection and try again.");
-    };
     setProgress(0);
-    request.send(picked);
+    void uploadFile(`/api/products/${productId}/file`, picked, setProgress).then((result) => {
+      setProgress(null);
+      if (result.ok) onChange(result.file);
+      else setProblem(result.error);
+    });
   };
 
   const remove = async () => {

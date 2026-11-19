@@ -4,6 +4,29 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-093: Product and lesson files in a private Cloudflare R2 bucket
+- **Date:** 2026-11-19
+- **Decision (founder approved the plan, 2026-11-19):**
+  - Product and lesson files go to a private R2 bucket through its S3 API. This uses the new dependencies `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` (founder approved). Images stay in MongoDB (D-077).
+  - Uploads happen in three steps, so a file never passes through the server; Vercel refuses request bodies over about 4.5 MB.
+    1. `POST /api/products/[id]/file` or `POST /api/courses/[id]/lessons/[lessonId]/attachments` with `{ name, size }`. It checks the extension, the size (up to 200 MB), the target's owner (from the session) and the rate limit, then saves a `pending` file record. It returns a signed R2 PUT link (10 minutes; the content type is part of the signature).
+    2. The browser uploads straight to R2 and shows progress.
+    3. `POST /api/files/[fileId]/complete`. The server reads the stored size (HEAD) and the first 16 bytes (range GET), and checks the type against the name as before (D-050). Only then is the file marked `ready` and attached. Anything wrong deletes the bytes and the record.
+  - The size is checked after the upload: the R2 docs do not say that a signed PUT can cap the size, and R2 has no POST policy.
+  - Downloads keep every order, access and drip check. The buyer is then redirected (303, `no-referrer`) to a 60-second signed GET link that carries the download name.
+  - Without R2, development and own servers keep the disk folder. The browser then uploads to `PUT /api/files/[fileId]` (only for a pending disk upload of the creator's own store).
+  - The `files` collection gains optional fields `storage` ("r2" or "disk"; missing means disk) and `status` ("pending" or "ready"; missing means ready). No migration is needed. Pending files are never listed, counted or delivered.
+  - The new partial index `files_pending_created` supports the daily Inngest job `files-pending-uploads-cleanup` (03:30 UTC), which deletes unfinished uploads older than a day.
+  - CSP `connect-src` allows `https://*.r2.cloudflarestorage.com`.
+  - The SDK client uses `requestChecksumCalculation` / `responseChecksumValidation: "WHEN_REQUIRED"`, so signed links do not demand a checksum the browser cannot send.
+- **Env (server only):** `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`. When all four are set, uploads use R2.
+- **Founder setup in Cloudflare:**
+  - Create a bucket with public access off.
+  - Create an R2 API token with "Object Read & Write" for that bucket only.
+  - Add a CORS policy: `[{"AllowedOrigins":["https://www.pickstall.store","http://localhost:3000"],"AllowedMethods":["PUT"],"AllowedHeaders":["Content-Type"],"ExposeHeaders":["ETag"],"MaxAgeSeconds":3600}]`.
+- **To verify on the live bucket:** the download name through `response-content-disposition` (not documented by R2), and a browser upload with the checksum setting.
+- **Why:** files must work on Vercel without a paid service; the R2 free tier is 10 GB with free egress.
+
 ## D-092: Stripe set up for the two money flows (webhooks, Connect OAuth)
 - **Date:** 2026-11-19
 - **Decision (founder):** Pickstall uses Stripe in two ways, as the code already does:

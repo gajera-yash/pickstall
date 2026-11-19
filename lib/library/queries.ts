@@ -170,7 +170,7 @@ export async function grantAccess(email: string, orderId: string): Promise<Acces
   const file = product.deliveryType === "file";
   if (file ? !product.fileId : !product.externalUrl) return { ok: false, reason: "unavailable" };
   // Check the file is really there before a download is counted.
-  if (file && !(await files.findOne({ _id: product.fileId as string, storeId: order.storeId }, { projection: { _id: 1 } }))) return { ok: false, reason: "unavailable" };
+  if (file && !(await files.findOne({ _id: product.fileId as string, storeId: order.storeId, status: { $ne: "pending" } }, { projection: { _id: 1 } }))) return { ok: false, reason: "unavailable" };
 
   const limit = product.downloadLimit;
   const counted = await orders.updateOne(

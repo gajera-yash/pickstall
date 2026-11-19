@@ -31,9 +31,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!access.ok) return back(`?problem=${access.reason}`);
 
     if (access.kind === "file") {
-      // Streamed from private storage to this buyer only, after the checks above (D-050).
+      // Only for this buyer, after the checks above: a 60-second signed link to the private R2
+      // bucket (D-093), or the bytes streamed from the disk (D-050).
       const file = await openFileForDownload(access.storeId, access.fileId);
       if (!file) return back("?problem=unavailable");
+      if (file.kind === "redirect") return NextResponse.redirect(file.url, { status: 303, headers: { "Referrer-Policy": "no-referrer", "Cache-Control": "private, no-store" } });
       return new Response(file.stream, {
         headers: {
           "Content-Type": file.mime,

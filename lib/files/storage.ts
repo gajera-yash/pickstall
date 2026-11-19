@@ -1,17 +1,18 @@
 import "server-only";
 
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, rename, rm, stat } from "node:fs/promises";
+import { mkdir, open, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 
 import { serverEnv } from "@/lib/env.server";
+import { inspectR2Object, r2Configured, removeR2Object } from "@/lib/files/r2";
 import { FILE_HEAD_BYTES } from "@/lib/files/types";
 
 // Private storage for product files (D-050): a folder on this server's disk, separate from the
 // public images. Nothing here is ever served by path; a file leaves only through the buyer
 // library after the order checks. Keys are server-made uuids, checked before any path is built.
-// For several servers or serverless hosting this moves to a private bucket (PRD F3b).
+// On the live site files go to the private R2 bucket instead (D-093, ./r2.ts).
 
 const KEY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -25,14 +26,22 @@ function pathFor(key: string): string {
   return path.join(filesDir(), key);
 }
 
+/** Where a file's bytes live: the private R2 bucket (D-093) or this server's disk (D-050). */
+export type StorageKind = "r2" | "disk";
+
 /**
- * Whether product and lesson files can be uploaded on this server (D-077). Files are stored on the
- * server's disk, which serverless hosting (Vercel) cannot keep, so they are off in production
- * unless PRODUCT_FILES_DIR points at a lasting folder (your own server). Creators use a delivery
- * link meanwhile.
+ * Where new uploads go: R2 when it is configured; otherwise the disk folder, which only lasts in
+ * development or on an own server with PRODUCT_FILES_DIR (D-077). Null: uploads are off.
  */
+export function activeStorage(): StorageKind | null {
+  if (r2Configured()) return "r2";
+  if (process.env.NODE_ENV !== "production" || serverEnv.PRODUCT_FILES_DIR) return "disk";
+  return null;
+}
+
+/** Whether product and lesson files can be uploaded on this server. */
 export function fileStorageAvailable(): boolean {
-  return process.env.NODE_ENV !== "production" || Boolean(serverEnv.PRODUCT_FILES_DIR);
+  return activeStorage() !== null;
 }
 
 export const FILE_UPLOADS_OFF_MESSAGE = "File uploads aren't available on the live site yet. For now, share the file with a link (Google Drive, Dropbox or Notion).";
@@ -102,4 +111,35 @@ export async function readFileStream(key: string): Promise<{ stream: ReadableStr
 
 export async function removeFile(key: string): Promise<void> {
   await rm(pathFor(key), { force: true });
+}
+
+/** A stored file's size and first bytes (for the type check), or null when it is missing. */
+export async function inspectStoredFile(storage: StorageKind, key: string): Promise<{ size: number; head: Uint8Array } | null> {
+  if (!KEY.test(key)) throw new Error("Invalid file key.");
+  if (storage === "r2") return inspectR2Object(key, FILE_HEAD_BYTES);
+  let handle;
+  try {
+    handle = await open(pathFor(key), "r");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+  try {
+    const { size } = await handle.stat();
+    const head = new Uint8Array(FILE_HEAD_BYTES);
+    const { bytesRead } = await handle.read(head, 0, FILE_HEAD_BYTES, 0);
+    return { size, head: head.subarray(0, bytesRead) };
+  } finally {
+    await handle.close();
+  }
+}
+
+/** Deletes a stored file wherever it lives. Missing files are fine. */
+export async function removeStoredFile(storage: StorageKind | undefined, key: string): Promise<void> {
+  if (storage === "r2") {
+    if (!KEY.test(key)) throw new Error("Invalid file key.");
+    await removeR2Object(key);
+    return;
+  }
+  await removeFile(key);
 }

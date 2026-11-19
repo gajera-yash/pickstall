@@ -30,7 +30,7 @@ export async function loadCurriculum(storeId: string, courseId: string): Promise
   const [moduleDocs, lessonDocs, fileDocs] = await Promise.all([
     courseModules.find({ storeId, productId: courseId }).sort({ sortOrder: 1 }).toArray(),
     lessons.find({ storeId, productId: courseId }).sort({ sortOrder: 1 }).toArray(),
-    files.find({ storeId, productId: courseId, lessonId: { $type: "string" } }, { projection: { name: 1, size: 1, ext: 1, lessonId: 1 } }).sort({ createdAt: 1 }).toArray(),
+    files.find({ storeId, productId: courseId, lessonId: { $type: "string" }, status: { $ne: "pending" } }, { projection: { name: 1, size: 1, ext: 1, lessonId: 1 } }).sort({ createdAt: 1 }).toArray(),
   ]);
   return {
     modules: moduleDocs.map((module) => ({

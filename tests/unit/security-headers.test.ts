@@ -34,14 +34,14 @@ describe("contentSecurityPolicy", () => {
 
   it("loads scripts and data only from our own origin", () => {
     expect(prod).toContain("script-src 'self' 'unsafe-inline';");
-    expect(prod).toContain("connect-src 'self' https://video.bunnycdn.com;");
+    expect(prod).toContain("connect-src 'self' https://video.bunnycdn.com https://*.r2.cloudflarestorage.com;");
     expect(prod).not.toContain("unsafe-eval");
     expect(prod).not.toMatch(/script-src[^;]*https:/);
   });
 
   it("allows eval and the hot-reload socket in development only", () => {
     expect(dev).toContain("'unsafe-eval'");
-    expect(dev).toContain("connect-src 'self' https://video.bunnycdn.com ws: wss:");
+    expect(dev).toContain("connect-src 'self' https://video.bunnycdn.com https://*.r2.cloudflarestorage.com ws: wss:");
     expect(dev).not.toContain("upgrade-insecure-requests");
   });
 

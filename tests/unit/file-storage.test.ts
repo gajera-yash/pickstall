@@ -4,17 +4,29 @@ import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-const dir = vi.hoisted(() => ({ path: "" }));
+const dir = vi.hoisted(() => ({ path: "", r2: false }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/env.server", () => ({
   serverEnv: {
     get PRODUCT_FILES_DIR() {
       return dir.path;
     },
+    get R2_ACCOUNT_ID() {
+      return dir.r2 ? "0123456789abcdef0123456789abcdef" : undefined;
+    },
+    get R2_ACCESS_KEY_ID() {
+      return dir.r2 ? "access-key-id-0001" : undefined;
+    },
+    get R2_SECRET_ACCESS_KEY() {
+      return dir.r2 ? "secret-access-key-secret-access-key-0001" : undefined;
+    },
+    get R2_BUCKET() {
+      return dir.r2 ? "pickstall-files" : undefined;
+    },
   },
 }));
 
-import { fileStorageAvailable, readFileStream, removeFile, writeFileStream } from "@/lib/files/storage";
+import { activeStorage, fileStorageAvailable, readFileStream, removeFile, writeFileStream } from "@/lib/files/storage";
 
 const KEY = "11111111-2222-4333-8444-555555555555";
 
@@ -86,5 +98,20 @@ describe("fileStorageAvailable (D-077)", () => {
     expect(fileStorageAvailable()).toBe(true);
     vi.unstubAllEnvs();
     dir.path = saved;
+  });
+});
+
+describe("activeStorage (D-093)", () => {
+  it("uses R2 whenever it is configured, also in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const saved = dir.path;
+    dir.path = "";
+    expect(activeStorage()).toBeNull();
+    dir.r2 = true;
+    expect(activeStorage()).toBe("r2");
+    expect(fileStorageAvailable()).toBe(true);
+    dir.r2 = false;
+    dir.path = saved;
+    vi.unstubAllEnvs();
   });
 });

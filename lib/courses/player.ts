@@ -45,7 +45,7 @@ export async function loadPlayerCourse(storeId: string, courseId: string): Promi
   const [moduleDocs, lessonDocs, fileDocs] = await Promise.all([
     courseModules.find({ storeId, productId: courseId }).sort({ sortOrder: 1 }).toArray(),
     lessons.find({ storeId, productId: courseId }).sort({ sortOrder: 1 }).toArray(),
-    files.find({ storeId, productId: courseId, lessonId: { $type: "string" } }).sort({ createdAt: 1 }).toArray(),
+    files.find({ storeId, productId: courseId, lessonId: { $type: "string" }, status: { $ne: "pending" } }).sort({ createdAt: 1 }).toArray(),
   ]);
   return { product, modules: moduleDocs, lessons: lessonDocs, files: fileDocs };
 }

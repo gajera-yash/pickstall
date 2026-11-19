@@ -399,6 +399,15 @@ export type FileDoc = {
   ext: string;
   mime: string;
   size: number;
+  /**
+   * Where the bytes live (D-093). Missing on files saved before R2: they are on the disk.
+   */
+  storage?: "r2" | "disk";
+  /**
+   * "pending" from the signed upload link until the server has checked the uploaded bytes; such a
+   * file is never shown or delivered, and is cleaned up after a day. Missing means ready.
+   */
+  status?: "pending" | "ready";
   createdAt: Date;
 };
 

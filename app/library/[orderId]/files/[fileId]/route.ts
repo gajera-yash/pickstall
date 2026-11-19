@@ -35,6 +35,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
     const download = await openFileForDownload(access.storeId, fileId);
     if (!download) return new NextResponse("Not found.", { status: 404, headers: NO_STORE });
+    // A 60-second signed link to the private R2 bucket (D-093); older files stream from the disk.
+    if (download.kind === "redirect") return NextResponse.redirect(download.url, { status: 303, headers: { ...NO_STORE, "Referrer-Policy": "no-referrer" } });
     return new Response(download.stream, {
       headers: {
         ...NO_STORE,

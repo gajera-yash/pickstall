@@ -59,6 +59,8 @@ async function ensureIndexes(db: Db): Promise<void> {
     // The Bunny webhook finds a lesson by its video id.
     db.collection("lessons").createIndex({ "video.videoId": 1 }, { partialFilterExpression: { "video.kind": "bunny" }, name: "lessons_bunny_video" }),
     db.collection("files").createIndex({ storeId: 1, lessonId: 1 }, { partialFilterExpression: { lessonId: { $type: "string" } }, name: "files_store_lesson" }),
+    // Pending uploads (D-093), for the daily clean-up of uploads that never finished.
+    db.collection("files").createIndex({ createdAt: 1 }, { partialFilterExpression: { status: "pending" }, name: "files_pending_created" }),
     // A student's progress is read per order (D-057).
     db.collection("lessonProgress").createIndex({ orderId: 1 }, { name: "lesson_progress_order" }),
     // Dashboard notifications (D-061): newest first per store, one per event, gone after 90 days.

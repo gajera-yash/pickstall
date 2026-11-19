@@ -33,7 +33,7 @@ Rules: do not paste or re-read whole files into the chat; reference file paths a
 
 - Next.js (latest stable, App Router), **TypeScript strict**, React Server Components by default
 - Tailwind CSS + shadcn/ui + lucide-react
-- MongoDB (official `mongodb` driver, no ORM) + **Better Auth** (email 6-digit code, Google, sessions) (D-024). File storage for avatars and product files is not decided yet; ask the founder before adding one
+- MongoDB (official `mongodb` driver, no ORM) + **Better Auth** (email 6-digit code, Google, sessions) (D-024). Product and lesson files live in a private Cloudflare R2 bucket (D-093); images stay in MongoDB (D-077)
 - Stripe (Connect **Standard** + Checkout **direct charges**; Billing for platform plans), accessed only through a provider-agnostic `PaymentProvider` interface (a PayPal adapter may be added later, only when the founder asks)
 - Bunny.net Stream (course video: direct TUS upload, signed playback; D-055) plus YouTube/Vimeo links, Resend + React Email, Inngest (background jobs)
 - Zod (validation), Vitest (unit), Playwright (e2e), PostHog, Sentry
@@ -148,6 +148,7 @@ STRIPE_PLATFORM_WEBHOOK_SECRET       # server only (webhook "Your account": plan
 STRIPE_CONNECT_WEBHOOK_SECRET        # server only (webhook "Connected accounts": creators' sales)
 STRIPE_CONNECT_CLIENT_ID             # Connect OAuth client id (ca_...)
 STRIPE_PLATFORM_ACCOUNT_ID           # server only, test mode: our own account as a store's seller
+R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET   # server only (private bucket for product files, D-093)
 BUNNY_STREAM_LIBRARY_ID              # server only
 BUNNY_STREAM_API_KEY                 # server only
 BUNNY_STREAM_TOKEN_KEY               # server only (signs playback links)

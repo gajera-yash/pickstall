@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 
 import { Field } from "@/components/dashboard/editor-fields";
 import { RichTextEditor } from "@/components/dashboard/rich-text-editor";
+import { uploadFile } from "@/components/dashboard/upload-file";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -223,28 +224,12 @@ function AttachmentsField({
       setProblem(`Use a file under ${PRODUCT_FILE_MAX_BYTES / 1024 / 1024} MB.`);
       return;
     }
-    // XMLHttpRequest, because fetch cannot report upload progress.
-    const request = new XMLHttpRequest();
-    request.open("PUT", `/api/courses/${courseId}/lessons/${lessonId}/attachments`);
-    request.setRequestHeader("X-File-Name", encodeURIComponent(picked.name));
-    request.upload.onprogress = (event) => event.lengthComputable && setProgress(Math.round((event.loaded / event.total) * 100));
-    request.onload = () => {
-      setProgress(null);
-      let body: { error?: string } = {};
-      try {
-        body = JSON.parse(request.responseText) as typeof body;
-      } catch {
-        // A non-JSON reply falls through to the generic message.
-      }
-      if (request.status === 201) onReload();
-      else setProblem(body.error ?? "Couldn't upload that file. Try again.");
-    };
-    request.onerror = () => {
-      setProgress(null);
-      setProblem("Couldn't upload that file. Check your connection and try again.");
-    };
     setProgress(0);
-    request.send(picked);
+    void uploadFile(`/api/courses/${courseId}/lessons/${lessonId}/attachments`, picked, setProgress).then((result) => {
+      setProgress(null);
+      if (result.ok) onReload();
+      else setProblem(result.error);
+    });
   };
 
   const remove = async (fileId: string) => {

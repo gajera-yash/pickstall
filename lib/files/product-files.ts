@@ -1,81 +1,24 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
-
-import { PRODUCT_FILE_MAX_BYTES } from "@/lib/config";
 import { collections, type FileDoc } from "@/lib/db/collections";
-import { readFileStream, removeFile, writeFileStream } from "@/lib/files/storage";
-import { PRODUCT_FILE_LABELS, PRODUCT_FILE_TYPES, cleanFileName, detectFileType, type ProductFileInfo } from "@/lib/files/types";
+import { r2DownloadUrl } from "@/lib/files/r2";
+import { readFileStream, removeStoredFile } from "@/lib/files/storage";
+import { attachmentHeader, type ProductFileInfo } from "@/lib/files/types";
+import { toFileInfo } from "@/lib/files/uploads";
 import { logger } from "@/lib/logger";
 
-// Product files (D-050): saving a creator's upload and finding it again for a buyer. Every query
+// Product files (D-050): removing and finding a creator's file, and delivering it to a buyer.
+// Uploads go through ./uploads.ts (D-093). Every query
 // filters by the store id, which comes from the verified session (creator) or from the buyer's own
 // paid order, never from the request (CLAUDE.md 6).
 
 export type { ProductFileInfo };
 
-export type SaveFileResult = { ok: true; data: ProductFileInfo } | { ok: false; error: string; status: number };
-
-const toInfo = (doc: Pick<FileDoc, "_id" | "name" | "size" | "ext">): ProductFileInfo => ({
-  id: doc._id,
-  name: doc.name,
-  size: doc.size,
-  label: PRODUCT_FILE_TYPES[doc.ext]?.label ?? doc.ext.toUpperCase(),
-});
-
 /** Removes a file's record and its bytes. Bytes go last, so a failed delete never leaves a record without a file. */
-async function dropFile(doc: Pick<FileDoc, "_id" | "key" | "storeId">): Promise<void> {
+async function dropFile(doc: Pick<FileDoc, "_id" | "key" | "storeId" | "storage">): Promise<void> {
   const { files } = await collections();
   await files.deleteOne({ _id: doc._id, storeId: doc.storeId });
-  await removeFile(doc.key).catch((error: unknown) => logger.warn("files.remove_failed", { name: error instanceof Error ? error.name : undefined }));
-}
-
-/**
- * Saves an upload as the product's file and switches the product to file delivery. The product
- * must belong to `storeId`. The type comes from the file's own bytes and its name together, the
- * size is capped while streaming, and the old file (if any) is removed once the new one is in.
- */
-export async function saveProductFile(storeId: string, productId: string, rawName: string, body: ReadableStream<Uint8Array>): Promise<SaveFileResult> {
-  const { products, files } = await collections();
-  // Only digital products deliver a file this way; course attachments come with the lessons (G2),
-  // and coaching calls deliver a booking (D-081).
-  const product = await products.findOne({ _id: productId, storeId, type: { $nin: ["course", "coaching"] } }, { projection: { fileId: 1 } });
-  if (!product) return { ok: false, error: "We couldn't find that product.", status: 404 };
-
-  const id = randomUUID();
-  const key = randomUUID();
-  const written = await writeFileStream(key, body, PRODUCT_FILE_MAX_BYTES);
-  if (!written.ok) {
-    return written.reason === "too_large"
-      ? { ok: false, error: `Use a file under ${PRODUCT_FILE_MAX_BYTES / 1024 / 1024} MB.`, status: 413 }
-      : { ok: false, error: "That file is empty.", status: 400 };
-  }
-
-  const type = detectFileType(rawName, written.head);
-  if (!type) {
-    await removeFile(key);
-    return { ok: false, error: `Use one of these file types: ${PRODUCT_FILE_LABELS}.`, status: 415 };
-  }
-
-  const doc: FileDoc = { _id: id, storeId, productId, key, name: cleanFileName(rawName, type.ext), ext: type.ext, mime: type.mime, size: written.size, createdAt: new Date() };
-  try {
-    await files.insertOne(doc);
-    const updated = await products.updateOne({ _id: productId, storeId }, { $set: { fileId: id, deliveryType: "file", updatedAt: new Date() } });
-    if (updated.matchedCount !== 1) {
-      await dropFile(doc);
-      return { ok: false, error: "We couldn't find that product.", status: 404 };
-    }
-  } catch (error) {
-    await files.deleteOne({ _id: id, storeId }).catch(() => undefined);
-    await removeFile(key).catch(() => undefined);
-    throw error;
-  }
-
-  if (product.fileId && product.fileId !== id) {
-    const old = await files.findOne({ _id: product.fileId, storeId }, { projection: { key: 1, storeId: 1 } });
-    if (old) await dropFile(old);
-  }
-  return { ok: true, data: toInfo(doc) };
+  await removeStoredFile(doc.storage, doc.key).catch((error: unknown) => logger.warn("files.remove_failed", { name: error instanceof Error ? error.name : undefined }));
 }
 
 /** Removes the product's file and goes back to link delivery. Only for the store's own product. */
@@ -85,7 +28,7 @@ export async function removeProductFile(storeId: string, productId: string): Pro
   if (!product) return false;
   await products.updateOne({ _id: productId, storeId }, { $set: { fileId: null, deliveryType: "link", updatedAt: new Date() } });
   if (product.fileId) {
-    const old = await files.findOne({ _id: product.fileId, storeId }, { projection: { key: 1, storeId: 1 } });
+    const old = await files.findOne({ _id: product.fileId, storeId }, { projection: { key: 1, storeId: 1, storage: 1 } });
     if (old) await dropFile(old);
   }
   return true;
@@ -94,7 +37,7 @@ export async function removeProductFile(storeId: string, productId: string): Pro
 /** Removes every file of a product that is being deleted. */
 export async function removeFilesOfProduct(storeId: string, productId: string): Promise<void> {
   const { files } = await collections();
-  const docs = await files.find({ storeId, productId }, { projection: { key: 1, storeId: 1 } }).toArray();
+  const docs = await files.find({ storeId, productId }, { projection: { key: 1, storeId: 1, storage: 1 } }).toArray();
   for (const doc of docs) await dropFile(doc);
 }
 
@@ -102,15 +45,21 @@ export async function removeFilesOfProduct(storeId: string, productId: string): 
 export async function findProductFile(storeId: string, fileId: string | null | undefined): Promise<ProductFileInfo | null> {
   if (!fileId) return null;
   const { files } = await collections();
-  const doc = await files.findOne({ _id: fileId, storeId }, { projection: { name: 1, size: 1, ext: 1 } });
-  return doc ? toInfo(doc) : null;
+  const doc = await files.findOne({ _id: fileId, storeId, status: { $ne: "pending" } }, { projection: { name: 1, size: 1, ext: 1 } });
+  return doc ? toFileInfo(doc) : null;
 }
 
-/** A file to send to a buyer: its bytes as a stream plus what the response needs. */
-export async function openFileForDownload(storeId: string, fileId: string): Promise<{ stream: ReadableStream<Uint8Array>; size: number; name: string; mime: string } | null> {
+/**
+ * How to hand a file to a buyer, after the caller's order checks: a 60-second signed R2 link to
+ * redirect to (D-093), or the bytes from the disk to stream (D-050). Null when it is missing.
+ */
+export type FileDelivery = { kind: "redirect"; url: string } | { kind: "stream"; stream: ReadableStream<Uint8Array>; size: number; name: string; mime: string };
+
+export async function openFileForDownload(storeId: string, fileId: string): Promise<FileDelivery | null> {
   const { files } = await collections();
-  const doc = await files.findOne({ _id: fileId, storeId }, { projection: { key: 1, name: 1, mime: 1 } });
+  const doc = await files.findOne({ _id: fileId, storeId, status: { $ne: "pending" } }, { projection: { key: 1, name: 1, mime: 1, storage: 1 } });
   if (!doc) return null;
+  if (doc.storage === "r2") return { kind: "redirect", url: await r2DownloadUrl(doc.key, attachmentHeader(doc.name), doc.mime) };
   const file = await readFileStream(doc.key);
-  return file ? { ...file, name: doc.name, mime: doc.mime } : null;
+  return file ? { kind: "stream", ...file, name: doc.name, mime: doc.mime } : null;
 }
