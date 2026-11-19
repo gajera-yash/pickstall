@@ -37,6 +37,8 @@ type Props = {
    * notice that signing up includes emails. The server saves its own copy of the same words.
    */
   consent?: { kind: "checkbox" | "notice"; text: string } | null;
+  /** Nothing to pay (a free product or lead magnet): no line about card details. */
+  free?: boolean;
 };
 
 /**
@@ -45,7 +47,7 @@ type Props = {
  * values are kept after an error and focus moves to the first problem. The price is not on this
  * form at all: the server takes it from the product (D-047).
  */
-export function CheckoutForm({ username, productSlug, askPhone, questions, submitLabel, booking, coupons = false, bump = null, consent = null }: Props) {
+export function CheckoutForm({ username, productSlug, askPhone, questions, submitLabel, booking, coupons = false, bump = null, consent = null, free = false }: Props) {
   const [state, action, pending] = useActionState<CheckoutState, FormData>(startCheckout.bind(null, username, productSlug), null);
   const error = state && !state.ok ? state : null;
   const fieldError = (field: string) => (error?.field === field ? error.error : null);
@@ -134,7 +136,7 @@ export function CheckoutForm({ username, productSlug, askPhone, questions, submi
         <Lock aria-hidden="true" className="size-4" />
         {submitLabel}
       </Button>
-      <p className="text-center text-sm text-mute">Card details are entered on the payment provider&apos;s secure page, never here.</p>
+      {!free && <p className="text-center text-sm text-mute">Card details are entered on the payment provider&apos;s secure page, never here.</p>}
       <p className="text-center text-xs text-mute">
         You buy from this creator. Pickstall&apos;s{" "}
         <a href="/terms" target="_blank" rel="noopener" className="underline underline-offset-4">

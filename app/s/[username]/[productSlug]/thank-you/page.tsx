@@ -70,7 +70,11 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
           </h1>
           <p className="max-w-sm break-words whitespace-pre-line" style={{ color: preset.muted }}>
             {paid
-              ? product.thankYou || (order.booking ? `Your call is booked: ${formatCallTime(order.booking.start, order.booking.end, order.booking.buyerTimeZone ?? product.coaching?.timeZone ?? null)}.` : `Your purchase of ${product.title} is confirmed.`)
+              ? product.thankYou || (order.booking ? `Your call is booked: ${formatCallTime(order.booking.start, order.booking.end, order.booking.buyerTimeZone ?? product.coaching?.timeZone ?? null)}.` : product.type === "lead_magnet"
+                  ? `${product.title} is on its way to your inbox.`
+                  : order.totalCents === 0
+                    ? `${product.title} is yours.`
+                    : `Your purchase of ${product.title} is confirmed.`)
               : pending
                 ? "This can take a moment. Refresh this page in a few seconds."
                 : "Something went wrong with this payment. You were not charged for this order."}

@@ -357,7 +357,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
                 {values.deliveryType === "file" ? (
                   <ProductFileField productId={values.id} file={values.file} onChange={(file) => set("file", file)} />
                 ) : (
-                  <Field id="externalUrl" label="Delivery link" error={fieldError("externalUrl")} hint="Where buyers go after paying (Google Drive, Notion, Dropbox...). Only buyers see it.">
+                  <Field id="externalUrl" label="Delivery link" error={fieldError("externalUrl")} hint={leadMagnet ? "Where people go after signing up (Google Drive, Notion, Dropbox...). Only they see it." : "Where buyers go after paying (Google Drive, Notion, Dropbox...). Only buyers see it."}>
                     <Input id="externalUrl" type="url" inputMode="url" value={values.externalUrl} onChange={(event) => set("externalUrl", event.target.value)} placeholder="https://" aria-invalid={!!fieldError("externalUrl")} />
                   </Field>
                 )}
@@ -450,7 +450,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
 
           {step === "publish" && (
             <>
-              <StepHeading title="Publish" body="What buyers see after paying, a last check, then publish." />
+              <StepHeading title="Publish" body={leadMagnet ? "What people see after signing up, a last check, then publish." : "What buyers see after paying, a last check, then publish."} />
 
               <section aria-labelledby="ready-title" className={cn("flex flex-col gap-3 rounded-md border p-4", blockers.length === 0 ? "border-mint/40 bg-mint-soft" : "border-line")}>
                 <h3 id="ready-title" className="font-display text-h4">

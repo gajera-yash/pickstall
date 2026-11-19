@@ -109,7 +109,7 @@ export function BroadcastComposer({ storeName, subscribed, blocked }: { storeNam
       }
       setSubject("");
       setBody("");
-      setMessage({ kind: "success", text: `Sending to ${result.data.recipients.toLocaleString("en")} subscribers. It shows below as it goes.` });
+      setMessage({ kind: "success", text: `Sending to ${result.data.recipients.toLocaleString("en")} ${result.data.recipients === 1 ? "subscriber" : "subscribers"}. It shows below as it goes.` });
       router.refresh();
     });
 
@@ -141,7 +141,9 @@ export function BroadcastComposer({ storeName, subscribed, blocked }: { storeNam
       <Dialog open={confirming} onOpenChange={setConfirming}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Send to {subscribed.toLocaleString("en")} subscribers?</DialogTitle>
+            <DialogTitle>
+              Send to {subscribed.toLocaleString("en")} {subscribed === 1 ? "subscriber" : "subscribers"}?
+            </DialogTitle>
             <DialogDescription>&ldquo;{subject}&rdquo; goes out now and can&apos;t be stopped or edited once sent.</DialogDescription>
           </DialogHeader>
           <DialogFooter>

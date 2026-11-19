@@ -84,6 +84,7 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
                   booking={booking}
                   coupons={payableCents(product) > 0}
                   bump={bump}
+                  free={payableCents(product) === 0}
                   consent={
                     product.type === "lead_magnet"
                       ? { kind: "notice", text: leadMagnetConsentText(store.name, product.title) }
@@ -97,7 +98,7 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
 
             <p className="flex items-center gap-2 text-xs" style={{ color: preset.muted }}>
               <ShieldCheck aria-hidden="true" className="size-4 shrink-0" />
-              Sold by {store.name}. Payments are handled securely by the payment provider.
+              {payableCents(product) === 0 ? `Offered by ${store.name}.` : `Sold by ${store.name}. Payments are handled securely by the payment provider.`}
             </p>
           </section>
         </div>
