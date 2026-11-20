@@ -22,7 +22,7 @@ export function SourcesCard({ rows, currency, period, storeUrl, error = false }:
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h2 className="font-display text-h4">Where sales come from</h2>
-          <p className="text-sm text-mute">Paid orders in the last {period} days, by source.</p>
+          <p className="text-sm text-mute">Paid orders in the last {period} days, by source. Free orders are not counted.</p>
         </div>
         <nav aria-label="Period" className="flex rounded-md border border-line p-0.5">
           {SOURCE_PERIODS.map((days) => (
@@ -62,7 +62,7 @@ export function SourcesCard({ rows, currency, period, storeUrl, error = false }:
               <TableRow key={row.source}>
                 <TableCell>
                   <span className="flex min-w-0 flex-col">
-                    <span className="truncate font-semibold capitalize">{sourceLabel(row.source)}</span>
+                    <span className={cn("truncate font-semibold", row.source !== DIRECT_SOURCE && "capitalize")}>{sourceLabel(row.source)}</span>
                     <span className="text-xs text-mute">{total > 0 ? Math.round((row.orders / total) * 100) : 0}% of orders</span>
                   </span>
                 </TableCell>

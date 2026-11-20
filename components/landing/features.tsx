@@ -161,7 +161,7 @@ export function Features() {
             </p>
           </Tile>
 
-          <Tile icon={Blocks} title="On the way" body="Phase 1 is digital products. These come next:" className="md:col-span-2 lg:col-span-2">
+          <Tile icon={Blocks} title="On the way" body="Courses, coupons, order bumps, emails, bookings and affiliates are already here. These come next:" className="md:col-span-2 lg:col-span-2">
             <ul className="flex flex-wrap gap-1.5">
               {soon.map((item) => (
                 <li key={item} className="rounded-full border border-line bg-bg-subtle px-2.5 py-1 text-xs font-semibold">

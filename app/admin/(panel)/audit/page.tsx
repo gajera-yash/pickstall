@@ -21,6 +21,8 @@ import { withQuery } from "@/lib/orders/params";
 // "creator" or "system". Records expire after 400 days (D-075).
 const PATH = "/admin/audit";
 const ALL = "all";
+/** Actions that can no longer happen (D-109 removed the admin password change), left out of the filter. */
+const RETIRED: readonly AuditAction[] = ["admin.password_changed"];
 
 export default function AdminAuditPage({ searchParams }: PageProps<"/admin/audit">) {
   return (
@@ -57,7 +59,7 @@ async function AuditContent({ searchParams }: Pick<PageProps<"/admin/audit">, "s
     <div className="flex flex-col gap-4">
       <form method="get" action={PATH} className="flex flex-wrap items-center gap-3">
         <div className="w-64">
-          <FilterSelect label="Action" name="action" value={action ?? ALL} options={[{ value: ALL, label: "All actions" }, ...AUDIT_ACTIONS.map((value) => ({ value, label: AUDIT_LABELS[value] }))]} />
+          <FilterSelect label="Action" name="action" value={action ?? ALL} options={[{ value: ALL, label: "All actions" }, ...AUDIT_ACTIONS.filter((value) => !RETIRED.includes(value)).map((value) => ({ value, label: AUDIT_LABELS[value] }))]} />
         </div>
         {storeId && <input type="hidden" name="store" value={storeId} />}
         {(action || storeId) && (

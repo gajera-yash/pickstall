@@ -65,7 +65,7 @@ async function OrdersContent({ searchParams }: Pick<PageProps<"/admin/orders">, 
                   </TableCell>
                   <TableCell className="max-w-56 truncate text-mute">{row.buyerEmail}</TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_VARIANT[row.status] ?? "draft"}>{row.status}</Badge>
+                    <Badge variant={STATUS_VARIANT[row.status] ?? "draft"} className="capitalize">{row.status}</Badge>
                   </TableCell>
                   <TableCell numeric>{row.totalCents === 0 ? "Free" : formatMoney(row.totalCents, row.currency)}</TableCell>
                   <TableCell className="whitespace-nowrap text-mute">{formatDay(row.createdAt)}</TableCell>

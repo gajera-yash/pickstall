@@ -115,7 +115,8 @@ async function PurchaseContent({ params, searchParams }: Pick<PageProps<"/librar
         </form>
       )}
       {license && <LicenseCard license={license} />}
-      {!refunded && <ReviewForm orderId={purchase.orderId} initial={review} />}
+      {/* No reviews for a product the creator took down (D-106): there is no page to show them on. */}
+      {!refunded && purchase.available && <ReviewForm orderId={purchase.orderId} initial={review} />}
     </Card>
   );
 }

@@ -112,8 +112,8 @@ async function CreatorContent({ params }: Pick<PageProps<"/admin/creators/[id]">
               {store.products.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="max-w-72 truncate font-semibold">{product.title}</TableCell>
-                  <TableCell className="text-mute">{product.type}</TableCell>
-                  <TableCell>{product.status === "published" ? <Badge variant="live">Published</Badge> : <Badge variant="draft">{product.status}</Badge>}</TableCell>
+                  <TableCell className="text-mute capitalize">{product.type}</TableCell>
+                  <TableCell>{product.status === "published" ? <Badge variant="live">Published</Badge> : <Badge variant="draft" className="capitalize">{product.status}</Badge>}</TableCell>
                   <TableCell numeric>{product.priceCents === 0 ? "Free" : formatMoney(product.priceCents, store.currency)}</TableCell>
                   <TableCell className="text-right">
                     {product.status === "published" && (

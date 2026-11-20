@@ -39,6 +39,8 @@ export type AdminOverview = {
   founding: number;
   trials: number;
   paused: number;
+  /** Paid plans on stores whose free trial has already ended (for the trial conversion). */
+  paidAfterTrial: number;
   trialsEndingSoon: number;
   mrrCents: number;
   orders30: number;
@@ -59,7 +61,7 @@ export async function adminOverview(now: Date = new Date()): Promise<AdminOvervi
   const since30 = new Date(now.getTime() - 30 * DAY_MS);
   const all = await stores.find({ deletedAt: { $exists: false } }, { projection: { planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, isPublished: 1, createdAt: 1 } }).toArray();
 
-  const overview: AdminOverview = { creators: all.length, signups7: 0, signups30: 0, liveStores: 0, paid: { starter: 0, pro: 0 }, founding: 0, trials: 0, paused: 0, trialsEndingSoon: 0, mrrCents: 0, orders30: 0, sales30: [], salesAll: [], subscribers: 0, broadcasts30: 0 };
+  const overview: AdminOverview = { creators: all.length, signups7: 0, signups30: 0, liveStores: 0, paid: { starter: 0, pro: 0 }, founding: 0, trials: 0, paused: 0, paidAfterTrial: 0, trialsEndingSoon: 0, mrrCents: 0, orders30: 0, sales30: [], salesAll: [], subscribers: 0, broadcasts30: 0 };
   for (const store of all) {
     if (store.createdAt >= since7) overview.signups7 += 1;
     if (store.createdAt >= since30) overview.signups30 += 1;
@@ -67,6 +69,7 @@ export async function adminOverview(now: Date = new Date()): Promise<AdminOvervi
     const access = accessOf(store, now);
     if (access.plan && (access.state === "active" || access.state === "past_due")) {
       overview.paid[access.plan] += 1;
+      if (store.trialEndsAt && store.trialEndsAt <= now) overview.paidAfterTrial += 1;
       overview.mrrCents += PLANNED_PRICE_CENTS[access.plan];
     } else if (access.state === "founding") overview.founding += 1;
     else if (access.state === "trial") {
@@ -269,12 +272,12 @@ export type AdminHealth = {
   unpaidOrders24h: number;
   database: { dataMb: number; storageMb: number; collections: number } | null;
   imagesMb: number;
-  auditRecent: { action: string; storeId: string | null; at: Date }[];
+  auditRecent: { action: string; storeId: string | null; storeName: string | null; at: Date }[];
 };
 
 /** Signs that something needs attention, and storage use. */
 export async function adminHealth(now: Date = new Date()): Promise<AdminHealth> {
-  const { webhookEvents, broadcasts, files, orders, mediaBlobs, auditLogs } = await collections();
+  const { webhookEvents, broadcasts, files, orders, mediaBlobs, auditLogs, stores } = await collections();
   const db = await getDb();
   const since24 = new Date(now.getTime() - DAY_MS);
   const [hooks, stuck, pending, unpaid, stats, images, audit] = await Promise.all([
@@ -287,6 +290,8 @@ export async function adminHealth(now: Date = new Date()): Promise<AdminHealth> 
     auditLogs.find({}, { projection: { action: 1, storeId: 1, at: 1 } }).sort({ at: -1 }).limit(15).toArray(),
   ]);
   const mb = (bytes: unknown) => Math.round((Number(bytes) || 0) / 1024 / 1024);
+  const storeIds = [...new Set(audit.map((row) => row.storeId).filter((id): id is string => typeof id === "string"))];
+  const names = new Map((await stores.find({ _id: { $in: storeIds } }, { projection: { name: 1 } }).toArray()).map((store) => [store._id, store.name]));
   return {
     webhooks24h: hooks.map((row) => ({ source: row._id, count: row.count })),
     stuckBroadcasts: stuck,
@@ -294,7 +299,7 @@ export async function adminHealth(now: Date = new Date()): Promise<AdminHealth> 
     unpaidOrders24h: unpaid,
     database: stats ? { dataMb: mb(stats.dataSize), storageMb: mb(stats.storageSize), collections: Number(stats.collections) || 0 } : null,
     imagesMb: mb(images[0]?.total),
-    auditRecent: audit.map((row) => ({ action: String(row.action), storeId: row.storeId, at: row.at })),
+    auditRecent: audit.map((row) => ({ action: String(row.action), storeId: row.storeId, storeName: row.storeId ? (names.get(row.storeId) ?? null) : null, at: row.at })),
   };
 }
 
@@ -333,11 +338,13 @@ export async function adminActivity(now: Date = new Date()): Promise<AdminActivi
   return { days, signups: days.map((day) => signupMap.get(day) ?? 0), orders: days.map((day) => orderMap.get(day) ?? 0) };
 }
 
-/** Of the creators whose free period is over, the share now on a paid plan (D-116). */
-export function trialConversion(overview: Pick<AdminOverview, "paid" | "paused">): number | null {
-  const paid = overview.paid.starter + overview.paid.pro;
-  const ended = paid + overview.paused;
-  return ended === 0 ? null : Math.round((paid / ended) * 100);
+/**
+ * Of the creators whose free trial is over, the share now on a paid plan (D-116). A plan bought
+ * during the trial counts only once that trial has ended; null while no trial has ended.
+ */
+export function trialConversion(overview: Pick<AdminOverview, "paidAfterTrial" | "paused">): number | null {
+  const ended = overview.paidAfterTrial + overview.paused;
+  return ended === 0 ? null : Math.round((overview.paidAfterTrial / ended) * 100);
 }
 
 export type AdminAuditRow = { id: string; at: Date; action: string; actor: string; storeId: string | null; storeName: string | null; meta: Record<string, string | number | boolean> };

@@ -20,8 +20,8 @@ describe("plan feature list (D-103)", () => {
     expect(row("Course video hosting").values).toEqual({ starter: "20 hours", pro: "100 hours" });
     expect(row("Email subscribers").values).toEqual({ starter: "1,000", pro: "10,000" });
     expect(row("Coaching calls with booking").values).toEqual({ starter: false, pro: true });
-    expect(row("Upsell after purchase").values).toEqual({ starter: false, pro: true });
-    expect(row("Welcome email and abandoned cart").values).toEqual({ starter: false, pro: true });
+    expect(row("Upsell and downsell after purchase").values).toEqual({ starter: false, pro: true });
+    expect(row("Welcome email, abandoned cart and review request").values).toEqual({ starter: false, pro: true });
     expect(row("Order bumps at checkout").values).toEqual({ starter: true, pro: true });
   });
 });

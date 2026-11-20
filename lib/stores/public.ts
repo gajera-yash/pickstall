@@ -171,10 +171,13 @@ export async function findPublicCurriculum(storeId: string, courseId: string): P
     courseModules.find({ storeId, productId: courseId }, { projection: { title: 1 } }).sort({ sortOrder: 1 }).toArray(),
     lessons.find({ storeId, productId: courseId }, { projection: { title: 1, moduleId: 1, "video.kind": 1 } }).sort({ sortOrder: 1 }).toArray(),
   ]);
+  // Empty modules (no lessons yet) are left out: buyers only see what they will get.
   return {
-    modules: moduleDocs.map((item) => ({
-      title: item.title,
-      lessons: lessonDocs.filter((lesson) => lesson.moduleId === item._id).map((lesson) => ({ title: lesson.title, hasVideo: Boolean(lesson.video) })),
-    })),
+    modules: moduleDocs
+      .map((item) => ({
+        title: item.title,
+        lessons: lessonDocs.filter((lesson) => lesson.moduleId === item._id).map((lesson) => ({ title: lesson.title, hasVideo: Boolean(lesson.video) })),
+      }))
+      .filter((item) => item.lessons.length > 0),
   };
 }

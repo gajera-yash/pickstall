@@ -34,7 +34,7 @@ export function PlanBadge({ access }: { access: StoreAccess }) {
   if (access.plan) return <Badge variant={access.state === "past_due" ? "danger" : "live"}>{access.plan === "pro" ? "Pro" : "Starter"}{access.state === "past_due" ? " (past due)" : ""}</Badge>;
   if (access.state === "suspended") return <Badge variant="danger">Suspended</Badge>;
   if (access.state === "founding") return <Badge variant="live">Founding</Badge>;
-  if (access.state === "trial") return <Badge variant="testMode">Trial{access.daysLeft !== null ? ` · ${access.daysLeft}d` : ""}</Badge>;
+  if (access.state === "trial") return <Badge variant="testMode">Trial · {access.daysLeft !== null ? `${access.daysLeft}d` : "no end date"}</Badge>;
   return <Badge variant="danger">Paused</Badge>;
 }
 

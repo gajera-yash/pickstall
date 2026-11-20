@@ -66,8 +66,8 @@ async function ProductsContent({ searchParams }: Pick<PageProps<"/admin/products
                       @{row.storeSlug}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-mute">{row.type}</TableCell>
-                  <TableCell>{row.status === "published" ? <Badge variant="live">Published</Badge> : <Badge variant="draft">{row.status}</Badge>}</TableCell>
+                  <TableCell className="text-mute capitalize">{row.type}</TableCell>
+                  <TableCell>{row.status === "published" ? <Badge variant="live">Published</Badge> : <Badge variant="draft" className="capitalize">{row.status}</Badge>}</TableCell>
                   <TableCell numeric>{row.priceCents === 0 ? "Free" : formatMoney(row.priceCents, row.currency)}</TableCell>
                   <TableCell className="whitespace-nowrap text-mute">{formatDay(row.createdAt)}</TableCell>
                 </TableRow>

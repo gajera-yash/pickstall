@@ -21,17 +21,8 @@ export const STEPS = [
   { title: "Connect payments and share", body: "Buyers pay into your own Stripe account. You see every order, customer and dollar." },
 ] as const;
 
-export const COMING_SOON = [
-  "Courses with video",
-  "Coupons",
-  "Order bumps",
-  "File uploads",
-  "Email marketing",
-  "Custom domain",
-  "Memberships",
-  "Bookings",
-  "Affiliates",
-] as const;
+/** Not built yet. Courses, coupons, order bumps, emails, bookings and affiliates are live. */
+export const COMING_SOON = ["Custom domain", "Memberships", "Payment plans", "Team accounts", "Store templates", "Public API"] as const;
 
 /**
  * Stan Store's public plans, from Stan's own help center (help.stan.store, "Creator vs Creator Pro"

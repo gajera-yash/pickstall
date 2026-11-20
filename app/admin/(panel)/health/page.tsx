@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { AdminPageTitle, Stat } from "@/components/admin/admin-ui";
@@ -6,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireAdmin } from "@/lib/admin/guard";
 import { adminHealth } from "@/lib/admin/queries";
+import { AUDIT_LABELS } from "@/lib/audit/labels";
+import type { AuditAction } from "@/lib/audit/log";
 
 // Admin: signs that something needs attention, and storage use (D-104). Inngest, Stripe, Resend,
 // Bunny and Sentry keep their own detailed logs; this page shows what our database knows.
@@ -58,8 +61,16 @@ async function HealthContent() {
               <TableBody>
                 {data.auditRecent.map((row, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-mono text-xs">{row.action}</TableCell>
-                    <TableCell className="font-mono text-xs text-mute">{row.storeId ?? "-"}</TableCell>
+                    <TableCell className="whitespace-nowrap font-semibold">{AUDIT_LABELS[row.action as AuditAction] ?? row.action}</TableCell>
+                    <TableCell className="max-w-48 truncate">
+                      {row.storeId ? (
+                        <Link href={`/admin/creators/${row.storeId}`} className="hover:underline">
+                          {row.storeName ?? "Deleted store"}
+                        </Link>
+                      ) : (
+                        <span className="text-mute">-</span>
+                      )}
+                    </TableCell>
                     <TableCell className="whitespace-nowrap text-mute">{formatDateTime(row.at)}</TableCell>
                   </TableRow>
                 ))}

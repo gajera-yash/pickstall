@@ -157,7 +157,7 @@ function BuyBox({ store, product, theme, buyable, curriculum }: { store: PublicS
       ? [`A ${durationLabel(product.coaching?.durationMinutes ?? 30)} one-to-one call`, "Pick a time that suits you at checkout", "Booking and calendar invite by email"]
       : product.type === "lead_magnet"
         ? ["Free: just your name and email", "Sent to your inbox right away", "Also kept in your library"]
-        : ["Delivered by email right after payment", "Also kept in your library"];
+        : [product.priceCents === 0 ? "Sent to your inbox right away" : "Delivered by email right after payment", "Also kept in your library"];
 
   return (
     <>

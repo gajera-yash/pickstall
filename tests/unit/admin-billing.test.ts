@@ -88,8 +88,8 @@ describe("MRR", () => {
 
 describe("conversion and exports", () => {
   it("measures how many ended trials now pay", () => {
-    expect(trialConversion({ paid: { starter: 1, pro: 2 }, paused: 1 })).toBe(75);
-    expect(trialConversion({ paid: { starter: 0, pro: 0 }, paused: 0 })).toBeNull();
+    expect(trialConversion({ paidAfterTrial: 3, paused: 1 })).toBe(75);
+    expect(trialConversion({ paidAfterTrial: 0, paused: 0 })).toBeNull();
   });
 
   it("neutralizes spreadsheet formulas in the CSVs", () => {
