@@ -2,7 +2,7 @@ import "server-only";
 
 import { collections } from "@/lib/db/collections";
 
-// Sales per product for the products table (D-102): paid orders and revenue, never the $0 order of
+// Sales per product for the products table (D-103): paid orders and revenue, never the $0 order of
 // an order bump (its price is part of the main order). Only the session owner's store.
 
 export type ProductSales = { orders: number; revenueCents: number };

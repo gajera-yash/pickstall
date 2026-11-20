@@ -1,6 +1,6 @@
 import { ChevronDown, HelpCircle } from "lucide-react";
 
-// A short, closed-by-default "How does this work?" with numbered steps and an example (D-102), so
+// A short, closed-by-default "How does this work?" with numbered steps and an example (D-103), so
 // creators understand a selling tool before turning it on. A plain <details>: no script needed.
 
 export type HowItWorksContent = { steps: string[]; example: string };

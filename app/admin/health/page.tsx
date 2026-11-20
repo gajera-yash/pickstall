@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { requireAdmin } from "@/lib/admin/guard";
 import { adminHealth } from "@/lib/admin/queries";
 
-// Admin: signs that something needs attention, and storage use (D-103). Inngest, Stripe, Resend,
+// Admin: signs that something needs attention, and storage use (D-104). Inngest, Stripe, Resend,
 // Bunny and Sentry keep their own detailed logs; this page shows what our database knows.
 export default function AdminHealthPage() {
   return (

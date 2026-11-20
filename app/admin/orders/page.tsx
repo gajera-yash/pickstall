@@ -13,7 +13,7 @@ import { requireAdmin } from "@/lib/admin/guard";
 import { adminListOrders } from "@/lib/admin/queries";
 import { formatMoney } from "@/lib/products/money";
 
-// Admin: orders of every store, for support (D-103). Refunds stay with the creator's Stripe.
+// Admin: orders of every store, for support (D-104). Refunds stay with the creator's Stripe.
 export default function AdminOrdersPage({ searchParams }: PageProps<"/admin/orders">) {
   return (
     <>

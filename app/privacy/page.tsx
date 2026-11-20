@@ -68,6 +68,10 @@ const sections: LegalSection[] = [
         </ul>
         <p>A creator sees the data of their own buyers. We may also disclose data when the law requires it, or to protect people from harm or fraud.</p>
         <p>
+          A small number of {APP_NAME} staff can see account, store and order details in our admin tools, only to run the platform: support, fixing
+          problems and stopping fraud or abuse.
+        </p>
+        <p>
           If a creator adds a Meta Pixel or a Google tag to their store pages and you allow it in the banner there, Meta or Google receive data about
           your visit to that store (pages viewed, checkout started, purchase and its amount). The creator is responsible for that; see our{" "}
           <LegalLink href="/cookies">Cookie Policy</LegalLink>.

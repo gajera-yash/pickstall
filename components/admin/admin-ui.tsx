@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/products/money";
 import type { StoreAccess } from "@/lib/plans/access";
 
-// Small building blocks for the admin pages (D-103).
+// Small building blocks for the admin pages (D-104).
 
 export function AdminPageTitle({ title, description }: { title: string; description?: string }) {
   return (

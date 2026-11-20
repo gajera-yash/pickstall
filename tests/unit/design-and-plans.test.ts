@@ -14,7 +14,7 @@ import { salesByProduct } from "@/lib/products/stats";
 
 const row = (label: string) => PLAN_FEATURE_GROUPS.flatMap((group) => group.rows).find((item) => item.label === label)!;
 
-describe("plan feature list (D-102)", () => {
+describe("plan feature list (D-103)", () => {
   it("matches the enforced limits and Pro features", () => {
     expect(row("Courses").values).toEqual({ starter: `Up to ${PLAN_LIMITS.starter.maxCourses}`, pro: "Unlimited" });
     expect(row("Course video hosting").values).toEqual({ starter: "20 hours", pro: "100 hours" });
@@ -26,7 +26,7 @@ describe("plan feature list (D-102)", () => {
   });
 });
 
-describe("one dropdown design (D-102)", () => {
+describe("one dropdown design (D-103)", () => {
   it("renders our styled trigger (Radix keeps only a hidden, unnamed native select) and a hidden input for forms", () => {
     const html = renderToStaticMarkup(createElement(ChoiceSelect, { id: "kind", name: "answer-q1", value: "", onValueChange: () => undefined, placeholder: "Choose...", options: [{ value: "a", label: "A" }] }));
     expect(html).not.toMatch(/<select[^>]*name=/);
@@ -36,7 +36,7 @@ describe("one dropdown design (D-102)", () => {
   });
 });
 
-describe("selling tools explained (D-102)", () => {
+describe("selling tools explained (D-103)", () => {
   it("explains order bumps and upsells with steps and an example", () => {
     const html = renderToStaticMarkup(createElement(HowItWorks, { content: UPSELL_HOW_IT_WORKS }));
     expect(html).toContain("<details");
@@ -46,7 +46,7 @@ describe("selling tools explained (D-102)", () => {
   });
 });
 
-describe("sales per product (D-102)", () => {
+describe("sales per product (D-103)", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("counts paid orders of the session's store only, leaving bump orders out", async () => {

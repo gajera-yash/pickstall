@@ -179,7 +179,7 @@ function UsageRow({ label, used, max }: { label: string; used: number; max: numb
   );
 }
 
-/** What a plan includes, grouped, with a check or a cross per feature (D-102). */
+/** What a plan includes, grouped, with a check or a cross per feature (D-103). */
 function PlanFeatures({ plan }: { plan: PaidPlan }) {
   return (
     <div className="flex flex-col gap-3 border-t border-line pt-3">

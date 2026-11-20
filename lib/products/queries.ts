@@ -31,7 +31,7 @@ const NOT_DELETED = { deletedAt: null };
 
 export async function listProducts(storeId: string): Promise<CreatorProduct[]> {
   const { products } = await collections();
-  // Newest first: a product the creator just added is at the top of the list (D-102).
+  // Newest first: a product the creator just added is at the top of the list (D-103).
   const docs = await products.find({ storeId, ...NOT_DELETED }).sort({ createdAt: -1 }).limit(PRODUCTS_MAX_PER_STORE).toArray();
   return docs.map(toCreatorProduct);
 }

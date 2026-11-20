@@ -8,7 +8,7 @@ import { getDb } from "@/lib/db/mongo";
 import { escapeRegex } from "@/lib/orders/csv";
 import { storeAccess, type StoreAccess } from "@/lib/plans/access";
 
-// Platform admin data (D-103), read-only. Only called from /admin pages after requireAdmin(); these
+// Platform admin data (D-104), read-only. Only called from /admin pages after requireAdmin(); these
 // functions read across all stores on purpose. Better Auth's `user` collection is only read.
 
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/admin/guard";
 import { adminOverview } from "@/lib/admin/queries";
 import { formatMoney } from "@/lib/products/money";
 
-// Admin overview (D-103): the platform's numbers at a glance.
+// Admin overview (D-104): the platform's numbers at a glance.
 export default function AdminOverviewPage() {
   return (
     <>

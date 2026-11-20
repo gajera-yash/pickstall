@@ -16,7 +16,7 @@ import { withQuery } from "@/lib/orders/params";
 
 const PATH = "/admin/creators";
 
-// Admin: every creator's store, newest first (D-103).
+// Admin: every creator's store, newest first (D-104).
 export default function AdminCreatorsPage({ searchParams }: PageProps<"/admin/creators">) {
   return (
     <>

@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { requireAdmin } from "@/lib/admin/guard";
 import { adminEmailStats } from "@/lib/admin/queries";
 
-// Admin: broadcasts and list health across stores (D-103). Every creator sends from the shared
+// Admin: broadcasts and list health across stores (D-104). Every creator sends from the shared
 // Pickstall domain, so stores with many spam complaints or bounces need a look.
 export default function AdminEmailsPage() {
   return (

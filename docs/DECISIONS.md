@@ -4,6 +4,22 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-104: Platform admin, part A1 (read-only)
+- **Date:** 2026-11-20
+- **Decision (founder approved the plan, 2026-11-19):**
+  - **Access:** `/admin` is open only to signed-in users whose email is in `ADMIN_EMAILS` (server-only, comma-separated). The whole admin shell renders only after `requireAdmin()`, so anyone else gets the 404 page and never sees the navigation, and each page checks again.
+  - **Pages, all read-only:**
+    - **Overview:** creators, signups (7 and 30 days), live stores, paid plans and MRR at planned prices, trials (and those ending within 7 days), founding, paused, subscribed emails, broadcasts, orders and creator sales by currency.
+    - **Creators:** every store, searchable by name, username or the owner's exact email, with plan, live status and Stripe. A detail page shows products, latest orders, sales, list health and broadcasts.
+    - **Orders:** across stores, by order id, the buyer's exact email or product title.
+    - **Products:** across stores, by title.
+    - **Emails:** broadcasts, sends, failures, and stores with spam complaints or bounces.
+    - **Health:** webhooks handled in 24 hours, stuck broadcasts, unfinished uploads, unpaid checkouts, database and image storage, and the latest audit log.
+  - Queries live in `lib/admin/queries.ts`, read across stores on purpose and are only called after `requireAdmin()`. Owners' emails are read (never written) from Better Auth's `user` collection.
+  - **Privacy Policy:** says that a small number of staff can see account, store and order details in admin tools, only to run the platform.
+- **Next (A2, not built):** actions with confirmation and an audit log: extend a trial or grant founding, suspend or restore a store, unpublish a product, block broadcasts, and data requests. No refunds or money movement, no card data, no logging in as a user.
+- **Setup:** set `ADMIN_EMAILS` in Vercel (for example the founder's sign-in email), then open `/admin`.
+
 ## D-103: Plan features listed, one dropdown design, a new products table, selling tools explained
 - **Date:** 2026-11-19
 - **Decision (founder request, 2026-11-19):**

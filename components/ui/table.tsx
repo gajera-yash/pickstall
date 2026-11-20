@@ -3,7 +3,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 // shadcn/ui table, restyled per DESIGN.md 9.9: header row on --bg-subtle with small uppercase muted
-// labels, 64px rows with 1px separators, hover on --bg-subtle (D-102: one look for every table). Money cells use `TableCell` with
+// labels, 64px rows with 1px separators, hover on --bg-subtle (D-103: one look for every table). Money cells use `TableCell` with
 // `numeric` so they sit right-aligned in tabular figures.
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {

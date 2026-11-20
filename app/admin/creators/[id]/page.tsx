@@ -13,7 +13,7 @@ import { adminStoreDetail } from "@/lib/admin/queries";
 import { isUuid } from "@/lib/media/media";
 import { formatMoney } from "@/lib/products/money";
 
-// Admin: one creator's store (D-103). Read-only in A1; actions come in A2.
+// Admin: one creator's store (D-104). Read-only in A1; actions come in A2.
 export default function AdminCreatorPage({ params }: PageProps<"/admin/creators/[id]">) {
   return (
     <>

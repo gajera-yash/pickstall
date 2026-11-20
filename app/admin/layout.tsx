@@ -9,7 +9,7 @@ import { requireAdmin } from "@/lib/admin/guard";
 
 export const metadata: Metadata = { title: `Admin | ${APP_NAME}`, robots: { index: false, follow: false } };
 
-// The platform admin area (D-103). The whole shell renders only after requireAdmin(): anyone else
+// The platform admin area (D-104). The whole shell renders only after requireAdmin(): anyone else
 // gets the 404 page and never sees the navigation. Every page checks again on its own.
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (

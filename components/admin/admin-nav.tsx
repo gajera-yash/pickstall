@@ -15,7 +15,7 @@ const ITEMS = [
   { href: "/admin/health", label: "Health", icon: Activity },
 ] as const;
 
-/** The admin sub-nav (D-103): a row on phones, a column on desktop. */
+/** The admin sub-nav (D-104): a row on phones, a column on desktop. */
 export function AdminNav() {
   const pathname = usePathname();
   return (

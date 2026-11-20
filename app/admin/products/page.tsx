@@ -13,7 +13,7 @@ import { requireAdmin } from "@/lib/admin/guard";
 import { adminListProducts } from "@/lib/admin/queries";
 import { formatMoney } from "@/lib/products/money";
 
-// Admin: products of every store (D-103), for reports of copyright or abuse.
+// Admin: products of every store (D-104), for reports of copyright or abuse.
 export default function AdminProductsPage({ searchParams }: PageProps<"/admin/products">) {
   return (
     <>
