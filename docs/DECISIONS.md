@@ -4,6 +4,44 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-108: Admin accounts and sessions in the database (supersedes the env part of D-107)
+- **Date:** 2026-11-20
+- **Decision (founder, 2026-11-20):** the admin username, password and sessions are kept in MongoDB, not in environment variables.
+  - **`adminUsers`:** username, `usernameKey` (unique, lower case), scrypt `passwordHash` (never the password), created and changed dates, and last sign-in. The first admin is made by the founder with `node --env-file=.env.local scripts/admin-create.mjs`. The password is asked for without showing it and typed twice; `--reset` sets a new password and signs out that admin's sessions.
+  - **`adminSessions`:** `_id` = SHA-256 of a random 32-byte token (the cookie holds the token, the database only its hash), admin id, IP hash, created and expiry dates (8 hours). The TTL index `admin_sessions_ttl` removes old ones.
+  - **Flow:** `/admin` without a live session redirects to `/admin/login`. A correct username and password create a session and an httpOnly, Secure (production), SameSite=Strict cookie, then open the dashboard.
+    - **Sign out** deletes the session from the database, so the cookie stops working everywhere.
+    - **Admin → Account** changes the password (current password required, 12+ characters) and signs out the admin's other sessions.
+  - **Protection:** as in D-107, 5 tries per network address per 15 minutes and one answer for any wrong username or password. An unknown username still runs one scrypt check, so timing does not reveal it. Sign-ins, failures (no username kept), sign-outs and password changes go to the audit log.
+  - `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH` and `ADMIN_SESSION_SECRET` are removed, together with `scripts/admin-password-hash.mjs`.
+
+## D-107: Admin sign-in with a username and password (replaces ADMIN_EMAILS; storage moved to the database in D-108)
+- **Date:** 2026-11-20
+- **Decision (founder approved the plan, 2026-11-20):**
+  - The admin area has its own sign-in at **`/admin/login`** (username and password), apart from creator accounts. Without an admin session, every admin page redirects there. Signed-in admins see their username and a **Sign out** button.
+  - **Password:** stored only as a scrypt hash (Node's built-in `crypto`, no new dependency) in `ADMIN_PASSWORD_HASH`. The founder makes it locally with `node scripts/admin-password-hash.mjs`, which asks for the password without showing it (12+ characters, typed twice) and also prints a fresh `ADMIN_SESSION_SECRET`.
+  - **Session:** an httpOnly, Secure (production), SameSite=Strict cookie `ps_admin` holding `{ username, expiry }` with an HMAC-SHA256 signature (`ADMIN_SESSION_SECRET`). It lasts 8 hours, and the username must still equal `ADMIN_USERNAME`. Changing the secret or the username signs every admin out.
+  - **Abuse protection:**
+    - 5 tries per network address per 15 minutes.
+    - Username and password are both checked every time, in constant time, with one answer: "Wrong username or password."
+    - Every sign-in, failure (no username stored) and sign-out goes to the audit log.
+    - Admin actions (D-105) record the actor as `admin:<username>`.
+  - **Env:** `ADMIN_EMAILS` is removed. The new variables are `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH` and `ADMIN_SESSION_SECRET`. Without all three, admin sign-in is closed.
+  - The admin pages moved into the route group `app/admin/(panel)`, so `/admin/login` sits outside the gated shell. The URLs are unchanged.
+- **Later (optional):** a second step with an authenticator app.
+
+## D-106: Product reviews (Phase 4, block 1)
+- **Date:** 2026-11-20
+- **Decision (founder: reviews show at once, no approval, 2026-11-20):**
+  - **Buyers** rate a product from their library ("Rate this product": 1-5 stars as an accessible radio group, plus optional text up to 1,000 characters, cleaned of tags and links).
+    - Only for their own **paid** order: the signed-in email must match the order, and a refund removes the form.
+    - One review per buyer and product (`reviews_store_product_buyer_unique`). Saving again updates it, and a review the creator hid stays hidden.
+  - **Public:** the product page shows the average, the count and the latest 20 published reviews. The name is shown only as first name and last initial ("Asha P."), never the email. Store cards show "★ 4.8 (23)".
+    - Reads live in `lib/reviews/public.ts` (published only); `PublicProduct.rating` holds the summary.
+  - **Creators:** a new **Reviews** section (sidebar, after Customers) with the average and every review, each with Hide / Show or Delete (with confirmation). Only the session's store.
+  - New collection `reviews`, with indexes `reviews_store_product_buyer_unique`, `reviews_store_product_status` and `reviews_store_created`.
+- **Not in this block:** a "please review" email after purchase, and creator replies.
+
 ## D-105: Platform admin, part A2 (actions)
 - **Date:** 2026-11-20
 - **Decision (founder approved the admin plan, 2026-11-19):** on a creator's admin page, `runAdminAction` (`lib/admin/actions.ts`) offers the actions below. Each one goes through `requireAdmin()` (404 for anyone else), Zod-checked input, a rate limit, a confirmation dialog with a required reason (cleaned, up to 200 characters), and an audit record (`admin.*` actions: admin id, store id, reason, hashed IP; no emails).

@@ -1,4 +1,6 @@
 import { ArrowLeft, CheckCircle2, ChevronDown, Clock, FileText, ListTree, Lock, PlayCircle, ShieldCheck } from "lucide-react";
+import { Stars } from "@/components/store/stars";
+import type { PublicReview } from "@/lib/reviews/public";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
@@ -23,7 +25,9 @@ const BUY_BUTTON_ID = "product-buy";
  * staying in view. Price shown is information only; checkout recomputes it on the server. Nothing
  * private (delivery link, questions, email text) is on this page.
  */
-export function ProductPage({ store, product, buyable, curriculum = null }: { store: PublicStore; product: PublicProduct; buyable: boolean; curriculum?: PublicCurriculum | null }) {
+const REVIEW_DATE = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeZone: "UTC" });
+
+export function ProductPage({ store, product, buyable, curriculum = null, reviews = [] }: { store: PublicStore; product: PublicProduct; buyable: boolean; curriculum?: PublicCurriculum | null; reviews?: PublicReview[] }) {
   const theme = resolveTheme(store.theme);
   const { preset } = theme;
   const outline = curriculum && product.course ? curriculum : null;
@@ -62,6 +66,41 @@ export function ProductPage({ store, product, buyable, curriculum = null }: { st
                 )
               )}
               {outline && product.course && <CourseOutline curriculum={outline} accessDays={product.course.accessDays} muted={preset.muted} />}
+            </section>
+          )}
+
+          {reviews.length > 0 && product.rating && (
+            <section aria-labelledby="product-reviews" className="flex flex-col gap-4 p-5 @3xl:col-start-1" style={cardStyle(theme)}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 id="product-reviews" className="font-display text-h3" style={{ fontWeight: preset.displayWeight }}>
+                  Reviews
+                </h2>
+                <span className="inline-flex items-center gap-2 text-sm font-semibold">
+                  <Stars rating={product.rating.average} color={theme.accent} />
+                  {product.rating.average.toFixed(1)}
+                  <span style={{ color: preset.muted }}>
+                    ({product.rating.count.toLocaleString("en")} {product.rating.count === 1 ? "review" : "reviews"})
+                  </span>
+                </span>
+              </div>
+              <ul className="flex flex-col divide-y" style={{ borderColor: borderColor(preset) }}>
+                {reviews.map((review) => (
+                  <li key={review.id} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0" style={{ borderColor: borderColor(preset) }}>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <Stars rating={review.rating} size="size-3.5" color={theme.accent} />
+                      <span className="text-sm font-semibold">{review.buyerName}</span>
+                      <span className="text-xs" style={{ color: preset.muted }}>
+                        {REVIEW_DATE.format(review.createdAt)}
+                      </span>
+                    </span>
+                    {review.text && (
+                      <p className="break-words whitespace-pre-line" style={{ color: preset.muted }}>
+                        {review.text}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
         </div>

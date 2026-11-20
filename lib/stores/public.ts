@@ -1,5 +1,7 @@
 import "server-only";
 
+import { ratingSummaries } from "@/lib/reviews/public";
+import type { RatingSummary } from "@/lib/reviews/rules";
 import type { PageBlock } from "@/lib/page-blocks/rules";
 import { safePixels, type StorePixels } from "@/lib/pixels/rules";
 import { connection } from "next/server";
@@ -50,6 +52,8 @@ export type PublicProduct = {
   course: { category: CourseCategory | null; accessDays: number | null; lessonCount: number } | null;
   /** A coaching call's length (D-087); never its meeting link. Null for other products. Optional for preview callers. */
   coaching?: { durationMinutes: number } | null;
+  /** Published reviews' average and count (D-106); missing or null without reviews. */
+  rating?: RatingSummary | null;
 };
 
 /** A published course's outline for its public page (D-056): titles only, never lesson content. */
@@ -108,6 +112,7 @@ export async function findPublicStore(slug: string): Promise<PublicStore | null>
 function toPublicProduct(
   doc: Pick<ProductDoc, "_id" | "slug" | "title" | "description" | "descriptionDoc" | "coverUrl" | "priceCents" | "salePriceCents" | "buttonText" | "type" | "course" | "coaching">,
   lessonCounts: Map<string, number> = new Map(),
+  ratings: Map<string, RatingSummary> = new Map(),
 ): PublicProduct {
   return {
     id: doc._id,
@@ -123,6 +128,7 @@ function toPublicProduct(
     type: doc.type ?? "digital",
     course: doc.type === "course" ? { category: doc.course?.category ?? null, accessDays: doc.course?.accessDays ?? null, lessonCount: lessonCounts.get(doc._id) ?? 0 } : null,
     coaching: doc.type === "coaching" ? { durationMinutes: doc.coaching?.durationMinutes ?? 30 } : null,
+    rating: ratings.get(doc._id) ?? null,
   };
 }
 
@@ -139,8 +145,8 @@ export async function lessonCountsOf(storeId: string, docs: Pick<ProductDoc, "_i
 export async function listPublicProducts(storeId: string): Promise<PublicProduct[]> {
   const { products } = await collections();
   const docs = await products.find({ storeId, status: "published" }, { projection: PRODUCT_FIELDS }).sort({ sortOrder: 1, createdAt: -1 }).limit(100).toArray();
-  const counts = await lessonCountsOf(storeId, docs);
-  return docs.map((doc) => toPublicProduct(doc, counts));
+  const [counts, ratings] = await Promise.all([lessonCountsOf(storeId, docs), ratingSummaries(storeId, docs.map((doc) => doc._id)).catch(() => new Map<string, RatingSummary>())]);
+  return docs.map((doc) => toPublicProduct(doc, counts, ratings));
 }
 
 /** One published product of a store by its slug, or null. */
@@ -148,7 +154,9 @@ export async function findPublicProduct(storeId: string, slug: string): Promise<
   if (typeof storeId !== "string" || typeof slug !== "string" || !PRODUCT_SLUG.test(slug)) return null;
   const { products } = await collections();
   const doc = await products.findOne({ storeId, slug, status: "published" }, { projection: PRODUCT_FIELDS });
-  return doc ? toPublicProduct(doc, await lessonCountsOf(storeId, [doc])) : null;
+  if (!doc) return null;
+  const [counts, ratings] = await Promise.all([lessonCountsOf(storeId, [doc]), ratingSummaries(storeId, [doc._id]).catch(() => new Map<string, RatingSummary>())]);
+  return toPublicProduct(doc, counts, ratings);
 }
 
 /**

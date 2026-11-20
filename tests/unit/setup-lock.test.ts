@@ -57,7 +57,7 @@ describe("isPathOpenWhileLocked", () => {
 describe("isSectionLocked", () => {
   it("locks every nav section but My Store while setup is incomplete", () => {
     const locked = DASHBOARD_SECTIONS.filter((section) => isSectionLocked(section.id, false)).map((section) => section.id);
-    expect(locked).toEqual(["products", "orders", "customers", "income", "marketing", "analytics", "settings"]);
+    expect(locked).toEqual(["products", "orders", "customers", "reviews", "income", "marketing", "analytics", "settings"]);
   });
 
   it("locks nothing once unlocked", () => {

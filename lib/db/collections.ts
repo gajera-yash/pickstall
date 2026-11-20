@@ -608,6 +608,54 @@ export type BroadcastDoc = {
   finishedAt: Date | null;
 };
 
+/**
+ * A buyer's review of a product they paid for (D-106). One per buyer and product (index
+ * `reviews_store_product_buyer_unique`). Shown at once; the creator can hide or delete it.
+ * `buyerName` is only the short display name ("Asha P."); the email is never shown.
+ */
+export type ReviewDoc = {
+  _id: string;
+  storeId: string;
+  productId: string;
+  orderId: string;
+  /** Lower-case buyer email, for the one-review-per-buyer rule. Never shown. */
+  buyerKey: string;
+  buyerName: string;
+  rating: 1 | 2 | 3 | 4 | 5;
+  text: string | null;
+  status: "published" | "hidden";
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
+ * A platform admin account (D-108), apart from creator accounts. Made with
+ * scripts/admin-create.mjs. Only the scrypt hash of the password is stored.
+ */
+export type AdminUserDoc = {
+  _id: string;
+  username: string;
+  /** Lower-case username, unique (index `admin_users_username_unique`). */
+  usernameKey: string;
+  passwordHash: string;
+  createdAt: Date;
+  updatedAt: Date;
+  passwordChangedAt: Date;
+  lastLoginAt: Date | null;
+};
+
+/**
+ * A signed-in admin session (D-108). `_id` is the SHA-256 of the random token in the cookie, so a
+ * database leak does not give working sessions. Removed by a TTL index after `expiresAt`.
+ */
+export type AdminSessionDoc = {
+  _id: string;
+  adminId: string;
+  ipHash: string | null;
+  createdAt: Date;
+  expiresAt: Date;
+};
+
 export async function collections(): Promise<{
   profiles: Collection<ProfileDoc>;
   stores: Collection<StoreDoc>;
@@ -633,6 +681,9 @@ export async function collections(): Promise<{
   couponRedemptions: Collection<CouponRedemptionDoc>;
   subscribers: Collection<SubscriberDoc>;
   broadcasts: Collection<BroadcastDoc>;
+  reviews: Collection<ReviewDoc>;
+  adminUsers: Collection<AdminUserDoc>;
+  adminSessions: Collection<AdminSessionDoc>;
 }> {
   const db = await getDb();
   return {
@@ -659,6 +710,9 @@ export async function collections(): Promise<{
     coupons: db.collection<CouponDoc>("coupons"),
     subscribers: db.collection<SubscriberDoc>("subscribers"),
     broadcasts: db.collection<BroadcastDoc>("broadcasts"),
+    reviews: db.collection<ReviewDoc>("reviews"),
+    adminUsers: db.collection<AdminUserDoc>("adminUsers"),
+    adminSessions: db.collection<AdminSessionDoc>("adminSessions"),
     couponRedemptions: db.collection<CouponRedemptionDoc>("couponRedemptions"),
   };
 }

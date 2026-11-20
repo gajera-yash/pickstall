@@ -25,8 +25,6 @@ export const serverEnvSchema = publicEnvSchema.extend({
   // Sends the sign-in code. Optional in development: the code is then written to the server log.
   RESEND_API_KEY: optional(z.string().min(1)),
   EMAIL_FROM: optional(z.string().min(3)),
-  // Platform admins (D-104): comma-separated sign-in emails that may open /admin. Empty: nobody.
-  ADMIN_EMAILS: optional(z.string().min(3)),
   // Verifies Resend's webhook calls (D-095): bounces and spam complaints unsubscribe people.
   RESEND_WEBHOOK_SECRET: optional(z.string().min(16)),
   // Where uploaded images are saved (D-032). Default: .data/uploads inside the project. Use a persistent volume in production.

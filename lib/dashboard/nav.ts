@@ -6,6 +6,7 @@ export const DASHBOARD_SECTIONS = [
   { id: "products", label: "Products", href: "/dashboard/products" },
   { id: "orders", label: "Orders", href: "/dashboard/orders" },
   { id: "customers", label: "Customers", href: "/dashboard/customers" },
+  { id: "reviews", label: "Reviews", href: "/dashboard/reviews" },
   { id: "income", label: "Income", href: "/dashboard/income" },
   { id: "marketing", label: "Marketing", href: "/dashboard/marketing" },
   { id: "analytics", label: "Analytics", href: "/dashboard/analytics" },

@@ -1,6 +1,6 @@
 import { createHash, createHmac } from "node:crypto";
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // D-055: Bunny Stream signatures and webhook, and YouTube / Vimeo links.
 
@@ -116,7 +116,11 @@ describe("Bunny webhook", () => {
     db.webhookEvents.insertOne.mockResolvedValue({});
     db.webhookEvents.deleteOne.mockResolvedValue({});
     curriculum.setBunnyVideoStatus.mockResolvedValue(1);
+    // A ready video's length is read from Bunny (D-098): never reach the network in tests.
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ status: 4, length: 60 }), { status: 200 }));
   });
+
+  afterEach(() => vi.restoreAllMocks());
 
   it("accepts nothing without the read-only key", async () => {
     const saved = env.serverEnv.BUNNY_STREAM_READONLY_KEY;

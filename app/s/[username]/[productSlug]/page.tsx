@@ -11,6 +11,7 @@ import { StorePixels } from "@/components/store/store-pixels";
 import { pixelValue } from "@/lib/pixels/rules";
 import { priceDecimals } from "@/lib/products/money";
 import { payableCents } from "@/lib/products/pricing";
+import { listProductReviews } from "@/lib/reviews/public";
 import { findPublicCurriculum, findPublicProduct, findPublicStore } from "@/lib/stores/public";
 
 // Public product page at /@username/product-slug (rewrite in next.config.ts). Only a published
@@ -41,10 +42,14 @@ export default async function PublicProductPage({ params }: PageProps<"/s/[usern
   if (!store.isOpen) return <StorePaused storeName={store.name} theme={store.theme} />;
   const product = await findPublicProduct(store.id, productSlug);
   if (!product) notFound();
-  const [context, curriculum] = await Promise.all([loadCheckoutContext(username, productSlug), product.type === "course" ? findPublicCurriculum(store.id, product.id) : null]);
+  const [context, curriculum, reviews] = await Promise.all([
+    loadCheckoutContext(username, productSlug),
+    product.type === "course" ? findPublicCurriculum(store.id, product.id) : null,
+    listProductReviews(store.id, product.id).catch(() => []),
+  ]);
   return (
     <>
-      <ProductPage store={store} product={product} buyable={context ? canBuy(context) : false} curriculum={curriculum} />
+      <ProductPage store={store} product={product} buyable={context ? canBuy(context) : false} curriculum={curriculum} reviews={reviews} />
       {store.pixels && (
         <StorePixels
           storeId={store.id}

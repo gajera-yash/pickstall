@@ -23,6 +23,10 @@ const LABELS: Record<AuditAction, string> = {
   "admin.product_unpublished": "Admin: product unpublished",
   "admin.broadcasts_blocked": "Admin: broadcasts blocked",
   "admin.broadcasts_unblocked": "Admin: broadcasts allowed",
+  "admin.signed_in": "Admin: signed in",
+  "admin.sign_in_failed": "Admin: sign-in failed",
+  "admin.signed_out": "Admin: signed out",
+  "admin.password_changed": "Admin: password changed",
 };
 
 const when = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" });

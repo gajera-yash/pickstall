@@ -7,12 +7,13 @@ import { DASHBOARD_SECTIONS, SETTINGS_SECTIONS, breadcrumbFor, isSectionActive, 
 const fresh: ChecklistInput = { bio: null, avatarUrl: null, chargesEnabled: false, isPublished: false, productCount: 0, paymentsAvailable: true };
 
 describe("dashboard sections (D-011)", () => {
-  it("has the eight sections of the reference design in order", () => {
+  it("has the sections in order (Reviews added in D-106)", () => {
     expect(DASHBOARD_SECTIONS.map((section) => section.label)).toEqual([
       "My Store",
       "Products",
       "Orders",
       "Customers",
+      "Reviews",
       "Income",
       "Marketing",
       "Analytics",

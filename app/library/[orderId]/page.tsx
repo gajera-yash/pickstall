@@ -11,6 +11,8 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/lib/auth/guards";
 import { findPurchase } from "@/lib/library/queries";
+import { findOwnReview } from "@/lib/reviews/queries";
+import { ReviewForm } from "@/components/library/review-form";
 import { isUuid, safeImageSrc } from "@/lib/media/media";
 
 const PROBLEMS: Record<string, string> = {
@@ -46,6 +48,8 @@ async function PurchaseContent({ params, searchParams }: Pick<PageProps<"/librar
 
   const purchase = await findPurchase(user.email, orderId);
   if (!purchase) notFound();
+  // The buyer's own review of this product (D-106), shown again so it can be changed.
+  const review = purchase.status === "paid" ? await findOwnReview(user.email, orderId).catch(() => null) : null;
 
   const problem = typeof query.problem === "string" ? PROBLEMS[query.problem] : undefined;
   const cover = safeImageSrc(purchase.coverUrl);
@@ -106,6 +110,7 @@ async function PurchaseContent({ params, searchParams }: Pick<PageProps<"/librar
           {used && <p className="text-sm text-mute">{used}</p>}
         </form>
       )}
+      {!refunded && <ReviewForm orderId={purchase.orderId} initial={review} />}
     </Card>
   );
 }

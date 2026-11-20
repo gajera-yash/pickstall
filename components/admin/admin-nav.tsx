@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BarChart3, Mail, Package, ReceiptText, Users } from "lucide-react";
+import { Activity, BarChart3, KeyRound, Mail, Package, ReceiptText, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -13,6 +13,7 @@ const ITEMS = [
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/emails", label: "Emails", icon: Mail },
   { href: "/admin/health", label: "Health", icon: Activity },
+  { href: "/admin/account", label: "Account", icon: KeyRound },
 ] as const;
 
 /** The admin sub-nav (D-104): a row on phones, a column on desktop. */

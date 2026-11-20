@@ -1,25 +1,26 @@
 import "server-only";
 
-import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-import { getCurrentUser, type AuthUser } from "@/lib/auth/guards";
-import { serverEnv } from "@/lib/env.server";
+import { findSessionAdmin } from "@/lib/admin/accounts";
+import { ADMIN_COOKIE } from "@/lib/admin/session";
 
-// Platform admin access (D-104). Only signed-in users whose email is in ADMIN_EMAILS (server-only)
-// may open /admin; everyone else gets a plain 404, so the admin area is not even visible.
+// Platform admin access (D-108): an admin session stored in MongoDB, from /admin/login (username and
+// password of an admin account, apart from creator accounts). Without a live session every admin
+// page sends the visitor to the sign-in page.
 
-/** The allowed admin emails, lower case. Empty when ADMIN_EMAILS is not set. */
-export function adminEmails(raw: string | undefined = serverEnv.ADMIN_EMAILS): Set<string> {
-  return new Set((raw ?? "").split(",").map((value) => value.trim().toLowerCase()).filter((value) => value.includes("@")));
+export type AdminUser = { id: string; username: string };
+
+/** The signed-in admin from the session cookie, or null. */
+export async function currentAdmin(): Promise<AdminUser | null> {
+  const store = await cookies();
+  return findSessionAdmin(store.get(ADMIN_COOKIE)?.value);
 }
 
-export function isAdminEmail(email: string | null | undefined, raw?: string): boolean {
-  return Boolean(email) && adminEmails(raw).has((email as string).trim().toLowerCase());
-}
-
-/** The signed-in admin, or a 404 for anyone else (signed out included). */
-export async function requireAdmin(): Promise<AuthUser & { email: string }> {
-  const user = await getCurrentUser();
-  if (!user?.email || !isAdminEmail(user.email)) notFound();
-  return { ...user, email: user.email };
+/** The signed-in admin, or a redirect to the admin sign-in page. */
+export async function requireAdmin(): Promise<AdminUser> {
+  const admin = await currentAdmin();
+  if (!admin) redirect("/admin/login");
+  return admin;
 }

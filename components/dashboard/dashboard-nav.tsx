@@ -10,6 +10,7 @@ import {
   Package,
   Settings,
   ShoppingBag,
+  Star,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -28,6 +29,7 @@ export const SECTION_ICONS: Record<DashboardSectionId, LucideIcon> = {
   products: Package,
   orders: ShoppingBag,
   customers: Users,
+  reviews: Star,
   income: BarChart3,
   marketing: Megaphone,
   analytics: LineChart,

@@ -3,6 +3,7 @@ import { StoreBlocks } from "@/components/store/store-blocks";
 import { splitBlocks } from "@/lib/page-blocks/rules";
 
 import { PriceTag } from "@/components/store/price-tag";
+import { RatingBadge } from "@/components/store/stars";
 import { StoreHeader } from "@/components/store/store-header";
 import { StoreFrame, borderColor, cardStyle } from "@/components/store/store-theme";
 import type { StoreLayoutProps } from "@/components/store/layouts/types";
@@ -41,6 +42,7 @@ export function StackLayout({ store, products, theme, preview }: StoreLayoutProp
                 <span className="font-display text-h3 break-words" style={{ fontWeight: preset.displayWeight }}>
                   {product.title}
                 </span>
+                {product.rating && product.rating.count > 0 && <RatingBadge average={product.rating.average} count={product.rating.count} color={theme.accent} mutedColor={preset.muted} />}
                 {product.description && (
                   <span className="line-clamp-2 text-sm break-words" style={{ color: preset.muted }}>
                     {product.description}

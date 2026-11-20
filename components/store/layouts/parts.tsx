@@ -1,5 +1,6 @@
 import { BookOpen, CalendarCheck, Download, ImageIcon, PlayCircle } from "lucide-react";
 
+import { RatingBadge } from "@/components/store/stars";
 import { PriceTag } from "@/components/store/price-tag";
 import type { StoreTheme } from "@/components/store/store-theme";
 import { durationLabel } from "@/lib/coaching/settings";
@@ -38,6 +39,11 @@ export function ProductKind({ product, theme }: { product: PublicProduct; theme:
           : product.type === "lead_magnet"
             ? "Free download"
             : "Digital product"}
+      {product.rating && product.rating.count > 0 && (
+        <span className="ml-1 inline-flex items-center" style={{ color: theme.preset.text }}>
+          <RatingBadge average={product.rating.average} count={product.rating.count} color={theme.accent} mutedColor={theme.preset.muted} />
+        </span>
+      )}
     </span>
   );
 }

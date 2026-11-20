@@ -32,6 +32,10 @@ export const AUDIT_ACTIONS = [
   "admin.product_unpublished",
   "admin.broadcasts_blocked",
   "admin.broadcasts_unblocked",
+  "admin.signed_in",
+  "admin.sign_in_failed",
+  "admin.signed_out",
+  "admin.password_changed",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

@@ -5,12 +5,14 @@ import { Suspense, type ReactNode } from "react";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { APP_NAME } from "@/lib/config";
+import { Button } from "@/components/ui/button";
+import { signOutAdmin } from "@/lib/admin/login-actions";
 import { requireAdmin } from "@/lib/admin/guard";
 
 export const metadata: Metadata = { title: `Admin | ${APP_NAME}`, robots: { index: false, follow: false } };
 
-// The platform admin area (D-104). The whole shell renders only after requireAdmin(): anyone else
-// gets the 404 page and never sees the navigation. Every page checks again on its own.
+// The platform admin area (D-104). The whole shell renders only after requireAdmin(): without an
+// admin session (D-107) the visitor is sent to /admin/login. Every page checks again on its own.
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <div className="min-h-dvh bg-bg">
@@ -30,7 +32,14 @@ async function AdminShell({ children }: { children: ReactNode }) {
           <Link href="/admin" className="font-display text-h4">
             {APP_NAME} Admin
           </Link>
-          <span className="truncate text-sm text-mute">{admin.email}</span>
+          <span className="flex items-center gap-3">
+            <span className="truncate text-sm text-mute">{admin.username}</span>
+            <form action={signOutAdmin}>
+              <Button type="submit" variant="secondary" size="sm">
+                Sign out
+              </Button>
+            </form>
+          </span>
         </div>
       </header>
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 lg:flex-row lg:items-start lg:gap-8">
