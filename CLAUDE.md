@@ -142,6 +142,7 @@ BETTER_AUTH_SECRET                   # server only
 GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET   # server only
 NEXT_PUBLIC_GOOGLE_AUTH_ENABLED
 EMAIL_FROM                           # server only
+ADMIN_USERNAME / ADMIN_PASSWORD      # server only (admin sign-in at /admin/login, D-109)
 IP_HASH_SECRET                       # server only
 STRIPE_SECRET_KEY                    # server only
 STRIPE_PLATFORM_WEBHOOK_SECRET       # server only (webhook "Your account": plans, test-mode sales)

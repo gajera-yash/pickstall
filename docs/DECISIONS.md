@@ -4,6 +4,15 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-109: Admin username and password in the environment, sessions stay in the database (supersedes the accounts part of D-108)
+- **Date:** 2026-11-20
+- **Decision:** The founder wants the admin sign-in set in Vercel, not in the database.
+  - **Credentials:** `ADMIN_USERNAME` and `ADMIN_PASSWORD` (at least 12 characters), server-only env variables. The username is matched case-insensitively; both are compared in constant time through their SHA-256. With either missing, `/admin/login` says sign-in is not set up and nobody gets in.
+  - **Sessions:** unchanged from D-108 (`adminSessions`, token hash as `_id`, 8 hours, TTL index, httpOnly strict cookie `ps_admin`, sign-out deletes the row). Each session also stores a 32-character fingerprint of the credentials it was made with; changing the username or password in Vercel ends every admin session.
+  - **Removed:** the `adminUsers` collection type and its index, `scripts/admin-create.mjs`, and the in-app password change. The Account page now explains where the credentials live.
+- **Why:** One place to manage the admin sign-in, no setup script to run, and a quick way to sign everyone out (change the password and redeploy).
+- **Consequences:** The password exists in plain form in Vercel env, so access to the Vercel project is access to the admin. Any old `adminUsers` documents in MongoDB are unused; they were left in place (collections are never dropped). Rate limiting (5 tries per 15 minutes per network address) and audit logging stay as in D-108.
+
 ## D-108: Admin accounts and sessions in the database (supersedes the env part of D-107)
 - **Date:** 2026-11-20
 - **Decision (founder, 2026-11-20):** the admin username, password and sessions are kept in MongoDB, not in environment variables.

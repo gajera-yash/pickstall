@@ -629,28 +629,15 @@ export type ReviewDoc = {
 };
 
 /**
- * A platform admin account (D-108), apart from creator accounts. Made with
- * scripts/admin-create.mjs. Only the scrypt hash of the password is stored.
- */
-export type AdminUserDoc = {
-  _id: string;
-  username: string;
-  /** Lower-case username, unique (index `admin_users_username_unique`). */
-  usernameKey: string;
-  passwordHash: string;
-  createdAt: Date;
-  updatedAt: Date;
-  passwordChangedAt: Date;
-  lastLoginAt: Date | null;
-};
-
-/**
- * A signed-in admin session (D-108). `_id` is the SHA-256 of the random token in the cookie, so a
- * database leak does not give working sessions. Removed by a TTL index after `expiresAt`.
+ * A signed-in admin session (D-108, D-109). `_id` is the SHA-256 of the random token in the cookie,
+ * so a database leak does not give working sessions. Removed by a TTL index after `expiresAt`.
+ * `credentials` is a fingerprint of the env username and password it was made with: changing them
+ * in the environment ends every session.
  */
 export type AdminSessionDoc = {
   _id: string;
   adminId: string;
+  credentials: string;
   ipHash: string | null;
   createdAt: Date;
   expiresAt: Date;
@@ -682,7 +669,6 @@ export async function collections(): Promise<{
   subscribers: Collection<SubscriberDoc>;
   broadcasts: Collection<BroadcastDoc>;
   reviews: Collection<ReviewDoc>;
-  adminUsers: Collection<AdminUserDoc>;
   adminSessions: Collection<AdminSessionDoc>;
 }> {
   const db = await getDb();
@@ -711,7 +697,6 @@ export async function collections(): Promise<{
     subscribers: db.collection<SubscriberDoc>("subscribers"),
     broadcasts: db.collection<BroadcastDoc>("broadcasts"),
     reviews: db.collection<ReviewDoc>("reviews"),
-    adminUsers: db.collection<AdminUserDoc>("adminUsers"),
     adminSessions: db.collection<AdminSessionDoc>("adminSessions"),
     couponRedemptions: db.collection<CouponRedemptionDoc>("couponRedemptions"),
   };

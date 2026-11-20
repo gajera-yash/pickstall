@@ -84,8 +84,7 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("reviews").createIndex({ storeId: 1, productId: 1, buyerKey: 1 }, { unique: true, name: "reviews_store_product_buyer_unique" }),
     db.collection("reviews").createIndex({ storeId: 1, productId: 1, status: 1, createdAt: -1 }, { name: "reviews_store_product_status" }),
     db.collection("reviews").createIndex({ storeId: 1, createdAt: -1 }, { name: "reviews_store_created" }),
-    // Platform admin accounts and sessions (D-108). Sessions disappear after they expire.
-    db.collection("adminUsers").createIndex({ usernameKey: 1 }, { unique: true, name: "admin_users_username_unique" }),
+    // Platform admin sessions (D-108, D-109). They disappear after they expire.
     db.collection("adminSessions").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "admin_sessions_ttl" }),
     db.collection("adminSessions").createIndex({ adminId: 1 }, { name: "admin_sessions_admin" }),
     // Abandoned cart reminders (D-096): the 7-day check per buyer and product, and the stats.

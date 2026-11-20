@@ -1,16 +1,15 @@
 import { Suspense } from "react";
 
-import { ChangePasswordForm } from "@/components/admin/change-password-form";
 import { AdminPageTitle } from "@/components/admin/admin-ui";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireAdmin } from "@/lib/admin/guard";
 
-// Admin account (D-108): change the password. Other sessions of this admin are signed out.
+// Admin account (D-109): the admin username and password live in the server environment.
 export default function AdminAccountPage() {
   return (
     <>
-      <AdminPageTitle title="Account" description="Your admin password. Changing it signs out your other admin sessions." />
-      <Suspense fallback={<Skeleton className="h-64 w-full max-w-md rounded-lg" />}>
+      <AdminPageTitle title="Account" description="Your admin sign-in." />
+      <Suspense fallback={<Skeleton className="h-40 w-full max-w-xl rounded-lg" />}>
         <AccountContent />
       </Suspense>
     </>
@@ -20,11 +19,14 @@ export default function AdminAccountPage() {
 async function AccountContent() {
   const admin = await requireAdmin();
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-4 sm:p-6">
-      <p className="text-sm text-mute">
-        Signed in as <span className="font-semibold text-ink">{admin.username}</span>
+    <div className="flex max-w-xl flex-col gap-3 rounded-lg border border-line bg-surface p-4 text-sm sm:p-6">
+      <p>
+        Signed in as <span className="font-semibold">{admin.username}</span>. Sessions last 8 hours.
       </p>
-      <ChangePasswordForm />
+      <p className="text-mute">
+        To change the username or password, edit <code className="font-mono">ADMIN_USERNAME</code> and <code className="font-mono">ADMIN_PASSWORD</code> in Vercel (Settings, Environment
+        Variables) and redeploy. Every admin session is signed out when they change.
+      </p>
     </div>
   );
 }
