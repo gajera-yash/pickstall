@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { PageHeader } from "@/components/dashboard/page-header";
 import { ProductList } from "@/components/dashboard/product-list";
+import { salesByProduct } from "@/lib/products/stats";
 import { ProductsEmpty } from "@/components/dashboard/products-empty";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ export default function ProductsPage({ searchParams }: PageProps<"/dashboard/pro
 
 async function ProductsContent({ searchParams }: Pick<PageProps<"/dashboard/products">, "searchParams">) {
   const [{ store }, params] = await Promise.all([requireUnlockedCreator("/dashboard/products"), searchParams]);
-  const products = await listProducts(store.id);
+  const [products, sales] = await Promise.all([listProducts(store.id), salesByProduct(store.id).catch(() => new Map())]);
   const error = productCreateError(params.error);
   const published = params.published === "1";
 
@@ -54,7 +55,7 @@ async function ProductsContent({ searchParams }: Pick<PageProps<"/dashboard/prod
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <Card className="p-2 sm:p-3">{products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} storeSlug={store.slug} />}</Card>
+      <Card className="overflow-hidden p-0">{products.length === 0 ? <div className="p-2 sm:p-3"><ProductsEmpty /></div> : <ProductList products={products} currency={store.currency} storeSlug={store.slug} sales={sales} />}</Card>
     </>
   );
 }

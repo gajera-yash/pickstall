@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FieldError } from "@/components/ui/field";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Textarea } from "@/components/ui/textarea";
 import { ANSWER_MAX_CHARS, BUYER_NAME_MAX } from "@/lib/config";
 import { startCheckout, type CheckoutState } from "@/lib/orders/actions";
@@ -103,14 +103,7 @@ export function CheckoutForm({ username, productSlug, askPhone, questions, submi
             {question.kind === "long_text" ? (
               <Textarea id={field} name={field} rows={4} maxLength={ANSWER_MAX_CHARS.long_text} value={values[field] ?? ""} onChange={(event) => set(field, event.target.value)} aria-invalid={problem ? true : undefined} />
             ) : question.kind === "dropdown" ? (
-              <Select id={field} name={field} value={values[field] ?? ""} onChange={(event) => set(field, event.target.value)} aria-invalid={problem ? true : undefined}>
-                <option value="">Choose...</option>
-                {question.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </Select>
+              <ChoiceSelect id={field} name={field} value={values[field] ?? ""} onValueChange={(value) => set(field, value)} invalid={Boolean(problem)} placeholder="Choose..." options={question.options.map((option) => ({ value: option, label: option }))} />
             ) : (
               <Input id={field} name={field} maxLength={ANSWER_MAX_CHARS.text} value={values[field] ?? ""} onChange={(event) => set(field, event.target.value)} aria-invalid={problem ? true : undefined} />
             )}

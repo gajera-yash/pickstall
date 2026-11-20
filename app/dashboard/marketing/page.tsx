@@ -1,9 +1,10 @@
-import { Mail, Megaphone, ShoppingCart, type LucideIcon } from "lucide-react";
+import { Mail, Megaphone, ShoppingCart, Sparkles, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { CartReminderSettings } from "@/components/dashboard/cart-reminder-settings";
 import { CouponManager, type ManagedCoupon } from "@/components/dashboard/coupon-manager";
+import { BUMP_HOW_IT_WORKS, HowItWorks, UPSELL_HOW_IT_WORKS, type HowItWorksContent } from "@/components/dashboard/how-it-works";
 import { PixelSettings } from "@/components/dashboard/pixel-settings";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -16,12 +17,20 @@ import { can } from "@/lib/plans/access";
 import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { listProducts } from "@/lib/products/queries";
 
-const TOOLS: { title: string; description: string; icon: LucideIcon; live: boolean; href?: string; badge?: string }[] = [
+const TOOLS: { title: string; description: string; icon: LucideIcon; live: boolean; href?: string; badge?: string; how?: HowItWorksContent }[] = [
   {
     title: "Order bumps",
     description: "Offer one more product at checkout with a single tick. Set it on each product: in the Checkout form step of a digital product, or the Publish step of a course or coaching call.",
     icon: ShoppingCart,
     live: true,
+    how: BUMP_HOW_IT_WORKS,
+  },
+  {
+    title: "Upsell after purchase",
+    description: "Offer another product on the thank-you page, right after someone buys. Set it on each product, next to the order bump.",
+    icon: Sparkles,
+    live: true,
+    how: UPSELL_HOW_IT_WORKS,
   },
   {
     title: "Email list",
@@ -72,7 +81,7 @@ async function MarketingContent() {
 function MoreTools() {
   return (
     <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {TOOLS.map(({ title, description, icon: Icon, live, href, badge }) => (
+      {TOOLS.map(({ title, description, icon: Icon, live, href, badge, how }) => (
         <li key={title} className="relative">
           <Card className="h-full gap-3">
             <div className="flex items-center justify-between gap-2">
@@ -91,6 +100,7 @@ function MoreTools() {
               )}
             </h2>
             <p className="text-sm text-mute">{description}</p>
+            {how && <HowItWorks content={how} />}
           </Card>
         </li>
       ))}

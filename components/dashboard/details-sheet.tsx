@@ -2,10 +2,10 @@
 
 import { Check, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/select";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -36,16 +36,25 @@ export function DetailsSheet({ closeHref, title, description, children }: { clos
   );
 }
 
-/** A filter select that applies itself on change; inside a GET form, so Enter still works without JS. */
+/** A filter that applies itself on change: it submits its GET form with the new value. */
 export function FilterSelect({ label, name, value, options }: { label: string; name: string; value: string; options: { value: string; label: string }[] }) {
+  const [current, setCurrent] = useState(value);
+  const wrapper = useRef<HTMLSpanElement>(null);
   return (
-    <NativeSelect size="sm" name={name} aria-label={label} defaultValue={value} onChange={(event) => event.currentTarget.form?.requestSubmit()}>
-      {options.map((option) => (
-        <NativeSelectOption key={option.value} value={option.value}>
-          {option.label}
-        </NativeSelectOption>
-      ))}
-    </NativeSelect>
+    <span ref={wrapper} className="block">
+      <ChoiceSelect
+        size="sm"
+        name={name}
+        aria-label={label}
+        value={current}
+        options={options}
+        onValueChange={(next) => {
+          setCurrent(next);
+          // After React writes the hidden input's new value, submit the form.
+          setTimeout(() => wrapper.current?.closest("form")?.requestSubmit(), 0);
+        }}
+      />
+    </span>
   );
 }
 

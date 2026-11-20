@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/select";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutoHide } from "@/components/ui/use-auto-hide";
@@ -406,44 +406,20 @@ export function CoachingEditor({ initial, currency, paymentsOk, isNew, bump, ups
             <>
               <StepHeading title="Availability" body="When buyers can book you. They see open times in their own time zone." />
               <Field id="timeZone" label="Your time zone" error={fieldError("timeZone")} hint="Your weekly hours below are in this time zone.">
-                <NativeSelect id="timeZone" value={timeZone} onChange={(event) => set("timeZone", event.target.value)} aria-invalid={!!fieldError("timeZone")}>
-                  {zones.map((zone) => (
-                    <NativeSelectOption key={zone} value={zone}>
-                      {zone.replaceAll("_", " ")}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                <ChoiceSelect id="timeZone" value={timeZone} onValueChange={(value) => set("timeZone", value)} invalid={!!fieldError("timeZone")} placeholder="Pick your time zone" options={zones.map((zone) => ({ value: zone, label: zone.replaceAll("_", " ") }))} />
               </Field>
 
               <WeeklyHours weekly={values.weekly} onChange={(weekly) => set("weekly", weekly)} problems={hoursProblems} serverError={fieldError("weekly")} />
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <Field id="bufferMinutes" label="Break after each call" error={fieldError("bufferMinutes")}>
-                  <NativeSelect id="bufferMinutes" value={String(values.bufferMinutes)} onChange={(event) => set("bufferMinutes", Number(event.target.value))}>
-                    {COACHING_BUFFERS.map((minutes) => (
-                      <NativeSelectOption key={minutes} value={String(minutes)}>
-                        {minutes === 0 ? "No break" : `${minutes} min`}
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
+                  <ChoiceSelect id="bufferMinutes" value={String(values.bufferMinutes)} onValueChange={(value) => set("bufferMinutes", Number(value))} options={COACHING_BUFFERS.map((minutes) => ({ value: String(minutes), label: minutes === 0 ? "No break" : `${minutes} min` }))} />
                 </Field>
                 <Field id="minNoticeHours" label="Minimum notice" error={fieldError("minNoticeHours")}>
-                  <NativeSelect id="minNoticeHours" value={String(values.minNoticeHours)} onChange={(event) => set("minNoticeHours", Number(event.target.value))}>
-                    {COACHING_NOTICE_HOURS.map((hours) => (
-                      <NativeSelectOption key={hours} value={String(hours)}>
-                        {noticeLabel(hours)}
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
+                  <ChoiceSelect id="minNoticeHours" value={String(values.minNoticeHours)} onValueChange={(value) => set("minNoticeHours", Number(value))} options={COACHING_NOTICE_HOURS.map((hours) => ({ value: String(hours), label: noticeLabel(hours) }))} />
                 </Field>
                 <Field id="bookingWindowDays" label="Book up to" error={fieldError("bookingWindowDays")}>
-                  <NativeSelect id="bookingWindowDays" value={String(values.bookingWindowDays)} onChange={(event) => set("bookingWindowDays", Number(event.target.value))}>
-                    {COACHING_WINDOW_DAYS.map((days) => (
-                      <NativeSelectOption key={days} value={String(days)}>
-                        {days} days ahead
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
+                  <ChoiceSelect id="bookingWindowDays" value={String(values.bookingWindowDays)} onValueChange={(value) => set("bookingWindowDays", Number(value))} options={COACHING_WINDOW_DAYS.map((days) => ({ value: String(days), label: `${days} days ahead` }))} />
                 </Field>
               </div>
 
