@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/select";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutoHide } from "@/components/ui/use-auto-hide";
@@ -347,14 +347,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
               <RichTextEditor id="descriptionDoc" label="Description (optional)" value={values.descriptionDoc} onChange={(doc) => set("descriptionDoc", doc)} error={fieldError("descriptionDoc")} />
               <ImageUploader id="coverUrl" label="Cover image (optional)" kind="cover" shape="wide" value={values.coverUrl} onChange={(value) => set("coverUrl", value)} error={fieldError("coverUrl")} hint="The banner on your store and course page. JPG, PNG, WebP or GIF, up to 4 MB." />
               <Field id="category" label="Category" error={fieldError("category")} hint="Helps students understand what the course is about.">
-                <NativeSelect id="category" value={values.category} onChange={(event) => set("category", event.target.value as EditorCourse["category"])} aria-invalid={!!fieldError("category")}>
-                  <NativeSelectOption value="">Pick a category</NativeSelectOption>
-                  {COURSE_CATEGORIES.map((category) => (
-                    <NativeSelectOption key={category} value={category}>
-                      {COURSE_CATEGORY_LABELS[category]}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                <ChoiceSelect id="category" value={values.category} onValueChange={(value) => set("category", value as EditorCourse["category"])} invalid={!!fieldError("category")} placeholder="Pick a category" options={COURSE_CATEGORIES.map((category) => ({ value: category, label: COURSE_CATEGORY_LABELS[category] }))} />
               </Field>
               <TagsField tags={values.tags} onChange={(tags) => set("tags", tags)} error={fieldError("tags")} />
             </>

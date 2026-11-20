@@ -8,7 +8,7 @@ import { Field } from "@/components/dashboard/editor-fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/select";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { importSubscribersAction } from "@/lib/subscribers/actions";
 import { IMPORT_MAX_FILE_BYTES, IMPORT_MAX_ROWS, guessColumn, parseCsv } from "@/lib/subscribers/import-rules";
@@ -101,24 +101,10 @@ export function SubscriberImport() {
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="import-email" label="Email column" error={emailColumn < 0 ? "Pick the column with email addresses." : null}>
-              <NativeSelect id="import-email" value={String(emailColumn)} onChange={(event) => setEmailColumn(Number(event.target.value))}>
-                <NativeSelectOption value="-1">Pick a column</NativeSelectOption>
-                {parsed.header.map((name, index) => (
-                  <NativeSelectOption key={index} value={String(index)}>
-                    {name || `Column ${index + 1}`}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+              <ChoiceSelect id="import-email" value={String(emailColumn)} onValueChange={(value) => setEmailColumn(Number(value))} options={[{ value: "-1", label: "Pick a column" }, ...parsed.header.map((name, index) => ({ value: String(index), label: name || `Column ${index + 1}` }))]} />
             </Field>
             <Field id="import-name" label="Name column (optional)">
-              <NativeSelect id="import-name" value={String(nameColumn)} onChange={(event) => setNameColumn(Number(event.target.value))}>
-                <NativeSelectOption value="-1">No name</NativeSelectOption>
-                {parsed.header.map((name, index) => (
-                  <NativeSelectOption key={index} value={String(index)}>
-                    {name || `Column ${index + 1}`}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+              <ChoiceSelect id="import-name" value={String(nameColumn)} onValueChange={(value) => setNameColumn(Number(value))} options={[{ value: "-1", label: "No name" }, ...parsed.header.map((name, index) => ({ value: String(index), label: name || `Column ${index + 1}` }))]} />
             </Field>
           </div>
 

@@ -21,7 +21,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Checkbox } from "@/components/ui/checkbox";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -625,13 +625,7 @@ function QuestionList({ questions, onChange, errorFor, listError }: { questions:
             </Field>
             <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
               <Field id={`question-kind-${index}`} label="Answer type">
-                <Select id={`question-kind-${index}`} value={question.kind} onChange={(event) => update(index, { kind: event.target.value as EditorQuestion["kind"], options: event.target.value === "dropdown" && question.options.length === 0 ? ["", ""] : question.options })}>
-                  {(Object.keys(KIND_LABELS) as EditorQuestion["kind"][]).map((kind) => (
-                    <option key={kind} value={kind}>
-                      {KIND_LABELS[kind]}
-                    </option>
-                  ))}
-                </Select>
+                <ChoiceSelect id={`question-kind-${index}`} value={question.kind} onValueChange={(value) => update(index, { kind: value as EditorQuestion["kind"], options: value === "dropdown" && question.options.length === 0 ? ["", ""] : question.options })} options={(Object.keys(KIND_LABELS) as EditorQuestion["kind"][]).map((kind) => ({ value: kind, label: KIND_LABELS[kind] }))} />
               </Field>
               <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium">
                 <Checkbox checked={question.required} onCheckedChange={(checked) => update(index, { required: checked === true })} />
@@ -719,16 +713,7 @@ function CheckoutPreview({ values }: { values: EditorProduct }) {
               {question.kind === "long_text" ? (
                 <Textarea tabIndex={-1} rows={3} readOnly />
               ) : question.kind === "dropdown" ? (
-                <Select tabIndex={-1} value="" onChange={() => undefined}>
-                  <option value="">Choose...</option>
-                  {question.options
-                    .filter((option) => option.trim() !== "")
-                    .map((option, index) => (
-                      <option key={`${option}-${index}`} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                </Select>
+                <ChoiceSelect value="" onValueChange={() => undefined} placeholder="Choose..." aria-label={label} options={question.options.filter((option) => option.trim() !== "").map((option, index) => ({ value: `${index}:${option}`, label: option }))} />
               ) : (
                 <Input tabIndex={-1} readOnly />
               )}

@@ -4,10 +4,11 @@ import { ShoppingCart } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { Field, MoneyInput } from "@/components/dashboard/editor-fields";
+import { BUMP_HOW_IT_WORKS, HowItWorks } from "@/components/dashboard/how-it-works";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/select";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Switch } from "@/components/ui/switch";
 import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { saveBumpAction } from "@/lib/bumps/actions";
@@ -54,6 +55,7 @@ export function BumpSection({ productId, currency, initial, candidates }: { prod
         </div>
         <Switch checked={values.enabled} onCheckedChange={(checked) => set("enabled", checked)} aria-label="Offer an order bump" />
       </div>
+      <HowItWorks content={BUMP_HOW_IT_WORKS} title="How does an order bump work?" />
 
       {values.enabled &&
         (candidates.length === 0 ? (
@@ -61,15 +63,7 @@ export function BumpSection({ productId, currency, initial, candidates }: { prod
         ) : (
           <div className="flex flex-col gap-4">
             <Field id={`bump-product-${productId}`} label="Product to offer" error={fieldError("productId")} hint={chosen?.status === "draft" ? "This product is a draft: buyers see the offer once you publish it." : undefined}>
-              <NativeSelect id={`bump-product-${productId}`} value={values.productId} onChange={(event) => set("productId", event.target.value)} aria-invalid={!!fieldError("productId")}>
-                <NativeSelectOption value="">Pick a product</NativeSelectOption>
-                {candidates.map((candidate) => (
-                  <NativeSelectOption key={candidate.id} value={candidate.id}>
-                    {candidate.title}
-                    {candidate.status === "draft" ? " (draft)" : ""}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+              <ChoiceSelect id={`bump-product-${productId}`} value={values.productId} onValueChange={(value) => set("productId", value)} invalid={!!fieldError("productId")} placeholder="Pick a product" options={candidates.map((candidate) => ({ value: candidate.id, label: `${candidate.title}${candidate.status === "draft" ? " (draft)" : ""}` }))} />
             </Field>
             <Field id={`bump-price-${productId}`} label="Offer price" error={fieldError("price")} hint="Usually a little lower than its normal price.">
               <MoneyInput id={`bump-price-${productId}`} currency={currency} value={values.price} onChange={(value) => set("price", value)} invalid={!!fieldError("price")} />

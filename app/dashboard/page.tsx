@@ -16,6 +16,7 @@ import { WelcomeHero } from "@/components/dashboard/welcome-hero";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { findPageBlocks } from "@/lib/page-blocks/queries";
+import { salesByProduct } from "@/lib/products/stats";
 import { requireCreator } from "@/lib/auth/guards";
 import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
@@ -55,7 +56,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
   const name = firstName(profile?.fullName) ?? store.name;
   const link = storeLink(store.slug);
 
-  const [stats, pageBlocks] = await Promise.all([incomeStats(store.id, store.currency, 90).catch(() => null), findPageBlocks(store.id).catch(() => [])]);
+  const [stats, pageBlocks, sales] = await Promise.all([incomeStats(store.id, store.currency, 90).catch(() => null), findPageBlocks(store.id).catch(() => []), salesByProduct(store.id).catch(() => new Map())]);
   const productCount = products.length;
   // Real numbers from paid orders; days without sales (or an unreachable database) are zeros.
   const series: KpiSeries = stats ? stats.series : { revenueCents: zeros(), orders: zeros(), customers: zeros() };
@@ -109,7 +110,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
 
         <MyStoreTabs
           productCount={productCount}
-          products={products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} storeSlug={store.slug} />}
+          products={products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} storeSlug={store.slug} sales={sales} />}
           design={
             <>
               <PageDesignForm initial={{ themePreset: store.theme.preset, accent: store.theme.accent }} />

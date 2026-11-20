@@ -4,6 +4,19 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-102: Plan features listed, one dropdown design, a new products table, selling tools explained
+- **Date:** 2026-11-19
+- **Decision (founder request, 2026-11-19):**
+  - **Plan page:** each plan card lists what it includes, grouped (Sell, Grow, Your store), with a check or a cross. The list is built from `PLAN_LIMITS` in `lib/plans/catalog.ts`, so it always matches what is enforced (D-098).
+  - **One dropdown design:** a new `ChoiceSelect` (`components/ui/choice-select.tsx`, Radix Select from the existing `radix-ui` package, so no new dependency) replaces every native `<select>`. Its list looks exactly like the profile menu (DropdownMenu: surface, 1px border, radius lg, popover shadow, 40px rows, `--accent` highlight), and its trigger looks like our text fields.
+    - Used in: coaching settings, course category, order bump and upsell product, checkout questions (editor, preview and the buyer's checkout), the import column pickers and the list filters.
+    - The empty choice maps to an internal value. Named selects submit a hidden input with the real value.
+  - **Products table:**
+    - Newest first (`listProducts` sorts by `createdAt` descending), so a new product is at the top.
+    - On desktop, a real table: product (cover, title, type), status, price, sales, revenue and date added. Sales come from `salesByProduct` (paid orders, not bump orders). The whole row opens the editor, and "..." holds the actions. On phones, cards.
+    - The shared `Table` gets small uppercase headers and 64px rows, so every table looks the same.
+  - **Selling tools explained:** a closed-by-default "How does this work?" (`HowItWorks`) with numbered steps and an example sits in the Order bump and Upsell sections of the editors and on the Marketing page, which also gains an "Upsell after purchase" card.
+
 ## D-101: Store page sections (Phase 3, block 9: block page editor v1)
 - **Date:** 2026-11-19
 - **Decision (founder approved the plan, 2026-11-19):**

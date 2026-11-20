@@ -5,10 +5,11 @@ import { useState, useTransition } from "react";
 
 import type { BumpCandidate } from "@/components/dashboard/bump-section";
 import { Field, MoneyInput } from "@/components/dashboard/editor-fields";
+import { HowItWorks, UPSELL_HOW_IT_WORKS } from "@/components/dashboard/how-it-works";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/select";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Switch } from "@/components/ui/switch";
 import { useAutoHide } from "@/components/ui/use-auto-hide";
 import { saveUpsellAction } from "@/lib/upsells/actions";
@@ -56,6 +57,7 @@ export function UpsellSection({ productId, currency, initial, candidates, locked
         </div>
         <Switch checked={values.enabled && !locked} disabled={locked} onCheckedChange={(checked) => set("enabled", checked)} aria-label="Offer an upsell after purchase" />
       </div>
+      <HowItWorks content={UPSELL_HOW_IT_WORKS} title="How does an upsell work?" />
       {locked && (
         <p className="text-sm text-mute">
           Part of Pro.{" "}
@@ -72,15 +74,7 @@ export function UpsellSection({ productId, currency, initial, candidates, locked
         ) : (
           <div className="flex flex-col gap-4">
             <Field id={`upsell-product-${productId}`} label="Product to offer" error={fieldError("productId")} hint={chosen?.status === "draft" ? "This product is a draft: buyers see the offer once you publish it." : undefined}>
-              <NativeSelect id={`upsell-product-${productId}`} value={values.productId} onChange={(event) => set("productId", event.target.value)} aria-invalid={!!fieldError("productId")}>
-                <NativeSelectOption value="">Pick a product</NativeSelectOption>
-                {candidates.map((candidate) => (
-                  <NativeSelectOption key={candidate.id} value={candidate.id}>
-                    {candidate.title}
-                    {candidate.status === "draft" ? " (draft)" : ""}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+              <ChoiceSelect id={`upsell-product-${productId}`} value={values.productId} onValueChange={(value) => set("productId", value)} invalid={!!fieldError("productId")} placeholder="Pick a product" options={candidates.map((candidate) => ({ value: candidate.id, label: `${candidate.title}${candidate.status === "draft" ? " (draft)" : ""}` }))} />
             </Field>
             <Field id={`upsell-price-${productId}`} label="Offer price" error={fieldError("price")} hint="Usually lower than its normal price. 0 makes it a free gift.">
               <MoneyInput id={`upsell-price-${productId}`} currency={currency} value={values.price} onChange={(value) => set("price", value)} invalid={!!fieldError("price")} />
