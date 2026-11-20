@@ -22,7 +22,27 @@ export type StoreBilling = {
   status: string;
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
+  /** The plan's price per period from Stripe (D-116), for the admin MRR. Missing before D-116. */
+  amountCents?: number | null;
+  currency?: string | null;
+  interval?: "day" | "week" | "month" | "year" | null;
   updatedAt: Date;
+};
+
+/**
+ * A paid plan invoice (D-116): money a creator paid Pickstall for a plan, on our own Stripe account.
+ * `_id` is the Stripe invoice id, so the webhook and the import never save one twice.
+ */
+export type PlanPaymentDoc = {
+  _id: string;
+  storeId: string | null;
+  customerId: string;
+  subscriptionId: string | null;
+  plan: "starter" | "pro" | null;
+  amountCents: number;
+  currency: string;
+  paidAt: Date;
+  createdAt: Date;
 };
 
 /** Extra account details, keyed by the Better Auth user id. */
@@ -770,6 +790,7 @@ export async function collections(): Promise<{
   affiliates: Collection<AffiliateDoc>;
   affiliatePayouts: Collection<AffiliatePayoutDoc>;
   licenseKeys: Collection<LicenseKeyDoc>;
+  planPayments: Collection<PlanPaymentDoc>;
   notifications: Collection<NotificationDoc>;
   bookings: Collection<BookingDoc>;
   coupons: Collection<CouponDoc>;
@@ -804,6 +825,7 @@ export async function collections(): Promise<{
     affiliates: db.collection<AffiliateDoc>("affiliates"),
     affiliatePayouts: db.collection<AffiliatePayoutDoc>("affiliatePayouts"),
     licenseKeys: db.collection<LicenseKeyDoc>("licenseKeys"),
+    planPayments: db.collection<PlanPaymentDoc>("planPayments"),
     notifications: db.collection<NotificationDoc>("notifications"),
     bookings: db.collection<BookingDoc>("bookings"),
     coupons: db.collection<CouponDoc>("coupons"),

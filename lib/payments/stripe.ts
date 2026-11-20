@@ -71,7 +71,9 @@ export function normalizeStripeEvent(event: Stripe.Event, endpoint: WebhookEndpo
   // platform endpoint (our account); the handler fetches the subscription from Stripe and saves it.
   if (endpoint === "platform") {
     const subscriptionId = billingSubscriptionOf(event);
-    if (subscriptionId) return { eventId: event.id, type: "billing.subscription", subscriptionId };
+    // A paid plan invoice is also saved for the admin's revenue (D-116).
+    const invoiceId = event.type === "invoice.paid" ? event.data.object.id : undefined;
+    if (subscriptionId) return { eventId: event.id, type: "billing.subscription", subscriptionId, ...(invoiceId ? { invoiceId } : {}) };
   }
 
   // Which seller account the event belongs to. On the Connect endpoint Stripe names it; on the

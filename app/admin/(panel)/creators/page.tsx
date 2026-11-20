@@ -20,7 +20,12 @@ const PATH = "/admin/creators";
 export default function AdminCreatorsPage({ searchParams }: PageProps<"/admin/creators">) {
   return (
     <>
-      <AdminPageTitle title="Creators" description="Every store, newest first. Search by store name, username or the owner's exact email." />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <AdminPageTitle title="Creators" description="Every store, newest first. Search by store name, username or the owner's exact email." />
+        <Link href="/admin/creators/export" prefetch={false} className="text-sm font-semibold text-blue underline underline-offset-4">
+          Download CSV
+        </Link>
+      </div>
       <Suspense fallback={<Skeleton className="h-96 w-full rounded-lg" />}>
         <CreatorsContent searchParams={searchParams} />
       </Suspense>

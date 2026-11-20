@@ -53,6 +53,9 @@ async function ensureIndexes(db: Db): Promise<void> {
     // Audit log (D-075): a person's own activity, newest first; records expire after 400 days.
     db.collection("auditLogs").createIndex({ actorId: 1, at: -1 }, { name: "audit_actor_at" }),
     db.collection("auditLogs").createIndex({ at: 1 }, { expireAfterSeconds: 400 * 24 * 60 * 60, name: "audit_ttl" }),
+    // The admin's audit log (D-116): by action, or by store, newest first.
+    db.collection("auditLogs").createIndex({ action: 1, at: -1 }, { name: "audit_action_at" }),
+    db.collection("auditLogs").createIndex({ storeId: 1, at: -1 }, { name: "audit_store_at" }),
     // Course curriculum (D-055): every read filters by store and course, in order.
     db.collection("courseModules").createIndex({ storeId: 1, productId: 1, sortOrder: 1 }, { name: "course_modules_store_course" }),
     db.collection("lessons").createIndex({ storeId: 1, productId: 1, moduleId: 1, sortOrder: 1 }, { name: "lessons_store_course_module" }),
@@ -67,6 +70,9 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("quizAttempts").createIndex({ orderId: 1 }, { name: "quiz_attempts_order" }),
     // One certificate per order (D-111).
     db.collection("certificates").createIndex({ orderId: 1 }, { unique: true, name: "certificates_order_unique" }),
+    // Plan payments (D-116): by date for revenue, by store for its history.
+    db.collection("planPayments").createIndex({ paidAt: -1 }, { name: "plan_payments_paid" }),
+    db.collection("planPayments").createIndex({ storeId: 1, paidAt: -1 }, { name: "plan_payments_store_paid" }),
     // License keys (D-114): one per order, and a key is unique within its store.
     db.collection("licenseKeys").createIndex({ orderId: 1 }, { unique: true, name: "license_keys_order_unique" }),
     db.collection("licenseKeys").createIndex({ storeId: 1, key: 1 }, { unique: true, name: "license_keys_store_key_unique" }),

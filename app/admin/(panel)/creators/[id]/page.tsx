@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireAdmin } from "@/lib/admin/guard";
 import { adminStoreDetail } from "@/lib/admin/queries";
+import { planPaymentsOfStore } from "@/lib/plans/payments";
 import { isUuid } from "@/lib/media/media";
 import { formatMoney } from "@/lib/products/money";
 
@@ -33,7 +34,7 @@ export default function AdminCreatorPage({ params }: PageProps<"/admin/creators/
 async function CreatorContent({ params }: Pick<PageProps<"/admin/creators/[id]">, "params">) {
   const [, { id }] = await Promise.all([requireAdmin(), params]);
   if (!isUuid(id)) notFound();
-  const store = await adminStoreDetail(id);
+  const [store, planPayments] = await Promise.all([adminStoreDetail(id), planPaymentsOfStore(id).catch(() => [])]);
   if (!store) notFound();
   return (
     <div className="flex flex-col gap-6">
@@ -42,11 +43,16 @@ async function CreatorContent({ params }: Pick<PageProps<"/admin/creators/[id]">
         <PlanBadge access={store.access} />
         {store.isPublished ? <Badge variant="live">Live</Badge> : <Badge variant="draft">Draft</Badge>}
       </div>
-      {store.isPublished && (
-        <Link href={`/@${store.slug}`} target="_blank" rel="noopener" className="self-start text-sm font-semibold text-blue underline underline-offset-4">
-          Open store page
+      <div className="flex flex-wrap gap-4">
+        {store.isPublished && (
+          <Link href={`/@${store.slug}`} target="_blank" rel="noopener" className="text-sm font-semibold text-blue underline underline-offset-4">
+            Open store page
+          </Link>
+        )}
+        <Link href={`/admin/audit?store=${store.id}`} className="text-sm font-semibold text-blue underline underline-offset-4">
+          Audit log for this store
         </Link>
-      )}
+      </div>
       {store.suspendedAt && (
         <Alert variant="error">
           <AlertDescription>
@@ -119,6 +125,36 @@ async function CreatorContent({ params }: Pick<PageProps<"/admin/creators/[id]">
             </TableBody>
           </Table>
         </ListCard>
+      </section>
+
+      <section aria-labelledby="admin-plan-payments" className="flex flex-col gap-3">
+        <h2 id="admin-plan-payments" className="font-display text-h3">
+          Plan payments
+        </h2>
+        {planPayments.length === 0 ? (
+          <p className="text-sm text-mute">This creator hasn&apos;t paid for a plan yet.</p>
+        ) : (
+          <ListCard>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Paid</TableHead>
+                  <TableHead>Plan</TableHead>
+                  <TableHead numeric>Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {planPayments.map((payment) => (
+                  <TableRow key={payment._id}>
+                    <TableCell className="whitespace-nowrap">{formatDay(payment.paidAt)}</TableCell>
+                    <TableCell className="capitalize">{payment.plan ?? "-"}</TableCell>
+                    <TableCell numeric>{formatMoney(payment.amountCents, payment.currency)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ListCard>
+        )}
       </section>
 
       <section aria-labelledby="admin-orders" className="flex flex-col gap-3">

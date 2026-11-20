@@ -21,6 +21,23 @@ export type SubscriptionState = {
   status: string;
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
+  /** What the plan costs per period, from Stripe's own price (D-116), for the admin MRR. */
+  amountCents?: number | null;
+  currency?: string | null;
+  interval?: "day" | "week" | "month" | "year" | null;
+};
+
+/** A paid plan invoice as the admin's revenue sees it (D-116). No Stripe types. */
+export type PlanInvoiceState = {
+  invoiceId: string;
+  customerId: string;
+  subscriptionId: string | null;
+  /** Our store id, from the subscription metadata snapshot on the invoice, when present. */
+  storeId: string | null;
+  plan: PaidPlan | null;
+  amountPaidCents: number;
+  currency: string;
+  paidAt: Date;
 };
 
 export function billingConfigured(): boolean {
@@ -117,7 +134,47 @@ function stateOf(subscription: Stripe.Subscription): SubscriptionState {
     status: subscription.status,
     currentPeriodEnd: item?.current_period_end ? new Date(item.current_period_end * 1000) : null,
     cancelAtPeriodEnd: subscription.cancel_at_period_end || subscription.cancel_at !== null,
+    amountCents: item?.price.unit_amount != null ? item.price.unit_amount * (item.quantity ?? 1) : null,
+    currency: item?.price.currency ?? null,
+    interval: (["day", "week", "month", "year"] as const).find((value) => value === item?.price.recurring?.interval) ?? null,
   };
+}
+
+/** A paid invoice of a plan subscription, or null for anything else (unpaid, not a subscription, no money). */
+function invoiceStateOf(invoice: Stripe.Invoice): PlanInvoiceState | null {
+  const details = invoice.parent?.subscription_details ?? null;
+  const customer = invoice.customer;
+  const paidAt = invoice.status_transitions?.paid_at;
+  if (invoice.status !== "paid" || !details || !customer || !paidAt || !invoice.id) return null;
+  const subscription = details.subscription;
+  return {
+    invoiceId: invoice.id,
+    customerId: typeof customer === "string" ? customer : customer.id,
+    subscriptionId: typeof subscription === "string" ? subscription : (subscription?.id ?? null),
+    storeId: details.metadata?.store_id ?? null,
+    plan: PAID_PLANS.find((plan) => plan === details.metadata?.plan) ?? null,
+    amountPaidCents: invoice.amount_paid,
+    currency: invoice.currency,
+    paidAt: new Date(paidAt * 1000),
+  };
+}
+
+/** One plan invoice as Stripe has it now (the webhook never trusts the event body). */
+export async function fetchPlanInvoice(invoiceId: string): Promise<PlanInvoiceState | null> {
+  return invoiceStateOf(await stripeClient().invoices.retrieve(invoiceId));
+}
+
+/** Paid plan invoices on our account, newest first, up to `max` (the admin's one-time import, D-116). */
+export async function listPaidPlanInvoices(max = 2000): Promise<PlanInvoiceState[]> {
+  const found: PlanInvoiceState[] = [];
+  let seen = 0;
+  for await (const invoice of stripeClient().invoices.list({ status: "paid", limit: 100 })) {
+    seen += 1;
+    const state = invoiceStateOf(invoice);
+    if (state) found.push(state);
+    if (seen >= max) break;
+  }
+  return found;
 }
 
 /**

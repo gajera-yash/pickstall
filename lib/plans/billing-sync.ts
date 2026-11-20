@@ -4,8 +4,9 @@ import { z } from "zod";
 
 import { recordAudit } from "@/lib/audit/log";
 import { logger } from "@/lib/logger";
-import { fetchSubscriptionState, subscriptionOfCheckout } from "@/lib/payments/billing";
+import { fetchPlanInvoice, fetchSubscriptionState, listPaidPlanInvoices, subscriptionOfCheckout } from "@/lib/payments/billing";
 import { applySubscriptionState, billingOfOwner } from "@/lib/plans/billing-queries";
+import { savePlanPayment } from "@/lib/plans/payments";
 
 // Keeps stores.billing in step with Stripe (D-073): from the webhook and from the Checkout return.
 
@@ -35,4 +36,18 @@ export async function syncCheckoutReturn(ownerId: string, rawSessionId: string |
     logger.error("billing.return_failed", { name: error instanceof Error ? error.name : undefined });
     return "pending"; // the webhook will still bring the plan in
   }
+}
+
+/** Saves a paid plan invoice named by a verified webhook (D-116). Safe to repeat. */
+export async function recordPlanInvoice(invoiceId: string): Promise<void> {
+  const state = await fetchPlanInvoice(invoiceId);
+  if (state) await savePlanPayment(state);
+}
+
+/** The admin's one-time import of paid plan invoices from Stripe (D-116). Returns how many were new. */
+export async function importPlanInvoices(): Promise<{ seen: number; added: number }> {
+  const invoices = await listPaidPlanInvoices();
+  let added = 0;
+  for (const invoice of invoices) if (await savePlanPayment(invoice)) added += 1;
+  return { seen: invoices.length, added };
 }

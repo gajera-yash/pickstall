@@ -4,6 +4,20 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-116: Admin update A3: full screen, platform billing and revenue, analytics, audit log, exports
+- **Date:** 2026-11-20
+- **Decision (founder approved the A3 plan, including the platform billing webhook change, 2026-11-20):**
+  - **Full screen:** the admin no longer sits in a 7xl container. A full-height sidebar (sections, the signed-in admin, Sign out) and the content across the rest of the screen; phones and tablets get a menu button with the same sections in a sheet. New sections: Billing and Audit log.
+  - **Plan payments:** a verified `invoice.paid` event on the platform endpoint now also carries the invoice id (`billing.subscription` with `invoiceId`). After the usual subscription sync, `recordPlanInvoice` fetches the invoice from Stripe (never trusting the body) and saves it in the new `planPayments` collection, `_id` = invoice id, so replays and the import never save one twice. The store comes from the subscription metadata on the invoice, else from `stores.billing.customerId`. Creator sales (Connect) are untouched; no application fees or transfers.
+  - **Real MRR:** the subscription sync now also saves Stripe's price on `stores.billing` (`amountCents`, `currency`, `interval`). MRR = active and past-due subscriptions per month (yearly divided by 12); rows from before this fall back to the planned price. ARR = MRR × 12.
+  - **Billing page** (`/admin/billing`): MRR, ARR, active plans by tier, new paying creators this month (first plan payment), cancellations in 30 days, revenue this month and all time, 12-month revenue chart (USD), payment problems (past due or unpaid), the latest 25 plan payments, and "Import past invoices from Stripe" (`importPlanInvoicesAction`: admin only, 3 per 10 minutes, reads up to 2,000 paid invoices, audited as `admin.billing_imported`).
+  - **Overview:** MRR from real prices and revenue this month, the share of ended trials now on a paid plan, and 30-day charts of new creators and paid creator orders (`AdminBarChart`, server-rendered SVG with a screen-reader table).
+  - **Creator page:** plan payment history and a link to the store's audit log.
+  - **Audit log page** (`/admin/audit`): every audit record across the platform, newest first, 50 a page, filter by action or store; actors show as "admin: name", "creator" or "system" (no user ids or emails). New indexes `audit_action_at` and `audit_store_at`. Audit labels moved to `lib/audit/labels.ts`.
+  - **CSV exports:** `/admin/creators/export` and `/admin/billing/export` (admins only, otherwise 404; 20 per 10 minutes; at most 5,000 rows; formulas neutralized).
+  - **Data:** new collection `planPayments` (indexes `plan_payments_paid`, `plan_payments_store_paid`); `StoreBilling` gains optional `amountCents`, `currency`, `interval`. No migration: the import button fills past payments.
+- **Not in this block:** plan refunds and credit notes in revenue, revenue in currencies other than USD on the chart, and churn by cohort.
+
 ## D-115: Funnels: downsell and funnel numbers (Phase 4, block P4-6)
 - **Date:** 2026-11-20
 - **Decision (founder approved the plan, 2026-11-20):** the funnel is the existing path (product page, checkout, order bump, upsell, thank-you) plus:

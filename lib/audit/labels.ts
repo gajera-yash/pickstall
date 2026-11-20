@@ -1,0 +1,30 @@
+import type { AuditAction } from "@/lib/audit/log";
+
+// What each audit action is called on screen (D-075, the admin audit log in D-116). Client-safe.
+export const AUDIT_LABELS: Record<AuditAction, string> = {
+  "auth.signed_in": "Signed in",
+  "security.signed_out_other_devices": "Signed out other devices",
+  "store.published": "Store published",
+  "store.unpublished": "Store unpublished",
+  "store.username_changed": "Store link changed",
+  "stripe.connected": "Stripe connected",
+  "stripe.disconnected": "Stripe disconnected",
+  "plan.checkout_started": "Plan checkout opened",
+  "plan.subscribed": "Plan started",
+  "plan.changed": "Plan changed",
+  "product.deleted": "Product deleted",
+  "account.data_exported": "Data downloaded",
+  "account.deleted": "Account deleted",
+  "admin.trial_extended": "Admin: trial extended",
+  "admin.founding_granted": "Admin: founding granted",
+  "admin.store_suspended": "Admin: store suspended",
+  "admin.store_restored": "Admin: store restored",
+  "admin.product_unpublished": "Admin: product unpublished",
+  "admin.broadcasts_blocked": "Admin: broadcasts blocked",
+  "admin.broadcasts_unblocked": "Admin: broadcasts allowed",
+  "admin.signed_in": "Admin: signed in",
+  "admin.sign_in_failed": "Admin: sign-in failed",
+  "admin.signed_out": "Admin: signed out",
+  "admin.password_changed": "Admin: password changed",
+  "admin.billing_imported": "Admin: plan invoices imported",
+};

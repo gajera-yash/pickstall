@@ -3,7 +3,7 @@ import "server-only";
 import { ObjectId } from "mongodb";
 
 import { PLANNED_PRICE_CENTS, type PaidPlan } from "@/lib/config";
-import { collections, type StoreDoc } from "@/lib/db/collections";
+import { collections, type AuditLogDoc, type StoreDoc } from "@/lib/db/collections";
 import { getDb } from "@/lib/db/mongo";
 import { escapeRegex } from "@/lib/orders/csv";
 import { storeAccess, type StoreAccess } from "@/lib/plans/access";
@@ -295,5 +295,78 @@ export async function adminHealth(now: Date = new Date()): Promise<AdminHealth> 
     database: stats ? { dataMb: mb(stats.dataSize), storageMb: mb(stats.storageSize), collections: Number(stats.collections) || 0 } : null,
     imagesMb: mb(images[0]?.total),
     auditRecent: audit.map((row) => ({ action: String(row.action), storeId: row.storeId, at: row.at })),
+  };
+}
+
+/** Every creator store for the admin CSV (D-116), newest first, at most 5,000. */
+export async function adminStoresForExport(now: Date = new Date()): Promise<AdminStoreRow[]> {
+  const { stores } = await collections();
+  const docs = await stores
+    .find({ deletedAt: { $exists: false } }, { projection: { name: 1, slug: 1, ownerId: 1, isPublished: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, stripeChargesEnabled: 1, createdAt: 1 } })
+    .sort({ createdAt: -1 })
+    .limit(5000)
+    .toArray();
+  const emails = await ownerEmails(docs.map((doc) => doc.ownerId));
+  return docs.map((doc) => ({ id: doc._id, name: doc.name, slug: doc.slug, ownerEmail: emails.get(doc.ownerId) ?? "", isPublished: doc.isPublished, access: accessOf(doc, now), stripeConnected: doc.stripeChargesEnabled, createdAt: doc.createdAt }));
+}
+
+export type AdminActivity = {
+  /** Last 30 days (UTC), oldest first. */
+  days: string[];
+  signups: number[];
+  orders: number[];
+};
+
+/** New stores and paid creator orders per day over the last 30 days (D-116), across the platform. */
+export async function adminActivity(now: Date = new Date()): Promise<AdminActivity> {
+  const { stores, orders } = await collections();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29));
+  const perDay = (field: "createdAt" | "paidAt") => ({ $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$" + field, timezone: "UTC" } }, count: { $sum: 1 } } });
+  const [signupRows, orderRows] = await Promise.all([
+    stores.aggregate<{ _id: string; count: number }>([{ $match: { createdAt: { $gte: start } } }, perDay("createdAt")]).toArray(),
+    orders.aggregate<{ _id: string; count: number }>([{ $match: { status: "paid", ...NOT_BUMP, paidAt: { $gte: start } } }, perDay("paidAt")]).toArray(),
+  ]);
+  const signupMap = new Map(signupRows.map((row) => [row._id, row.count]));
+  const orderMap = new Map(orderRows.map((row) => [row._id, row.count]));
+  const days: string[] = [];
+  for (let index = 0; index < 30; index += 1) days.push(new Date(start.getTime() + index * DAY_MS).toISOString().slice(0, 10));
+  return { days, signups: days.map((day) => signupMap.get(day) ?? 0), orders: days.map((day) => orderMap.get(day) ?? 0) };
+}
+
+/** Of the creators whose free period is over, the share now on a paid plan (D-116). */
+export function trialConversion(overview: Pick<AdminOverview, "paid" | "paused">): number | null {
+  const paid = overview.paid.starter + overview.paid.pro;
+  const ended = paid + overview.paused;
+  return ended === 0 ? null : Math.round((paid / ended) * 100);
+}
+
+export type AdminAuditRow = { id: string; at: Date; action: string; actor: string; storeId: string | null; storeName: string | null; meta: Record<string, string | number | boolean> };
+
+/**
+ * The audit log across the platform (D-116), newest first, 50 a page: optionally one action, or one
+ * store. Actors are shown as "admin: <name>", or "creator" / "system" (no user ids or emails).
+ */
+export async function adminListAudit(options: { action?: string; storeId?: string; before?: Date } = {}): Promise<{ rows: AdminAuditRow[]; nextBefore: string | null }> {
+  const { auditLogs, stores } = await collections();
+  const filter = {
+    ...(options.action ? { action: options.action as AuditLogDoc["action"] } : {}),
+    ...(options.storeId ? { storeId: options.storeId } : {}),
+    ...(options.before ? { at: { $lt: options.before } } : {}),
+  };
+  const docs = await auditLogs.find(filter).sort({ at: -1 }).limit(PAGE + 1).toArray();
+  const page = docs.slice(0, PAGE);
+  const ids = [...new Set(page.map((doc) => doc.storeId).filter((id): id is string => typeof id === "string"))];
+  const names = new Map((await stores.find({ _id: { $in: ids } }, { projection: { name: 1 } }).toArray()).map((store) => [store._id, store.name]));
+  return {
+    rows: page.map((doc) => ({
+      id: doc._id,
+      at: doc.at,
+      action: doc.action,
+      actor: doc.actorId.startsWith("admin:") ? `admin: ${doc.actorId.slice(6)}` : doc.actorId === "system" ? "system" : "creator",
+      storeId: doc.storeId,
+      storeName: doc.storeId ? (names.get(doc.storeId) ?? null) : null,
+      meta: doc.meta,
+    })),
+    nextBefore: docs.length > PAGE ? (page.at(-1)?.at.toISOString() ?? null) : null,
   };
 }

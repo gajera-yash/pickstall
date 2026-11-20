@@ -13,7 +13,7 @@ import { logger } from "@/lib/logger";
 import { providerByName } from "@/lib/payments";
 import { notifyOrderPaid, notifyRefund } from "@/lib/notifications/queries";
 import { scheduleOrderConfirmation } from "@/lib/orders/confirmation";
-import { syncSubscription } from "@/lib/plans/billing-sync";
+import { recordPlanInvoice, syncSubscription } from "@/lib/plans/billing-sync";
 import type { PaymentEvent, PaymentProvider, WebhookEndpoint } from "@/lib/payments/types";
 import { applyStripeAccountStatus, detachStripeAccount, stripeAccountOfStore } from "@/lib/stores/queries";
 
@@ -109,6 +109,8 @@ async function applyEvent(providerName: PaymentProvider["name"], event: PaymentE
     case "billing.subscription":
       // Fetches the subscription from Stripe and saves it: replays and out-of-order events end the same.
       await syncSubscription(event.subscriptionId);
+      // A paid plan invoice (D-116): saved once by its id, fetched from Stripe, never from the body.
+      if (event.invoiceId) await recordPlanInvoice(event.invoiceId);
       return;
 
     case "account.updated":

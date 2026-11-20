@@ -140,8 +140,9 @@ describe("platform billing events (D-073)", () => {
 
   it("finds the subscription of a paid or failed invoice", () => {
     const invoice = { id: "in_1", object: "invoice", parent: { type: "subscription_details", subscription_details: { subscription: "sub_2" } } };
-    expect(platform("invoice.paid", invoice)).toMatchObject({ type: "billing.subscription", subscriptionId: "sub_2" });
-    expect(platform("invoice.payment_failed", invoice)).toMatchObject({ type: "billing.subscription", subscriptionId: "sub_2" });
+    // A paid invoice is also saved for the admin's revenue (D-116); a failed one is not.
+    expect(platform("invoice.paid", invoice)).toMatchObject({ type: "billing.subscription", subscriptionId: "sub_2", invoiceId: "in_1" });
+    expect(platform("invoice.payment_failed", invoice)).not.toHaveProperty("invoiceId");
   });
 
   it("treats a finished subscription Checkout as billing, and a payment Checkout still as an order", () => {
