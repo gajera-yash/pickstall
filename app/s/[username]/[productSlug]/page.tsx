@@ -8,6 +8,7 @@ import { publicEnv } from "@/lib/env";
 import { absoluteImageUrl } from "@/lib/media/media";
 import { canBuy, loadCheckoutContext } from "@/lib/orders/queries";
 import { StorePixels } from "@/components/store/store-pixels";
+import { VisitSource } from "@/components/store/visit-source";
 import { pixelValue } from "@/lib/pixels/rules";
 import { priceDecimals } from "@/lib/products/money";
 import { payableCents } from "@/lib/products/pricing";
@@ -50,6 +51,7 @@ export default async function PublicProductPage({ params }: PageProps<"/s/[usern
   return (
     <>
       <ProductPage store={store} product={product} buyable={context ? canBuy(context) : false} curriculum={curriculum} reviews={reviews} />
+      <VisitSource />
       {store.pixels && (
         <StorePixels
           storeId={store.id}

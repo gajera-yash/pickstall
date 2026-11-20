@@ -1,12 +1,13 @@
 "use client";
 
+import { CertificateSection } from "@/components/dashboard/certificate-section";
 import { ArrowLeft, ArrowRight, BookOpen, CalendarClock, Check, CheckCircle2, Circle, Clock, CreditCard, Eye, FileText, ImageIcon, Infinity as InfinityIcon, ListTree, Plus, Rocket, Tag, Trash2, Undo2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
 import { BumpSection, type BumpCandidate, type BumpSettings } from "@/components/dashboard/bump-section";
-import { UpsellSection, type UpsellSettings } from "@/components/dashboard/upsell-section";
+import { AfterPurchaseOffers, type AfterPurchaseSettings } from "@/components/dashboard/upsell-section";
 import { ConfirmationEmailFields } from "@/components/dashboard/confirmation-email-fields";
 import { CurriculumBuilder } from "@/components/dashboard/curriculum-builder";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
@@ -64,6 +65,8 @@ export type EditorCourse = {
   accessDays: string;
   /** Drip (D-056): modules open N days after purchase instead of all at once. */
   drip: boolean;
+  /** Certificates for students who finish (D-111). */
+  certificate: boolean;
   /** Confirmation email (D-078); empty means the default email. */
   emailSubject: string;
   emailBody: string;
@@ -92,7 +95,7 @@ type Props = {
   /** Order bump settings and the products that can be offered (D-089). */
   bump: { initial: BumpSettings; candidates: BumpCandidate[] };
   /** Upsell after purchase (D-099); `locked` on plans without upsells. */
-  upsell?: { initial: UpsellSettings; locked: boolean };
+  upsell?: AfterPurchaseSettings;
 };
 
 /**
@@ -451,8 +454,9 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
             <>
               <StepHeading title="Publish" body="How the course opens for students, a look at the student view, then publish." />
               <BumpSection productId={values.id} currency={currency} initial={bump.initial} candidates={bump.candidates} />
-              {upsell && <UpsellSection productId={values.id} currency={currency} initial={upsell.initial} candidates={bump.candidates} locked={upsell.locked} />}
+              {upsell && <AfterPurchaseOffers productId={values.id} currency={currency} settings={upsell} candidates={bump.candidates} />}
               <ReleaseSection courseId={values.id} drip={values.drip} modules={curriculum.modules} onSaved={(drip, modules) => (set("drip", drip), setCurriculum({ modules }))} />
+              <CertificateSection courseId={values.id} initial={values.certificate} />
               <ConfirmationEmailFields
                 subject={values.emailSubject}
                 body={values.emailBody}

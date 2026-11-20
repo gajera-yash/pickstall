@@ -13,7 +13,7 @@ import { StorePixels } from "@/components/store/store-pixels";
 import { pixelValue } from "@/lib/pixels/rules";
 import { formatMoney, priceDecimals } from "@/lib/products/money";
 import { findUpsellOffer } from "@/lib/upsells/queries";
-import { UpsellOffer } from "@/components/store/upsell-offer";
+import { PostPurchaseOffers } from "@/components/store/upsell-offer";
 import { findOrderForThankYou, loadCheckoutContext } from "@/lib/orders/queries";
 
 export const instant = false;
@@ -53,6 +53,14 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
   const Icon = paid ? CheckCircle2 : pending ? Clock : XCircle;
   // Upsell after purchase (D-099): only for a paid order that still qualifies.
   const offer = paid ? await findUpsellOffer(store._id, orderId).catch(() => null) : null;
+  // Downsell (D-115): shown instead when the buyer declines the upsell.
+  const downsell = paid ? await findUpsellOffer(store._id, orderId, new Date(), "downsell").catch(() => null) : null;
+  const view = (item: NonNullable<typeof offer>) => ({
+    title: item.title,
+    headline: item.headline,
+    price: item.priceCents === 0 ? "Free" : formatMoney(item.priceCents, store.currency),
+    regular: item.regularCents > item.priceCents ? formatMoney(item.regularCents, store.currency) : null,
+  });
 
   return (
     <StoreFrame theme={theme}>
@@ -91,15 +99,13 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
           </div>
         </div>
 
-        {offer && (
-          <UpsellOffer
+        {(offer || downsell) && (
+          <PostPurchaseOffers
             username={store.slug}
             productSlug={product.slug}
             orderId={orderId}
-            title={offer.title}
-            headline={offer.headline}
-            price={offer.priceCents === 0 ? "Free" : formatMoney(offer.priceCents, store.currency)}
-            regular={offer.regularCents > offer.priceCents ? formatMoney(offer.regularCents, store.currency) : null}
+            upsell={offer ? view(offer) : null}
+            downsell={downsell ? view(downsell) : null}
             accent={theme.accent}
             onAccent={theme.onAccent}
             muted={preset.muted}

@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition, type MouseEvent } from "react";
 
 import { BumpSection, type BumpCandidate, type BumpSettings } from "@/components/dashboard/bump-section";
-import { UpsellSection, type UpsellSettings } from "@/components/dashboard/upsell-section";
+import { LicenseSection } from "@/components/dashboard/license-section";
+import { AfterPurchaseOffers, type AfterPurchaseSettings } from "@/components/dashboard/upsell-section";
 import { ConfirmationEmailFields } from "@/components/dashboard/confirmation-email-fields";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
@@ -100,11 +101,13 @@ type Props = {
   /** Order bump settings and the products that can be offered (D-089). */
   bump: { initial: BumpSettings; candidates: BumpCandidate[] };
   /** Upsell after purchase (D-099); `locked` on plans without upsells. */
-  upsell?: { initial: UpsellSettings; locked: boolean };
+  upsell?: AfterPurchaseSettings;
   /** True while first-run setup still locks the dashboard (D-079): after publishing, go back to setup. */
   setupLocked?: boolean;
   /** A lead magnet (D-094): always free, no price fields and no order bump. */
   leadMagnet?: boolean;
+  /** License keys on for this product (D-114). */
+  licenseEnabled?: boolean;
 };
 
 /**
@@ -113,7 +116,7 @@ type Props = {
  * and then publishes, so nothing typed is lost. The whole form is one JSON payload; the server
  * cleans and validates every field again and checks the publish rules on the saved product.
  */
-export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew, fileUploadReady, bump, upsell, leadMagnet = false, setupLocked = false }: Props) {
+export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew, fileUploadReady, bump, upsell, leadMagnet = false, setupLocked = false, licenseEnabled = false }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSetup = searchParams.get("from") === "setup";
@@ -487,7 +490,8 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
                 listError={fieldError("questions")}
               />
               {!leadMagnet && <BumpSection productId={values.id} currency={currency} initial={bump.initial} candidates={bump.candidates} />}
-              {!leadMagnet && upsell && <UpsellSection productId={values.id} currency={currency} initial={upsell.initial} candidates={bump.candidates} locked={upsell.locked} />}
+              {!leadMagnet && upsell && <AfterPurchaseOffers productId={values.id} currency={currency} settings={upsell} candidates={bump.candidates} />}
+              {!leadMagnet && <LicenseSection productId={values.id} initial={licenseEnabled} />}
             </>
           )}
 

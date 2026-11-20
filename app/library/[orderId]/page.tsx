@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, ImageIcon, PlayCircle } from "lucide-react";
+import { ArrowLeft, ExternalLink, ImageIcon, KeyRound, PlayCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -11,6 +11,8 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/lib/auth/guards";
 import { findPurchase } from "@/lib/library/queries";
+import { licenseOfOrder, type OrderLicense } from "@/lib/licenses/queries";
+import { CopyButton } from "@/components/dashboard/details-sheet";
 import { findOwnReview } from "@/lib/reviews/queries";
 import { ReviewForm } from "@/components/library/review-form";
 import { isUuid, safeImageSrc } from "@/lib/media/media";
@@ -50,6 +52,8 @@ async function PurchaseContent({ params, searchParams }: Pick<PageProps<"/librar
   if (!purchase) notFound();
   // The buyer's own review of this product (D-106), shown again so it can be changed.
   const review = purchase.status === "paid" ? await findOwnReview(user.email, orderId).catch(() => null) : null;
+  // The order's license key (D-114); the purchase above is already this email's own.
+  const license = await licenseOfOrder(orderId).catch(() => null);
 
   const problem = typeof query.problem === "string" ? PROBLEMS[query.problem] : undefined;
   const cover = safeImageSrc(purchase.coverUrl);
@@ -110,7 +114,28 @@ async function PurchaseContent({ params, searchParams }: Pick<PageProps<"/librar
           {used && <p className="text-sm text-mute">{used}</p>}
         </form>
       )}
+      {license && <LicenseCard license={license} />}
       {!refunded && <ReviewForm orderId={purchase.orderId} initial={review} />}
     </Card>
+  );
+}
+
+/** The buyer's license key (D-114), or why it no longer works. */
+function LicenseCard({ license }: { license: OrderLicense }) {
+  return (
+    <section aria-labelledby="license-heading" className="flex flex-col gap-2 rounded-md border border-line p-4">
+      <h3 id="license-heading" className="flex items-center gap-2 font-semibold">
+        <KeyRound aria-hidden="true" className="size-4 text-blue" />
+        Your license key
+      </h3>
+      {license.status === "active" ? (
+        <div className="flex items-center gap-2">
+          <code className="min-w-0 flex-1 rounded-md bg-bg-subtle px-3 py-2 font-mono text-sm break-all">{license.key}</code>
+          <CopyButton value={license.key} label="Copy key" />
+        </div>
+      ) : (
+        <p className="text-sm text-mute">{license.status === "refunded" ? "This purchase was refunded, so the key no longer works." : "The creator has turned this key off. Contact them if you think this is a mistake."}</p>
+      )}
+    </section>
   );
 }

@@ -18,6 +18,8 @@ export type OrderEmailInput = {
   subject: string | null;
   body: string | null;
   call?: CallDetails | null;
+  /** The order's license key (D-114), always added whatever the creator wrote. */
+  licenseKey?: string | null;
 };
 
 /** The booking lines of the email, plain text. */
@@ -73,12 +75,16 @@ export function renderOrderEmail(input: OrderEmailInput): RenderedEmail {
   const footer = `Sent for ${storeName} through Pickstall. If you didn't buy this, you can ignore this email.`;
 
   const call = input.call ? callText(input.call, storeName) : "";
-  const text = [intro, call, alreadyHasLink ? "" : action, footer].filter(Boolean).join("\n\n");
+  const license = input.licenseKey ? `Your license key:\n${input.licenseKey}\n\nYou can also find it in your library.` : "";
+  const text = [intro, call, license, alreadyHasLink ? "" : action, footer].filter(Boolean).join("\n\n");
 
   const htmlIntro = escapeHtml(intro).replace(/\n/g, "<br>");
   const callHtml = call ? `<div style="margin:20px 0 0;padding:14px 16px;border:1px solid #e5e7eb;border-radius:12px;line-height:1.55">${linkify(escapeHtml(call)).replace(/\n/g, "<br>")}</div>` : "";
+  const licenseHtml = input.licenseKey
+    ? `<div style="margin:20px 0 0;padding:14px 16px;border:1px solid #e5e7eb;border-radius:12px;line-height:1.55">Your license key:<br><span style="font-family:Consolas,Menlo,monospace;font-size:16px;font-weight:700;letter-spacing:1px">${escapeHtml(input.licenseKey)}</span><br><span style="color:#555a82;font-size:13px">You can also find it in your library.</span></div>`
+    : "";
   const button = `<p style="margin:24px 0"><a href="${escapeHtml(vars.accessLink)}" style="background:#0056ff;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">Create your password and open your purchase</a></p>`;
-  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#f7f9fc;font-family:Arial,Helvetica,sans-serif;color:#0b0d2a"><div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px"><p style="margin:0 0 4px;font-weight:700">${escapeHtml(storeName)}</p><div style="line-height:1.55">${htmlIntro}</div>${callHtml}${button}<p style="color:#555a82;font-size:13px;line-height:1.5">${escapeHtml(footer)}</p></div></body></html>`;
+  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#f7f9fc;font-family:Arial,Helvetica,sans-serif;color:#0b0d2a"><div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px"><p style="margin:0 0 4px;font-weight:700">${escapeHtml(storeName)}</p><div style="line-height:1.55">${htmlIntro}</div>${callHtml}${licenseHtml}${button}<p style="color:#555a82;font-size:13px;line-height:1.5">${escapeHtml(footer)}</p></div></body></html>`;
 
   return { subject, text, html };
 }

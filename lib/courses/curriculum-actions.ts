@@ -18,6 +18,7 @@ import {
   type CurriculumWrite,
 } from "@/lib/courses/curriculum";
 import type { Curriculum } from "@/lib/courses/curriculum-types";
+import { quizInput } from "@/lib/courses/quiz";
 import { COURSE_LIMITS } from "@/lib/courses/settings";
 import { refreshPendingVideos } from "@/lib/courses/video-status";
 import { parseVideoLink } from "@/lib/courses/video-links";
@@ -138,6 +139,8 @@ const lessonInput = z.object({
   links: z.array(linkInput).max(COURSE_LIMITS.linksMax, { error: `Add up to ${COURSE_LIMITS.linksMax} links.` }),
   /** A YouTube or Vimeo link, "" to remove the video, or "keep" for an uploaded (or unchanged) video. */
   videoLink: z.string().max(500),
+  /** The lesson quiz (D-110): null removes it; left out keeps it as it is. */
+  quiz: quizInput.optional(),
 });
 
 /** Saves a lesson's title, video link, notes and links. Payload: one JSON string. */
@@ -170,6 +173,7 @@ export async function saveCourseLesson(courseId: string, lessonId: string, paylo
       bodyDoc: parsed.data.bodyDoc && !isEmptyDoc(parsed.data.bodyDoc) ? parsed.data.bodyDoc : null,
       links: parsed.data.links.map((link) => ({ label: link.label ?? new URL(link.url as string).hostname, url: link.url as string })),
       video,
+      quiz: parsed.data.quiz,
     });
     if (saved === "not_found") return err(NOT_FOUND);
     await dropBunnyVideos([saved.replacedBunnyVideoId]);

@@ -21,7 +21,7 @@ vi.mock("@/lib/courses/curriculum", () => curriculum);
 vi.mock("@/lib/courses/cleanup", () => ({ removeCourseContent: vi.fn() }));
 vi.mock("@/lib/files/product-files", () => ({ removeFilesOfProduct: vi.fn() }));
 
-import { saveCourseRelease } from "@/lib/courses/actions";
+import { saveCourseCertificate, saveCourseRelease } from "@/lib/courses/actions";
 import { isUnlocked, unlockDay, unlockLabel, unlocksAt } from "@/lib/courses/drip";
 import { buildOutline, playerLessonOf, playerVideoOf } from "@/lib/courses/player";
 import { updateCourseRelease } from "@/lib/courses/queries";
@@ -145,6 +145,16 @@ describe("saving how lessons open", () => {
     expect(await saveCourseRelease(COURSE, { drip: true, modules: [{ id: "x", dripDays: 1 }] })).toMatchObject({ ok: false });
     expect(db.products.updateOne).not.toHaveBeenCalled();
     expect(await saveCourseRelease(COURSE, { drip: false, modules: [] })).toMatchObject({ ok: true });
+  });
+
+  it("turns certificates on for the session's own course only (D-111)", async () => {
+    expect(await saveCourseCertificate(COURSE, true)).toEqual({ ok: true, data: { enabled: true } });
+    expect(db.products.updateOne.mock.calls[0]?.[0]).toEqual({ _id: COURSE, storeId: "store-1", type: "course", deletedAt: null });
+    expect(db.products.updateOne.mock.calls[0]?.[1]).toMatchObject({ $set: { "course.certificate": true } });
+    expect(await saveCourseCertificate(COURSE, "yes")).toMatchObject({ ok: false });
+    expect(await saveCourseCertificate("not-a-uuid", true)).toMatchObject({ ok: false });
+    db.products.updateOne.mockResolvedValue({ matchedCount: 0 });
+    expect(await saveCourseCertificate(COURSE, false)).toMatchObject({ ok: false });
   });
 
   it("publishes a course only when it has a lesson with content", async () => {

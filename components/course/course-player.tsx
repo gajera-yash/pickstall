@@ -26,6 +26,8 @@ export function CoursePlayer({
   fileHref,
   completed = [],
   completeAction,
+  quiz,
+  aside,
   banner,
 }: {
   title: string;
@@ -37,6 +39,10 @@ export function CoursePlayer({
   completed?: string[];
   /** The "Mark as complete" control for the current lesson (students only). */
   completeAction?: ReactNode;
+  /** The lesson's quiz: answerable for students, a summary in the creator's preview (D-110). */
+  quiz?: ReactNode;
+  /** Shown under the lesson list, for example the student's certificate (D-111). */
+  aside?: ReactNode;
   banner?: ReactNode;
 }) {
   const total = outline.lessonIds.length;
@@ -112,6 +118,7 @@ export function CoursePlayer({
               ))}
             </nav>
           </Card>
+          {aside}
         </aside>
 
         <div className="order-1 flex min-w-0 flex-col gap-5 lg:order-2">
@@ -173,6 +180,7 @@ export function CoursePlayer({
                   </ul>
                 </Card>
               )}
+              {quiz}
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
                 {previous ? (
                   <Button asChild variant="ghost">

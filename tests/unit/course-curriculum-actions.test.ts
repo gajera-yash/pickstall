@@ -55,6 +55,18 @@ describe("curriculum actions", () => {
     expect(curriculum.updateLesson).toHaveBeenCalledTimes(1);
   });
 
+  it("saves a cleaned quiz, removes it with null, keeps it when left out, and refuses a bad one (D-110)", async () => {
+    const quiz = { passPercent: 70, questions: [{ prompt: "<b>Q</b>", options: ["a", "b"], correct: 1 }] };
+    expect(await saveCourseLesson(COURSE, LESSON, lesson({ quiz }))).toMatchObject({ ok: true });
+    expect(curriculum.updateLesson).toHaveBeenLastCalledWith("store-1", COURSE, LESSON, expect.objectContaining({ quiz: { passPercent: 70, questions: [{ prompt: "Q", options: ["a", "b"], correct: 1 }] } }));
+    expect(await saveCourseLesson(COURSE, LESSON, lesson({ quiz: null }))).toMatchObject({ ok: true });
+    expect(curriculum.updateLesson).toHaveBeenLastCalledWith("store-1", COURSE, LESSON, expect.objectContaining({ quiz: null }));
+    expect(await saveCourseLesson(COURSE, LESSON, lesson())).toMatchObject({ ok: true });
+    expect(curriculum.updateLesson).toHaveBeenLastCalledWith("store-1", COURSE, LESSON, expect.objectContaining({ quiz: undefined }));
+    expect(await saveCourseLesson(COURSE, LESSON, lesson({ quiz: { ...quiz, passPercent: 20 } }))).toMatchObject({ ok: false, field: "quiz" });
+    expect(curriculum.updateLesson).toHaveBeenCalledTimes(3);
+  });
+
   it("removes the video with an empty link, and deletes the Bunny video it replaced", async () => {
     bunny.bunnyConfig.mockReturnValue({ libraryId: "759", apiKey: "k", tokenKey: "t", readOnlyKey: "r" });
     curriculum.updateLesson.mockResolvedValue({ replacedBunnyVideoId: VIDEO });

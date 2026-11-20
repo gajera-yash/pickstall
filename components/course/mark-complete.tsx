@@ -9,7 +9,7 @@ import { FieldError } from "@/components/ui/field";
 import { markLessonComplete } from "@/lib/courses/student-actions";
 
 /** The student's "Mark as complete" toggle for the lesson they are on (D-057). */
-export function MarkComplete({ orderId, lessonId, done: initialDone }: { orderId: string; lessonId: string; done: boolean }) {
+export function MarkComplete({ orderId, lessonId, done: initialDone, needsQuiz = false }: { orderId: string; lessonId: string; done: boolean; needsQuiz?: boolean }) {
   const router = useRouter();
   const [done, setDone] = useState(initialDone);
   const [problem, setProblem] = useState<string | null>(null);
@@ -30,6 +30,11 @@ export function MarkComplete({ orderId, lessonId, done: initialDone }: { orderId
       router.refresh();
     });
   };
+
+  // A lesson with a quiz completes when the quiz is passed (D-110).
+  if (needsQuiz && !done) {
+    return <p className="shrink-0 text-sm text-mute">Pass the quiz below to complete this lesson.</p>;
+  }
 
   return (
     <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end">

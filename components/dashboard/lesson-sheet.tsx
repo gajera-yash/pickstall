@@ -4,6 +4,7 @@ import { FileUp, Link2, Paperclip, Plus, Trash2, Upload, Video, VideoOff } from 
 import { useRef, useState } from "react";
 
 import { Field } from "@/components/dashboard/editor-fields";
+import { QuizField } from "@/components/dashboard/quiz-field";
 import { RichTextEditor } from "@/components/dashboard/rich-text-editor";
 import { uploadFile } from "@/components/dashboard/upload-file";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -40,7 +41,7 @@ export function videoBadge(video: EditorLessonVideo | null): { label: string; va
 
 /**
  * Edits one lesson in a side sheet (D-055): title, video (upload to Bunny, or a YouTube / Vimeo
- * link), written notes, files and links. "Save lesson" sends everything but the upload and the
+ * link), written notes, files, links and an optional quiz (D-110). "Save lesson" sends everything but the upload and the
  * files, which go up on their own as soon as they are picked.
  */
 export function LessonSheet({
@@ -72,6 +73,7 @@ export function LessonSheet({
   const [videoLink, setVideoLink] = useState(lesson.video && lesson.video.kind !== "bunny" ? watchUrlFor(lesson.video) : "");
   const [bodyDoc, setBodyDoc] = useState(lesson.bodyDoc ?? docFromPlainText(""));
   const [links, setLinks] = useState(lesson.links);
+  const [quiz, setQuiz] = useState(lesson.quiz);
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<{ field?: string; text: string } | null>(null);
   const upload = videoUpload?.error === null ? { percent: videoUpload.percent } : null;
@@ -85,7 +87,7 @@ export function LessonSheet({
     setProblem(null);
     // "keep" leaves an uploaded video as it is; "" removes the video; otherwise a YouTube/Vimeo link.
     const link = mode === "link" ? videoLink.trim() : mode === "none" ? "" : "keep";
-    const result = await saveCourseLesson(courseId, lesson.id, JSON.stringify({ title, bodyDoc, links, videoLink: link }));
+    const result = await saveCourseLesson(courseId, lesson.id, JSON.stringify({ title, bodyDoc, links, videoLink: link, quiz }));
     setSaving(false);
     if (!result.ok) {
       setProblem({ field: result.field, text: result.error });
@@ -182,6 +184,8 @@ export function LessonSheet({
           <AttachmentsField courseId={courseId} lessonId={lesson.id} files={lesson.attachments} onChange={onChange} onReload={onReload} uploadReady={fileUploadReady} />
 
           <LinksField links={links} onChange={setLinks} error={fieldError("links")} />
+
+          <QuizField quiz={quiz} onChange={setQuiz} error={fieldError("quiz")} />
         </SheetBody>
         <div className="flex justify-end gap-2 border-t border-line px-5 py-4 sm:px-6">
           <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>

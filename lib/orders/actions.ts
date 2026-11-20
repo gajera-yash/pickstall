@@ -13,7 +13,10 @@ import { couponDiscountCents, couponProblem, totalProblem } from "@/lib/coupons/
 import { bookingInput } from "@/lib/coaching/schemas";
 import { findSlot } from "@/lib/coaching/slots";
 import { PAUSED_MESSAGES } from "@/lib/plans/access";
-import { CHECKOUT_RATE_LIMIT } from "@/lib/config";
+import { affiliateForCheckout } from "@/lib/affiliates/queries";
+import { AFFILIATE_FIELD } from "@/lib/affiliates/rules";
+import { ATTRIBUTION_FIELDS, attributionFrom } from "@/lib/analytics/attribution";
+import { CHECKOUT_RATE_LIMIT, ROOT_DOMAIN } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { validateAnswers } from "@/lib/orders/answers";
 import { orderAmounts } from "@/lib/orders/pricing";
@@ -121,6 +124,18 @@ export async function startCheckout(username: string, productSlug: string, _prev
     }
 
     const free = amount.totalCents === 0;
+    // Where the buyer came from (D-112): labels only, cleaned; a visit from our own pages is direct.
+    const attribution = attributionFrom(
+      {
+        source: formData.get(ATTRIBUTION_FIELDS.source),
+        medium: formData.get(ATTRIBUTION_FIELDS.medium),
+        campaign: formData.get(ATTRIBUTION_FIELDS.campaign),
+        referrer: formData.get(ATTRIBUTION_FIELDS.referrer),
+      },
+      ROOT_DOMAIN,
+    );
+    // An affiliate's code from the visit (D-113): only an active affiliate of this store counts.
+    const affiliate = await affiliateForCheckout(context.store._id, formData.get(AFFILIATE_FIELD));
     // Consent to the store's emails (D-094): signing up for a lead magnet, or the unticked-by-default
     // "Email me updates" box. The words come from the server, matching what the form showed.
     const marketingConsent = consentForCheckout(context.store.name, context.product, formData.get("marketingConsent") === "on");
@@ -143,6 +158,8 @@ export async function startCheckout(username: string, productSlug: string, _prev
       provider: free ? "free" : provider!.name,
       ...(booking ? { booking } : {}),
       ...(marketingConsent ? { marketingConsent } : {}),
+      ...(attribution ? { attribution } : {}),
+      ...(affiliate ? { affiliate } : {}),
       ...(coupon ? { coupon: { couponId: coupon._id, code: coupon.code, discountCents: amount.discountCents - orderAmounts(context.product).discountCents } } : {}),
       ...(bump ? { bump: { productId: bump.productId, title: bump.title, priceCents: bump.priceCents } } : {}),
     });

@@ -128,6 +128,7 @@ export const RESERVED_SLUGS: readonly string[] = [
   "checkout",
   "dashboard",
   "help",
+  "certificates",
   "library",
   "login",
   "mail",

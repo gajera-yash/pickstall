@@ -159,6 +159,8 @@ export type CourseSettingsDoc = {
   accessDays: number | null;
   /** Drip (D-056): modules open on their own day after purchase. Missing or false: all open at once. */
   drip?: boolean;
+  /** Certificates (D-111): students who finish every lesson can get one. Missing or false: off. */
+  certificate?: boolean;
 };
 
 /** One weekly time range when a coach takes calls (D-081). Times are "HH:MM" in the product's time zone. */
@@ -209,6 +211,13 @@ export type ProductDoc = {
    * price, bought with a fresh checkout. Only digital products and courses. Missing or null: none.
    */
   upsell?: { productId: string; priceCents: number; headline: string | null } | null;
+  /**
+   * Downsell (D-115): offered on the thank-you page instead when the buyer says "No thanks" to the
+   * upsell. Same rules and shape as the upsell. Missing or null: none.
+   */
+  downsell?: { productId: string; priceCents: number; headline: string | null } | null;
+  /** License keys (D-114): each paid order of this digital product gets a unique key. Missing: off. */
+  license?: { enabled: boolean } | null;
   title: string;
   /** Unique per store (index `products_store_slug_unique`). */
   slug: string;
@@ -303,6 +312,18 @@ export type OrderDoc = {
   bumpOf?: string | null;
   /** Set on an order bought from the upsell offer of the paid order with this id (D-099). */
   upsellOf?: string | null;
+  /** Which after-purchase offer it was bought from (D-115). Missing on an `upsellOf` order: the upsell. */
+  offer?: "upsell" | "downsell" | null;
+  /**
+   * Where the buyer came from (D-112): UTM tags of the link and the referring site's host, cleaned.
+   * An upsell order copies its parent's. Missing or null: a direct visit (or an order from before).
+   */
+  attribution?: { source: string; medium: string | null; campaign: string | null; referrer: string | null } | null;
+  /**
+   * The affiliate whose link the buyer used (D-113), with the commission rate frozen at checkout.
+   * An upsell order copies its parent's. Missing or null: no affiliate.
+   */
+  affiliate?: { affiliateId: string; code: string; commissionPercent: number } | null;
   createdAt: Date;
   paidAt: Date | null;
 };
@@ -502,7 +523,89 @@ export type LessonDoc = {
   /** Written notes, as allow-listed rich text (D-049). */
   bodyDoc: RichDoc | null;
   links: LessonLinkDoc[];
+  /** An optional single-choice quiz (D-110). Missing on lessons made before quizzes existed. */
+  quiz?: LessonQuizDoc | null;
   createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
+ * A license key (D-114), issued once per paid order of a product with license keys on, only from the
+ * payment path. A key counts as valid while the order is paid and the creator has not revoked it.
+ */
+export type LicenseKeyDoc = {
+  _id: string;
+  storeId: string;
+  productId: string;
+  orderId: string;
+  key: string;
+  revokedAt: Date | null;
+  createdAt: Date;
+};
+
+/**
+ * A store's affiliate (D-113): someone who shares the store with their own `?ref=` code and earns a
+ * commission the creator pays them outside the platform. `codeKey` is unique per store.
+ */
+export type AffiliateDoc = {
+  _id: string;
+  storeId: string;
+  name: string;
+  /** For the creator's own records; never shown to buyers. */
+  email: string | null;
+  code: string;
+  codeKey: string;
+  commissionPercent: number;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/** A payment the creator says they made to an affiliate outside the platform (D-113). No money moves here. */
+export type AffiliatePayoutDoc = {
+  _id: string;
+  storeId: string;
+  affiliateId: string;
+  amountCents: number;
+  currency: string;
+  note: string | null;
+  createdAt: Date;
+};
+
+/**
+ * A course certificate (D-111): one per order, issued when the student has finished every lesson.
+ * The name, course title and store name are copied in when it is issued, so later edits do not
+ * change a certificate. A refund of the order shows it as revoked.
+ */
+export type CertificateDoc = {
+  _id: string;
+  orderId: string;
+  storeId: string;
+  productId: string;
+  studentName: string;
+  courseTitle: string;
+  storeName: string;
+  issuedAt: Date;
+};
+
+/** A lesson quiz (D-110): cleaned text, one right option per question (creator-only data). */
+export type LessonQuizDoc = { passPercent: number; questions: { prompt: string; options: string[]; correct: number }[] };
+
+/**
+ * A student's quiz results for one lesson (D-110). `_id` is "orderId:lessonId", so it is one
+ * document however many times they try. Only scores are kept, never the answers.
+ */
+export type QuizAttemptDoc = {
+  _id: string;
+  orderId: string;
+  storeId: string;
+  productId: string;
+  lessonId: string;
+  attempts: number;
+  lastPercent: number;
+  bestPercent: number;
+  /** When they first passed; null until then. */
+  passedAt: Date | null;
   updatedAt: Date;
 };
 
@@ -662,6 +765,11 @@ export async function collections(): Promise<{
   courseModules: Collection<CourseModuleDoc>;
   lessons: Collection<LessonDoc>;
   lessonProgress: Collection<LessonProgressDoc>;
+  quizAttempts: Collection<QuizAttemptDoc>;
+  certificates: Collection<CertificateDoc>;
+  affiliates: Collection<AffiliateDoc>;
+  affiliatePayouts: Collection<AffiliatePayoutDoc>;
+  licenseKeys: Collection<LicenseKeyDoc>;
   notifications: Collection<NotificationDoc>;
   bookings: Collection<BookingDoc>;
   coupons: Collection<CouponDoc>;
@@ -691,6 +799,11 @@ export async function collections(): Promise<{
     courseModules: db.collection<CourseModuleDoc>("courseModules"),
     lessons: db.collection<LessonDoc>("lessons"),
     lessonProgress: db.collection<LessonProgressDoc>("lessonProgress"),
+    quizAttempts: db.collection<QuizAttemptDoc>("quizAttempts"),
+    certificates: db.collection<CertificateDoc>("certificates"),
+    affiliates: db.collection<AffiliateDoc>("affiliates"),
+    affiliatePayouts: db.collection<AffiliatePayoutDoc>("affiliatePayouts"),
+    licenseKeys: db.collection<LicenseKeyDoc>("licenseKeys"),
     notifications: db.collection<NotificationDoc>("notifications"),
     bookings: db.collection<BookingDoc>("bookings"),
     coupons: db.collection<CouponDoc>("coupons"),

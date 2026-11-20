@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 
 import { BumpSection, type BumpCandidate, type BumpSettings } from "@/components/dashboard/bump-section";
-import { UpsellSection, type UpsellSettings } from "@/components/dashboard/upsell-section";
+import { AfterPurchaseOffers, type AfterPurchaseSettings } from "@/components/dashboard/upsell-section";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { RichTextEditor } from "@/components/dashboard/rich-text-editor";
@@ -116,7 +116,7 @@ type Props = {
   /** Order bump settings and the products that can be offered (D-089). */
   bump: { initial: BumpSettings; candidates: BumpCandidate[] };
   /** Upsell after purchase (D-099); `locked` on plans without upsells. */
-  upsell?: { initial: UpsellSettings; locked: boolean };
+  upsell?: AfterPurchaseSettings;
 };
 
 /**
@@ -509,7 +509,7 @@ export function CoachingEditor({ initial, currency, paymentsOk, isNew, bump, ups
               )}
 
               <BumpSection productId={values.id} currency={currency} initial={bump.initial} candidates={bump.candidates} />
-              {upsell && <UpsellSection productId={values.id} currency={currency} initial={upsell.initial} candidates={bump.candidates} locked={upsell.locked} />}
+              {upsell && <AfterPurchaseOffers productId={values.id} currency={currency} settings={upsell} candidates={bump.candidates} />}
 
               <section aria-labelledby="ready-title" className="flex flex-col gap-3 rounded-lg border border-line p-4">
                 <h3 id="ready-title" className="font-display text-h4">

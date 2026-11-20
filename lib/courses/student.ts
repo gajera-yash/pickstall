@@ -54,3 +54,31 @@ export async function setLessonComplete(access: Extract<CourseAccess, { ok: true
     await lessonProgress.deleteOne({ _id, orderId: access.orderId });
   }
 }
+
+export type QuizStatus = { attempts: number; lastPercent: number; bestPercent: number; passed: boolean };
+
+/** This order's quiz results for one lesson, or null before the first try (D-110). */
+export async function quizStatus(orderId: string, lessonId: string): Promise<QuizStatus | null> {
+  const { quizAttempts } = await collections();
+  const doc = await quizAttempts.findOne({ _id: `${orderId}:${lessonId}`, orderId });
+  return doc ? { attempts: doc.attempts, lastPercent: doc.lastPercent, bestPercent: doc.bestPercent, passed: doc.passedAt !== null } : null;
+}
+
+/** Saves one graded try for an order the caller has checked with `courseAccess`. Keeps the best score and the first pass. */
+export async function recordQuizAttempt(access: Extract<CourseAccess, { ok: true }>, lessonId: string, percent: number, passed: boolean, now: Date = new Date()): Promise<QuizStatus> {
+  const { quizAttempts } = await collections();
+  const _id = `${access.orderId}:${lessonId}`;
+  await quizAttempts.updateOne(
+    { _id, orderId: access.orderId },
+    {
+      $setOnInsert: { storeId: access.storeId, productId: access.courseId, lessonId, passedAt: null },
+      $inc: { attempts: 1 },
+      $set: { lastPercent: percent, updatedAt: now },
+      $max: { bestPercent: percent },
+    },
+    { upsert: true },
+  );
+  // The first pass is kept once; failing later never takes it away.
+  if (passed) await quizAttempts.updateOne({ _id, orderId: access.orderId, passedAt: null }, { $set: { passedAt: now } });
+  return (await quizStatus(access.orderId, lessonId)) ?? { attempts: 1, lastPercent: percent, bestPercent: percent, passed };
+}

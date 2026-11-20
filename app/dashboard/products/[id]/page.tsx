@@ -59,6 +59,13 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
       price: product.upsell ? centsToInput(product.upsell.priceCents, store.currency) : "",
       headline: product.upsell?.headline ?? "",
     },
+    // Downsell (D-115): offered when the buyer declines the upsell.
+    downsell: {
+      enabled: Boolean(product.downsell),
+      productId: product.downsell?.productId ?? "",
+      price: product.downsell ? centsToInput(product.downsell.priceCents, store.currency) : "",
+      headline: product.downsell?.headline ?? "",
+    },
     locked: !can(store.access, "upsells"),
   };
 
@@ -102,6 +109,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
       access: product.course?.accessDays ? "days" : "lifetime",
       accessDays: product.course?.accessDays ? String(product.course.accessDays) : "",
       drip: product.course?.drip ?? false,
+      certificate: product.course?.certificate ?? false,
       // Courses saved before D-078 may have no afterPurchase yet.
       emailSubject: product.afterPurchase?.emailSubject ?? "",
       emailBody: product.afterPurchase?.emailBody ?? "",
@@ -138,7 +146,7 @@ async function EditorContent({ params }: Pick<PageProps<"/dashboard/products/[id
 
   // While setup still locks the dashboard (D-079), publishing goes back to setup, not the locked products list.
   const { unlocked } = await loadSetupGate(store);
-  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} fileUploadReady={fileUploadReady} bump={bump} upsell={upsell} leadMagnet={product.type === "lead_magnet"} setupLocked={!unlocked} />;
+  return <ProductEditor initial={initial} currency={store.currency} storeLink={storeLink(store.slug)} paymentsOk={paymentsReady(store)} isNew={isNew} fileUploadReady={fileUploadReady} bump={bump} upsell={upsell} leadMagnet={product.type === "lead_magnet"} setupLocked={!unlocked} licenseEnabled={product.license?.enabled ?? false} />;
 }
 
 function EditorSkeleton() {

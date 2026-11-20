@@ -8,7 +8,7 @@ import { requireCreator } from "@/lib/auth/guards";
 import { CHECKOUT_RATE_LIMIT, PRODUCT_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { isUuid } from "@/lib/media/media";
-import { attachProviderSession, createPendingOrder, loadCheckoutContext, markOrderFailed } from "@/lib/orders/queries";
+import { attachProviderSession, createPendingOrder, loadCheckoutContext, markOrderFailed, originOfOrder } from "@/lib/orders/queries";
 import { providerForStore } from "@/lib/payments";
 import { markFreeOrderPaid } from "@/lib/payments/process";
 import { productIdInput } from "@/lib/products/schemas";
@@ -16,12 +16,12 @@ import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { getClientIpHash } from "@/lib/request-ip";
 import { err, ok, type Result } from "@/lib/result";
 import { findUpsellOffer, saveProductUpsell } from "@/lib/upsells/queries";
-import { upsellInputFor } from "@/lib/upsells/rules";
+import { OFFER_KINDS, upsellInputFor, type OfferKind } from "@/lib/upsells/rules";
 
-/** Saves the upsell of one product of the session owner's store (D-099). */
-export async function saveUpsellAction(productId: string, input: unknown): Promise<Result<{ enabled: boolean }>> {
+/** Saves the upsell (D-099) or the downsell (D-115) of one product of the session owner's store. */
+export async function saveUpsellAction(productId: string, input: unknown, kind: unknown = "upsell"): Promise<Result<{ enabled: boolean }>> {
   const { user, store } = await requireCreator(`/dashboard/products/${productId}`);
-  if (!productIdInput.safeParse(productId).success) return err("We couldn't find that product.");
+  if (!productIdInput.safeParse(productId).success || !OFFER_KINDS.includes(kind as OfferKind)) return err("We couldn't find that product.");
   const parsed = upsellInputFor(store.currency).safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -31,7 +31,7 @@ export async function saveUpsellAction(productId: string, input: unknown): Promi
   const { max, windowMinutes } = PRODUCT_RATE_LIMIT;
   if (!(await takeRateLimit(rateLimitKey("product-write:owner", user.id), max, windowMinutes))) return err("Slow down a little, then try again.");
   try {
-    const result = await saveProductUpsell(store.id, productId, parsed.data);
+    const result = await saveProductUpsell(store.id, productId, parsed.data, kind as OfferKind);
     if (result === "not_found") return err("We couldn't find that product.");
     if (result === "bad_product") return err("Pick another digital product or course from your store.", "productId");
   } catch (error) {
@@ -51,8 +51,9 @@ const GENERIC = "Couldn't add it. Check your connection and try again.";
  * product, and the buyer's details come from the paid order. It then goes through the same order
  * and payment path as any checkout (a free offer is marked paid like any free order).
  */
-export async function startUpsellCheckout(username: string, productSlug: string, orderId: string): Promise<UpsellState> {
-  if (!isUuid(orderId)) return err("This offer isn't available anymore.");
+export async function startUpsellCheckout(username: string, productSlug: string, orderId: string, kind: unknown = "upsell"): Promise<UpsellState> {
+  if (!isUuid(orderId) || !OFFER_KINDS.includes(kind as OfferKind)) return err("This offer isn't available anymore.");
+  const offerKind = kind as OfferKind;
   try {
     const ipHash = await getClientIpHash();
     const { max, windowMinutes } = CHECKOUT_RATE_LIMIT;
@@ -61,7 +62,7 @@ export async function startUpsellCheckout(username: string, productSlug: string,
     // The paid order's product page context: the store must be published and open.
     const context = await loadCheckoutContext(username, productSlug);
     if (!context?.open) return err("This offer isn't available anymore.");
-    const offer = await findUpsellOffer(context.store._id, orderId);
+    const offer = await findUpsellOffer(context.store._id, orderId, new Date(), offerKind);
     if (!offer) return err("This offer isn't available anymore.");
 
     const free = offer.priceCents === 0;
@@ -82,6 +83,9 @@ export async function startUpsellCheckout(username: string, productSlug: string,
       currency: context.store.currency,
       provider: free ? "free" : provider!.name,
       upsellOf: orderId,
+      offer: offerKind,
+      // The upsell came from the same visit (D-112) and affiliate (D-113) as the order before it.
+      ...(await originOfOrder(context.store._id, orderId)),
     });
 
     const base = `/@${context.store.slug}/${offer.slug}`;

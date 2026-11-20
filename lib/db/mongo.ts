@@ -63,6 +63,20 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("files").createIndex({ createdAt: 1 }, { partialFilterExpression: { status: "pending" }, name: "files_pending_created" }),
     // A student's progress is read per order (D-057).
     db.collection("lessonProgress").createIndex({ orderId: 1 }, { name: "lesson_progress_order" }),
+    // Quiz results are read per order too (D-110).
+    db.collection("quizAttempts").createIndex({ orderId: 1 }, { name: "quiz_attempts_order" }),
+    // One certificate per order (D-111).
+    db.collection("certificates").createIndex({ orderId: 1 }, { unique: true, name: "certificates_order_unique" }),
+    // License keys (D-114): one per order, and a key is unique within its store.
+    db.collection("licenseKeys").createIndex({ orderId: 1 }, { unique: true, name: "license_keys_order_unique" }),
+    db.collection("licenseKeys").createIndex({ storeId: 1, key: 1 }, { unique: true, name: "license_keys_store_key_unique" }),
+    // Affiliates (D-113): one code per store; their orders and payouts are read per store and affiliate.
+    db.collection("affiliates").createIndex({ storeId: 1, codeKey: 1 }, { unique: true, name: "affiliates_store_code_unique" }),
+    db.collection("affiliatePayouts").createIndex({ storeId: 1, affiliateId: 1, createdAt: -1 }, { name: "affiliate_payouts_store_affiliate" }),
+    db.collection("orders").createIndex(
+      { storeId: 1, "affiliate.affiliateId": 1 },
+      { partialFilterExpression: { "affiliate.affiliateId": { $type: "string" } }, name: "orders_store_affiliate" },
+    ),
     // Dashboard notifications (D-061): newest first per store, one per event, gone after 90 days.
     db.collection("notifications").createIndex({ storeId: 1, createdAt: -1 }, { name: "notifications_store_created" }),
     db.collection("notifications").createIndex({ dedupeKey: 1 }, { unique: true, name: "notifications_dedupe_unique" }),

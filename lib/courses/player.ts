@@ -1,6 +1,7 @@
 import "server-only";
 
 import { isUnlocked, unlockDay } from "@/lib/courses/drip";
+import { studentQuizOf, type StudentQuiz } from "@/lib/courses/quiz";
 import { embedUrlFor } from "@/lib/courses/video-links";
 import { collections, type CourseModuleDoc, type FileDoc, type LessonDoc, type ProductDoc } from "@/lib/db/collections";
 import { PRODUCT_FILE_TYPES, type ProductFileInfo } from "@/lib/files/types";
@@ -24,6 +25,8 @@ export type PlayerLesson = {
   bodyDoc: RichDoc | null;
   links: { label: string; url: string }[];
   files: ProductFileInfo[];
+  /** The quiz without its right answers (D-110). */
+  quiz: StudentQuiz | null;
 };
 
 export type OutlineLesson = { id: string; title: string; hasVideo: boolean; locked: boolean };
@@ -91,6 +94,7 @@ export function playerLessonOf(course: Pick<PlayerCourse, "lessons" | "files">, 
     video: playerVideoOf(lesson.video, now),
     bodyDoc: lesson.bodyDoc,
     links: lesson.links,
+    quiz: studentQuizOf(lesson.quiz),
     files: course.files
       .filter((file) => file.lessonId === lesson._id)
       .map((file) => ({ id: file._id, name: file.name, size: file.size, label: PRODUCT_FILE_TYPES[file.ext]?.label ?? file.ext.toUpperCase() })),

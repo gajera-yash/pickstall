@@ -6,6 +6,7 @@ import { CopyButton, DetailsSheet } from "@/components/dashboard/details-sheet";
 import { Answers, DetailList, DetailSection, ListCard, ListToolbar, OrderBadges, formatDateTime, formatDay, orderNumber } from "@/components/dashboard/orders-ui";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { CancelCallButton } from "@/components/dashboard/cancel-call-button";
+import { LicenseRevokeButton } from "@/components/dashboard/license-revoke-button";
 import { RefundButton } from "@/components/dashboard/refund-button";
 import { UpcomingCalls } from "@/components/dashboard/upcoming-calls";
 import { ResendEmailButton } from "@/components/dashboard/resend-email-button";
@@ -18,6 +19,7 @@ import { formatCallTime } from "@/lib/coaching/ics";
 import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { countOrdersByStatus, findOrderDetail, listOrders, type OrderDetail, type OrderRow } from "@/lib/orders/creator-queries";
 import { ORDER_STATUSES, parseOrderParams, withQuery, type OrderParams } from "@/lib/orders/params";
+import { licenseForStoreOrder } from "@/lib/licenses/queries";
 import { formatMoney } from "@/lib/products/money";
 import { listProducts } from "@/lib/products/queries";
 import { cn } from "@/lib/utils";
@@ -26,6 +28,12 @@ import { cn } from "@/lib/utils";
 // phones) with status tabs, search, a product filter and CSV export. A row opens the order in a
 // drawer through `?order=`. Test orders from the development mock are labelled "Test". The store
 // always comes from the session, never the URL.
+const LICENSE_STATUS = {
+  active: "Valid. The verify API accepts it.",
+  revoked: "Revoked by you. The verify API refuses it.",
+  refunded: "Not valid: the order was refunded.",
+} as const;
+
 export default function OrdersPage({ searchParams }: PageProps<"/dashboard/orders">) {
   return (
     <>
@@ -240,7 +248,7 @@ function accessEmailLabel(email: OrderDetail["accessEmail"]): string {
 const PAID_WITH: Record<OrderRow["provider"], string> = { stripe: "Stripe", mock: "Test payment", free: "Free product" };
 
 async function OrderDrawer({ storeId, orderId, closeHref }: { storeId: string; orderId: string; closeHref: string }) {
-  const [order, call] = await Promise.all([findOrderDetail(storeId, orderId), findOrderCall(storeId, orderId).catch(() => null)]);
+  const [order, call, license] = await Promise.all([findOrderDetail(storeId, orderId), findOrderCall(storeId, orderId).catch(() => null), licenseForStoreOrder(storeId, orderId).catch(() => null)]);
   if (!order) {
     return (
       <DetailsSheet closeHref={closeHref} title="Order not found">
@@ -330,6 +338,17 @@ async function OrderDrawer({ storeId, orderId, closeHref }: { storeId: string; o
             </>
           )}
           {order.accessEmail?.status === "sent" && <p className="text-sm text-mute">If the buyer can&apos;t find it, ask them to check their spam folder.</p>}
+        </DetailSection>
+      )}
+
+      {license && (
+        <DetailSection title="License key">
+          <div className="flex items-center gap-2">
+            <code className="min-w-0 flex-1 rounded-md bg-bg-subtle px-3 py-2 font-mono text-sm break-all">{license.key}</code>
+            <CopyButton value={license.key} label="Copy key" />
+          </div>
+          <p className="text-sm text-mute">{LICENSE_STATUS[license.status]}</p>
+          {license.status !== "refunded" && <LicenseRevokeButton orderId={order.id} revoked={license.status === "revoked"} />}
         </DetailSection>
       )}
 

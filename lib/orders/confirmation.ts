@@ -9,6 +9,7 @@ import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { EmailSendError, sendEmail } from "@/lib/email/send";
 import { renderOrderEmail, type CallDetails } from "@/lib/email/templates";
+import { licenseOfOrder } from "@/lib/licenses/queries";
 import { logger } from "@/lib/logger";
 
 /** A "sending" row older than this is treated as failed (the send was cut off). */
@@ -43,10 +44,11 @@ export async function sendOrderConfirmation(orderId: string): Promise<"sent" | "
     // Which part failed, for the log (the access link, the email itself, ...).
     let stage = "load";
     try {
-      const [product, store, booking] = await Promise.all([
+      const [product, store, booking, license] = await Promise.all([
         products.findOne({ _id: order.productId, storeId: order.storeId }, { projection: { afterPurchase: 1, "coaching.meetingUrl": 1, "coaching.timeZone": 1 } }),
         stores.findOne({ _id: order.storeId }, { projection: { name: 1 } }),
         order.booking ? bookings.findOne({ orderId, storeId: order.storeId }, { projection: { status: 1 } }) : null,
+        licenseOfOrder(orderId),
       ]);
       // A coaching call (D-084): its time in the buyer's own zone, the meeting link, and a calendar file.
       const confirmedCall = order.booking && booking?.status === "confirmed";
@@ -67,6 +69,7 @@ export async function sendOrderConfirmation(orderId: string): Promise<"sent" | "
         subject: product?.afterPurchase?.emailSubject ?? null,
         body: product?.afterPurchase?.emailBody ?? null,
         call,
+        licenseKey: license?.status === "active" ? license.key : null,
       });
       const storeName = store?.name ?? "Pickstall store";
       const attachments =

@@ -41,7 +41,7 @@ beforeEach(() => {
   db.lessonProgress.deleteOne.mockResolvedValue({});
   mockSession({ id: userId, email: "Student@Example.com" });
   rateLimit.takeRateLimit.mockResolvedValue(true);
-  player.loadPlayerCourse.mockResolvedValue({ product: {}, modules: [], lessons: [], files: [{ _id: FILE, lessonId: LESSON }] });
+  player.loadPlayerCourse.mockResolvedValue({ product: {}, modules: [], lessons: [{ _id: LESSON }], files: [{ _id: FILE, lessonId: LESSON }] });
   player.buildOutline.mockReturnValue(outline(false));
 });
 

@@ -4,6 +4,68 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-115: Funnels: downsell and funnel numbers (Phase 4, block P4-6)
+- **Date:** 2026-11-20
+- **Decision (founder approved the plan, 2026-11-20):** the funnel is the existing path (product page, checkout, order bump, upsell, thank-you) plus:
+  - **Downsell:** under "Upsell after purchase", every product editor (digital, course, coaching) has "Downsell if they say no": another digital product or course of the store (or the same one as the upsell, for less), a price and an optional headline. Saved with `saveUpsellAction(productId, input, "downsell")` in `ProductDoc.downsell`, with the upsell's rules (D-099). Pro, like upsells.
+  - **Thank-you page:** `PostPurchaseOffers` shows the upsell; "No thanks" shows the downsell instead (or nothing). `startUpsellCheckout(..., "downsell")` reads the offer again on the server (`findUpsellOffer(..., "downsell")`), takes the price from the database and opens a fresh checkout; there is still no one-click charge.
+  - **One offer per order:** once an upsell or downsell order of a purchase is paid, neither is offered again for it.
+  - **Order:** offer orders now save `offer: "upsell" | "downsell"` next to `upsellOf`; older upsell orders without it count as upsells. No migration.
+  - **Funnels page** (`/dashboard/marketing/funnels`, linked from Marketing): for each product with an offer set up (or offer sales in the period), the paid sales, upsells taken and downsells taken (count and share of sales), and offer revenue, over 30 or 90 days, net of partial refunds. Only the session's store.
+- **Not in this block:** counting how many buyers saw each offer, more than two offer steps, and a visual funnel builder.
+
+## D-114: License keys (Phase 4, block P4-5)
+- **Date:** 2026-11-20
+- **Decision (founder approved the plan, including the change to the payment fulfilment path, 2026-11-20):**
+  - **Creators** switch "License key" on in a digital product's Checkout form step (`saveProductLicenseAction`, `ProductDoc.license.enabled`). Lead magnets, courses and coaching calls have no keys.
+  - **Issuing:** `onOrderPaid` (the verified payment path, and free orders through `markFreeOrderPaid`) calls `issueLicenseForOrder` before the confirmation email, for the order and for a bump order. A paid order of a product with keys on gets one key: 20 random characters from Crockford's base32 in four groups (100 bits). The unique index on `orderId` makes a replayed webhook harmless. A failure is only logged; the sale and the email go through. Prices and the Stripe calls do not change.
+  - **Buyers** see the key on their library purchase page (with Copy), and the confirmation email always includes it, whatever the creator wrote (like the access link).
+  - **Valid** while the order is paid and the creator has not revoked it. A full refund makes it invalid (no extra write: the order status decides). Creators revoke or restore a key in the order details.
+  - **Verify API:** `POST /api/licenses/verify` with JSON `{"store": "<username>", "key": "..."}` answers `{"valid": true, "product": "<title>"}` or `{"valid": false, "reason": "not_found" | "revoked" | "refunded"}`. Typing slips are accepted (lower case, spaces, missing dashes, I/L/O). Any origin may call it (CORS `*`, no cookies, `no-store`); 60 tries per 10 minutes per network address; at most 1,000 bytes. Nothing about the buyer is returned.
+  - **Data:** new collection `licenseKeys` with unique indexes `license_keys_order_unique` and `license_keys_store_key_unique`.
+- **Not in this block:** uploading the creator's own key list, activation limits per device, and keys for courses.
+
+## D-113: Affiliate tracking (Phase 4, block P4-4)
+- **Date:** 2026-11-20
+- **Decision (founder approved the plan, 2026-11-20; available on every plan):**
+  - **Tracking only** (PRD hard constraint: affiliate payouts cannot be automated). The platform never pays affiliates, holds money or moves funds. Creators pay affiliates themselves and record it.
+  - **Creators** manage affiliates at Marketing → Affiliates (`/dashboard/marketing/affiliates`): name, optional email (for their records, never emailed), code (3-20 lower-case letters, numbers or dashes, unique per store) and a commission of 1-90%. Up to 50 per store. Each can be paused (their link stops counting) or resumed.
+  - **Link:** any store or product link plus `?ref=code`. Like attribution (D-112), the code is noted in `sessionStorage` for that browser tab only (the latest code wins, no cookie) and sent with the checkout form. `startCheckout` keeps it only when it is an active affiliate of the store being bought from, and freezes the rate on the order: `OrderDoc.affiliate` (`affiliateId`, `code`, `commissionPercent`). Prices are not affected. An upsell order copies its parent's affiliate.
+  - **Numbers per affiliate:** paid orders (bump orders left out), sales net of partial refunds (a full refund is not "paid"), commission at each order's frozen rate rounded down per order, recorded payments, and what is still owed.
+  - **Recording a payment:** an amount in the store's currency (above 0) and an optional note, stored in `affiliatePayouts`. It changes only the totals.
+  - **Data:** new collections `affiliates` (index `affiliates_store_code_unique`) and `affiliatePayouts` (index `affiliate_payouts_store_affiliate`), and an order index `orders_store_affiliate`. Every read and write filters by the session's store.
+- **Not in this block:** a page for affiliates to see their own stats, affiliate sign-up, editing an affiliate's rate (add a new code instead), self-referral checks, and deleting a recorded payment.
+
+## D-112: Where sales come from (Phase 4, block P4-3: attribution)
+- **Date:** 2026-11-20
+- **Decision (founder approved the Phase 4 order and this plan, 2026-11-20):**
+  - **Capture:** the first store page of a browser tab (store page or product page) notes the link's `utm_source`, `utm_medium`, `utm_campaign` and the referring site's host in `sessionStorage` (this tab only, removed when it closes; no cookie, no id). Moving between our own pages is not a source. The checkout form sends them as four hidden fields.
+  - **Server:** `attributionFrom` (`lib/analytics/attribution.ts`) cleans each label (tags removed, lower case, 100 characters) and keeps only a host name for the referrer. The UTM source wins; otherwise the referring site gives the source, with known sites merged ("l.instagram.com" is "instagram", "t.co" is "x"). Our own domain, junk and empty values mean a direct visit (nothing saved).
+  - **Order:** new optional field `OrderDoc.attribution` (`source`, `medium`, `campaign`, `referrer`), set when the pending order is created. Prices, the provider call and fulfilment do not change. An upsell order copies its parent order's attribution. No migration: older orders count as direct.
+  - **Dashboard:** Analytics shows "Where sales come from": paid orders above 0 in the last 30 or 90 days by source (orders, revenue net of partial refunds, share of orders, top campaign), up to 20 sources, plus a tip on adding UTM tags to links. Bump orders and free orders are left out. The placeholder "No traffic yet" card is gone.
+- **Privacy:** only campaign labels and a site name are kept, nothing about the buyer. Visits from apps that send no referrer (often Instagram's in-app browser) count as direct unless the link has UTM tags.
+- **Not in this block:** page view counts and conversion rates, and attribution of free sign-ups (lead magnets).
+
+## D-111: Course certificates (Phase 4, block 2, part Q2)
+- **Date:** 2026-11-20
+- **Decision (founder approved the quizzes and certificates plan, 2026-11-20; available on every plan):**
+  - **Creators** switch "Certificate" on in the course's Publish step (`saveCourseCertificate`, `ProductDoc.course.certificate`, missing = off). Turning it off later does not remove certificates already issued.
+  - **Students** see a Certificate card under the lesson list. It unlocks when every lesson of the course is complete (quiz lessons complete only when passed, D-110). They confirm the name to print, filled in from the checkout name; it is cleaned of tags, 2-80 characters, and cannot be changed after issuing. `claimCertificate` checks access like the other student actions (own email, paid, not refunded or expired), that certificates are on, and that the course is finished. 10 claims per 10 minutes.
+  - **One per order:** new collection `certificates` with a unique index `certificates_order_unique` on `orderId`; a second or racing claim returns the certificate already issued. The student name, course title and store name are copied in when it is issued.
+  - **Public page** `/certificates/<uuid>`: name, course, store, issue date and the certificate id, plus "Print or save as PDF" through the browser (no PDF library). No email or order details, `noindex`, and "revoked" once the order is refunded. `certificates` is now a reserved store slug.
+- **Privacy:** anyone with the link sees the printed name; the form says so. The link is a random UUID and is never listed anywhere public.
+- **Not in this block:** a certificate email, creator logos or signatures on the certificate, and a creator list of issued certificates.
+
+## D-110: Lesson quizzes (Phase 4, block 2, part Q1)
+- **Date:** 2026-11-20
+- **Decision (founder approved the quizzes and certificates plan, 2026-11-20; available on every plan):**
+  - **Creators** add an optional quiz in the lesson sheet: 1-10 single-choice questions, 2-5 options each (different from each other), one right option picked with a radio button, and a pass mark of 50-100% (default 70%). Text is cleaned of tags (question 300, option 150 characters). It is saved with the lesson (`saveCourseLesson`, field `quiz`: null removes it, left out keeps it). A quiz counts as lesson content for the publish rule.
+  - **Students** answer it under the lesson. `submitLessonQuiz` checks access like "Mark as complete" (paid, own email, not refunded or expired, lesson open), grades on the server from the lesson's own answers, and answers with the score and which questions were right, never the right options. Students only ever get `StudentQuiz` (no answers). Unlimited retries, 30 tries per 10 minutes.
+  - **Completion:** a lesson with a quiz completes when the quiz is passed (passing marks it complete); "Mark as complete" is refused until then. Unmarking still works. Lessons completed before a quiz was added stay complete.
+  - **Data:** `LessonDoc.quiz` (optional, missing on older lessons) and a new collection `quizAttempts`, one document per order and lesson (`_id` "orderId:lessonId", index `quiz_attempts_order`) with attempts, last and best percent and the first pass date. Answers are not stored.
+  - The creator's preview shows the questions and the pass mark, without answering.
+- **Next (Q2):** certificates when a course is finished (D-111).
+
 ## D-109: Admin username and password in the environment, sessions stay in the database (supersedes the accounts part of D-108)
 - **Date:** 2026-11-20
 - **Decision:** The founder wants the admin sign-in set in Vercel, not in the database.

@@ -8,6 +8,7 @@ import { redeemCouponForOrder, releaseCouponForOrder } from "@/lib/coupons/queri
 import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { addSubscriberForOrder } from "@/lib/subscribers/queries";
+import { issueLicenseForOrder } from "@/lib/licenses/queries";
 import { logger } from "@/lib/logger";
 import { providerByName } from "@/lib/payments";
 import { notifyOrderPaid, notifyRefund } from "@/lib/notifications/queries";
@@ -71,6 +72,11 @@ async function fromStoreAccount(event: { account?: string | null }, storeId: str
   return expected !== null && event.account === expected;
 }
 
+/** Issues a license key (D-114); a failure is logged and never undoes or blocks the sale. */
+async function issueLicenseSafely(orderId: string): Promise<void> {
+  await issueLicenseForOrder(orderId).catch((error: unknown) => logger.error("licenses.issue_failed", { orderId, name: error instanceof Error ? error.name : undefined }));
+}
+
 /**
  * Runs once per order when it becomes paid. Fulfilment of a digital product is the buyer library
  * (it reads paid orders) plus the confirmation email. Other order kinds add their own idempotent
@@ -80,10 +86,16 @@ async function onOrderPaid(orderId: string): Promise<void> {
   await redeemCouponForOrder(orderId); // no coupon: nothing happens (D-088)
   // No booking (not a coaching order): nothing happens. A confirmed call gets its reminders (D-085).
   if ((await confirmBookingForOrder(orderId)) === "confirmed") await scheduleCallReminders(orderId);
+  // A license key (D-114) before the email, which includes it. Once per order; a problem is only
+  // logged, so the sale and the email still go through (the creator can see a key is missing).
+  await issueLicenseSafely(orderId);
   scheduleOrderConfirmation(orderId); // a replay is safe: one outbox row per order
   // An order bump (D-089): its product gets its own $0 order (once), with its own access email.
   const bumpOrderId = await createBumpOrder(orderId);
-  if (bumpOrderId) scheduleOrderConfirmation(bumpOrderId);
+  if (bumpOrderId) {
+    await issueLicenseSafely(bumpOrderId);
+    scheduleOrderConfirmation(bumpOrderId);
+  }
   await notifyOrderPaid(orderId); // one "New sale" per order (dedupe key); never throws (D-061)
   // The email list (D-094): only with the consent saved on the order; an upsert, so replays are safe.
   // A list problem must never undo or block the sale, so it is only logged.

@@ -17,6 +17,7 @@ import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Textarea } from "@/components/ui/textarea";
 import { ANSWER_MAX_CHARS, BUYER_NAME_MAX } from "@/lib/config";
 import { startCheckout, type CheckoutState } from "@/lib/orders/actions";
+import { VisitSourceFields } from "@/components/store/visit-source";
 
 export type CheckoutQuestion = { id: string; label: string; kind: "text" | "long_text" | "dropdown" | "checkbox"; required: boolean; options: string[] };
 
@@ -61,6 +62,7 @@ export function CheckoutForm({ username, productSlug, askPhone, questions, submi
 
   return (
     <form action={action} noValidate className="flex flex-col gap-5">
+      <VisitSourceFields />
       {formError && (
         <Alert variant="error">
           <AlertDescription>{formError}</AlertDescription>

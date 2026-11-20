@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const db = vi.hoisted(() => ({
-  orders: { findOne: vi.fn(), countDocuments: vi.fn() },
-  products: { findOne: vi.fn(), countDocuments: vi.fn(), updateOne: vi.fn() },
+  orders: { findOne: vi.fn(), countDocuments: vi.fn(), aggregate: vi.fn() },
+  products: { findOne: vi.fn(), countDocuments: vi.fn(), updateOne: vi.fn(), find: vi.fn() },
   stores: { findOne: vi.fn() },
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/db/collections", () => ({ collections: vi.fn(async () => db) }));
 
-import { findUpsellOffer, saveProductUpsell } from "@/lib/upsells/queries";
+import { findUpsellOffer, funnelStats, saveProductUpsell } from "@/lib/upsells/queries";
 import { upsellInputFor, upsellWindowOpen } from "@/lib/upsells/rules";
 
 const NOW = new Date("2026-11-19T12:00:00Z");
@@ -58,7 +58,8 @@ describe("the offer on the thank-you page (D-099)", () => {
   });
 
   it("offers nothing to a buyer who already owns it", async () => {
-    db.orders.countDocuments.mockResolvedValue(1);
+    // First: no offer taken yet for this order; then: the buyer owns the product.
+    db.orders.countDocuments.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
     expect(await findUpsellOffer("store-a", "order-1", NOW)).toBeNull();
     expect(db.orders.countDocuments).toHaveBeenCalledWith({ storeId: "store-a", productId: TARGET, buyerEmail: "asha@example.com", status: "paid" }, { limit: 1 });
   });
@@ -81,5 +82,58 @@ describe("saving an upsell is scoped to the session's store (CLAUDE.md 6)", () =
     db.products.updateOne.mockResolvedValue({ matchedCount: 0 });
     expect(await saveProductUpsell("store-b", "p1", { productId: TARGET, priceCents: 100, headline: null })).toBe("not_found");
     expect(db.products.updateOne).toHaveBeenCalledWith({ _id: "p1", storeId: "store-b", deletedAt: { $in: [null] } }, { $set: expect.objectContaining({ upsell: { productId: TARGET, priceCents: 100, headline: null } }) });
+  });
+});
+
+describe("the downsell (D-115)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Earlier tests may leave queued one-time answers behind.
+    db.products.findOne.mockReset();
+    db.orders.countDocuments.mockReset();
+    db.orders.findOne.mockResolvedValue(order);
+    db.stores.findOne.mockResolvedValue(founding);
+    db.orders.countDocuments.mockResolvedValue(0);
+  });
+
+  it("reads the product's downsell, at its own price", async () => {
+    db.products.findOne.mockResolvedValueOnce({ downsell: { productId: TARGET, priceCents: 900, headline: "Starter instead" } }).mockResolvedValueOnce({ _id: TARGET, slug: "starter", title: "Starter", coverUrl: null, type: "digital", priceCents: 2900, salePriceCents: null });
+    expect(await findUpsellOffer("store-a", "order-1", NOW, "downsell")).toMatchObject({ productId: TARGET, priceCents: 900, headline: "Starter instead" });
+    expect(db.products.findOne.mock.calls[0]?.[1]).toEqual({ projection: { downsell: 1 } });
+  });
+
+  it("offers nothing more once an upsell or downsell of the order is paid", async () => {
+    db.products.findOne.mockResolvedValueOnce({ downsell: { productId: TARGET, priceCents: 900, headline: null } });
+    db.orders.countDocuments.mockResolvedValueOnce(1);
+    expect(await findUpsellOffer("store-a", "order-1", NOW, "downsell")).toBeNull();
+    expect(db.orders.countDocuments).toHaveBeenCalledWith({ storeId: "store-a", upsellOf: "order-1", status: "paid" }, { limit: 1 });
+  });
+
+  it("is saved in its own field, scoped to the store", async () => {
+    db.products.countDocuments.mockResolvedValue(1);
+    db.products.updateOne.mockResolvedValue({ matchedCount: 1 });
+    expect(await saveProductUpsell("store-a", "p1", { productId: TARGET, priceCents: 900, headline: null }, "downsell")).toBe("saved");
+    expect(db.products.updateOne).toHaveBeenCalledWith({ _id: "p1", storeId: "store-a", deletedAt: { $in: [null] } }, { $set: expect.objectContaining({ downsell: { productId: TARGET, priceCents: 900, headline: null } }) });
+  });
+});
+
+describe("funnel stats (D-115)", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("counts paid sales and the upsells and downsells bought after them, per product of this store", async () => {
+    db.products.find.mockReturnValueOnce({ toArray: async () => [{ _id: "p1", title: "Playbook" }] });
+    db.orders.aggregate
+      .mockReturnValueOnce({ toArray: async () => [{ _id: "p1", sales: 10, salesCents: 19000 }, { _id: "p2", sales: 3, salesCents: 3000 }] })
+      .mockReturnValueOnce({
+        toArray: async () => [
+          { _id: { productId: "p1", offer: "upsell" }, count: 2, cents: 3800 },
+          { _id: { productId: "p1", offer: "downsell" }, count: 1, cents: 900 },
+        ],
+      });
+    expect(await funnelStats("store-a", "usd", 30, NOW)).toEqual([{ productId: "p1", title: "Playbook", sales: 10, salesCents: 19000, upsells: 2, upsellCents: 3800, downsells: 1, downsellCents: 900 }]);
+    const [mainPipeline, offerPipeline] = db.orders.aggregate.mock.calls.map((call) => call[0] as Record<string, unknown>[]);
+    expect(mainPipeline?.[0]).toEqual({ $match: { storeId: "store-a", status: "paid", currency: "usd", paidAt: { $gte: new Date("2026-10-20T12:00:00Z") }, bumpOf: null, upsellOf: null } });
+    expect(JSON.stringify(offerPipeline)).toContain('"storeId":"store-a"');
+    expect(db.products.find.mock.calls[0]?.[0]).toMatchObject({ storeId: "store-a" });
   });
 });

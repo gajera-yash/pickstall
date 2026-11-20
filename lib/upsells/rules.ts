@@ -9,6 +9,10 @@ import { cleanText } from "@/lib/products/text";
 /** Products that can be offered after a purchase: delivered without a booking. */
 export const UPSELL_TYPES: ProductDoc["type"][] = ["digital", "course"];
 export const UPSELL_HEADLINE_MAX = 120;
+/** The two after-purchase offers (D-099 upsell, D-115 downsell). The downsell shows when the upsell is declined. */
+export const OFFER_KINDS = ["upsell", "downsell"] as const;
+export type OfferKind = (typeof OFFER_KINDS)[number];
+
 /** How long after the purchase the offer is shown. */
 export const UPSELL_WINDOW_MS = 2 * 60 * 60 * 1000;
 

@@ -196,7 +196,8 @@ describe("curriculum helpers (D-055)", () => {
     expect(lessonHasContent({ ...empty, bodyDoc: { type: "doc", content: [] } })).toBe(false);
     expect(lessonHasContent({ ...empty, video: { kind: "youtube", id: "dQw4w9WgXcQ" } })).toBe(true);
     expect(lessonHasContent({ ...empty, links: [{ label: "Figma", url: "https://figma.com" }] })).toBe(true);
-    const lesson = { id: "l", title: "L", ...empty };
+    expect(lessonHasContent({ ...empty, quiz: { passPercent: 70, questions: [{ prompt: "Q", options: ["a", "b"], correct: 0 }] } })).toBe(true);
+    const lesson = { id: "l", title: "L", ...empty, quiz: null };
     expect(lessonCount({ modules: [{ id: "a", title: "A", dripDays: null, lessons: [lesson, lesson] }, { id: "b", title: "B", dripDays: null, lessons: [lesson] }] })).toBe(3);
   });
 });

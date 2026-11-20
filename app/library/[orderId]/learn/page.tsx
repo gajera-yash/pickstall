@@ -3,14 +3,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { CertificateCard } from "@/components/course/certificate-card";
 import { CoursePlayer } from "@/components/course/course-player";
+import { LessonQuiz } from "@/components/course/lesson-quiz";
 import { MarkComplete } from "@/components/course/mark-complete";
 import { formatDay } from "@/components/dashboard/orders-ui";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/lib/auth/guards";
+import { buyerNameOfOrder, certificateOfOrder } from "@/lib/certificates/queries";
+import { courseFinished } from "@/lib/certificates/rules";
 import { buildOutline, loadPlayerCourse, playerLessonOf } from "@/lib/courses/player";
-import { completedLessons, courseAccess } from "@/lib/courses/student";
+import { completedLessons, courseAccess, quizStatus } from "@/lib/courses/student";
 import { isUuid } from "@/lib/media/media";
 
 const BLOCKED: Record<string, string> = {
@@ -58,6 +62,12 @@ async function Learn({ params, searchParams }: PageProps<"/library/[orderId]/lea
   const current = wanted ?? open.find((lesson) => !completed.includes(lesson.id)) ?? open[0];
   const lesson = current ? playerLessonOf(course, current.id, now) : null;
   const base = `/library/${orderId}`;
+  const quiz = lesson?.quiz ? await quizStatus(orderId, lesson.id) : null;
+  const needsQuiz = lesson?.quiz != null && !quiz?.passed;
+  // Certificates (D-111): only when the creator has them on, or one was already issued.
+  const certificate = await certificateOfOrder(orderId);
+  const offersCertificate = course.product.course?.certificate === true || certificate !== null;
+  const defaultName = offersCertificate && !certificate ? await buyerNameOfOrder(orderId) : "";
 
   return (
     <CoursePlayer
@@ -67,7 +77,9 @@ async function Learn({ params, searchParams }: PageProps<"/library/[orderId]/lea
       lessonHref={(id) => `${base}/learn?lesson=${id}`}
       fileHref={(fileId) => `${base}/files/${fileId}`}
       completed={completed}
-      completeAction={lesson ? <MarkComplete key={lesson.id} orderId={orderId} lessonId={lesson.id} done={completed.includes(lesson.id)} /> : null}
+      completeAction={lesson ? <MarkComplete key={lesson.id} orderId={orderId} lessonId={lesson.id} done={completed.includes(lesson.id)} needsQuiz={needsQuiz} /> : null}
+      aside={offersCertificate ? <CertificateCard orderId={orderId} finished={courseFinished(outline.lessonIds, completed)} defaultName={defaultName} certificateId={certificate?.id ?? null} /> : null}
+      quiz={lesson?.quiz ? <LessonQuiz key={lesson.id} orderId={orderId} lessonId={lesson.id} quiz={lesson.quiz} status={quiz} /> : null}
       banner={
         <div className="flex flex-wrap items-center justify-between gap-2">
           <BackLink orderId={orderId} />

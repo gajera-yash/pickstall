@@ -7,7 +7,7 @@ import { z } from "zod";
 import { requireCreator } from "@/lib/auth/guards";
 import { PRODUCT_RATE_LIMIT } from "@/lib/config";
 import { DRIP_DAYS_MAX } from "@/lib/courses/drip";
-import { updateCourseDetails, updateCourseRelease } from "@/lib/courses/queries";
+import { updateCourseCertificate, updateCourseDetails, updateCourseRelease } from "@/lib/courses/queries";
 import { COURSE_LIMITS } from "@/lib/courses/settings";
 import { courseDetailsInputFor } from "@/lib/courses/schemas";
 import { logger } from "@/lib/logger";
@@ -110,4 +110,19 @@ export async function saveCourseRelease(courseId: string, input: unknown): Promi
   }
   revalidatePath("/dashboard", "layout");
   return ok({ savedAt: Date.now() });
+}
+
+/** Turns course certificates on or off (D-111). */
+export async function saveCourseCertificate(courseId: string, enabled: unknown): Promise<Result<{ enabled: boolean }>> {
+  const { user, store } = await requireCreator(`/dashboard/products/${courseId}`);
+  if (!productIdInput.safeParse(courseId).success || typeof enabled !== "boolean") return err(NOT_FOUND);
+  if (!(await allowed(user.id))) return err("Slow down a little, then try again.");
+  try {
+    if ((await updateCourseCertificate(store.id, courseId, enabled)) === "not_found") return err(NOT_FOUND);
+  } catch (error) {
+    logger.error("courses.certificate_setting_failed", { name: errorName(error) });
+    return err("Couldn't save. Check your connection and try again.");
+  }
+  revalidatePath("/dashboard", "layout");
+  return ok({ enabled });
 }

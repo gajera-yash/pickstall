@@ -35,6 +35,13 @@ export async function updateCourseDetails(storeId: string, id: string, input: Co
   });
 }
 
+/** Turns certificates on or off for this store's course (D-111). Certificates already issued stay valid. */
+export async function updateCourseCertificate(storeId: string, courseId: string, enabled: boolean): Promise<SaveProductResult> {
+  const { products } = await collections();
+  const result = await products.updateOne({ _id: courseId, storeId, type: "course", deletedAt: null }, { $set: { "course.certificate": enabled, updatedAt: new Date() } });
+  return result.matchedCount === 1 ? "saved" : "not_found";
+}
+
 export type ReleaseInput = { drip: boolean; modules: { id: string; dripDays: number }[] };
 
 /**

@@ -50,6 +50,8 @@ vi.mock("@/lib/db/collections", () => ({
     },
   })),
 }));
+// License keys (D-114) have their own tests; these orders have none.
+vi.mock("@/lib/licenses/queries", () => ({ licenseOfOrder: vi.fn(async () => null) }));
 vi.mock("@/lib/email/send", () => ({ sendEmail: hoisted.sendEmail }));
 vi.mock("@/lib/auth/profiles", () => ({ saveProfile: hoisted.saveProfile, getProfile: vi.fn() }));
 vi.mock("next/server", () => ({ after: (fn: () => void) => void fn() }));

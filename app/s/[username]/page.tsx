@@ -7,6 +7,7 @@ import { APP_NAME } from "@/lib/config";
 import { publicEnv } from "@/lib/env";
 import { absoluteImageUrl } from "@/lib/media/media";
 import { StorePixels } from "@/components/store/store-pixels";
+import { VisitSource } from "@/components/store/visit-source";
 import { findPublicStore, listPublicProducts } from "@/lib/stores/public";
 
 // Public store page, served at /@username by a rewrite in next.config.ts (D-010). A draft or unknown
@@ -38,6 +39,7 @@ export default async function PublicStorePage({ params }: PageProps<"/s/[usernam
   return (
     <>
       <StorePage store={store} products={products} />
+      <VisitSource />
       {store.pixels && <StorePixels storeId={store.id} storeName={store.name} pixels={store.pixels} />}
     </>
   );

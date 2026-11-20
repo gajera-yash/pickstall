@@ -1,4 +1,4 @@
-import { Mail, Megaphone, ShoppingCart, Sparkles, type LucideIcon } from "lucide-react";
+import { Filter, HandCoins, Mail, Megaphone, ShoppingCart, Sparkles, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -33,6 +33,14 @@ const TOOLS: { title: string; description: string; icon: LucideIcon; live: boole
     how: UPSELL_HOW_IT_WORKS,
   },
   {
+    title: "Funnels",
+    description: "Sale, then upsell, then downsell: see how many buyers take each offer. Add a downsell under the upsell of a product.",
+    icon: Filter,
+    live: true,
+    href: "/dashboard/marketing/funnels",
+    badge: "View",
+  },
+  {
     title: "Email list",
     description: "People who joined from a Collect emails product or ticked “Email me updates” at checkout. Search, export or remove them.",
     icon: Mail,
@@ -47,6 +55,14 @@ const TOOLS: { title: string; description: string; icon: LucideIcon; live: boole
     live: true,
     href: "/dashboard/marketing/broadcasts",
     badge: "Write one",
+  },
+  {
+    title: "Affiliates",
+    description: "Give people their own link and a commission on the sales they bring. You pay them yourself; Pickstall keeps count.",
+    icon: HandCoins,
+    live: true,
+    href: "/dashboard/marketing/affiliates",
+    badge: "Open",
   },
 ];
 

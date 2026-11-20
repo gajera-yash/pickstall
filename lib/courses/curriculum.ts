@@ -6,7 +6,7 @@ import type { AnyBulkWriteOperation } from "mongodb";
 
 import { COURSE_LIMITS } from "@/lib/courses/settings";
 import { lessonHasContent, type Curriculum } from "@/lib/courses/curriculum-types";
-import { collections, type CourseModuleDoc, type LessonDoc, type LessonLinkDoc, type LessonVideoDoc } from "@/lib/db/collections";
+import { collections, type CourseModuleDoc, type LessonDoc, type LessonLinkDoc, type LessonQuizDoc, type LessonVideoDoc } from "@/lib/db/collections";
 import { PRODUCT_FILE_TYPES } from "@/lib/files/types";
 import { notify } from "@/lib/notifications/queries";
 import type { RichDoc } from "@/lib/products/rich-text";
@@ -46,6 +46,7 @@ export async function loadCurriculum(storeId: string, courseId: string): Promise
           video: lesson.video === null ? null : lesson.video.kind === "bunny" ? { kind: "bunny" as const, status: lesson.video.status } : lesson.video,
           bodyDoc: lesson.bodyDoc,
           links: lesson.links,
+          quiz: lesson.quiz ?? null,
           attachments: fileDocs
             .filter((file) => file.lessonId === lesson._id)
             .map((file) => ({ id: file._id, name: file.name, size: file.size, label: PRODUCT_FILE_TYPES[file.ext]?.label ?? file.ext.toUpperCase() })),
@@ -102,6 +103,8 @@ export type LessonUpdate = {
   links: LessonLinkDoc[];
   /** "keep" leaves the video as it is (an upload runs separately); null removes it. */
   video: Extract<LessonVideoDoc, { kind: "youtube" | "vimeo" }> | null | "keep";
+  /** The quiz (D-110); null removes it, undefined leaves it as it is. */
+  quiz?: LessonQuizDoc | null;
 };
 
 /** Saves a lesson. Returns the Bunny video it replaced (to delete), or "not_found". */
@@ -112,6 +115,7 @@ export async function updateLesson(storeId: string, courseId: string, lessonId: 
   if (!current) return "not_found";
   const set: Partial<LessonDoc> = { title: update.title, bodyDoc: update.bodyDoc, links: update.links, updatedAt: new Date() };
   if (update.video !== "keep") set.video = update.video;
+  if (update.quiz !== undefined) set.quiz = update.quiz;
   const result = await lessons.updateOne(filter, { $set: set });
   if (result.matchedCount !== 1) return "not_found";
   const replaced = update.video !== "keep" && current.video?.kind === "bunny" ? current.video.videoId : null;

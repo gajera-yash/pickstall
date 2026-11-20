@@ -46,6 +46,8 @@ vi.mock("@/lib/coupons/queries", () => hoisted.coupons);
 vi.mock("@/lib/bumps/queries", () => hoisted.bumps);
 const cart = vi.hoisted(() => ({ scheduleCartReminder: vi.fn(async () => undefined) }));
 vi.mock("@/lib/abandoned-cart/job", () => cart);
+const affiliates = vi.hoisted(() => ({ affiliateForCheckout: vi.fn(async (): Promise<unknown> => null) }));
+vi.mock("@/lib/affiliates/queries", () => affiliates);
 vi.mock("@/lib/coaching/calls", () => ({ cancelBookingOfRefundedOrder: vi.fn(async () => undefined) }));
 vi.mock("@/lib/payments", async () => {
   const actual = await vi.importActual<typeof import("@/lib/payments")>("@/lib/payments");
@@ -258,6 +260,30 @@ describe("startCheckout", () => {
     provider.createCheckout.mockResolvedValue({ url: "/mock-pay/order-2", providerSessionId: "mock_order-2" });
     await redirectOf(() => startCheckout("maya", "playbook", null, form({ marketingConsent: "on" })));
     expect(hoisted.queries.createPendingOrder).toHaveBeenCalledWith(expect.objectContaining({ marketingConsent: { at: expect.any(Date), text: expect.stringMatching(/^Email me updates/) } }));
+  });
+
+  it("saves where the buyer came from, cleaned, and nothing for a direct visit (D-112)", async () => {
+    await redirectOf(() => startCheckout("maya", "playbook", null, form({ utmSource: " Instagram<b>", utmMedium: "Social", utmCampaign: "Launch", referrerHost: "l.instagram.com" })));
+    expect(hoisted.queries.createPendingOrder).toHaveBeenCalledWith(expect.objectContaining({ attribution: { source: "instagram", medium: "social", campaign: "launch", referrer: "l.instagram.com" } }));
+    // The amount is still the product's own.
+    expect(provider.createCheckout).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 1900 }));
+    vi.clearAllMocks();
+    hoisted.queries.createPendingOrder.mockResolvedValue("order-2");
+    provider.createCheckout.mockResolvedValue({ url: "/mock-pay/order-2", providerSessionId: "mock_order-2" });
+    await redirectOf(() => startCheckout("maya", "playbook", null, form()));
+    expect(hoisted.queries.createPendingOrder.mock.calls[0]![0].attribution).toBeUndefined();
+  });
+
+  it("saves the store's affiliate for a ref code, at its frozen rate, without changing the price (D-113)", async () => {
+    affiliates.affiliateForCheckout.mockResolvedValueOnce({ affiliateId: "aff-1", code: "asha", commissionPercent: 30 });
+    await redirectOf(() => startCheckout("maya", "playbook", null, form({ affiliateRef: "Asha", commissionPercent: "90" })));
+    expect(affiliates.affiliateForCheckout).toHaveBeenCalledWith("store-1", "Asha");
+    expect(hoisted.queries.createPendingOrder).toHaveBeenCalledWith(expect.objectContaining({ affiliate: { affiliateId: "aff-1", code: "asha", commissionPercent: 30 }, totalCents: 1900 }));
+    vi.clearAllMocks();
+    hoisted.queries.createPendingOrder.mockResolvedValue("order-2");
+    provider.createCheckout.mockResolvedValue({ url: "/mock-pay/order-2", providerSessionId: "mock_order-2" });
+    await redirectOf(() => startCheckout("maya", "playbook", null, form({ affiliateRef: "nobody" })));
+    expect(hoisted.queries.createPendingOrder.mock.calls[0]![0].affiliate).toBeUndefined();
   });
 
   it("takes no order from a paused store, free products included (D-072)", async () => {

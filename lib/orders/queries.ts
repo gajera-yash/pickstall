@@ -152,7 +152,7 @@ export type NewOrder = Pick<
   OrderDoc,
   "storeId" | "productId" | "item" | "buyerEmail" | "buyerName" | "buyerPhone" | "answers" | "subtotalCents" | "discountCents" | "totalCents" | "currency" | "provider"
 > &
-  Partial<Pick<OrderDoc, "booking" | "marketingConsent" | "upsellOf">>;
+  Partial<Pick<OrderDoc, "booking" | "marketingConsent" | "upsellOf" | "offer" | "attribution" | "affiliate">>;
 
 /** Creates a pending order. Amounts are what the server computed from the product (lib/orders/pricing.ts). */
 export async function createPendingOrder(input: NewOrder): Promise<string> {
@@ -167,6 +167,13 @@ export async function createPendingOrder(input: NewOrder): Promise<string> {
     paidAt: null,
   });
   return id;
+}
+
+/** Where this store's order came from (D-112) and its affiliate (D-113), for an upsell bought after it. */
+export async function originOfOrder(storeId: string, orderId: string): Promise<Pick<OrderDoc, "attribution" | "affiliate">> {
+  const { orders } = await collections();
+  const order = await orders.findOne({ _id: orderId, storeId }, { projection: { attribution: 1, affiliate: 1 } });
+  return { attribution: order?.attribution ?? null, affiliate: order?.affiliate ?? null };
 }
 
 export async function attachProviderSession(orderId: string, providerSessionId: string): Promise<void> {

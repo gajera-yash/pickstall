@@ -340,3 +340,43 @@ export async function incomeStats(storeId: string, currency: string, days: numbe
     totalPaidOrders,
   };
 }
+
+export type SourceRow = { source: string; orders: number; revenueCents: number; topCampaign: string | null };
+
+/**
+ * Paid sales by where the buyer came from (D-112), for this store and currency over the last `days`
+ * days, best first. Revenue leaves out partial refunds; fully refunded orders are not "paid". Free
+ * orders (lead magnets, free products) and bump orders are not sales here. No source: "direct".
+ */
+export async function salesBySource(storeId: string, currency: string, days: number, now = new Date()): Promise<SourceRow[]> {
+  const { orders } = await collections();
+  const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const rows = await orders
+    .aggregate<{ _id: { source: string; campaign: string | null }; orders: number; revenueCents: number }>([
+      { $match: { storeId, status: "paid", currency, totalCents: { $gt: 0 }, paidAt: { $gte: since }, ...NOT_BUMP } },
+      {
+        $group: {
+          _id: { source: { $ifNull: ["$attribution.source", "direct"] }, campaign: { $ifNull: ["$attribution.campaign", null] } },
+          orders: { $sum: 1 },
+          revenueCents: { $sum: { $subtract: ["$totalCents", { $ifNull: ["$amountRefundedCents", 0] }] } },
+        },
+      },
+    ])
+    .toArray();
+
+  const bySource = new Map<string, SourceRow & { campaignOrders: number }>();
+  for (const row of rows) {
+    const current = bySource.get(row._id.source) ?? { source: row._id.source, orders: 0, revenueCents: 0, topCampaign: null, campaignOrders: 0 };
+    current.orders += row.orders;
+    current.revenueCents += row.revenueCents;
+    if (row._id.campaign && row.orders > current.campaignOrders) {
+      current.topCampaign = row._id.campaign;
+      current.campaignOrders = row.orders;
+    }
+    bySource.set(row._id.source, current);
+  }
+  return [...bySource.values()]
+    .map((row): SourceRow => ({ source: row.source, orders: row.orders, revenueCents: row.revenueCents, topCampaign: row.topCampaign }))
+    .sort((a, b) => b.revenueCents - a.revenueCents || b.orders - a.orders || a.source.localeCompare(b.source))
+    .slice(0, 20);
+}

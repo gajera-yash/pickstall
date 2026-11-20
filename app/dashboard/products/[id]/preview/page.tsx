@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { CoursePlayer } from "@/components/course/course-player";
+import { QuizPreview } from "@/components/course/lesson-quiz";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireCreator } from "@/lib/auth/guards";
@@ -41,6 +42,7 @@ async function Preview({ params, searchParams }: PageProps<"/dashboard/products/
       outline={outline}
       lesson={lesson}
       lessonHref={(lesson) => `${base}?lesson=${lesson}`}
+      quiz={lesson?.quiz ? <QuizPreview quiz={lesson.quiz} /> : null}
       banner={
         <div className="flex flex-col gap-3">
           <Link href={`/dashboard/products/${id}`} className="inline-flex items-center gap-1 self-start text-sm font-semibold text-mute hover:text-ink">
