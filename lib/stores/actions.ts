@@ -7,7 +7,7 @@ import { requireCreator, requireCreatorForAction } from "@/lib/auth/guards";
 import { STRIPE_CONNECT_RATE_LIMIT, USERNAME_CHANGE_RATE_LIMIT } from "@/lib/config";
 import { recordAudit } from "@/lib/audit/log";
 import { logger } from "@/lib/logger";
-import { can, PAUSED_MESSAGES } from "@/lib/plans/access";
+import { can, cannotPublishMessage } from "@/lib/plans/access";
 import { rateLimitKey, releaseRateLimit, takeRateLimit } from "@/lib/rate-limit";
 import { err, fieldErrors, ok, type Result } from "@/lib/result";
 import { SLUG_TAKEN_MESSAGE, slugSchema } from "@/lib/slug";
@@ -231,7 +231,7 @@ export async function setStorePublishedAction(isPublished: boolean, from?: "setu
   const { user, store } = await requireCreatorForAction(from === "setup" ? PUBLISH_STEP_PATH : MY_STORE_PATH);
   if (typeof isPublished !== "boolean") return err(SAVE_FAILED);
   // Unpublishing always works; publishing needs an open store (D-072).
-  if (isPublished && !can(store.access, "publish")) return err(PAUSED_MESSAGES.publish);
+  if (isPublished && !can(store.access, "publish")) return err(cannotPublishMessage(store.access));
 
   try {
     if (!(await setStorePublished(user.id, isPublished))) return err(NO_STORE);

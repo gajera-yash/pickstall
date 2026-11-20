@@ -65,7 +65,7 @@ const STORE_FIELDS = {
   link: 1,
   theme: 1,
   currency: 1,
-  planTier: 1,
+  planTier: 1, suspendedAt: 1,
   trialEndsAt: 1,
   foundingEndsAt: 1,
   "billing.plan": 1,
@@ -88,7 +88,8 @@ export async function findPublicStore(slug: string): Promise<PublicStore | null>
   await connection();
   const { stores } = await collections();
   const doc = await stores.findOne({ slug, isPublished: true }, { projection: STORE_FIELDS });
-  if (!doc) return null;
+  // A store suspended by a platform admin (D-105) looks exactly like a missing one.
+  if (!doc || doc.suspendedAt) return null;
   return {
     id: doc._id,
     slug: doc.slug,

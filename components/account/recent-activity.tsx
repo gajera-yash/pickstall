@@ -16,6 +16,13 @@ const LABELS: Record<AuditAction, string> = {
   "product.deleted": "Product deleted",
   "account.data_exported": "Data downloaded",
   "account.deleted": "Account deleted",
+  "admin.trial_extended": "Admin: trial extended",
+  "admin.founding_granted": "Admin: founding granted",
+  "admin.store_suspended": "Admin: store suspended",
+  "admin.store_restored": "Admin: store restored",
+  "admin.product_unpublished": "Admin: product unpublished",
+  "admin.broadcasts_blocked": "Admin: broadcasts blocked",
+  "admin.broadcasts_unblocked": "Admin: broadcasts allowed",
 };
 
 const when = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" });

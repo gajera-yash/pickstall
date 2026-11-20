@@ -70,7 +70,9 @@ export function renderListEmail({ storeName, subject, body, name, unsubscribeUrl
 }
 
 /** Whether a store may start another broadcast, given how many it started in the last 24 hours. */
-export function broadcastProblem(input: { startedToday: number; subscribed: number; limit: number }): string | null {
+export function broadcastProblem(input: { startedToday: number; subscribed: number; limit: number; blocked?: boolean }): string | null {
+  // A platform admin turned this store's broadcasts off (D-105), for example after spam complaints.
+  if (input.blocked) return "Broadcasts are turned off for your store by the Pickstall team. Contact support to sort it out.";
   if (input.subscribed === 0) return "Nobody is subscribed yet.";
   if (input.subscribed > input.limit) return `Your list has ${input.subscribed.toLocaleString("en")} subscribers and your plan allows ${input.limit.toLocaleString("en")}. Upgrade your plan to send.`;
   if (input.startedToday >= BROADCASTS_PER_DAY) return `You can send ${BROADCASTS_PER_DAY} broadcasts a day. Try again tomorrow.`;

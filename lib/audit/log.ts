@@ -24,6 +24,14 @@ export const AUDIT_ACTIONS = [
   "product.deleted",
   "account.data_exported",
   "account.deleted",
+  // Platform admin actions (D-105): actorId is the admin, storeId the store acted on.
+  "admin.trial_extended",
+  "admin.founding_granted",
+  "admin.store_suspended",
+  "admin.store_restored",
+  "admin.product_unpublished",
+  "admin.broadcasts_blocked",
+  "admin.broadcasts_unblocked",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

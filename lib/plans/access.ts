@@ -1,7 +1,7 @@
 // Can this store sell right now? (D-072, D-073). Pure, so pages, actions and tests share one rule.
 // All plan gating goes through `can()` (CLAUDE.md 5); never compare plan names elsewhere.
 
-import { PLAN_LIMITS, TRIAL_DAYS, type PaidPlan, type PlanFeature } from "@/lib/config";
+import { APP_NAME, PLAN_LIMITS, SUPPORT_EMAIL, TRIAL_DAYS, type PaidPlan, type PlanFeature } from "@/lib/config";
 import type { StoreDoc } from "@/lib/db/collections";
 
 /**
@@ -9,7 +9,7 @@ import type { StoreDoc } from "@/lib/db/collections";
  * - `past_due`: a renewal payment failed and Stripe is retrying; the store stays open meanwhile.
  * - `founding` / `trial`: free periods. `paused`: none of the above.
  */
-export type AccessState = "active" | "past_due" | "founding" | "trial" | "paused";
+export type AccessState = "active" | "past_due" | "founding" | "trial" | "paused" | "suspended";
 
 export type StoreAccess = {
   state: AccessState;
@@ -23,7 +23,7 @@ export type StoreAccess = {
   cancelsAtPeriodEnd: boolean;
 };
 
-export type StoreAccessFields = Pick<StoreDoc, "planTier" | "trialEndsAt" | "foundingEndsAt" | "billing">;
+export type StoreAccessFields = Pick<StoreDoc, "planTier" | "trialEndsAt" | "foundingEndsAt" | "billing"> & Partial<Pick<StoreDoc, "suspendedAt">>;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -49,6 +49,8 @@ function free(state: "founding" | "trial" | "paused", endsAt: Date | null, now: 
  * date stays open until the migration gives it one.
  */
 export function storeAccess(store: StoreAccessFields, now: Date = new Date()): StoreAccess {
+  // A platform admin suspended the store (D-105): it wins over any plan.
+  if (store.suspendedAt) return { state: "suspended", endsAt: null, daysLeft: null, plan: store.billing?.plan ?? null, cancelsAtPeriodEnd: false };
   const billing = store.billing;
   const paid = billing?.plan ? PAID_STATES[billing.status] : undefined;
   if (billing?.plan && paid) {
@@ -78,14 +80,26 @@ export function can(access: StoreAccess, feature: Feature): boolean {
     case "coaching":
     case "automations":
     case "upsells":
-      return access.state !== "paused" && planLimits(access).features.includes(feature);
+      return isOpenState(access) && planLimits(access).features.includes(feature);
     case "sell":
     case "publish":
     // Pixels are in every plan (PRD F9: Starter and up; the trial mirrors Starter), not while paused.
     case "pixels":
-      return access.state !== "paused";
+      return isOpenState(access);
   }
 }
+
+/** Paused (no plan) and suspended (by an admin, D-105) stores can do nothing for buyers. */
+function isOpenState(access: Pick<StoreAccess, "state">): boolean {
+  return access.state !== "paused" && access.state !== "suspended";
+}
+
+/** Why publishing is off right now, for the creator. */
+export function cannotPublishMessage(access: Pick<StoreAccess, "state">): string {
+  return access.state === "suspended" ? SUSPENDED_MESSAGE : PAUSED_MESSAGES.publish;
+}
+
+export const SUSPENDED_MESSAGE = `Your store is suspended by the ${APP_NAME} team. Contact ${SUPPORT_EMAIL} to sort it out.`;
 
 export const PAUSED_MESSAGES = {
   publish: "Your store is paused because it has no active plan. Choose a plan to publish again.",

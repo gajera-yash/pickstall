@@ -69,6 +69,14 @@ export type StoreDoc = {
    * the one "products" marker. Missing or empty: the page as before. Validated by lib/page-blocks.
    */
   pageBlocks?: PageBlock[] | null;
+  /**
+   * Set by a platform admin (D-105): the store is hidden and cannot sell or publish until restored.
+   * Missing or null: not suspended. The reason is internal (never shown to buyers).
+   */
+  suspendedAt?: Date | null;
+  suspendReason?: string | null;
+  /** Set by a platform admin (D-105): no broadcasts or welcome emails from this store. */
+  broadcastsBlocked?: boolean;
   slug: string;
   name: string;
   bio: string | null;

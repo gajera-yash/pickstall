@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { AdminAction } from "@/components/admin/admin-action";
 import { AdminPageTitle, PlanBadge, Stat, moneyList } from "@/components/admin/admin-ui";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatDay, ListCard } from "@/components/dashboard/orders-ui";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +15,7 @@ import { adminStoreDetail } from "@/lib/admin/queries";
 import { isUuid } from "@/lib/media/media";
 import { formatMoney } from "@/lib/products/money";
 
-// Admin: one creator's store (D-104). Read-only in A1; actions come in A2.
+// Admin: one creator's store (D-104), with the admin actions (D-105).
 export default function AdminCreatorPage({ params }: PageProps<"/admin/creators/[id]">) {
   return (
     <>
@@ -45,6 +47,37 @@ async function CreatorContent({ params }: Pick<PageProps<"/admin/creators/[id]">
           Open store page
         </Link>
       )}
+      {store.suspendedAt && (
+        <Alert variant="error">
+          <AlertDescription>
+            Suspended on {formatDay(store.suspendedAt)}
+            {store.suspendReason ? `: ${store.suspendReason}` : "."} The store is hidden and cannot sell or publish.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <section aria-labelledby="admin-actions" className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
+        <h2 id="admin-actions" className="font-display text-h4">
+          Actions
+        </h2>
+        <p className="text-sm text-mute">Every action asks for a reason and is saved in the audit log. Nothing here moves money or deletes data.</p>
+        <div className="flex flex-wrap gap-3">
+          <AdminAction label="Extend trial" title="Extend the free trial?" description={`The trial of ${store.name} is pushed out from today or from its current end, whichever is later.`} base={{ action: "extend_trial", storeId: store.id }} amount={{ label: "Add", key: "days", options: [7, 14, 30, 60, 90], unit: "days" }} />
+          <AdminAction label="Grant founding" title="Make this a founding creator?" description={`${store.name} gets Pro for free for the chosen time, starting today.`} base={{ action: "grant_founding", storeId: store.id }} amount={{ label: "For", key: "months", options: [6, 3, 12, 1], unit: "months" }} />
+          {store.broadcastsBlocked ? (
+            <AdminAction label="Allow broadcasts" title="Allow broadcasts again?" description={`${store.name} can send broadcasts and welcome emails again.`} base={{ action: "unblock_broadcasts", storeId: store.id }} />
+          ) : (
+            <AdminAction label="Block broadcasts" title="Turn broadcasts off?" description={`${store.name} cannot send broadcasts or welcome emails until you allow them again. Use this after spam complaints.`} base={{ action: "block_broadcasts", storeId: store.id }} destructive />
+          )}
+          {store.suspendedAt ? (
+            <AdminAction label="Restore store" title="Restore this store?" description={`${store.name} becomes visible again and can sell, as its plan allows.`} base={{ action: "restore", storeId: store.id }} />
+          ) : (
+            <AdminAction label="Suspend store" title="Suspend this store?" description={`${store.name} is hidden from buyers, checkout stops and the creator cannot publish. Orders, buyers' libraries and data stay as they are.`} base={{ action: "suspend", storeId: store.id }} destructive />
+          )}
+        </div>
+        {store.broadcastsBlocked && <p className="text-sm font-semibold text-danger">Broadcasts are turned off for this store.</p>}
+      </section>
+
       <section aria-label="Numbers" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Paid orders" value={store.orders.paid.toLocaleString("en")} />
         <Stat label="Sales" value={moneyList(store.orders.sales)} />
@@ -64,6 +97,9 @@ async function CreatorContent({ params }: Pick<PageProps<"/admin/creators/[id]">
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead numeric>Price</TableHead>
+                <TableHead>
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -73,6 +109,11 @@ async function CreatorContent({ params }: Pick<PageProps<"/admin/creators/[id]">
                   <TableCell className="text-mute">{product.type}</TableCell>
                   <TableCell>{product.status === "published" ? <Badge variant="live">Published</Badge> : <Badge variant="draft">{product.status}</Badge>}</TableCell>
                   <TableCell numeric>{product.priceCents === 0 ? "Free" : formatMoney(product.priceCents, store.currency)}</TableCell>
+                  <TableCell className="text-right">
+                    {product.status === "published" && (
+                      <AdminAction label="Unpublish" title={`Unpublish “${product.title}”?`} description="It goes back to draft and leaves the store. Buyers who bought it keep access in their library." base={{ action: "unpublish_product", productId: product.id }} destructive />
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

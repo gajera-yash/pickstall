@@ -20,6 +20,8 @@ export function planStatusLabel(access: StoreAccess): string {
       return "Founding creator";
     case "paused":
       return "Store paused";
+    case "suspended":
+      return "Store suspended";
     case "past_due":
       return "Payment due";
     case "active":

@@ -14,10 +14,10 @@ import { can, storeAccess } from "@/lib/plans/access";
 export async function sendWelcomeEmail(storeId: string, subscriberId: string): Promise<"sent" | "skipped" | "failed"> {
   try {
     const { stores, subscribers } = await collections();
-    const store = await stores.findOne({ _id: storeId }, { projection: { name: 1, welcomeEmail: 1, planTier: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1 } });
+    const store = await stores.findOne({ _id: storeId }, { projection: { name: 1, welcomeEmail: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, broadcastsBlocked: 1 } });
     const welcome = store?.welcomeEmail;
     // Automations are a Pro feature (D-098): off on other plans even if it was saved on.
-    if (!store || !welcome?.enabled || !can(storeAccess(store), "automations")) return "skipped";
+    if (!store || !welcome?.enabled || store.broadcastsBlocked || !can(storeAccess(store), "automations")) return "skipped";
     const claimed = await subscribers.findOneAndUpdate(
       { _id: subscriberId, storeId, status: "subscribed", welcomedAt: { $in: [null] } },
       { $set: { welcomedAt: new Date() } },

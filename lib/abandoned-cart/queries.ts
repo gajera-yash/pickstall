@@ -29,7 +29,7 @@ export async function sendCartReminder(orderId: string, now: Date = new Date()):
     );
     if (!order || order.bumpOf) return "skipped";
 
-    const store = await stores.findOne({ _id: order.storeId, isPublished: true }, { projection: { name: 1, slug: 1, abandonedCart: 1, planTier: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1 } });
+    const store = await stores.findOne({ _id: order.storeId, isPublished: true }, { projection: { name: 1, slug: 1, abandonedCart: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1 } });
     const access = store ? storeAccess(store, now) : null;
     // Reminders need the store to sell and to have automations on its plan (D-098).
     if (!store?.abandonedCart?.enabled || !access || !can(access, "sell") || !can(access, "automations")) return "skipped";

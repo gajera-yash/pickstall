@@ -51,8 +51,9 @@ export async function sendNextBatch(broadcastId: string): Promise<{ done: boolea
   const { broadcasts, stores, subscribers } = await collections();
   const broadcast = await broadcasts.findOne({ _id: broadcastId, status: "sending" });
   if (!broadcast) return { done: true, sent: 0 };
-  const store = await stores.findOne({ _id: broadcast.storeId }, { projection: { name: 1 } });
-  if (!store) {
+  const store = await stores.findOne({ _id: broadcast.storeId }, { projection: { name: 1, broadcastsBlocked: 1, suspendedAt: 1 } });
+  // Blocked or suspended by a platform admin while sending (D-105): stop here.
+  if (!store || store.broadcastsBlocked || store.suspendedAt) {
     await markBroadcastFailed(broadcastId);
     return { done: true, sent: 0 };
   }

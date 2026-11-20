@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TRIAL_WARNING_DAYS } from "@/lib/config";
-import type { StoreAccess } from "@/lib/plans/access";
+import { SUSPENDED_MESSAGE, type StoreAccess } from "@/lib/plans/access";
 
 /** "Nov 15, 2026" in the creator's view (DESIGN.md 15). UTC, so server and client agree. */
 export function formatPlanDate(date: Date): string {
@@ -30,6 +30,13 @@ function PlanLink({ children }: { children: string }) {
  */
 export function TrialBanner({ access }: { access: StoreAccess }) {
   switch (access.state) {
+    case "suspended":
+      return (
+        <Alert variant="error">
+          <AlertTitle>Your store is suspended</AlertTitle>
+          <AlertDescription>{SUSPENDED_MESSAGE} Buyers can&apos;t open it or check out; nothing is deleted.</AlertDescription>
+        </Alert>
+      );
     case "paused":
       return (
         <Alert variant="error">

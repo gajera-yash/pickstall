@@ -12,7 +12,7 @@ import { PAID_PLANS, PLANNED_PRICE_CENTS, SUPPORT_EMAIL, TRIAL_DAYS, type PaidPl
 import { formatWholeDollars } from "@/lib/landing/demo";
 import { billingConfigured } from "@/lib/payments/billing";
 import { liveKey } from "@/lib/payments/test-account";
-import { can, planLimits, type StoreAccess } from "@/lib/plans/access";
+import { SUSPENDED_MESSAGE, can, planLimits, type StoreAccess } from "@/lib/plans/access";
 import { PLAN_FEATURE_GROUPS } from "@/lib/plans/catalog";
 import { countCourses, videoSecondsUsed } from "@/lib/plans/usage";
 import { countSubscribed } from "@/lib/subscribers/queries";
@@ -63,6 +63,8 @@ function statusOf(access: StoreAccess): { badge: { label: string; variant: "live
       return { badge: { label: "Founding creator", variant: "live" }, text: `Free until ${end}. Pick a plan any time before then to keep your store open afterwards.` };
     case "paused":
       return { badge: { label: "Paused", variant: "draft" }, text: "Your store is hidden from buyers and checkout is off until you pick a plan. Nothing is deleted." };
+    case "suspended":
+      return { badge: { label: "Suspended", variant: "draft" }, text: SUSPENDED_MESSAGE };
     case "trial":
       return end
         ? { badge: { label: "Free trial", variant: "testMode" }, text: `Your ${TRIAL_DAYS}-day free trial ends on ${end}. Pick a plan before then and nothing pauses.` }

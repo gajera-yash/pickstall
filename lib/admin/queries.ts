@@ -57,7 +57,7 @@ export async function adminOverview(now: Date = new Date()): Promise<AdminOvervi
   const { stores, orders, subscribers, broadcasts } = await collections();
   const since7 = new Date(now.getTime() - 7 * DAY_MS);
   const since30 = new Date(now.getTime() - 30 * DAY_MS);
-  const all = await stores.find({ deletedAt: { $exists: false } }, { projection: { planTier: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, isPublished: 1, createdAt: 1 } }).toArray();
+  const all = await stores.find({ deletedAt: { $exists: false } }, { projection: { planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, isPublished: 1, createdAt: 1 } }).toArray();
 
   const overview: AdminOverview = { creators: all.length, signups7: 0, signups30: 0, liveStores: 0, paid: { starter: 0, pro: 0 }, founding: 0, trials: 0, paused: 0, trialsEndingSoon: 0, mrrCents: 0, orders30: 0, sales30: [], salesAll: [], subscribers: 0, broadcasts30: 0 };
   for (const store of all) {
@@ -115,7 +115,7 @@ export async function adminListStores(options: { q?: string; before?: Date } = {
     ...(options.before ? { createdAt: { $lt: options.before } } : {}),
     ...(ownerFilter ? { ownerId: { $in: ownerFilter } } : q ? { $or: [{ name: { $regex: escapeRegex(q), $options: "i" } }, { slug: { $regex: escapeRegex(q.toLowerCase()) } }] } : {}),
   };
-  const docs = await stores.find(filter, { projection: { name: 1, slug: 1, ownerId: 1, isPublished: 1, planTier: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, stripeChargesEnabled: 1, createdAt: 1 } }).sort({ createdAt: -1 }).limit(PAGE + 1).toArray();
+  const docs = await stores.find(filter, { projection: { name: 1, slug: 1, ownerId: 1, isPublished: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, stripeChargesEnabled: 1, createdAt: 1 } }).sort({ createdAt: -1 }).limit(PAGE + 1).toArray();
   const page = docs.slice(0, PAGE);
   const emails = await ownerEmails(page.map((doc) => doc.ownerId));
   return {
@@ -126,6 +126,9 @@ export async function adminListStores(options: { q?: string; before?: Date } = {
 
 export type AdminStoreDetail = AdminStoreRow & {
   currency: string;
+  suspendedAt: Date | null;
+  suspendReason: string | null;
+  broadcastsBlocked: boolean;
   trialEndsAt: Date | null;
   products: { id: string; title: string; type: string; status: string; priceCents: number }[];
   orders: { paid: number; sales: MoneyByCurrency; recent: { id: string; title: string; buyerEmail: string; totalCents: number; currency: string; status: string; createdAt: Date }[] };
@@ -166,6 +169,9 @@ export async function adminStoreDetail(storeId: string, now: Date = new Date()):
     stripeConnected: doc.stripeChargesEnabled,
     createdAt: doc.createdAt,
     currency: doc.currency,
+    suspendedAt: doc.suspendedAt ?? null,
+    suspendReason: doc.suspendReason ?? null,
+    broadcastsBlocked: doc.broadcastsBlocked === true,
     trialEndsAt: doc.trialEndsAt ?? null,
     products: productDocs.map((product) => ({ id: product._id, title: product.title, type: product.type, status: product.status, priceCents: product.priceCents })),
     orders: {

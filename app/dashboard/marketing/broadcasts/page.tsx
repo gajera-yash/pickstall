@@ -37,7 +37,7 @@ async function BroadcastsContent() {
   const { store } = await requireUnlockedCreator(PATH);
   const now = new Date();
   const [subscribed, startedToday, broadcasts] = await Promise.all([countSubscribed(store.id), countBroadcastsStartedSince(store.id, now), listBroadcasts(store.id)]);
-  const blocked = broadcastProblem({ subscribed, startedToday, limit: subscriberLimit(store.access) });
+  const blocked = broadcastProblem({ subscribed, startedToday, limit: subscriberLimit(store.access), blocked: store.broadcastsBlocked || store.access.state === "suspended" });
 
   return (
     <div className="flex flex-col gap-6">

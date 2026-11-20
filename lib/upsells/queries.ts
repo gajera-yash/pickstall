@@ -46,7 +46,7 @@ export async function findUpsellOffer(storeId: string, orderId: string, now: Dat
   const order = await orders.findOne({ _id: orderId, storeId, status: "paid" }, { projection: { productId: 1, buyerEmail: 1, buyerName: 1, buyerPhone: 1, paidAt: 1, bumpOf: 1, upsellOf: 1 } });
   if (!order || order.bumpOf || order.upsellOf || !upsellWindowOpen(order.paidAt ?? null, now)) return null;
 
-  const store = await stores.findOne({ _id: storeId }, { projection: { planTier: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1 } });
+  const store = await stores.findOne({ _id: storeId }, { projection: { planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1 } });
   if (!store) return null;
   const access = storeAccess(store, now);
   if (!can(access, "upsells") || !can(access, "sell")) return null;

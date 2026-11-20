@@ -29,6 +29,8 @@ export type CreatorStore = {
   access: StoreAccess;
   /** Store details saved at least once (D-091): setup step 1 is done. */
   profileSaved: boolean;
+  /** A platform admin turned this store's broadcasts and welcome emails off (D-105). */
+  broadcastsBlocked: boolean;
 };
 
 /** The store owned by this user, or null. */
@@ -55,6 +57,7 @@ export async function findStoreByOwner(ownerId: string): Promise<CreatorStore | 
     isPublished: doc.isPublished,
     access: storeAccess(doc),
     profileSaved: Boolean(doc.profileSavedAt),
+    broadcastsBlocked: doc.broadcastsBlocked === true,
   };
 }
 

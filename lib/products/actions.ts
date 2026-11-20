@@ -10,7 +10,7 @@ import { logger } from "@/lib/logger";
 import { removeCourseContent } from "@/lib/courses/cleanup";
 import { countLessonsWithContent } from "@/lib/courses/curriculum";
 import { removeFilesOfProduct } from "@/lib/files/product-files";
-import { can, PAUSED_MESSAGES, planProblem } from "@/lib/plans/access";
+import { can, cannotPublishMessage, planProblem } from "@/lib/plans/access";
 import { checkPublish } from "@/lib/products/publish";
 import { createDraftProduct, deleteProduct, findEmptyDraft, findProduct, setProductStatus, updateProduct, type DeleteProductResult } from "@/lib/products/queries";
 import { productIdInput, productInputFor, productStatusInput } from "@/lib/products/schemas";
@@ -106,7 +106,7 @@ export async function saveProduct(productId: string, _prev: SaveProductState, fo
       // A paused store (trial over, D-072) keeps its edits but cannot publish.
       if (!can(store.access, "publish")) {
         revalidatePath("/dashboard", "layout");
-        return err(`Saved, but not published: ${PAUSED_MESSAGES.publish}`);
+        return err(`Saved, but not published: ${cannotPublishMessage(store.access)}`);
       }
       const saved = await findProduct(store.id, productId);
       if (!saved) return err(NOT_FOUND);
@@ -139,7 +139,7 @@ export async function changeProductStatus(productId: string, status: string): Pr
     if (!product) return err(NOT_FOUND);
 
     if (next.data === "published") {
-      if (!can(store.access, "publish")) return err(PAUSED_MESSAGES.publish);
+      if (!can(store.access, "publish")) return err(cannotPublishMessage(store.access));
       // The plan (D-098): Pro for coaching calls, and the course limit (after a downgrade, the
       // courses already published stay; no more can be published).
       if (product.type === "course" || product.type === "coaching") {

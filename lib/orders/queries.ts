@@ -57,7 +57,7 @@ const STORE_FIELDS = {
   currency: 1,
   stripeAccountId: 1,
   stripeChargesEnabled: 1,
-  planTier: 1,
+  planTier: 1, suspendedAt: 1,
   trialEndsAt: 1,
   foundingEndsAt: 1,
   "billing.plan": 1,
@@ -105,8 +105,8 @@ export async function loadCheckoutContext(username: string, productSlug: string)
   if (!product) return null;
 
   // The plan fields only decide `open`; they are not passed on to the page.
-  const { planTier, trialEndsAt, foundingEndsAt, billing, pixels, ...storeFields } = store;
-  const access = storeAccess({ planTier, trialEndsAt, foundingEndsAt, billing });
+  const { planTier, trialEndsAt, foundingEndsAt, billing, suspendedAt, pixels, ...storeFields } = store;
+  const access = storeAccess({ planTier, trialEndsAt, foundingEndsAt, billing, suspendedAt });
   return {
     store: storeFields,
     open: can(access, "sell"),

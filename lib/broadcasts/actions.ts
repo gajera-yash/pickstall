@@ -57,7 +57,7 @@ export async function sendBroadcastAction(raw: unknown): Promise<Result<{ id: st
   try {
     const now = new Date();
     const [subscribed, startedToday] = await Promise.all([countSubscribed(store.id), countBroadcastsStartedSince(store.id, now)]);
-    const problem = broadcastProblem({ subscribed, startedToday, limit: subscriberLimit(store.access) });
+    const problem = broadcastProblem({ subscribed, startedToday, limit: subscriberLimit(store.access), blocked: store.broadcastsBlocked || store.access.state === "suspended" });
     if (problem) return err(problem);
 
     const id = await createSendingBroadcast(store.id, input.data, user.email, subscribed, now);

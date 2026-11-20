@@ -4,6 +4,17 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-105: Platform admin, part A2 (actions)
+- **Date:** 2026-11-20
+- **Decision (founder approved the admin plan, 2026-11-19):** on a creator's admin page, `runAdminAction` (`lib/admin/actions.ts`) offers the actions below. Each one goes through `requireAdmin()` (404 for anyone else), Zod-checked input, a rate limit, a confirmation dialog with a required reason (cleaned, up to 200 characters), and an audit record (`admin.*` actions: admin id, store id, reason, hashed IP; no emails).
+  - **Extend trial** by 7-90 days, from today or the current end, whichever is later.
+  - **Grant founding** for 1-12 months (Pro for free).
+  - **Suspend or restore a store:** `stores.suspendedAt` and `suspendReason`. `storeAccess` returns the new state `suspended`, which wins over any plan, so `can()` blocks selling, publishing, pixels and Pro features. The public store looks missing (404). The creator sees a "suspended" banner and plan status, and publishing explains why (`cannotPublishMessage`). Orders, buyers' libraries and data stay as they are.
+  - **Block or allow broadcasts:** `stores.broadcastsBlocked`. It stops new broadcasts (`broadcastProblem`), stops a running one at its next batch, and stops welcome emails.
+  - **Unpublish a product** back to draft. Buyers keep access.
+- **Not done (by design):** no refunds or money movement, no card data, no logging in as a user, no deleting. Data export or deletion requests still go through the person's own account page.
+- **Also:** `RemovableRow` (QA fix) no longer uses `any`, so `pnpm lint` passes again.
+
 ## D-104: Platform admin, part A1 (read-only)
 - **Date:** 2026-11-20
 - **Decision (founder approved the plan, 2026-11-19):**
