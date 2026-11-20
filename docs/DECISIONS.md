@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-117: Stuck broadcasts fail on their own, and the "please review" email
+- **Date:** 2026-11-20
+- **Decision (founder approved the plan, including the schema fields and the paid-order hook, 2026-11-20):**
+  - **Stuck broadcasts:** an Inngest cron (`broadcasts-fail-stuck`, every 15 minutes, UTC) runs `failStuckBroadcasts`: a broadcast still "sending" whose `updatedAt` is more than 1 hour old is marked "failed" (with `finishedAt`). A live broadcast moves `updatedAt` on every batch of 100, so it is never caught. New index `broadcasts_status_updated`.
+  - **Review request:** one email a week after each paid order, asking the buyer to rate the product. The button opens `/library/{orderId}`, where the review form already is (D-106). Settings on Marketing next to the abandoned cart card: on/off (default off), optional subject and message with only `{{customer_name}}` and `{{product_title}}`; the review button, the store name and the "only review request" line are always added. An automation (D-098): saving it on needs the plan.
+  - **When it is not sent:** the order is no longer paid (refunded), is a bump, or was already asked; the store has it off, is suspended, cannot sell or has no automations; the product was deleted; the buyer already reviewed the product or unsubscribed from the store.
+  - **Sent once:** `onOrderPaid` queues an Inngest event with id `review-request-<orderId>` (a replay queues nothing new; never throws). After `step.sleepUntil(paidAt + 7 days)` the job claims `orders.reviewRequestSentAt` before sending, and the Resend idempotency key is `review-<orderId>`.
+  - **Data:** `StoreDoc.reviewRequest?` and `OrderDoc.reviewRequestSentAt?`, both optional; no migration.
+- **Not in this block:** a creator-chosen delay, requests for orders paid before the setting was on, and sending without Inngest (development).
+
 ## D-116: Admin update A3: full screen, platform billing and revenue, analytics, audit log, exports
 - **Date:** 2026-11-20
 - **Decision (founder approved the A3 plan, including the platform billing webhook change, 2026-11-20):**

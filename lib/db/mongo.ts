@@ -100,6 +100,8 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("subscribers").createIndex({ unsubscribeToken: 1 }, { unique: true, partialFilterExpression: { unsubscribeToken: { $type: "string" } }, name: "subscribers_unsubscribe_token_unique" }),
     db.collection("subscribers").createIndex({ storeId: 1, status: 1, _id: 1 }, { name: "subscribers_store_status_id" }),
     db.collection("broadcasts").createIndex({ storeId: 1, createdAt: -1 }, { name: "broadcasts_store_created" }),
+    // Finding broadcasts stuck in "sending" (D-117).
+    db.collection("broadcasts").createIndex({ status: 1, updatedAt: 1 }, { name: "broadcasts_status_updated" }),
     // Product reviews (D-106): one per buyer and product; public lists per product; the creator's list.
     db.collection("reviews").createIndex({ storeId: 1, productId: 1, buyerKey: 1 }, { unique: true, name: "reviews_store_product_buyer_unique" }),
     db.collection("reviews").createIndex({ storeId: 1, productId: 1, status: 1, createdAt: -1 }, { name: "reviews_store_product_status" }),

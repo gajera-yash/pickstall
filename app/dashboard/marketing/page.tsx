@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { CartReminderSettings } from "@/components/dashboard/cart-reminder-settings";
+import { ReviewRequestSettings } from "@/components/dashboard/review-request-settings";
 import { CouponManager, type ManagedCoupon } from "@/components/dashboard/coupon-manager";
 import { BUMP_HOW_IT_WORKS, HowItWorks, UPSELL_HOW_IT_WORKS, type HowItWorksContent } from "@/components/dashboard/how-it-works";
 import { PixelSettings } from "@/components/dashboard/pixel-settings";
@@ -11,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cartStats, findCartSettings } from "@/lib/abandoned-cart/queries";
+import { findReviewRequestSettings, reviewRequestsSent } from "@/lib/review-request/queries";
 import { couponRows, listCoupons } from "@/lib/coupons/queries";
 import { findPixelSettings } from "@/lib/pixels/queries";
 import { can } from "@/lib/plans/access";
@@ -81,13 +83,22 @@ export default function MarketingPage() {
 
 async function MarketingContent() {
   const { store } = await requireUnlockedCreator("/dashboard/marketing");
-  const [coupons, products, cart, stats, pixels] = await Promise.all([listCoupons(store.id), listProducts(store.id), findCartSettings(store.id), cartStats(store.id), findPixelSettings(store.id)]);
+  const [coupons, products, cart, stats, pixels, review, reviewSent] = await Promise.all([
+    listCoupons(store.id),
+    listProducts(store.id),
+    findCartSettings(store.id),
+    cartStats(store.id),
+    findPixelSettings(store.id),
+    findReviewRequestSettings(store.id),
+    reviewRequestsSent(store.id),
+  ]);
   const managed: ManagedCoupon[] = couponRows(coupons, products, store.currency);
 
   return (
     <div className="flex flex-col gap-6">
       <CouponManager coupons={managed} products={products.map((product) => ({ id: product._id, title: product.title }))} currency={store.currency} />
       <CartReminderSettings storeName={store.name} initial={cart} stats={stats} locked={!can(store.access, "automations")} />
+      <ReviewRequestSettings storeName={store.name} initial={review} sent={reviewSent} locked={!can(store.access, "automations")} />
       <PixelSettings initial={pixels} />
       <MoreTools />
     </div>

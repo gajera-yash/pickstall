@@ -80,6 +80,11 @@ export type StoreDoc = {
    */
   abandonedCart?: { enabled: boolean; subject: string; body: string } | null;
   /**
+   * One "please review" email a week after each paid order (D-117). Missing: off. Empty subject or
+   * body: the default text. The review button and store name are always added.
+   */
+  reviewRequest?: { enabled: boolean; subject: string; body: string } | null;
+  /**
    * Ad and analytics pixels on the store's own pages (D-097): IDs only, put into our fixed
    * snippets, loaded only after the visitor accepts. Never creator scripts. Missing: none.
    */
@@ -302,6 +307,8 @@ export type OrderDoc = {
   marketingConsent?: { at: Date; text: string } | null;
   /** When the abandoned cart reminder for this unfinished checkout went out (D-096); set once. */
   reminderSentAt?: Date | null;
+  /** When the "please review" email for this paid order went out (D-117); set once. */
+  reviewRequestSentAt?: Date | null;
   subtotalCents: number;
   discountCents: number;
   totalCents: number;

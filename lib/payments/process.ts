@@ -13,6 +13,7 @@ import { logger } from "@/lib/logger";
 import { providerByName } from "@/lib/payments";
 import { notifyOrderPaid, notifyRefund } from "@/lib/notifications/queries";
 import { scheduleOrderConfirmation } from "@/lib/orders/confirmation";
+import { scheduleReviewRequest } from "@/lib/review-request/job";
 import { recordPlanInvoice, syncSubscription } from "@/lib/plans/billing-sync";
 import type { PaymentEvent, PaymentProvider, WebhookEndpoint } from "@/lib/payments/types";
 import { applyStripeAccountStatus, detachStripeAccount, stripeAccountOfStore } from "@/lib/stores/queries";
@@ -96,6 +97,8 @@ async function onOrderPaid(orderId: string): Promise<void> {
     await issueLicenseSafely(bumpOrderId);
     scheduleOrderConfirmation(bumpOrderId);
   }
+  // The "please review" email a week later (D-117); the job checks the store setting then. Never throws.
+  await scheduleReviewRequest(orderId);
   await notifyOrderPaid(orderId); // one "New sale" per order (dedupe key); never throws (D-061)
   // The email list (D-094): only with the consent saved on the order; an upsert, so replays are safe.
   // A list problem must never undo or block the sale, so it is only logged.

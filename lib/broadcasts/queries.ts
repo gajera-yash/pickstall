@@ -42,6 +42,22 @@ export async function markBroadcastFailed(broadcastId: string): Promise<void> {
   await broadcasts.updateOne({ _id: broadcastId, status: "sending" }, { $set: { status: "failed", updatedAt: now, finishedAt: now } });
 }
 
+/** A "sending" broadcast with no progress for this long is treated as cut off (D-117). */
+export const STUCK_BROADCAST_MS = 60 * 60 * 1000;
+
+/**
+ * Marks every broadcast failed that has been "sending" with no progress for an hour (D-117). System
+ * code for the cron job, across all stores. Returns how many it marked.
+ */
+export async function failStuckBroadcasts(now: Date = new Date()): Promise<number> {
+  const { broadcasts } = await collections();
+  const result = await broadcasts.updateMany(
+    { status: "sending", updatedAt: { $lt: new Date(now.getTime() - STUCK_BROADCAST_MS) } },
+    { $set: { status: "failed", updatedAt: now, finishedAt: now } },
+  );
+  return result.modifiedCount;
+}
+
 /**
  * Sends the next 100 subscribed people of a sending broadcast (by id order after the saved cursor)
  * and moves the cursor. The Resend idempotency key is the broadcast plus the cursor it started
