@@ -11,6 +11,7 @@ import { can, cannotPublishMessage } from "@/lib/plans/access";
 import { rateLimitKey, releaseRateLimit, takeRateLimit } from "@/lib/rate-limit";
 import { err, fieldErrors, ok, type Result } from "@/lib/result";
 import { SLUG_TAKEN_MESSAGE, slugSchema } from "@/lib/slug";
+import { providerCurrencies } from "@/lib/payments/paypal-config";
 import { testSellerAccountId } from "@/lib/payments/test-account";
 import { connectAuthorizeUrl, connectAvailable } from "@/lib/payments/connect";
 import { changeStoreSlug, setStorePublished, setStoreStripeConnection, updateStorePageDesign, updateStoreProfile } from "@/lib/stores/queries";
@@ -75,6 +76,12 @@ export async function saveStoreSetup(_prev: StoreSetupState, formData: FormData)
       return err(issue?.message ?? "Check the form and try again.", typeof issue?.path[0] === "string" ? issue.path[0] : undefined);
     }
     design = parsedDesign.data;
+  }
+
+  // PayPal takes only some currencies (D-118); a store keeps one it already has.
+  const allowed = providerCurrencies();
+  if (allowed && parsed.data.currency !== store.currency && !allowed.includes(parsed.data.currency)) {
+    return err("PayPal doesn't take this currency. Pick another one.", "currency");
   }
 
   try {

@@ -21,7 +21,7 @@ const SLUG = /^[a-z0-9-]{3,30}$/;
 const PRODUCT_SLUG = /^[a-z0-9-]{1,60}$/;
 
 export type CheckoutContext = {
-  store: Pick<StoreDoc, "_id" | "slug" | "name" | "theme" | "currency" | "stripeAccountId" | "stripeChargesEnabled" | "bio" | "avatarUrl" | "socialLinks" | "link">;
+  store: Pick<StoreDoc, "_id" | "slug" | "name" | "theme" | "currency" | "stripeAccountId" | "stripeChargesEnabled" | "paypal" | "bio" | "avatarUrl" | "socialLinks" | "link">;
   /** False while the store is paused after its free trial (D-072): no new orders, free ones included. */
   open: boolean;
   /** Pixel IDs for the checkout and thank-you pages (D-097), or null. */
@@ -57,6 +57,8 @@ const STORE_FIELDS = {
   currency: 1,
   stripeAccountId: 1,
   stripeChargesEnabled: 1,
+  // Only whether a PayPal app is connected and its mode (D-118); the credentials stay in lib/stores/paypal.ts.
+  "paypal.mode": 1,
   planTier: 1, suspendedAt: 1,
   trialEndsAt: 1,
   foundingEndsAt: 1,
@@ -192,12 +194,12 @@ export async function markOrderFailed(orderId: string): Promise<void> {
 export async function findOrderForThankYou(
   storeId: string,
   orderId: string,
-): Promise<{ status: OrderDoc["status"]; productId: string; booking: { start: Date; end: Date; buyerTimeZone: string | null } | null; totalCents: number; currency: string } | null> {
+): Promise<{ status: OrderDoc["status"]; provider: OrderDoc["provider"]; productId: string; booking: { start: Date; end: Date; buyerTimeZone: string | null } | null; totalCents: number; currency: string } | null> {
   const { orders } = await collections();
-  const doc = await orders.findOne({ _id: orderId, storeId }, { projection: { status: 1, productId: 1, booking: 1, totalCents: 1, currency: 1 } });
+  const doc = await orders.findOne({ _id: orderId, storeId }, { projection: { status: 1, provider: 1, productId: 1, booking: 1, totalCents: 1, currency: 1 } });
   // A coaching order's booked time (D-087), so the page can show it; never the meeting link. The
   // amount is for the purchase pixel event (D-097).
-  return doc ? { status: doc.status, productId: doc.productId, booking: doc.booking ?? null, totalCents: doc.totalCents, currency: doc.currency } : null;
+  return doc ? { status: doc.status, provider: doc.provider, productId: doc.productId, booking: doc.booking ?? null, totalCents: doc.totalCents, currency: doc.currency } : null;
 }
 
 /** Development-only mock payment page: a pending mock order with its product title and total. */

@@ -11,12 +11,12 @@ import { storeHasOrders } from "@/lib/orders/creator-queries";
 
 export type SetupGate = SetupState & { unlocked: boolean };
 
-type GateStore = Pick<CreatorStore, "id" | "bio" | "avatarUrl" | "stripeChargesEnabled" | "isPublished"> & Partial<Pick<CreatorStore, "profileSaved">>;
+type GateStore = Pick<CreatorStore, "id" | "bio" | "avatarUrl" | "chargesEnabled" | "isPublished"> & Partial<Pick<CreatorStore, "profileSaved">>;
 
 // Cached per request on plain values, so the layout's nav, top bar and footer and the page share
 // one lookup.
-const gateFor = cache(async (id: string, bio: string | null, avatarUrl: string | null, stripeChargesEnabled: boolean, isPublished: boolean, profileSaved: boolean): Promise<SetupGate> => {
-  const state = await loadSetupState({ id, bio, avatarUrl, stripeChargesEnabled, isPublished, profileSaved });
+const gateFor = cache(async (id: string, bio: string | null, avatarUrl: string | null, chargesEnabled: boolean, isPublished: boolean, profileSaved: boolean): Promise<SetupGate> => {
+  const state = await loadSetupState({ id, bio, avatarUrl, chargesEnabled, isPublished, profileSaved });
   // Orders only matter while setup is incomplete. When the database is unreachable, setup decides.
   const hasOrders = !state.checklist.complete && (await storeHasOrders(id).catch(() => false));
   return { ...state, unlocked: isDashboardUnlocked({ setupComplete: state.checklist.complete, hasOrders }) };
@@ -27,7 +27,7 @@ const gateFor = cache(async (id: string, bio: string | null, avatarUrl: string |
  * requireCreator, so every query is scoped to the session owner's store.
  */
 export function loadSetupGate(store: GateStore): Promise<SetupGate> {
-  return gateFor(store.id, store.bio, store.avatarUrl, store.stripeChargesEnabled, store.isPublished, store.profileSaved ?? false);
+  return gateFor(store.id, store.bio, store.avatarUrl, store.chargesEnabled, store.isPublished, store.profileSaved ?? false);
 }
 
 /**

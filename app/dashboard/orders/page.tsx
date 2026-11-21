@@ -245,7 +245,7 @@ function accessEmailLabel(email: OrderDetail["accessEmail"]): string {
   return "Not delivered";
 }
 
-const PAID_WITH: Record<OrderRow["provider"], string> = { stripe: "Stripe", mock: "Test payment", free: "Free product" };
+const PAID_WITH: Record<OrderRow["provider"], string> = { paypal: "PayPal", stripe: "Stripe", mock: "Test payment", free: "Free product" };
 
 async function OrderDrawer({ storeId, orderId, closeHref }: { storeId: string; orderId: string; closeHref: string }) {
   const [order, call, license] = await Promise.all([findOrderDetail(storeId, orderId), findOrderCall(storeId, orderId).catch(() => null), licenseForStoreOrder(storeId, orderId).catch(() => null)]);

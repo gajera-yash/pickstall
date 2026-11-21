@@ -18,6 +18,8 @@ export const AUDIT_ACTIONS = [
   "store.username_changed",
   "stripe.connected",
   "stripe.disconnected",
+  "paypal.connected",
+  "paypal.disconnected",
   "plan.checkout_started",
   "plan.subscribed",
   "plan.changed",

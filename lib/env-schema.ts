@@ -60,6 +60,17 @@ export const serverEnvSchema = publicEnvSchema.extend({
   STRIPE_CONNECT_CLIENT_ID: optional(z.string().regex(/^ca_[A-Za-z0-9]+$/)),
   // The founder's own Stripe account id. In TEST mode only, a store may use it directly as its seller account (D-034).
   STRIPE_PLATFORM_ACCOUNT_ID: optional(z.string().regex(/^acct_[A-Za-z0-9]+$/)),
+  // Which provider takes payments (D-118). PayPal by default; "stripe" turns the dormant Stripe code back on.
+  PAYMENT_PROVIDER: optional(z.enum(["paypal", "stripe"])),
+  // PayPal (D-118). "sandbox" until the founder approves live mode. Creators' own REST apps must be in the same mode.
+  PAYPAL_MODE: optional(z.enum(["sandbox", "live"])),
+  // Our OWN PayPal REST app: platform billing (Pickstall plans) only, never creators' sales. Server only.
+  PAYPAL_CLIENT_ID: optional(z.string().regex(/^[A-Za-z0-9_-]{20,128}$/, { error: "Must be a PayPal REST app client id" })),
+  PAYPAL_CLIENT_SECRET: optional(z.string().min(20)),
+  // The id of the webhook registered on our own app for /api/webhooks/paypal (verifies billing events).
+  PAYPAL_WEBHOOK_ID: optional(z.string().regex(/^[A-Za-z0-9-]{6,64}$/)),
+  // 32 random bytes, base64: encrypts creators' PayPal app secrets at rest (AES-256-GCM). Server only.
+  PAYMENT_CREDENTIALS_KEY: optional(z.string().refine((value) => Buffer.from(value, "base64").length === 32, { error: "Must be 32 bytes, base64" })),
   // Hashes client IPs for signup rate limits (D-019). Optional: without it the per-IP limit is off.
   IP_HASH_SECRET: optional(z.string().min(16)),
 });

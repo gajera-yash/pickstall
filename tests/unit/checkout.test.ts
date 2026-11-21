@@ -194,7 +194,11 @@ describe("handleWebhookRequest (the only way an order becomes paid)", () => {
   });
 
   it("does not know other providers", async () => {
-    expect(await handleWebhookRequest("paypal", "{}", null)).toEqual({ status: 404, body: "not found" });
+    expect(await handleWebhookRequest("square", "{}", null)).toEqual({ status: 404, body: "not found" });
+  });
+
+  it("refuses a PayPal delivery without its signature headers (D-118)", async () => {
+    expect(await handleWebhookRequest("paypal", "{}", null)).toEqual({ status: 400, body: "bad_signature" });
   });
 
   it("forgets the event when applying it fails, so the provider's retry is processed", async () => {

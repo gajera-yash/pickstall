@@ -4,7 +4,9 @@ import { Suspense } from "react";
 
 import { StorePreview, type PreviewProduct } from "@/components/dashboard/store-preview";
 import { StoreSetupForm } from "@/components/dashboard/store-setup-form";
-import { StripeStatus, stripeOutcomeOf, type StripeOutcome } from "@/components/dashboard/stripe-status";
+import { PaymentsConnection, paypalSandbox, providerLabel } from "@/components/dashboard/payments-connection";
+import { stripeOutcomeOf, type StripeOutcome } from "@/components/dashboard/stripe-status";
+import { activeProvider, providerCurrencies } from "@/lib/payments/paypal-config";
 import { PublishButton } from "@/components/dashboard/setup/publish-step";
 import { ScrollToTopOnStep } from "@/components/dashboard/setup/step-feedback";
 import { SetupStepper } from "@/components/dashboard/setup/setup-stepper";
@@ -66,6 +68,7 @@ async function SetupContent({ searchParams }: { searchParams: PageProps<"/dashbo
 
       {step.id === "store-setup" && (
         <StoreSetupForm
+          allowedCurrencies={providerCurrencies()}
           mode="setup"
           continueHref={continueHref}
           slug={store.slug}
@@ -161,24 +164,26 @@ function ProductStep({ step, products, currency, error }: { step: ChecklistItem;
 }
 
 function PaymentsStep({ step, store, outcome }: { step: ChecklistItem; store: CreatorStore; outcome: StripeOutcome | null }) {
-  const connected = store.stripeChargesEnabled;
+  const connected = store.chargesEnabled;
+  const provider = providerLabel();
+  const testMode = activeProvider() === "stripe" ? !liveKey() : paypalSandbox();
   return (
     <Card className="gap-6">
       <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-display text-h3">Connect payments</h2>
-          {/* Stripe test mode until the founder approves live mode (CLAUDE.md section 9). */}
-          {!liveKey() && <Badge variant="testMode">Test mode</Badge>}
+          {/* Test mode (PayPal sandbox) until the founder approves live mode (CLAUDE.md section 9). */}
+          {testMode && <Badge variant="testMode">Test mode</Badge>}
         </div>
-        <p className="text-sm text-mute">Buyers pay you directly through your own Stripe account. Pickstall never holds your money and takes 0% of your sales.</p>
+        <p className="text-sm text-mute">Buyers pay you directly through your own {provider} account. Pickstall never holds your money and takes 0% of your sales.</p>
       </CardHeader>
 
-      <StripeStatus store={store} returnTo="setup" continueHref={SETUP_PATH} outcome={outcome} />
+      <PaymentsConnection store={store} returnTo="setup" continueHref={SETUP_PATH} stripeOutcome={outcome} />
 
       {!step.available && (
         <p className="text-sm text-mute">
-          Connecting Stripe is not switched on for this server yet, so this step does not hold up your setup. It turns on by itself once Stripe is
-          configured.
+          Connecting {provider} is not switched on for this server yet, so this step does not hold up your setup. It turns on by itself once{" "}
+          {provider} is configured.
         </p>
       )}
       {(connected || !step.available) && (
@@ -186,7 +191,7 @@ function PaymentsStep({ step, store, outcome }: { step: ChecklistItem; store: Cr
           <NextLink />
         </div>
       )}
-      <p className="text-sm text-mute">Stripe&apos;s card processing fees still apply.</p>
+      <p className="text-sm text-mute">{provider}&apos;s payment processing fees still apply.</p>
     </Card>
   );
 }

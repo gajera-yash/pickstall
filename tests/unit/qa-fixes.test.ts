@@ -98,7 +98,7 @@ describe("findEmptyDraft", () => {
 });
 
 describe("setup progress ignores an empty 'Untitled product'", () => {
-  const store = { id: "store-a", bio: "Hi", avatarUrl: null, stripeChargesEnabled: false, isPublished: false, profileSaved: true };
+  const store = { id: "store-a", bio: "Hi", avatarUrl: null, chargesEnabled: false, isPublished: false, profileSaved: true };
   const listing = (docs: Record<string, unknown>[]) => ({ sort: () => ({ limit: () => ({ toArray: async () => docs }) }) });
   const untitled = { _id: "p1", storeId: "store-a", type: "digital", status: "draft", title: "Untitled product" };
 

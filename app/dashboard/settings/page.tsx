@@ -6,6 +6,7 @@ import { UsernameCard } from "@/components/dashboard/username-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { storeLink } from "@/lib/config";
+import { providerCurrencies } from "@/lib/payments/paypal-config";
 import { isCurrencyLocked } from "@/lib/stores/currency-lock";
 
 // Settings > Store (PRD F8, D-028, D-045): publish status and link, username with Change, then the
@@ -27,6 +28,7 @@ async function StoreSettingsContent() {
       {/* Its own form, outside the profile form (forms must not nest, even through a portal). */}
       <UsernameCard username={store.slug} />
       <StoreSetupForm
+          allowedCurrencies={providerCurrencies()}
         slug={store.slug}
         theme={store.theme}
         currencyLocked={currencyLocked}

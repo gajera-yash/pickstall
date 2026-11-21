@@ -34,7 +34,7 @@ function Flag({ option }: { option: CurrencyOption | undefined }) {
 }
 
 /**
- * Store currency (D-046): a searchable shadcn Popover + Command list of every Stripe currency with
+ * Store currency (D-046): a searchable shadcn Popover + Command list of the provider's currencies with
  * its flag, code and name. Submits one field, `currency`. Locked once the store has a product,
  * because prices are stored in the currency's own units and would change meaning (D-046).
  */
@@ -43,14 +43,17 @@ export function CurrencyPicker({
   onChange,
   locked,
   error,
+  allowed,
 }: {
   value: Currency;
   onChange: (currency: Currency) => void;
   locked: boolean;
   error?: string | null;
+  /** The currencies the payment provider takes (PayPal, D-118); all when missing. */
+  allowed?: readonly Currency[];
 }) {
   const [open, setOpen] = useState(false);
-  const options = useMemo(() => currencyOptions(), []);
+  const options = useMemo(() => currencyOptions(allowed, value), [allowed, value]);
   const current = options.find((option) => option.code === value);
   const hintId = error ? "currency-error" : "currency-hint";
 

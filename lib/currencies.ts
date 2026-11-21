@@ -27,9 +27,11 @@ export function flagCountryFor(code: string): string | null {
 export type CurrencyOption = { code: Currency; name: string; flag: string | null };
 
 /** Every store currency, sorted by name, with the launch markets (USD, GBP, CAD) first. */
-export function currencyOptions(): CurrencyOption[] {
+export function currencyOptions(allowed?: readonly string[], keep?: string): CurrencyOption[] {
   const first: readonly string[] = ["usd", "gbp", "cad"];
-  return CURRENCIES.map((code) => ({ code, name: currencyName(code), flag: flagCountryFor(code) })).sort((a, b) => {
+  // Only the payment provider's currencies (PayPal, D-118), plus the store's current one so it still shows.
+  const codes = allowed ? CURRENCIES.filter((code) => allowed.includes(code) || code === keep) : CURRENCIES;
+  return codes.map((code) => ({ code, name: currencyName(code), flag: flagCountryFor(code) })).sort((a, b) => {
     const rank = (option: CurrencyOption) => (first.includes(option.code) ? first.indexOf(option.code) : first.length);
     return rank(a) - rank(b) || a.name.localeCompare(b.name);
   });

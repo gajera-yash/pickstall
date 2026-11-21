@@ -1,6 +1,7 @@
 import "server-only";
 
 import { collections } from "@/lib/db/collections";
+import { storeCanTakePayments } from "@/lib/payments/seller-status";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { storeAccess, type StoreAccess } from "@/lib/plans/access";
 import type { PageDesignInput, SocialLink, StoreProfileInput } from "@/lib/stores/schemas";
@@ -24,6 +25,13 @@ export type CreatorStore = {
   stripeChargesEnabled: boolean;
   /** Connected Stripe account details (D-053), for Settings > Payments. Never sent to buyers. */
   stripe: { connected: boolean; payoutsEnabled: boolean; detailsSubmitted: boolean };
+  /**
+   * True when buyers can pay this store with the active provider (PayPal by default, D-118). Use this,
+   * not `stripeChargesEnabled`, for setup, publishing and checkout.
+   */
+  chargesEnabled: boolean;
+  /** The connected PayPal app (D-118), for Settings > Payments: never the secret. */
+  paypal: { connected: boolean; mode: "sandbox" | "live" | null; clientIdEnd: string | null };
   isPublished: boolean;
   /** Free trial, founding period or paused (D-072). Gate features with `can(store.access, ...)`. */
   access: StoreAccess;
@@ -54,6 +62,8 @@ export async function findStoreByOwner(ownerId: string): Promise<CreatorStore | 
       payoutsEnabled: doc.stripePayoutsEnabled ?? doc.stripeChargesEnabled,
       detailsSubmitted: doc.stripeDetailsSubmitted ?? doc.stripeChargesEnabled,
     },
+    chargesEnabled: storeCanTakePayments(doc),
+    paypal: { connected: Boolean(doc.paypal), mode: doc.paypal?.mode ?? null, clientIdEnd: doc.paypal ? doc.paypal.clientId.slice(-6) : null },
     isPublished: doc.isPublished,
     access: storeAccess(doc),
     profileSaved: Boolean(doc.profileSavedAt),

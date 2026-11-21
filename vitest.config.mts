@@ -13,6 +13,14 @@ export default defineConfig({
           name: "unit",
           include: ["tests/unit/**/*.test.ts"],
           environment: "node",
+          // Placeholder values so modules that read the server env can load; unit tests never connect
+          // anywhere (the database is mocked) and tests that need other values mock the env modules.
+          env: {
+            NEXT_PUBLIC_APP_URL: "https://pickstall.test",
+            NEXT_PUBLIC_ROOT_DOMAIN: "pickstall.test",
+            MONGODB_URI: "mongodb://unit-tests.invalid:27017",
+            BETTER_AUTH_SECRET: "unit-test-secret-unit-test-secret-0000",
+          },
         },
       },
       {

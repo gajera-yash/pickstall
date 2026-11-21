@@ -14,6 +14,7 @@ import { pixelValue } from "@/lib/pixels/rules";
 import { formatMoney, priceDecimals } from "@/lib/products/money";
 import { findUpsellOffer } from "@/lib/upsells/queries";
 import { PostPurchaseOffers } from "@/components/store/upsell-offer";
+import { captureReturningPayPalOrder } from "@/lib/orders/paypal-return";
 import { findOrderForThankYou, loadCheckoutContext } from "@/lib/orders/queries";
 
 export const instant = false;
@@ -41,8 +42,14 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
   const context = await loadCheckoutContext(username, productSlug);
   if (!context || !isUuid(orderId)) notFound();
 
-  const order = await findOrderForThankYou(context.store._id, orderId);
+  let order = await findOrderForThankYou(context.store._id, orderId);
   if (!order || order.productId !== context.product.id) notFound();
+  // Back from PayPal (D-118): capture the approved payment now. Access still comes only from the
+  // verified capture webhook; this read just shows "paid" when that already arrived.
+  if (order.status === "pending" && order.provider === "paypal") {
+    await captureReturningPayPalOrder(context.store._id, orderId);
+    order = (await findOrderForThankYou(context.store._id, orderId)) ?? order;
+  }
 
   const { store, product } = context;
   const theme = resolveTheme(store.theme);

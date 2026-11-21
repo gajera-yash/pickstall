@@ -7,10 +7,15 @@ export type CheckoutInput = {
   amountCents: number;
   currency: string;
   buyerEmail: string;
+  /** The store name, shown as the seller on the provider's payment page (PayPal brand_name). */
+  sellerName?: string;
   /** Where the buyer returns after paying. Never used to grant access: only the verified event does. */
   successUrl: string;
   cancelUrl: string;
-  /** The creator's own Stripe account id (direct charge, no application fee). */
+  /**
+   * Whose account takes the money: the creator's Stripe account id (direct charge, no application
+   * fee), or for PayPal the store id, whose own PayPal app creates the order (D-118).
+   */
   connectedAccountId: string | null;
 };
 
@@ -27,6 +32,11 @@ type FromAccount = { account?: string | null };
 
 /** A provider event reduced to what fulfilment needs. `eventId` is the provider's event id, the idempotency key. */
 export type PaymentEvent =
+  /**
+   * The buyer approved the payment, which still has to be captured (PayPal, D-118). Capturing is
+   * idempotent; the order becomes paid only on the later verified "payment.succeeded".
+   */
+  | (FromAccount & { eventId: string; type: "payment.approved"; orderId: string; providerSessionId: string })
   | (FromAccount & {
       eventId: string;
       type: "payment.succeeded";
@@ -67,13 +77,30 @@ export type WebhookOutcome = { ok: true; event: PaymentEvent | null } | { ok: fa
 /** Which of our webhook endpoints a request arrived on. Each has its own signing secret (CLAUDE.md 7). */
 export type WebhookEndpoint = "connect" | "platform";
 
+/**
+ * What a provider may need besides the body and one signature header: PayPal signs with several
+ * headers and is verified per creator app, so it needs all headers and the store id from the URL.
+ */
+export type WebhookContext = { headers?: Headers; accountId?: string };
+
 export type RefundInput = { orderId: string; providerPaymentId: string; amountCents: number; connectedAccountId: string | null };
 
 export type PaymentProvider = {
-  readonly name: "stripe" | "mock";
+  readonly name: "paypal" | "stripe" | "mock";
   createCheckout(input: CheckoutInput): Promise<CheckoutSession>;
   /** Verifies the signature and turns the raw request into a normalized event. `event: null` means "valid but not interesting". */
-  handleWebhook(rawBody: string, signature: string | null, endpoint?: WebhookEndpoint): Promise<WebhookOutcome>;
+  handleWebhook(rawBody: string, signature: string | null, endpoint?: WebhookEndpoint, context?: WebhookContext): Promise<WebhookOutcome>;
+  /**
+   * Finishes an approved payment when the provider needs a server call for it (PayPal capture).
+   * Idempotent. It never marks the order paid: the verified "payment.succeeded" event does that.
+   */
+  completeCheckout?(input: { orderId: string; providerSessionId: string; connectedAccountId: string | null }): Promise<void>;
+  /**
+   * Where an unfinished checkout stands at the provider (PayPal, D-118), for the sweep that settles
+   * checkouts the buyer never finished: "approved" (capture it), "completed" (its event will come),
+   * "open" (not approved yet) or "gone" (expired or voided).
+   */
+  checkoutStatus?(input: { providerSessionId: string; connectedAccountId: string | null }): Promise<"approved" | "completed" | "open" | "gone">;
   /**
    * Asks the provider to refund the whole payment. It does NOT change the order: the provider's
    * verified refund event does that, through the same path as every other event.

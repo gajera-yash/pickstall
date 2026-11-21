@@ -33,7 +33,7 @@ import {
 import { scheduleCartReminder } from "@/lib/abandoned-cart/job";
 import { consentForCheckout } from "@/lib/subscribers/rules";
 import { buyerInput } from "@/lib/orders/schemas";
-import { providerForStore } from "@/lib/payments";
+import { providerForStore, sellerAccountFor } from "@/lib/payments";
 import { mockAllowed, signMockBody } from "@/lib/payments/mock";
 import { handleWebhookRequest, markFreeOrderPaid } from "@/lib/payments/process";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
@@ -195,9 +195,10 @@ export async function startCheckout(username: string, productSlug: string, _prev
           amountCents: amount.totalCents,
           currency: context.store.currency,
           buyerEmail: buyer.email,
+          sellerName: context.store.name,
           successUrl: `${appUrl}${base}/thank-you?order=${orderId}`,
           cancelUrl: `${appUrl}${base}`,
-          connectedAccountId: context.store.stripeAccountId,
+          connectedAccountId: sellerAccountFor(provider, context.store),
         });
         await attachProviderSession(orderId, session.providerSessionId);
         // One reminder two hours later if this paid checkout is not finished (D-096); never throws.

@@ -15,7 +15,7 @@ import { notifyOrderPaid, notifyRefund } from "@/lib/notifications/queries";
 import { scheduleOrderConfirmation } from "@/lib/orders/confirmation";
 import { scheduleReviewRequest } from "@/lib/review-request/job";
 import { recordPlanInvoice, syncSubscription } from "@/lib/plans/billing-sync";
-import type { PaymentEvent, PaymentProvider, WebhookEndpoint } from "@/lib/payments/types";
+import type { PaymentEvent, PaymentProvider, WebhookContext, WebhookEndpoint } from "@/lib/payments/types";
 import { applyStripeAccountStatus, detachStripeAccount, stripeAccountOfStore } from "@/lib/stores/queries";
 
 // The one place an order becomes paid, failed or refunded. Stripe's webhook routes and the
@@ -30,11 +30,12 @@ export async function handleWebhookRequest(
   rawBody: string,
   signature: string | null,
   endpoint: WebhookEndpoint = "connect",
+  context?: WebhookContext,
 ): Promise<WebhookResult> {
   const provider = providerByName(providerName);
   if (!provider) return { status: 404, body: "not found" };
 
-  const outcome = await provider.handleWebhook(rawBody, signature, endpoint);
+  const outcome = await provider.handleWebhook(rawBody, signature, endpoint, context);
   if (!outcome.ok) return { status: 400, body: outcome.reason };
   if (!outcome.event) return { status: 200, body: "ignored" };
 
@@ -64,11 +65,13 @@ export async function handleWebhookRequest(
 
 /**
  * The event must come from the seller account of the order's store. Without this, a creator could
- * send events from their own Stripe account that name another store's order (R9). The mock has no
+ * send events from their own Stripe account (or PayPal app) that name another store's order (R9).
+ * PayPal events carry the store id whose app they were verified with (D-118). The mock has no
  * accounts (`undefined`), so there is nothing to compare.
  */
-async function fromStoreAccount(event: { account?: string | null }, storeId: string): Promise<boolean> {
+async function fromStoreAccount(event: { account?: string | null }, storeId: string, providerName: PaymentProvider["name"]): Promise<boolean> {
   if (event.account === undefined) return true;
+  if (providerName === "paypal") return event.account === storeId;
   const expected = await stripeAccountOfStore(storeId);
   return expected !== null && event.account === expected;
 }
@@ -124,11 +127,25 @@ async function applyEvent(providerName: PaymentProvider["name"], event: PaymentE
       await detachStripeAccount(event.account);
       return;
 
+    case "payment.approved": {
+      // PayPal (D-118): the buyer approved; capture it now in case they never came back to our page.
+      // Only a pending order bound to this PayPal order, from this store's own app. Capture is
+      // idempotent; the order becomes paid on the verified capture event, not here.
+      const order = await orders.findOne({ _id: event.orderId, provider: providerName, providerSessionId: event.providerSessionId, status: "pending" }, { projection: { storeId: 1 } });
+      if (!order || !(await fromStoreAccount(event, order.storeId, providerName))) return;
+      const provider = providerByName(providerName);
+      await provider?.completeCheckout?.({ orderId: event.orderId, providerSessionId: event.providerSessionId, connectedAccountId: order.storeId }).catch((error: unknown) => {
+        // Declined or already captured: the capture events (or the pending sweep) settle the order.
+        logger.warn("webhook.capture_failed", { orderId: event.orderId, name: error instanceof Error ? error.name : undefined });
+      });
+      return;
+    }
+
     case "payment.succeeded": {
       // The event must belong to the checkout session we created for this order (R9).
       const binding = { _id: event.orderId, provider: providerName, providerSessionId: event.providerSessionId };
       const order = await orders.findOne(binding, { projection: { storeId: 1, totalCents: 1, currency: 1 } });
-      if (!order || !(await fromStoreAccount(event, order.storeId))) {
+      if (!order || !(await fromStoreAccount(event, order.storeId, providerName))) {
         logger.error("webhook.session_mismatch", { orderId: event.orderId });
         return;
       }
@@ -153,7 +170,7 @@ async function applyEvent(providerName: PaymentProvider["name"], event: PaymentE
     case "payment.failed": {
       const match = { provider: providerName, providerSessionId: event.providerSessionId, ...(event.orderId ? { _id: event.orderId } : {}) };
       const order = await orders.findOne(match, { projection: { storeId: 1 } });
-      if (!order || !(await fromStoreAccount(event, order.storeId))) return;
+      if (!order || !(await fromStoreAccount(event, order.storeId, providerName))) return;
       await orders.updateOne({ _id: order._id, status: "pending" }, { $set: { status: "failed" } });
       // A failed or expired checkout gives its coaching time (D-083) and its coupon use (D-088) back.
       await releaseBookingForOrder(order._id);
@@ -166,7 +183,7 @@ async function applyEvent(providerName: PaymentProvider["name"], event: PaymentE
       const match = event.providerPaymentId ? { providerPaymentId: event.providerPaymentId } : event.orderId ? { _id: event.orderId } : null;
       if (!match) return;
       const order = await orders.findOne({ ...match, provider: providerName }, { projection: { storeId: 1, totalCents: 1 } });
-      if (!order || !(await fromStoreAccount(event, order.storeId))) return;
+      if (!order || !(await fromStoreAccount(event, order.storeId, providerName))) return;
       const refunded = event.amountRefundedCents ?? order.totalCents;
       // $max: events can arrive out of order; the refunded amount never goes down.
       const changed = await orders.updateOne(

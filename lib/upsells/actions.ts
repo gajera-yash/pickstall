@@ -9,7 +9,7 @@ import { CHECKOUT_RATE_LIMIT, PRODUCT_RATE_LIMIT } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { isUuid } from "@/lib/media/media";
 import { attachProviderSession, createPendingOrder, loadCheckoutContext, markOrderFailed, originOfOrder } from "@/lib/orders/queries";
-import { providerForStore } from "@/lib/payments";
+import { providerForStore, sellerAccountFor } from "@/lib/payments";
 import { markFreeOrderPaid } from "@/lib/payments/process";
 import { productIdInput } from "@/lib/products/schemas";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
@@ -100,9 +100,10 @@ export async function startUpsellCheckout(username: string, productSlug: string,
           amountCents: offer.priceCents,
           currency: context.store.currency,
           buyerEmail: offer.buyer.email,
+          sellerName: context.store.name,
           successUrl: `${appUrl}${base}/thank-you?order=${newOrderId}`,
           cancelUrl: `${appUrl}/@${context.store.slug}/${context.product.slug}/thank-you?order=${orderId}`,
-          connectedAccountId: context.store.stripeAccountId,
+          connectedAccountId: sellerAccountFor(provider, context.store),
         });
         await attachProviderSession(newOrderId, session.providerSessionId);
         redirect(session.url);

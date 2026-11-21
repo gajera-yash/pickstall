@@ -206,28 +206,28 @@ describe("publish rules", () => {
   const free = { title: "T", priceCents: 0, salePriceCents: null, externalUrl: "https://x.example.com" };
 
   it("needs a delivery link or a file", () => {
-    expect(checkPublish({ ...free, externalUrl: null }, { stripeChargesEnabled: false })).toEqual({ ok: false, problems: ["Add a link or a file to deliver."] });
-    expect(checkPublish({ ...free, externalUrl: null, deliveryType: "file", fileId: "f1" }, { stripeChargesEnabled: false })).toEqual({ ok: true });
+    expect(checkPublish({ ...free, externalUrl: null }, { chargesEnabled: false })).toEqual({ ok: false, problems: ["Add a link or a file to deliver."] });
+    expect(checkPublish({ ...free, externalUrl: null, deliveryType: "file", fileId: "f1" }, { chargesEnabled: false })).toEqual({ ok: true });
     // A file product needs its file, whatever link is left over from before (D-050).
-    expect(checkPublish({ ...free, deliveryType: "file", fileId: null }, { stripeChargesEnabled: false })).toMatchObject({ ok: false });
+    expect(checkPublish({ ...free, deliveryType: "file", fileId: null }, { chargesEnabled: false })).toMatchObject({ ok: false });
   });
 
   it("lets free products publish without payments", () => {
-    expect(checkPublish(free, { stripeChargesEnabled: false }, "production")).toEqual({ ok: true });
+    expect(checkPublish(free, { chargesEnabled: false }, "production")).toEqual({ ok: true });
   });
 
   it("blocks paid products in production until Stripe is connected", () => {
     const paid = { ...free, priceCents: 1900 };
-    expect(checkPublish(paid, { stripeChargesEnabled: false }, "production")).toMatchObject({ ok: false });
-    expect(checkPublish(paid, { stripeChargesEnabled: true }, "production")).toEqual({ ok: true });
-    expect(checkPublish(paid, { stripeChargesEnabled: false }, "development")).toEqual({ ok: true });
+    expect(checkPublish(paid, { chargesEnabled: false }, "production")).toMatchObject({ ok: false });
+    expect(checkPublish(paid, { chargesEnabled: true }, "production")).toEqual({ ok: true });
+    expect(checkPublish(paid, { chargesEnabled: false }, "development")).toEqual({ ok: true });
   });
 
   it("knows what counts as paid and when payments are ready", () => {
     expect(isPaid({ priceCents: 0, salePriceCents: null })).toBe(false);
     expect(isPaid({ priceCents: 1000, salePriceCents: null })).toBe(true);
     expect(isPaid({ priceCents: 1000, salePriceCents: 500 })).toBe(true);
-    expect(paymentsReady({ stripeChargesEnabled: false }, "production")).toBe(false);
+    expect(paymentsReady({ chargesEnabled: false }, "production")).toBe(false);
   });
 });
 

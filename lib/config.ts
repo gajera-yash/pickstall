@@ -85,6 +85,14 @@ export const CURRENCIES = [
 ] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
+/**
+ * Currencies a store can sell in with PayPal (D-118), from PayPal's REST "Currency codes" reference
+ * (developer.paypal.com/api/rest/reference/currency-codes, checked 2026-11-21). Left out: BRL, CNY and
+ * MYR (in-country PayPal accounts only), RUB, INR (not on the list), and HUF and TWD (PayPal takes no
+ * decimals for them while our amounts keep two). JPY has no decimals on both sides.
+ */
+export const PAYPAL_CURRENCIES: readonly Currency[] = ["aud", "cad", "chf", "czk", "dkk", "eur", "gbp", "hkd", "ils", "jpy", "mxn", "nok", "nzd", "php", "pln", "sek", "sgd", "thb", "usd"];
+
 /** Currency of a new draft store; the creator can change it in Store setup until the first product. */
 export const DEFAULT_CURRENCY: Currency = "usd";
 
@@ -242,8 +250,8 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
 };
 
 /**
- * Planned monthly prices from PRD F9, integer cents. Shown on the landing page as "planned"; billing is
- * Phase 3 and founding creators pay nothing for 6 months. Change them here only.
+ * Monthly plan prices from PRD F9, integer cents (final, confirmed by the founder 2026-11-20).
+ * Founding creators pay nothing for 6 months. Change them here only.
  */
 export const PLANNED_PRICE_CENTS: Record<Exclude<Plan, "trial">, number> = {
   starter: 1900,

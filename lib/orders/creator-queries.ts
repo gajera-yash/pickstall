@@ -141,13 +141,13 @@ export async function findOrderDetail(storeId: string, orderId: string): Promise
 export async function findRefundableOrder(
   storeId: string,
   orderId: string,
-): Promise<{ id: string; provider: "stripe" | "mock"; providerPaymentId: string; totalCents: number } | null> {
+): Promise<{ id: string; provider: "paypal" | "stripe" | "mock"; providerPaymentId: string; totalCents: number } | null> {
   const { orders } = await collections();
   const doc = await orders.findOne(
-    { _id: orderId, storeId, status: "paid", provider: { $in: ["stripe", "mock"] }, providerPaymentId: { $type: "string" } },
+    { _id: orderId, storeId, status: "paid", provider: { $in: ["paypal", "stripe", "mock"] }, providerPaymentId: { $type: "string" } },
     { projection: { provider: 1, providerPaymentId: 1, totalCents: 1 } },
   );
-  if (!doc || (doc.provider !== "stripe" && doc.provider !== "mock") || !doc.providerPaymentId) return null;
+  if (!doc || doc.provider === "free" || !doc.providerPaymentId) return null;
   return { id: doc._id, provider: doc.provider, providerPaymentId: doc.providerPaymentId, totalCents: doc.totalCents };
 }
 

@@ -19,7 +19,8 @@ export async function requestFullRefund(storeId: string, orderId: string): Promi
     orderId: order.id,
     providerPaymentId: order.providerPaymentId,
     amountCents: order.totalCents,
-    connectedAccountId: order.provider === "stripe" ? await stripeAccountOfStore(storeId) : null,
+    // PayPal refunds on the store's own app (D-118); Stripe on the connected account.
+    connectedAccountId: order.provider === "paypal" ? storeId : order.provider === "stripe" ? await stripeAccountOfStore(storeId) : null,
   });
   await markRefundRequested(storeId, order.id);
   return "requested";

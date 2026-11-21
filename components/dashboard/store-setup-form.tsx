@@ -47,6 +47,8 @@ type Props = {
   products?: PreviewProduct[];
   /** True once the store has a product: prices are in this currency, so it cannot change (D-046). */
   currencyLocked?: boolean;
+  /** Currencies the payment provider takes (PayPal, D-118); all when missing. */
+  allowedCurrencies?: readonly Currency[];
 };
 
 const NAME_REQUIRED = "Enter a store name.";
@@ -73,7 +75,7 @@ const snapshot = (values: Omit<Values, "socialLinks">, social: SocialValues, des
  * preview on wide screens (behind a Preview button otherwise), social links list, unsaved-changes
  * guard, and "Saving..." then "Saved" on the button.
  */
-export function StoreSetupForm({ initial, slug, theme, mode = "settings", continueHref, products, currencyLocked = false }: Props) {
+export function StoreSetupForm({ initial, slug, theme, mode = "settings", continueHref, products, currencyLocked = false, allowedCurrencies }: Props) {
   const router = useRouter();
   const setup = mode === "setup";
   const [state, action, pending] = useActionState<StoreSetupState, FormData>(saveStoreSetup, null);
@@ -262,7 +264,7 @@ export function StoreSetupForm({ initial, slug, theme, mode = "settings", contin
           <CardHeader>
             <h2 className="font-display text-h3">Currency</h2>
           </CardHeader>
-          <CurrencyPicker value={values.currency} onChange={(currency) => set("currency", currency)} locked={currencyLocked} error={fieldError("currency")} />
+          <CurrencyPicker value={values.currency} onChange={(currency) => set("currency", currency)} locked={currencyLocked} error={fieldError("currency")} allowed={allowedCurrencies} />
         </Card>
 
         <div className="flex flex-wrap items-center gap-3">

@@ -9,6 +9,8 @@ export const AUDIT_LABELS: Record<AuditAction, string> = {
   "store.username_changed": "Store link changed",
   "stripe.connected": "Stripe connected",
   "stripe.disconnected": "Stripe disconnected",
+  "paypal.connected": "PayPal connected",
+  "paypal.disconnected": "PayPal disconnected",
   "plan.checkout_started": "Plan checkout opened",
   "plan.subscribed": "Plan started",
   "plan.changed": "Plan changed",

@@ -14,12 +14,12 @@ type Publishable = Pick<ProductDoc, "title" | "priceCents" | "salePriceCents" | 
 
 
 /**
- * Whether paid products may be published: the creator's Stripe account must be connected, or we
+ * Whether paid products may be published: the creator must have connected payments (PayPal, D-118), or we
  * are in development where the MockProvider stands in (CLAUDE.md 7). In production only a
- * connected Stripe account counts.
+ * connected payment account counts.
  */
-export function paymentsReady(store: { stripeChargesEnabled: boolean }, nodeEnv: string | undefined = process.env.NODE_ENV): boolean {
-  return store.stripeChargesEnabled || nodeEnv !== "production";
+export function paymentsReady(store: { chargesEnabled: boolean }, nodeEnv: string | undefined = process.env.NODE_ENV): boolean {
+  return store.chargesEnabled || nodeEnv !== "production";
 }
 
 /** True when buyers can pay anything for this product. */
@@ -55,7 +55,7 @@ export function publishProblems(product: Publishable, paymentsOk: boolean): stri
 }
 
 /** Publish rules (PRD F3): a title, something to deliver, a valid price and payments for paid products. */
-export function checkPublish(product: Publishable, store: { stripeChargesEnabled: boolean }, nodeEnv?: string): PublishCheck {
+export function checkPublish(product: Publishable, store: { chargesEnabled: boolean }, nodeEnv?: string): PublishCheck {
   const problems = publishProblems(product, paymentsReady(store, nodeEnv));
   return problems.length === 0 ? { ok: true } : { ok: false, problems };
 }

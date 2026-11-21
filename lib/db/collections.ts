@@ -131,6 +131,13 @@ export type StoreDoc = {
    */
   stripeClaimKey?: string;
   /**
+   * The creator's own PayPal REST app (D-118), until PayPal partner onboarding exists. Written only
+   * by the Settings > Payments connect action. `secretSealed` is AES-256-GCM encrypted with
+   * PAYMENT_CREDENTIALS_KEY and this store's id; `webhookId` is the webhook we registered on their
+   * app for /api/webhooks/paypal/<storeId>. Never sent to buyers or to the browser.
+   */
+  paypal?: StorePayPal;
+  /**
    * Plan and free trial (D-072). New stores start as `trial` with `trialEndsAt` = created + TRIAL_DAYS.
    * `founding` is granted by the founder (scripts/admin/grant-founding.mjs) until `foundingEndsAt`.
    * Missing on stores created before D-072 until `scripts/migrations/2026-11-15-store-trials.mjs` ran;
@@ -149,6 +156,16 @@ export type StoreDoc = {
   isPublished: boolean;
   createdAt: Date;
   updatedAt: Date;
+};
+
+/** A store's connected PayPal REST app (D-118). */
+export type StorePayPal = {
+  mode: "sandbox" | "live";
+  clientId: string;
+  secretSealed: string;
+  /** Null when the app origin could not receive webhooks (local development over http). */
+  webhookId: string | null;
+  connectedAt: Date;
 };
 
 /** Signup details waiting for the email code (D-019). Removed by a TTL index after `expiresAt`. */
@@ -314,8 +331,8 @@ export type OrderDoc = {
   totalCents: number;
   currency: string;
   status: "pending" | "paid" | "refunded" | "failed";
-  /** Who takes the payment: Stripe, the development-only mock, or none for a free product. */
-  provider: "stripe" | "mock" | "free";
+  /** Who takes the payment: PayPal (D-118), Stripe (dormant), the development-only mock, or none for a free product. */
+  provider: "paypal" | "stripe" | "mock" | "free";
   providerSessionId: string | null;
   /** The provider's payment id, saved when the order is paid; a refund event finds the order through it. */
   providerPaymentId?: string | null;
