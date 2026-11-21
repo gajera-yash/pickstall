@@ -13,7 +13,7 @@ import { formatMoney } from "@/lib/products/money";
 export default function AdminOverviewPage() {
   return (
     <>
-      <AdminPageTitle title="Overview" description="The whole platform at a glance. Sales are creators' sales, paid into their own Stripe accounts." />
+      <AdminPageTitle title="Overview" description="The whole platform at a glance. Sales are creators' sales, paid into their own PayPal accounts." />
       <Suspense fallback={<Skeleton className="h-96 w-full rounded-lg" />}>
         <OverviewContent />
       </Suspense>

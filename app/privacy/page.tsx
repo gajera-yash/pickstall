@@ -33,7 +33,7 @@ const sections: LegalSection[] = [
       <ul>
         <li><strong>Account:</strong> email address, name, phone number if you give one, sign-in records, and whether and when you accepted our Terms.</li>
         <li><strong>Store:</strong> what you publish (store name, bio, photo, links, products, files, course videos), settings, and your plan and billing status.</li>
-        <li><strong>Payments:</strong> handled by Stripe. We store Stripe account, customer and subscription ids and payment results, never card numbers.</li>
+        <li><strong>Payments:</strong> handled by PayPal. We store PayPal order, payment and subscription ids and payment results, and a creator&apos;s PayPal app Client ID with its Secret encrypted, never card numbers.</li>
         <li><strong>Orders:</strong> for each sale, the buyer&apos;s name, email, optional phone, checkout answers, the product, the amount and the status.</li>
         <li><strong>Technical:</strong> a hashed (not readable) form of your IP address and a random browser id, used only to stop abuse such as repeated sign-ups; a log of security-relevant actions on your account (sign-ins, store and plan changes, data downloads), which you can see in your account settings; error reports with secrets and personal details removed; cookies listed in our <LegalLink href="/cookies">Cookie Policy</LegalLink>.</li>
       </ul>
@@ -58,7 +58,7 @@ const sections: LegalSection[] = [
       <>
         <p>Only with service providers that help us run {APP_NAME}, under contracts that limit them to that purpose:</p>
         <ul>
-          <li>Stripe (payments and plan billing)</li>
+          <li>PayPal (payments and plan billing)</li>
           <li>Resend (sending emails such as sign-in codes and order emails)</li>
           <li>Bunny.net (storing and streaming course videos)</li>
           <li>Cloudflare R2 (storing product and lesson files)</li>

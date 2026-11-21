@@ -47,7 +47,7 @@ export function CheckoutShowcase() {
             </span>
             <p className="flex items-center justify-center gap-1.5 text-xs text-mute">
               <CreditCard className="size-3.5" />
-              Payments processed by Stripe
+              Payments processed by PayPal
             </p>
           </div>
           <p className="text-sm text-mute">Name and email always, plus up to {CHECKOUT_QUESTIONS_MAX} questions of your own. Answers land in your Customers tab.</p>
@@ -72,7 +72,7 @@ export function CheckoutShowcase() {
                   </p>
                   <p className="flex justify-between gap-4 text-mute">
                     <span>Card processing</span>
-                    <span>set by Stripe</span>
+                    <span>set by PayPal</span>
                   </p>
                   <p className="flex justify-between gap-4 border-t border-dashed border-input pt-2 font-semibold">
                     <span>Paid to your account</span>
@@ -83,7 +83,7 @@ export function CheckoutShowcase() {
               </div>
             </Reveal>
           </div>
-          <p className="text-sm text-mute">The buyer pays into your own Stripe account. We never hold your money. *Before card processing. {CARD_FEES_NOTE}</p>
+          <p className="text-sm text-mute">The buyer pays into your own PayPal account. We never hold your money. *Before card processing. {CARD_FEES_NOTE}</p>
         </Step>
 
         <Step n={3} title="Delivered after a verified payment">

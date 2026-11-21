@@ -82,8 +82,8 @@ export function Hero() {
 }
 
 const PROOF = [
-  { icon: BadgeCheck, value: "0%", label: "Platform fee. Stripe card fees still apply." },
-  { icon: CreditCard, value: "Stripe", label: "Processes every payment" },
+  { icon: BadgeCheck, value: "0%", label: "Platform fee. PayPal fees still apply." },
+  { icon: CreditCard, value: "PayPal", label: "Processes every payment" },
   { icon: Wallet, value: "Direct", label: "Money goes to your own account" },
   { icon: Lock, value: "Verified", label: "Access only after a confirmed payment" },
 ] as const;

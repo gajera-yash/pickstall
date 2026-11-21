@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { refundOrder } from "@/lib/orders/refund-actions";
 
-/** Full refund of a paid order, after a confirmation (D-053). The order turns "Refunded" when Stripe confirms it. */
+/** Full refund of a paid order, after a confirmation (D-053). The order turns "Refunded" when the payment provider confirms it. */
 export function RefundButton({ orderId, amount }: { orderId: string; amount: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);

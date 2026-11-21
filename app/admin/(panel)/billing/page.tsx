@@ -60,7 +60,7 @@ async function BillingContent() {
       {data.pastDue.length > 0 && (
         <Card className="gap-3">
           <h2 className="font-display text-h4">Payment problems</h2>
-          <p className="text-sm text-mute">Stripe is retrying these payments. The creator keeps their plan while it does.</p>
+          <p className="text-sm text-mute">The payment service is retrying these payments. The creator keeps their plan while it does.</p>
           <ul className="flex flex-col divide-y divide-line rounded-md border border-line">
             {data.pastDue.map((row) => (
               <li key={row.storeId} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
@@ -86,7 +86,7 @@ async function BillingContent() {
         </div>
         {data.recent.length === 0 ? (
           <EmptyState icon={CreditCard} title="No plan payments yet">
-            Paid plan invoices appear here as Stripe sends them. Import older ones with the button above.
+            Paid plan payments appear here as PayPal confirms them (older Stripe invoices can be imported with the button above).
           </EmptyState>
         ) : (
           <Table>

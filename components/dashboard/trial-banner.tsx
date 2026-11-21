@@ -51,7 +51,7 @@ export function TrialBanner({ access }: { access: StoreAccess }) {
         <Alert variant="warning">
           <AlertTitle>Your last payment didn&apos;t go through</AlertTitle>
           <AlertDescription>
-            Stripe will try again. Update your card so your store stays open. <PlanLink>Update payment</PlanLink>
+            It will be tried again. Update your payment method so your store stays open. <PlanLink>Update payment</PlanLink>
           </AlertDescription>
         </Alert>
       );

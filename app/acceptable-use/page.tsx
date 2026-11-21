@@ -23,7 +23,7 @@ const sections: LegalSection[] = [
         <li>Medical or health products or claims that promise cures, replace professional care or are not allowed by law.</li>
         <li>Malware, hacking tools, stolen accounts, leaked data, or lists of personal data.</li>
         <li>Fake reviews, fake followers, impersonation of a person or brand, or misleading descriptions.</li>
-        <li>Anything Stripe does not allow on its platform (Stripe&apos;s restricted businesses list applies to your account).</li>
+        <li>Anything PayPal does not allow (PayPal&apos;s Acceptable Use Policy applies to your PayPal account).</li>
       </ul>
     ),
   },

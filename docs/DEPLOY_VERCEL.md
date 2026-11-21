@@ -1,7 +1,7 @@
 # Deploying Pickstall to Vercel
 
-> Written 2026-11-15 from the current code (commit `7c76eb4`). Stripe stays in **test mode** until live mode is approved (CLAUDE.md 7).
-> Vercel builds every deployment, Preview included, with `NODE_ENV=production`: the development MockProvider is off there, so payments need Stripe test keys.
+> Written 2026-11-15 from the current code (commit `7c76eb4`); payments moved to **PayPal** on 2026-11-21 (D-118). PayPal stays in **sandbox** until live mode is approved (CLAUDE.md 7).
+> Vercel builds every deployment, Preview included, with `NODE_ENV=production`: the development MockProvider is off there, so payments need a PayPal sandbox setup (step 6). Stripe is dormant (only with `PAYMENT_PROVIDER=stripe`; old step 6b).
 
 ## 0. File storage on Vercel (D-077)
 
@@ -45,7 +45,12 @@ Vercel > Settings > Environment Variables. Add them for **Production** (and Prev
 | `IP_HASH_SECRET` | 16+ random characters | Turns on per-IP rate limits. |
 | `RESEND_API_KEY` | from Resend | **Required in production**: without it the sign-in code cannot be sent and nobody can log in. |
 | `EMAIL_FROM` | `Pickstall <login@pickstall.store>` | Must use a domain verified in Resend (step 5). |
-| `STRIPE_SECRET_KEY` | `sk_test_...` | Test mode. |
+| `PAYPAL_MODE` | `sandbox` | `live` only after PayPal live approval. |
+| `PAYPAL_CLIENT_ID` | from your PayPal app | Your OWN PayPal REST app (step 6): Pickstall plan billing. |
+| `PAYPAL_CLIENT_SECRET` | from your PayPal app | Server only. |
+| `PAYPAL_WEBHOOK_ID` | `WH-...` | The webhook you add on your app in step 6. |
+| `PAYMENT_CREDENTIALS_KEY` | 32 random bytes, base64 | Encrypts creators' PayPal secrets. Never change it later. |
+| `STRIPE_SECRET_KEY` | `sk_test_...` | Dormant since D-118; leave empty unless `PAYMENT_PROVIDER=stripe`. |
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | `whsec_...` | From the Connect webhook endpoint (step 6). |
 | `STRIPE_PLATFORM_WEBHOOK_SECRET` | `whsec_...` | From the platform webhook endpoint (step 6). A different secret. |
 | `STRIPE_CONNECT_CLIENT_ID` | `ca_...` | Stripe > Connect settings. |
@@ -67,7 +72,23 @@ Then **Deployments > Redeploy** so the build picks the values up.
 4. In Vercel, set `EMAIL_FROM` to an address on the verified domain, for example `Pickstall <orders@pickstall.store>`, then redeploy. Without it the app falls back to Resend's test sender (`onboarding@resend.dev`), with the same problem, and Sentry reports `email.sender_not_verified`.
 5. Check: buy a product from a private window with an email address that is **not** your Resend login. In the dashboard, Orders > the order > Delivery shows "Access email: Sent". If it says "Not delivered", fix the sender, then press **Send again**.
 
-## 6. Stripe (test mode)
+## 6. PayPal (sandbox, D-118)
+
+Two money flows, never mixed:
+- **Creators' sales:** each creator pastes the Client ID and Secret of THEIR OWN PayPal REST app in Settings > Payments. Pickstall checks the keys, adds the webhook `https://<domain>/api/webhooks/paypal/<storeId>` on their app by itself, and stores the Secret encrypted. Buyers pay the creator directly; Pickstall takes no fee.
+- **Pickstall plans:** YOUR own PayPal REST app.
+
+Steps on developer.paypal.com with your PayPal **Business** account, **Sandbox** selected:
+1. Apps & Credentials > Create App (Merchant). Copy its Client ID and Secret into `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`.
+2. In that app, add a webhook: URL `https://<domain>/api/webhooks/paypal`, events `BILLING.SUBSCRIPTION.ACTIVATED`, `BILLING.SUBSCRIPTION.UPDATED`, `BILLING.SUBSCRIPTION.CANCELLED`, `BILLING.SUBSCRIPTION.SUSPENDED`, `BILLING.SUBSCRIPTION.EXPIRED`, `BILLING.SUBSCRIPTION.PAYMENT.FAILED`, `PAYMENT.SALE.COMPLETED`. Copy the webhook id into `PAYPAL_WEBHOOK_ID`.
+3. Generate `PAYMENT_CREDENTIALS_KEY`: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Keep it safe; changing it later forces every creator to reconnect.
+4. Plans need no setup: Pickstall creates the product `PICKSTALL-PLANS` and the Starter and Pro monthly USD plans the first time someone subscribes (names carry the price from `PLANNED_PRICE_CENTS`).
+5. Inngest must run (step 7b): the `paypal-pending-sweep` job captures approved checkouts the buyer never returned from and frees coupons and booked times of abandoned ones.
+6. For testing, create a sandbox **personal** buyer account under Testing Tools > Sandbox Accounts.
+
+**Live mode (before real money):** apply for PayPal live approval of your Business account, then set `PAYPAL_MODE=live` with a live app's keys and webhook. Creators must then connect a **Live** app. Note: a PayPal business account in India cannot receive payments from buyers in India (international payments only), and PayPal Subscriptions do not support INR, so plans are billed in USD. For one-click "Connect PayPal" (no keys to paste), apply to the PayPal partner program (Commerce Platform); that replaces only the connect step.
+
+## 6b. Stripe (dormant, only with PAYMENT_PROVIDER=stripe)
 
 Stripe Dashboard, **Test mode** on:
 
@@ -114,16 +135,17 @@ Google Cloud Console > Credentials > your OAuth client > **Authorized redirect U
 
 - [ ] `https://pickstall.store` loads; the response has the security headers (`Strict-Transport-Security`, `Content-Security-Policy`).
 - [ ] Sign up with a real email: the 6-digit code arrives (Resend), you land on the dashboard.
-- [ ] Create a store, connect Stripe (test), add and publish a product.
-- [ ] Buy it from a private window with a Stripe test card (`4242 4242 4242 4242`): the order shows as paid, the email arrives, the library opens it.
-- [ ] Stripe > Webhooks shows the events delivered with `200`.
-- [ ] Refund in Stripe: access is removed.
+- [ ] Create a store, connect PayPal with a sandbox app's keys, add and publish a product.
+- [ ] Buy it from a private window with a sandbox personal account: the order shows as paid, the email arrives, the library opens it.
+- [ ] developer.paypal.com > your creator app > Webhooks events shows deliveries with `200`.
+- [ ] Refund from the order drawer (or in PayPal): access is removed.
+- [ ] Subscribe to a plan with a sandbox buyer: Settings > Plan shows it active; Admin > Billing shows the payment.
 - [ ] Image and file uploads: only after the storage change in section 0.
 - [ ] `https://pickstall.store/api/health` answers `{"status":"ok","database":"ok"}`.
 - [ ] Vercel > Logs: no errors.
 
 ## 11. After launch
 
-- Tell alpha creators it is a test version (PRD 8.2) until Stripe live mode is approved.
+- Tell alpha creators it is a test version (PRD 8.2) until PayPal live mode is approved.
 - Follow `docs/OPS_RUNBOOK.md`: uptime monitor on `/api/health`, Sentry alerts, Atlas backups, a load test and an independent security review.
 - Analytics (PostHog) is not installed yet.

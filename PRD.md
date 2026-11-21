@@ -270,12 +270,12 @@ Custom domain and import specs: connect via a domain-verification flow (DNS reco
 Activation (signup to published store to connected payments to first sale), time to first published product, bugs per active creator, trial-to-paid conversion, qualitative "very disappointed if gone" score.
 
 ## 11. Open questions
-1. Stripe India invite and test-mode availability (use MockProvider meanwhile).
+1. ~~Stripe India invite~~ Payments moved to PayPal (D-118). PayPal live approval of the Business account is pending.
 2. Final AWS region and hosting option for the first deploy (EC2 vs ECS Fargate).
 3. Resend sending domain and physical address for email footers.
 4. Username change policy after publishing (Phase 1: allowed, old link stops working; revisit).
 5. Mongoose vs official driver (use what the code already uses).
-6. PayPal application outcome.
+6. PayPal partner program (Commerce Platform) for one-click "Connect PayPal": not applied yet (D-118); creators paste their own app keys meanwhile.
 
 ## 12. Risks
 | Risk | Mitigation |

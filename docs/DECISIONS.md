@@ -4,6 +4,24 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-118: Payments move from Stripe to PayPal (creators' sales and Pickstall plans)
+- **Date:** 2026-11-21
+- **Decision (founder, 2026-11-21: "use PayPal, not Stripe"; plan approved the same day):**
+  - **Creators' sales:** each creator connects THEIR OWN PayPal REST app (Client ID and Secret pasted in Settings > Payments, or the setup step). We check the keys with PayPal, register our webhook `/api/webhooks/paypal/<storeId>` on their app, and store the Secret AES-256-GCM encrypted (`PAYMENT_CREDENTIALS_KEY`, the store id as AAD; `lib/security/secret-box.ts`, `stores.paypal`). Orders v2 are created with the creator's app, so the money goes straight to them: no payee override, no platform fee, Pickstall never holds funds. This is temporary until PayPal partner approval (Commerce Platform), which the founder has not applied for yet; only the connect step changes then.
+  - **Flow:** `createCheckout` (intent CAPTURE, `custom_id` and `invoice_id` = our order id, `brand_name` = store name, NO_SHIPPING, PAY_NOW) -> buyer approves -> capture on the thank-you page, on `CHECKOUT.ORDER.APPROVED`, or by the Inngest sweep (all idempotent with `PayPal-Request-Id`). Only the verified `PAYMENT.CAPTURE.COMPLETED` webhook marks the order paid (same `process.ts` path, amount and currency checked). Refunds: full refund of the capture on the creator's app; `PAYMENT.CAPTURE.REFUNDED` / `REVERSED` change the order (full vs partial from the capture's status).
+  - **Webhook trust:** every delivery is checked with PayPal's verify-webhook-signature API for the app and webhook id it was sent to; a creator event carries its store id and `fromStoreAccount` requires it to be the order's store (creator B's app cannot pay or refund creator A's order).
+  - **Sweep:** `paypal-pending-sweep` (every 15 minutes) captures approved checkouts and fails abandoned or expired ones after 3 hours, freeing coupon uses and coaching times (PayPal sends no event for an abandoned checkout).
+  - **Platform billing:** Pickstall plans on OUR OWN PayPal app (`PAYPAL_CLIENT_ID`): product `PICKSTALL-PLANS`, monthly USD plans created on first use and found by name ("Pickstall Starter monthly 1900 USD"); subscriptions carry the store id as `custom_id`; switching uses PayPal's revise (subscriber approves); cancel keeps access until the paid month ends; "Manage billing" opens PayPal's automatic payments page. Verified webhook `/api/webhooks/paypal` and the return route save only subscriptions fetched from PayPal for the right store; completed transactions become plan payments for the admin revenue.
+  - **Currencies:** stores may pick only PayPal's currencies (`PAYPAL_CURRENCIES`): not INR, BRL, CNY, MYR, RUB, HUF or TWD. A store with another currency is told to change it.
+  - **Stripe** stays in the code, switched off; `PAYMENT_PROVIDER=stripe` turns it back on. `CreatorStore.chargesEnabled` replaces `stripeChargesEnabled` for setup, publishing and checkout.
+  - No SDK: a small `fetch` client with Zod-checked responses (`lib/payments/paypal-api.ts`). Shapes checked against PayPal's REST docs and OpenAPI files on 2026-11-21.
+- **Why:** founder decision.
+- **Consequences:**
+  - PayPal India business accounts can only receive international payments, and Subscriptions do not support INR: Indian creators cannot sell to Indian buyers through PayPal, and plans are billed in USD.
+  - Creators need a PayPal Business account and a few minutes on developer.paypal.com (step-by-step help on the page).
+  - New env: `PAYMENT_PROVIDER`, `PAYPAL_MODE`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, `PAYMENT_CREDENTIALS_KEY` (docs/DEPLOY_VERCEL.md step 6). Sandbox until the founder approves live mode.
+  - Not verified end to end against the PayPal sandbox yet: that needs the founder's sandbox apps and a deployed https URL.
+
 ## D-117: Stuck broadcasts fail on their own, and the "please review" email
 - **Date:** 2026-11-20
 - **Decision (founder approved the plan, including the schema fields and the paid-order hook, 2026-11-20):**

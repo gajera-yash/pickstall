@@ -291,7 +291,7 @@ async function OrderDrawer({ storeId, orderId, closeHref }: { storeId: string; o
         />
         {order.refundable &&
           (order.refundRequestedAt ? (
-            <p className="text-sm text-mute">Refund requested. It shows here as refunded once Stripe confirms it, usually within a minute.</p>
+            <p className="text-sm text-mute">Refund requested. It shows here as refunded once PayPal confirms it, usually within a minute.</p>
           ) : (
             <RefundButton orderId={order.id} amount={money(order.totalCents)} />
           ))}

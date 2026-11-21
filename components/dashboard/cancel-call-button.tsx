@@ -44,7 +44,7 @@ export function CancelCallButton({ orderId, amount, paid }: { orderId: string; a
           <DialogTitle>{paid ? `Cancel this call and refund ${amount}?` : "Cancel this call?"}</DialogTitle>
           <DialogDescription>
             {paid
-              ? "The buyer gets the full amount back from your Stripe balance and an email that the call is cancelled. Stripe's processing fee is not returned to you. The time opens up for new bookings. This can't be undone."
+              ? "The buyer gets the full amount back from your PayPal balance and an email that the call is cancelled. PayPal's processing fee may not be returned to you. The time opens up for new bookings. This can't be undone."
               : "The buyer gets an email that the call is cancelled, and the time opens up for new bookings. This can't be undone."}
           </DialogDescription>
         </DialogHeader>

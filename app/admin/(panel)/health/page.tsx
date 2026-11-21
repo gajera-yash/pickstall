@@ -15,7 +15,7 @@ import type { AuditAction } from "@/lib/audit/log";
 export default function AdminHealthPage() {
   return (
     <>
-      <AdminPageTitle title="Health" description="Webhooks, background work and storage. Details live in Stripe, Inngest, Resend, Bunny and Sentry." />
+      <AdminPageTitle title="Health" description="Webhooks, background work and storage. Details live in PayPal, Inngest, Resend, Bunny and Sentry." />
       <Suspense fallback={<Skeleton className="h-96 w-full rounded-lg" />}>
         <HealthContent />
       </Suspense>
@@ -30,7 +30,7 @@ async function HealthContent() {
   return (
     <div className="flex flex-col gap-6">
       <section aria-label="Webhooks" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Stripe webhooks, 24h" value={(hooks("stripe") + hooks("stripe-connect")).toLocaleString("en")} hint="Handled events" />
+        <Stat label="Payment webhooks, 24h" value={(hooks("paypal") + hooks("stripe") + hooks("stripe-connect")).toLocaleString("en")} hint="Handled events" />
         <Stat label="Bunny webhooks, 24h" value={hooks("bunny").toLocaleString("en")} />
         <Stat label="Resend webhooks, 24h" value={hooks("resend").toLocaleString("en")} hint="Bounces and complaints" />
         <Stat label="Unpaid checkouts, 24h" value={data.unpaidOrders24h.toLocaleString("en")} hint="Pending or failed" />

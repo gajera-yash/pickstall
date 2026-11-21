@@ -65,7 +65,7 @@ export function FeeCalculator() {
       </dl>
 
       <p className="text-xs text-mute">
-        10% is an assumed example rate, not a quote for any platform. Stripe&apos;s card processing fees apply on top in both cases. Pickstall
+        10% is an assumed example rate, not a quote for any platform. PayPal&apos;s processing fees apply on top in both cases. Pickstall
         plans are a flat {formatWholeDollars(PLANNED_PRICE_CENTS.starter)} or {formatWholeDollars(PLANNED_PRICE_CENTS.pro)} a month.
       </p>
     </div>

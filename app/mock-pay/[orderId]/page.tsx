@@ -41,7 +41,7 @@ async function MockPayContent({ params }: Pick<PageProps<"/mock-pay/[orderId]">,
           <h1 className="font-display text-h2">Pay {formatMoney(order.totalCents, order.currency)}</h1>
           <p className="text-mute">{order.title}</p>
         </div>
-        <p className="rounded-md bg-yellow-soft px-4 py-3 text-sm text-warning">This is a development stand-in for Stripe. No real money moves and no card is needed.</p>
+        <p className="rounded-md bg-yellow-soft px-4 py-3 text-sm text-warning">This is a development stand-in for PayPal. No real money moves and no card is needed.</p>
         <form action={confirmMockPayment.bind(null, order.id)}>
           <Button type="submit" size="lg" className="w-full">
             Pay (test)

@@ -15,7 +15,7 @@ import { APP_NAME } from "@/lib/config";
 export const metadata: Metadata = {
   title: `${APP_NAME}: your own stall, 0% transaction fees`,
   description:
-    "A lower-cost Stan Store alternative: sell digital products, courses and coaching calls from one tap-to-buy page made for phones. No code, no cut of your sales. Stripe's card processing fees still apply.",
+    "A lower-cost Stan Store alternative: sell digital products, courses and coaching calls from one tap-to-buy page made for phones. No code, no cut of your sales. PayPal's processing fees still apply.",
   openGraph: {
     title: `${APP_NAME}: open your own stall`,
     description: "Sell digital products, courses and coaching from one tap-to-buy page. 0% transaction fees.",

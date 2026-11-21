@@ -13,13 +13,13 @@ export const LANDING_NAV = [
   { href: "#faq", label: "FAQ" },
 ] as const;
 
-export const CARD_FEES_NOTE = "Stripe's card processing fees still apply.";
+export const CARD_FEES_NOTE = "PayPal's processing fees still apply.";
 
 export const STEPS = [
   { title: "Claim your link", body: "Pick a username. Your stall lives at one short link you can put in any bio." },
   { title: "Make it yours", body: "Photo, bio, social links, a theme and your own accent color. No code, no designer." },
   { title: "Add what you sell", body: "Guides, templates, courses, coaching calls or a free download. Set a price, and add a discount when you like." },
-  { title: "Connect payments and share", body: "Buyers pay into your own Stripe account. You see every order, customer and dollar." },
+  { title: "Connect payments and share", body: "Buyers pay into your own PayPal account. You see every order, customer and dollar." },
 ] as const;
 
 /** Not built yet (everything else on the page is live). */
@@ -46,7 +46,7 @@ const PRO = price(PLANNED_PRICE_CENTS.pro);
 export const FAQ = [
   {
     q: "What does 0% transaction fees mean?",
-    a: "We never take a percentage of your sales. Buyers pay into your own Stripe account. Stripe's card processing fees still apply, as they do everywhere.",
+    a: "We never take a percentage of your sales. Buyers pay into your own PayPal account. PayPal's processing fees still apply, as they do everywhere.",
   },
   {
     q: "What does it cost?",
@@ -62,7 +62,7 @@ export const FAQ = [
   },
   {
     q: "How do I get paid?",
-    a: "You connect your own Stripe account. Money goes straight to it; Pickstall never holds or forwards your funds.",
+    a: "You connect your own PayPal Business account. Money goes straight to it; Pickstall never holds or forwards your funds.",
   },
   {
     q: "Who handles taxes?",
@@ -78,7 +78,7 @@ export const FAQ = [
   },
   {
     q: "Which countries?",
-    a: "We start with creators selling to buyers in the US, UK and Canada. Creators elsewhere can join where Stripe supports them.",
+    a: "We start with creators selling to buyers in the US, UK and Canada. Creators elsewhere can join where PayPal supports them.",
   },
 ] as const;
 

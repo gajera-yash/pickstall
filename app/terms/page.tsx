@@ -15,7 +15,7 @@ const sections: LegalSection[] = [
       <>
         <p>
           {APP_NAME} gives creators an online store at their own link, where they sell digital products and courses. Buyers pay the creator directly
-          through the creator&apos;s own Stripe account. {APP_NAME} is a software service: we are not the seller of anything sold in a store, and we are
+          through the creator&apos;s own PayPal account. {APP_NAME} is a software service: we are not the seller of anything sold in a store, and we are
           not a merchant of record.
         </p>
         <p>These terms are an agreement between you and {LEGAL.operatorName} (&quot;we&quot;, &quot;us&quot;). By creating an account, opening a store or buying from a store, you accept them.</p>
@@ -42,7 +42,7 @@ const sections: LegalSection[] = [
         <ul>
           <li>You are the seller of record for your sales. You set your prices, describe your products honestly and deliver what you promise.</li>
           <li>You handle your own taxes (income tax, GST, VAT, sales tax), invoices to your buyers, refunds, disputes and chargebacks.</li>
-          <li>Payments go to your own Stripe account under Stripe&apos;s terms. {APP_NAME} never holds or forwards your money and takes 0% of your sales. Stripe&apos;s card processing fees apply.</li>
+          <li>Payments go to your own PayPal account under PayPal&apos;s terms. {APP_NAME} never holds or forwards your money and takes 0% of your sales. PayPal&apos;s processing fees apply. You keep your PayPal app keys private; {APP_NAME} stores the Secret encrypted and uses it only to take your buyers&apos; payments and refunds.</li>
           <li>
             You are the controller of your buyers&apos; personal data (for example the answers to your checkout questions). Use it only for your
             sales and support, follow privacy law, and never ask for card numbers, ID numbers or other sensitive data at checkout.
@@ -63,7 +63,7 @@ const sections: LegalSection[] = [
             When the free period ends without a paid plan, your store is paused: buyers cannot open it or check out, and you cannot publish. Your
             content, orders and customers are kept, and paying for a plan reopens the store.
           </li>
-          <li>Paid plans are billed monthly in advance through Stripe. Prices are shown before you pay. Plans renew until you cancel.</li>
+          <li>Paid plans are billed monthly in advance through PayPal. Prices are shown before you pay. Plans renew until you cancel.</li>
           <li>You can cancel at any time in Settings &gt; Plan &gt; Manage billing; your plan stays active until the end of the month you paid for.</li>
           <li>
             Refunds of plan fees are covered by our <LegalLink href="/refunds">Refund and Cancellation Policy</LegalLink>. We may change prices with
@@ -79,7 +79,7 @@ const sections: LegalSection[] = [
     body: (
       <ul>
         <li>When you buy in a store, you buy from that creator, not from {APP_NAME}. The creator is responsible for the product, its delivery and refunds.</li>
-        <li>Your payment is processed by Stripe. We never see or store your card details.</li>
+        <li>Your payment is processed by PayPal. We never see or store your card details.</li>
         <li>Purchased products are for your personal use unless the creator says otherwise. Do not share, resell or publish them.</li>
         <li>For problems with a purchase, contact the creator first. If you cannot reach them, write to us and we will try to help.</li>
       </ul>
@@ -132,9 +132,9 @@ const sections: LegalSection[] = [
     title: "Services we rely on",
     body: (
       <p>
-        Payments run on Stripe, emails on Resend, course videos on Bunny.net (and YouTube or Vimeo if a creator links them), and data is stored with
+        Payments run on PayPal, emails on Resend, course videos on Bunny.net (and YouTube or Vimeo if a creator links them), and data is stored with
         our hosting and database providers. Their own terms apply to what they do. We are not responsible for outages or decisions of these services,
-        for example Stripe declining to work with a creator.
+        for example PayPal declining to work with a creator.
       </p>
     ),
   },

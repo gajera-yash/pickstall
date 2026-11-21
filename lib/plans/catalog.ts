@@ -20,7 +20,7 @@ export const PLAN_FEATURE_GROUPS: { title: string; rows: PlanFeatureRow[] }[] = 
       { label: "Course quizzes and certificates", values: { starter: true, pro: true } },
       { label: "License keys for software and templates", values: { starter: true, pro: true } },
       { label: "Free lead magnets (collect emails)", values: { starter: true, pro: true } },
-      { label: "0% Pickstall transaction fee", hint: "Stripe's card fees still apply.", values: { starter: true, pro: true } },
+      { label: "0% Pickstall transaction fee", hint: "PayPal's fees still apply.", values: { starter: true, pro: true } },
     ],
   },
   {

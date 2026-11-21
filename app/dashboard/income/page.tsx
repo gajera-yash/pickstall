@@ -53,7 +53,7 @@ async function IncomeContent({ searchParams }: Pick<PageProps<"/dashboard/income
   if (stats.totalPaidOrders === 0) {
     return (
       <EmptyState icon={Wallet} title="No sales yet">
-        When someone buys from your store, your income shows here. We don&apos;t take a cut of your sales. Stripe&apos;s card processing fees still apply.
+        When someone buys from your store, your income shows here. We don&apos;t take a cut of your sales. PayPal&apos;s processing fees still apply.
       </EmptyState>
     );
   }

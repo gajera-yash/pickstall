@@ -31,7 +31,7 @@ const sections: LegalSection[] = [
         </p>
         <ul>
           <li>Contact the creator first, using the email in your order confirmation.</li>
-          <li>Creators refund through their own Stripe account. When a full refund is made, your access to the product ends.</li>
+          <li>Creators refund through their own PayPal account. When a full refund is made, your access to the product ends.</li>
           <li>If a creator does not answer or a product is not what was described, write to us. We will contact the creator and may act under our <LegalLink href="/terms">Terms</LegalLink>.</li>
           <li>Your bank may also let you dispute a card payment. Please try the creator first; disputes take longer.</li>
         </ul>
@@ -43,8 +43,8 @@ const sections: LegalSection[] = [
     title: "For creators",
     body: (
       <p>
-        Tell your buyers your refund rules on your product page. Refunds come out of your own Stripe balance. Our 0% transaction fee means there is no
-        platform fee to return, but Stripe may keep its card processing fee on a refunded payment.
+        Tell your buyers your refund rules on your product page. Refunds come out of your own PayPal balance. Our 0% transaction fee means there is no
+        platform fee to return, but PayPal may keep its processing fee on a refunded payment.
       </p>
     ),
   },

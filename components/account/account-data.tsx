@@ -45,7 +45,7 @@ export function AccountData({ hasStore }: { hasStore: boolean }) {
         </CardHeader>
         <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-mute">
           {hasStore && <li>a paid plan is cancelled at once and you are not charged again;</li>}
-          {hasStore && <li>your store goes offline, its link is freed, and Stripe is disconnected;</li>}
+          {hasStore && <li>your store goes offline, its link is freed, and PayPal is disconnected;</li>}
           {hasStore && <li>buyers keep access to what they already bought, and orders are kept as tax law requires;</li>}
           <li>your name, phone and sign-in are deleted, and you are signed out everywhere.</li>
         </ul>

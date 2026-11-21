@@ -34,7 +34,7 @@ Rules: do not paste or re-read whole files into the chat; reference file paths a
 - Next.js (latest stable, App Router), **TypeScript strict**, React Server Components by default
 - Tailwind CSS + shadcn/ui + lucide-react
 - MongoDB (official `mongodb` driver, no ORM) + **Better Auth** (email 6-digit code, Google, sessions) (D-024). Product and lesson files live in a private Cloudflare R2 bucket (D-093); images stay in MongoDB (D-077)
-- Stripe (Connect **Standard** + Checkout **direct charges**; Billing for platform plans), accessed only through a provider-agnostic `PaymentProvider` interface (a PayPal adapter may be added later, only when the founder asks)
+- **PayPal** (D-118): each creator's own PayPal REST app takes their buyers' payments (Orders v2); PayPal Subscriptions on our own app for platform plans. Accessed only through the provider-agnostic `PaymentProvider` interface. Stripe (Connect Standard + direct charges) stays in the code, switched off unless `PAYMENT_PROVIDER=stripe`
 - Bunny.net Stream (course video: direct TUS upload, signed playback; D-055) plus YouTube/Vimeo links, Resend + React Email, Inngest (background jobs)
 - Zod (validation), Vitest (unit), Playwright (e2e), PostHog, Sentry
 - Package manager: `pnpm`
@@ -87,6 +87,23 @@ Business logic lives in `/lib`, not inside components or route files. Route hand
 - Add a test for each new data-access function: creator A cannot read or write creator B's documents (the owner filter is applied).
 
 ## 7. Payments rules (CRITICAL)
+
+Payments run on **PayPal** since D-118. Creators connect their OWN PayPal REST app (keys pasted in Settings > Payments, Secret stored encrypted); the platform's own PayPal app is used only for Pickstall plan billing.
+
+**PayPal DO**
+- Create every sale's order with the creator's own app (`paypalCredentialsOfStore(storeId)`), so the money goes straight to them. No `payee` override, no `platform_fees`, no payouts.
+- Compute all prices server-side from the database; `custom_id` and `invoice_id` are our order id.
+- Mark an order paid only from the verified `PAYMENT.CAPTURE.COMPLETED` webhook (verify-webhook-signature for that store's app and webhook id); capture calls never grant access.
+- Keep capture, refund and create idempotent with `PayPal-Request-Id`; keep webhooks idempotent through `webhook_events`.
+- Never log, return or render a creator's PayPal Secret; it is encrypted with `PAYMENT_CREDENTIALS_KEY` and the store id.
+- Platform billing only on our own app (`PAYPAL_CLIENT_ID`), in USD.
+
+**PayPal DON'T**
+- Do not use PayPal Payouts, `platform_fees`, `payee` overrides or any flow where Pickstall holds or forwards creator money.
+- Do not accept a PayPal app in the other mode (sandbox vs live) or a currency outside `PAYPAL_CURRENCIES`.
+- Do not trust the return page, a token in a URL, or any amount from the client.
+
+The Stripe rules below still apply to the dormant Stripe code if it is ever switched back on.
 
 The founder's platform Stripe account is **India-based**. Stripe documented these restrictions; violating them breaks the product.
 
@@ -144,7 +161,12 @@ NEXT_PUBLIC_GOOGLE_AUTH_ENABLED
 EMAIL_FROM                           # server only
 ADMIN_USERNAME / ADMIN_PASSWORD      # server only (admin sign-in at /admin/login, D-109)
 IP_HASH_SECRET                       # server only
-STRIPE_SECRET_KEY                    # server only
+PAYMENT_PROVIDER                     # server only: unset/"paypal" (default) or "stripe" (D-118)
+PAYPAL_MODE                          # server only: sandbox (default) or live
+PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET   # server only (OUR app: platform plan billing)
+PAYPAL_WEBHOOK_ID                    # server only (webhook on our app for /api/webhooks/paypal)
+PAYMENT_CREDENTIALS_KEY              # server only (32 bytes base64: encrypts creators' PayPal secrets)
+STRIPE_SECRET_KEY                    # server only (dormant since D-118)
 STRIPE_PLATFORM_WEBHOOK_SECRET       # server only (webhook "Your account": plans, test-mode sales)
 STRIPE_CONNECT_WEBHOOK_SECRET        # server only (webhook "Connected accounts": creators' sales)
 STRIPE_CONNECT_CLIENT_ID             # Connect OAuth client id (ca_...)
@@ -162,7 +184,7 @@ SENTRY_DSN / NEXT_PUBLIC_SENTRY_DSN
 SENTRY_AUTH_TOKEN / SENTRY_ORG / SENTRY_PROJECT   # build only (source maps)
 DEV_ALLOWED_HOSTS                    # development only
 ```
-Use Stripe **test mode** keys until the founder says live mode is approved.
+Use PayPal **sandbox** (and Stripe **test mode** keys, if Stripe is switched on) until the founder says live mode is approved.
 
 ## 10. Testing expectations
 
