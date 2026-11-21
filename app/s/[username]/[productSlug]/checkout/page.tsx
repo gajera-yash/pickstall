@@ -1,4 +1,4 @@
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Lock, Mail, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -35,6 +35,7 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
   const theme = resolveTheme(store.theme);
   const { preset } = theme;
   const available = canBuy(context);
+  const free = payableCents(product) === 0;
   // An order bump (D-089): only when its product is still published in this store.
   const offer = product.type === "lead_magnet" ? null : await findCheckoutBump(store._id, product.bump).catch(() => null);
   const bump = offer ? { title: offer.title, coverUrl: offer.coverUrl, price: formatMoney(offer.priceCents, store.currency), headline: offer.headline } : null;
@@ -63,6 +64,20 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
           </aside>
 
           <section aria-labelledby="checkout-title" className="flex flex-col gap-5 p-5 @3xl:col-start-1 @3xl:row-start-1 @3xl:p-8" style={cardStyle(theme)}>
+            <ol aria-label="Checkout steps" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold">
+              {(coaching ? ["Pick a time", "Your details", free ? "Confirm" : "Pay securely"] : ["Your details", free ? "Confirm" : "Pay securely", "Get access"]).map((label, index) => (
+                <li key={label} className="flex items-center gap-2">
+                  <span
+                    className="flex size-6 items-center justify-center rounded-full tabular-nums"
+                    style={index === 0 ? { background: theme.accent, color: theme.onAccent } : { background: `color-mix(in srgb, ${preset.text} 8%, transparent)`, color: preset.muted }}
+                  >
+                    {index + 1}
+                  </span>
+                  <span style={{ color: index === 0 ? preset.text : preset.muted }}>{label}</span>
+                  {index < 2 && <span aria-hidden="true" className="h-px w-5" style={{ background: `color-mix(in srgb, ${preset.text} 20%, transparent)` }} />}
+                </li>
+              ))}
+            </ol>
             <div className="flex flex-col gap-1">
               <h1 id="checkout-title" className="font-display text-h2 break-words" style={{ fontWeight: preset.displayWeight }}>
                 {product.checkout.headline || "Checkout"}
@@ -96,10 +111,20 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
               <p style={{ color: preset.muted }}>This store can&apos;t take payments yet. Please check back soon.</p>
             )}
 
-            <p className="flex items-center gap-2 text-xs" style={{ color: preset.muted }}>
-              <ShieldCheck aria-hidden="true" className="size-4 shrink-0" />
-              {payableCents(product) === 0 ? `Offered by ${store.name}.` : `Sold by ${store.name}. Payments are handled securely by the payment provider.`}
-            </p>
+            <ul className="grid gap-2 text-xs sm:grid-cols-3" style={{ color: preset.muted }}>
+              <li className="flex items-center gap-2">
+                <Lock aria-hidden="true" className="size-4 shrink-0" style={{ color: theme.accent }} />
+                {free ? "No payment needed" : "Secure payment, card details never touch Pickstall"}
+              </li>
+              <li className="flex items-center gap-2">
+                <Mail aria-hidden="true" className="size-4 shrink-0" style={{ color: theme.accent }} />
+                {coaching ? "Booking and calendar invite by email" : "Access link sent to your email"}
+              </li>
+              <li className="flex items-center gap-2">
+                <ShieldCheck aria-hidden="true" className="size-4 shrink-0" style={{ color: theme.accent }} />
+                {free ? `Offered by ${store.name}` : `Sold by ${store.name}`}
+              </li>
+            </ul>
           </section>
         </div>
         </CheckoutTotalsProvider>

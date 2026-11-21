@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, ChevronDown, Clock, FileText, ListTree, Lock, PlayCircle, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, Clock, FileText, ListTree, Lock, PlayCircle, ShieldCheck, Zap } from "lucide-react";
 import { Stars } from "@/components/store/stars";
 import type { PublicReview } from "@/lib/reviews/public";
 import Link from "next/link";
@@ -46,6 +46,12 @@ export function ProductPage({ store, product, buyable, curriculum = null, review
               <h1 id="product-title" className="font-display text-h1 break-words" style={{ fontWeight: preset.displayWeight }}>
                 {product.title}
               </h1>
+              <p className="flex items-center gap-2 text-sm" style={{ color: preset.muted }}>
+                <CreatorAvatar store={store} theme={theme} className="size-6 text-xs" />
+                <span>
+                  by <span className="font-semibold" style={{ color: preset.text }}>{store.name}</span>
+                </span>
+              </p>
             </div>
           </section>
 
@@ -103,6 +109,7 @@ export function ProductPage({ store, product, buyable, curriculum = null, review
               </ul>
             </section>
           )}
+          <CreatorCard store={store} theme={theme} />
         </div>
       </div>
 
@@ -122,23 +129,56 @@ export function ProductPage({ store, product, buyable, curriculum = null, review
   );
 }
 
+/** The creator's photo, or their initial on the accent. Decorative: the name is always next to it. */
+function CreatorAvatar({ store, theme, className }: { store: PublicStore; theme: StoreTheme; className: string }) {
+  const avatar = safeImageSrc(store.avatarUrl);
+  if (avatar) {
+    // A creator's own https link on any host, so next/image (fixed remote hosts) cannot load it.
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={avatar} alt="" referrerPolicy="no-referrer" className={`${className} shrink-0 rounded-full object-cover`} />;
+  }
+  return (
+    <span aria-hidden="true" className={`${className} flex shrink-0 items-center justify-center rounded-full font-semibold`} style={{ background: theme.accent, color: theme.onAccent }}>
+      {store.name.trim().charAt(0).toUpperCase() || "?"}
+    </span>
+  );
+}
+
 /** Back link to the store: the creator's photo (or initial) and name. */
 function StoreStrip({ store, theme }: { store: PublicStore; theme: StoreTheme }) {
-  const avatar = safeImageSrc(store.avatarUrl);
   return (
     <Link href={`/@${store.slug}`} className="inline-flex min-h-11 items-center gap-3 self-start text-sm font-semibold" style={{ color: theme.preset.text }}>
       <ArrowLeft aria-hidden="true" className="size-4" style={{ color: theme.preset.muted }} />
-      {avatar ? (
-        // A creator's own https link on any host, so next/image (fixed remote hosts) cannot load it.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={avatar} alt="" referrerPolicy="no-referrer" className="size-8 rounded-full object-cover" />
-      ) : (
-        <span aria-hidden="true" className="flex size-8 items-center justify-center rounded-full text-sm" style={{ background: theme.accent, color: theme.onAccent }}>
-          {store.name.trim().charAt(0).toUpperCase() || "?"}
-        </span>
-      )}
+      <CreatorAvatar store={store} theme={theme} className="size-8 text-sm" />
       <span className="break-words">{store.name}</span>
     </Link>
+  );
+}
+
+/** "About the creator": photo, name, bio and a link to the rest of their store. */
+function CreatorCard({ store, theme }: { store: PublicStore; theme: StoreTheme }) {
+  const { preset } = theme;
+  return (
+    <section aria-labelledby="about-creator" className="flex flex-col gap-4 p-5 @3xl:col-start-1" style={cardStyle(theme)}>
+      <h2 id="about-creator" className="font-display text-h3" style={{ fontWeight: preset.displayWeight }}>
+        About the creator
+      </h2>
+      <div className="flex items-start gap-4">
+        <CreatorAvatar store={store} theme={theme} className="size-14 text-h3" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="font-semibold break-words">{store.name}</p>
+          {store.bio && (
+            <p className="line-clamp-4 text-sm break-words whitespace-pre-line" style={{ color: preset.muted }}>
+              {store.bio}
+            </p>
+          )}
+          <Link href={`/@${store.slug}`} className="mt-1 inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold underline-offset-4 hover:underline" style={{ color: preset.text }}>
+            See all products
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -161,7 +201,14 @@ function BuyBox({ store, product, theme, buyable, curriculum }: { store: PublicS
 
   return (
     <>
-      <Price product={product} store={store} theme={theme} className="text-money-l" />
+      <div className="flex flex-col gap-1">
+        <Price product={product} store={store} theme={theme} className="text-money-l" />
+        {/* Text in the theme's text color (always readable); only the icon takes the accent. */}
+        <p className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: preset.text }}>
+          <Zap aria-hidden="true" className="size-4" style={{ color: theme.accent }} />
+          {product.type === "coaching" ? "Instant booking confirmation" : "Instant access"}
+        </p>
+      </div>
       {buyable ? (
         // The creator's theme colors (theme data) override the button's own.
         <Button asChild size="lg" className="w-full" style={buttonStyle(theme)}>

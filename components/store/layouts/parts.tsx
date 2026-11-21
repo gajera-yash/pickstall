@@ -1,4 +1,4 @@
-import { BookOpen, CalendarCheck, Download, ImageIcon, PlayCircle } from "lucide-react";
+import { BookOpen, CalendarCheck, Download, Gift, PlayCircle } from "lucide-react";
 
 import { RatingBadge } from "@/components/store/stars";
 import { PriceTag } from "@/components/store/price-tag";
@@ -11,17 +11,40 @@ import { cn } from "@/lib/utils";
 
 // Small pieces the store layouts share (D-063). Colors come from the creator's theme data.
 
-/** The product cover, or a quiet placeholder in the theme's accent when there is none. */
-export function ProductCover({ product, theme, className }: { product: PublicProduct; theme: StoreTheme; className?: string }) {
+/**
+ * The product cover. Without one, an "auto cover" in the creator's accent: a soft gradient, the
+ * product type's icon and the title (decorative: the title is always shown as text nearby), so a
+ * product without an image still looks finished. `compact` (small thumbnails) shows the icon only.
+ */
+export function ProductCover({ product, theme, className, compact = false }: { product: PublicProduct; theme: StoreTheme; className?: string; compact?: boolean }) {
   const src = safeImageSrc(product.coverUrl);
   if (src) {
     // A creator's own https link on any host, so next/image (fixed remote hosts) cannot load it.
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={src} alt="" referrerPolicy="no-referrer" loading="lazy" className={cn("w-full object-cover", className)} />;
   }
+  const { accent, onAccent, preset } = theme;
+  const Icon = product.type === "course" ? PlayCircle : product.type === "coaching" ? CalendarCheck : product.type === "lead_magnet" ? Gift : Download;
   return (
-    <span aria-hidden="true" className={cn("flex w-full items-center justify-center", className)} style={{ background: `color-mix(in srgb, ${theme.accent} 14%, ${theme.preset.card})`, color: theme.accent }}>
-      {product.type === "course" ? <PlayCircle className="size-10" /> : product.type === "coaching" ? <CalendarCheck className="size-10" /> : <ImageIcon className="size-10" />}
+    <span
+      aria-hidden="true"
+      className={cn("relative isolate flex w-full overflow-hidden", compact ? "items-center justify-center" : "", className)}
+      style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${accent} 26%, ${preset.card}) 0%, color-mix(in srgb, ${accent} 8%, ${preset.card}) 100%)`, color: accent }}
+    >
+      <span className="absolute -top-12 -right-10 -z-10 size-44 rounded-full" style={{ background: `color-mix(in srgb, ${accent} 16%, transparent)` }} />
+      <span className="absolute -bottom-14 -left-8 -z-10 size-36 rounded-full" style={{ background: `color-mix(in srgb, ${accent} 10%, transparent)` }} />
+      {compact ? (
+        <Icon className="size-8" />
+      ) : (
+        <span className="flex size-full flex-col justify-between gap-3 p-5">
+          <span className="flex size-10 items-center justify-center rounded-full shadow-sm" style={{ background: accent, color: onAccent }}>
+            <Icon className="size-5" />
+          </span>
+          <span className="line-clamp-3 font-display text-h2 leading-tight break-words" style={{ color: preset.text, fontWeight: preset.displayWeight }}>
+            {product.title}
+          </span>
+        </span>
+      )}
     </span>
   );
 }

@@ -17,8 +17,12 @@ export function ProductThumb({ product, theme, className = "size-16" }: { produc
     return <img src={src} alt="" referrerPolicy="no-referrer" className={`${className} shrink-0 rounded-md object-cover`} />;
   }
   return (
-    <span aria-hidden="true" className={`${className} flex shrink-0 items-center justify-center rounded-md`} style={{ background: `color-mix(in srgb, ${theme.accent} 14%, ${theme.preset.card})`, color: theme.accent }}>
-      <ImageIcon className="size-6" />
+    <span
+      aria-hidden="true"
+      className={`${className} flex shrink-0 items-center justify-center rounded-md font-display text-h3`}
+      style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${theme.accent} 30%, ${theme.preset.card}), color-mix(in srgb, ${theme.accent} 10%, ${theme.preset.card}))`, color: theme.preset.text }}
+    >
+      {product.title.trim().charAt(0).toUpperCase() || <ImageIcon className="size-6" />}
     </span>
   );
 }

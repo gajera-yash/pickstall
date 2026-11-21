@@ -63,7 +63,7 @@ export function EditorialLayout({ store, products, theme, preview }: StoreLayout
                   {rest.map((product) => (
                     <li key={product.id} className="border-b" style={rule}>
                       <Link href={`/@${store.slug}/${product.slug}`} className="group flex items-center gap-4 py-5">
-                        <ProductCover product={product} theme={theme} className="aspect-square w-20 shrink-0 @xl:w-24" />
+                        <ProductCover product={product} theme={theme} compact className="aspect-square w-20 shrink-0 @xl:w-24" />
                         <span className="flex min-w-0 flex-1 flex-col gap-1">
                           <ProductKind product={product} theme={theme} />
                           <span className="font-display text-h3 break-words" style={{ fontWeight: preset.displayWeight }}>

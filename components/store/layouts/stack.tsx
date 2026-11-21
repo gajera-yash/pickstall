@@ -2,17 +2,15 @@ import Link from "next/link";
 import { StoreBlocks } from "@/components/store/store-blocks";
 import { splitBlocks } from "@/lib/page-blocks/rules";
 
-import { PriceTag } from "@/components/store/price-tag";
-import { RatingBadge } from "@/components/store/stars";
+import { PriceAndButton, ProductCover, ProductKind } from "@/components/store/layouts/parts";
 import { StoreHeader } from "@/components/store/store-header";
-import { StoreFrame, borderColor, cardStyle } from "@/components/store/store-theme";
+import { StoreFrame, cardStyle } from "@/components/store/store-theme";
 import type { StoreLayoutProps } from "@/components/store/layouts/types";
-import { safeImageSrc } from "@/lib/media/media";
 
 /**
- * Clean, Bold and Soft. On a phone: the original single column, header then one card per product.
- * On a wide page (@3xl and up, D-066): the header becomes a left-aligned banner with a rule under
- * it, and the products form a grid of 2 (or 3 on very wide pages) cards with their buttons lined up.
+ * Clean, Bold and Soft. On a phone: one column, the header on a soft accent band, then one card per
+ * product (cover or auto cover, type, title, short description, price and button). On a wide page
+ * (@3xl and up, D-066): the header becomes a left-aligned banner and the products a grid of 2 (or 3).
  */
 export function StackLayout({ store, products, theme, preview }: StoreLayoutProps) {
   const { preset } = theme;
@@ -21,7 +19,12 @@ export function StackLayout({ store, products, theme, preview }: StoreLayoutProp
   return (
     <StoreFrame theme={theme} preview={preview} wide>
       <div className="flex w-full max-w-xl flex-col items-center gap-6 @3xl:max-w-5xl @3xl:gap-10">
-      <div className="w-full @3xl:border-b @3xl:pb-10" style={{ borderColor: borderColor(preset) }}>
+      {/* A soft band in the creator's accent behind the header: their colors, a premium first glance. */}
+      <div
+        className="relative isolate w-full overflow-hidden px-5 py-8 @3xl:px-10 @3xl:py-10"
+        style={{ borderRadius: preset.radiusPx, background: `linear-gradient(135deg, color-mix(in srgb, ${theme.accent} 12%, ${preset.background}) 0%, color-mix(in srgb, ${theme.accent} 4%, ${preset.background}) 100%)` }}
+      >
+        <span aria-hidden="true" className="absolute -top-24 -right-16 -z-10 size-72 rounded-full" style={{ background: `color-mix(in srgb, ${theme.accent} 10%, transparent)` }} />
         <StoreHeader store={store} align="banner" />
       </div>
       <StoreBlocks blocks={before} theme={theme} />
@@ -30,37 +33,41 @@ export function StackLayout({ store, products, theme, preview }: StoreLayoutProp
           Products are coming soon. Check back later.
         </p>
       ) : (
-        <ul className="flex w-full flex-col gap-4 @3xl:grid @3xl:grid-cols-2 @3xl:gap-6 @5xl:grid-cols-3">
-          {products.map((product) => (
-            <li key={product.id}>
-              <Link href={`/@${store.slug}/${product.slug}`} className="flex h-full flex-col gap-3 overflow-hidden p-4" style={cardStyle(theme)}>
-                {safeImageSrc(product.coverUrl) && (
-                  // A creator's own https link on any host, so next/image (fixed remote hosts) cannot load it.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={safeImageSrc(product.coverUrl) ?? ""} alt="" referrerPolicy="no-referrer" loading="lazy" className="aspect-video w-full rounded-md object-cover" />
-                )}
-                <span className="font-display text-h3 break-words" style={{ fontWeight: preset.displayWeight }}>
-                  {product.title}
-                </span>
-                {product.rating && product.rating.count > 0 && <RatingBadge average={product.rating.average} count={product.rating.count} color={theme.accent} mutedColor={preset.muted} />}
-                {product.description && (
-                  <span className="line-clamp-2 text-sm break-words" style={{ color: preset.muted }}>
-                    {product.description}
+        <section aria-labelledby="store-products" className="flex w-full flex-col gap-4">
+          <h2 id="store-products" className="font-display text-h3 @3xl:text-h2" style={{ fontWeight: preset.displayWeight }}>
+            {products.length === 1 ? "Featured" : "Shop"}
+            <span className="ml-2 text-sm font-normal" style={{ color: preset.muted }}>
+              {products.length} {products.length === 1 ? "product" : "products"}
+            </span>
+          </h2>
+          <ul className="flex w-full flex-col gap-4 @3xl:grid @3xl:grid-cols-2 @3xl:gap-6 @5xl:grid-cols-3">
+            {products.map((product) => (
+              <li key={product.id}>
+                <Link
+                  href={`/@${store.slug}/${product.slug}`}
+                  className="group flex h-full flex-col overflow-hidden transition-transform duration-(--dur-fast) hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
+                  style={cardStyle(theme)}
+                >
+                  <ProductCover product={product} theme={theme} className="aspect-video" />
+                  <span className="flex flex-1 flex-col gap-2 p-4">
+                    <ProductKind product={product} theme={theme} />
+                    <span className="font-display text-h3 break-words" style={{ fontWeight: preset.displayWeight }}>
+                      {product.title}
+                    </span>
+                    {product.description && (
+                      <span className="line-clamp-2 text-sm break-words" style={{ color: preset.muted }}>
+                        {product.description}
+                      </span>
+                    )}
+                    <span className="mt-auto pt-2">
+                      <PriceAndButton product={product} theme={theme} currency={store.currency} />
+                    </span>
                   </span>
-                )}
-                <span className="mt-auto flex items-center justify-between gap-3">
-                  <PriceTag product={product} currency={store.currency} className="font-display text-money-m" regularStyle={{ color: preset.muted }} />
-                  <span
-                    className="flex h-11 items-center rounded-md px-5 text-button"
-                    style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}
-                  >
-                    {product.buttonText || "Buy now"}
-                  </span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       <StoreBlocks blocks={after} theme={theme} />
       </div>
