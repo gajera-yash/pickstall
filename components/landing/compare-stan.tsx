@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { APP_NAME, PLANNED_PRICE_CENTS } from "@/lib/config";
 import { formatWholeDollars, priceShare, yearlySavingsCents } from "@/lib/landing/demo";
 
-// "Pickstall vs Stan Store" (D-040): planned prices side by side, then a feature table that says
+// "Pickstall vs Stan Store" (D-040): prices side by side, then a feature table that says
 // plainly what is live on Pickstall today and what is coming. Stan's facts come from STAN only.
 
 const PLAN_LABEL: Record<CompareRow["plan"], string> = { starter: "Starter", pro: "Pro" };
@@ -32,7 +32,7 @@ function PricePair({ title, theirs, theirsLabel, ours, oursLabel }: { title: str
             {APP_NAME} {oursLabel}
           </span>
           <span className="font-display text-money-l text-blue tabular-nums">{money(ours)}</span>
-          <span className="text-xs text-ink">per month, planned</span>
+          <span className="text-xs text-ink">per month</span>
         </div>
       </div>
       <p className="flex items-center justify-between gap-3 rounded-md bg-yellow px-3 py-2 text-sm font-semibold text-on-yellow">
@@ -71,7 +71,7 @@ export function CompareStan() {
             {APP_NAME} vs {STAN.name}
           </Eyebrow>
           <h2 id="compare-title" className="text-display-l text-balance">
-            {STAN.name}&apos;s Pro toolkit, planned at {money(PLANNED_PRICE_CENTS.pro)} a month instead of {money(STAN.creatorProCents)}.
+            {STAN.name}&apos;s Pro toolkit at {money(PLANNED_PRICE_CENTS.pro)} a month instead of {money(STAN.creatorProCents)}.
           </h2>
           <p className="text-body-l text-mute text-pretty">
             The same kind of creator store for less: up to {proSavings} a year back in your pocket. Founding creators pay nothing for the first 6 months. Below
@@ -147,8 +147,8 @@ export function CompareStan() {
 
         <p className="text-xs text-mute">
           {STAN.name} plans and prices from {STAN.name}&apos;s help center ({STAN.source}), checked {STAN.checkedOn}; they may change, so check their
-          site. {STAN.name} is a trademark of its owner; {APP_NAME} is not affiliated with it. {APP_NAME} prices are planned and confirmed before anyone is
-          asked to pay. Card processing fees apply on both.
+          site. {STAN.name} is a trademark of its owner; {APP_NAME} is not affiliated with it. {APP_NAME} prices are per month, billed monthly. Card processing fees apply on
+          both.
         </p>
       </div>
     </section>

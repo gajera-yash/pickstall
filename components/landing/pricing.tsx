@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PLANNED_PRICE_CENTS, TRIAL_DAYS } from "@/lib/config";
 import { formatWholeDollars } from "@/lib/landing/demo";
 
-// Pricing (D-039, PRD F9): planned plans, nothing billed yet. The founding plan is the featured
+// Pricing (D-039, PRD F9): the paid plans at their final prices. The founding plan is the featured
 // card; the fee calculator below shows what "no cut" means in dollars.
 
 function PlanItems({ items }: { items: PlanCard["items"] }) {
@@ -41,7 +41,7 @@ function PaidPlan({ plan }: { plan: PlanCard & { id: "starter" | "pro" } }) {
       </div>
       <p className="flex items-baseline gap-1.5">
         <span className="font-display text-display-l tabular-nums">{formatWholeDollars(PLANNED_PRICE_CENTS[plan.id])}</span>
-        <span className="text-sm text-mute">per month, planned</span>
+        <span className="text-sm text-mute">per month</span>
       </p>
       <Button asChild variant="secondary" className="w-full">
         <Link href="/signup">Start your {TRIAL_DAYS}-day free trial</Link>
@@ -87,7 +87,7 @@ export function Pricing() {
     <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 py-20 sm:py-28">
       <Container className="flex flex-col gap-14">
         <SectionHeading id="pricing-title" eyebrow="Pricing" icon={Tag} title="One flat plan." muted="0% of your sales." center>
-          You pay a monthly plan, never a share of what you sell. Prices are planned and confirmed before anyone is asked to pay. {CARD_FEES_NOTE}
+          You pay a monthly plan, never a share of what you sell. {CARD_FEES_NOTE}
         </SectionHeading>
 
         <div className="grid items-start gap-8 lg:grid-cols-3 lg:items-center lg:gap-6">

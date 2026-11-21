@@ -17,7 +17,7 @@ export function AnnouncementBar() {
     <div className="border-b-2 border-border-strong bg-yellow text-on-yellow">
       <Container className="flex min-h-10 flex-wrap items-center justify-center gap-x-3 gap-y-1 py-2 text-center text-sm font-semibold">
         <span>
-          {STAN.name} Pro is {formatWholeDollars(STAN.creatorProCents)}/mo. Ours is planned at {formatWholeDollars(PLANNED_PRICE_CENTS.pro)}.
+          {STAN.name} Pro is {formatWholeDollars(STAN.creatorProCents)}/mo. Ours is {formatWholeDollars(PLANNED_PRICE_CENTS.pro)}.
           <span className="hidden sm:inline"> Founding creators: 6 months free.</span>
         </span>
         <a href="#compare" className="inline-flex items-center gap-1 underline underline-offset-4">
@@ -52,7 +52,7 @@ export function Hero() {
             </span>
           </h1>
           <p className="max-w-xl animate-rise text-body-l text-mute text-pretty [animation-delay:120ms] sm:text-lg">
-            One tap-to-buy page for your digital products, made for the phone your followers already hold. No code. No cut of your sales.
+            One tap-to-buy page for your digital products, courses and coaching calls, made for the phone your followers already hold. No code. No cut of your sales.
           </p>
           <div className="flex w-full animate-rise flex-col gap-3 [animation-delay:180ms] sm:w-auto sm:flex-row">
             <Button asChild size="lg" className="px-7">

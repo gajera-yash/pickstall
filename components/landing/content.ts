@@ -1,7 +1,8 @@
-// Copy for the marketing landing (D-039). Honesty rules: Phase 1 sells digital products; anything
-// else is tagged "Coming soon"; every 0% claim sits near the card-processing note (DESIGN.md 15).
+// Copy for the marketing landing (D-039). Honesty rules: only what is built is shown as live, and
+// which plan has it follows PLAN_LIMITS (lib/plans/catalog.ts); anything not built yet is tagged
+// "Coming soon"; every 0% claim sits near the card-processing note (DESIGN.md 15).
 
-import { PLANNED_PRICE_CENTS, TRIAL_DAYS } from "@/lib/config";
+import { PLAN_LIMITS, PLANNED_PRICE_CENTS, TRIAL_DAYS } from "@/lib/config";
 import { formatWholeDollars } from "@/lib/landing/demo";
 
 export const LANDING_NAV = [
@@ -17,11 +18,11 @@ export const CARD_FEES_NOTE = "Stripe's card processing fees still apply.";
 export const STEPS = [
   { title: "Claim your link", body: "Pick a username. Your stall lives at one short link you can put in any bio." },
   { title: "Make it yours", body: "Photo, bio, social links, a theme and your own accent color. No code, no designer." },
-  { title: "Add what you sell", body: "Guides, templates, presets, workbooks. Set a price, and add a discount when you like." },
+  { title: "Add what you sell", body: "Guides, templates, courses, coaching calls or a free download. Set a price, and add a discount when you like." },
   { title: "Connect payments and share", body: "Buyers pay into your own Stripe account. You see every order, customer and dollar." },
 ] as const;
 
-/** Not built yet. Courses, coupons, order bumps, emails, bookings and affiliates are live. */
+/** Not built yet (everything else on the page is live). */
 export const COMING_SOON = ["Custom domain", "Memberships", "Payment plans", "Team accounts", "Store templates", "Public API"] as const;
 
 /**
@@ -49,11 +50,11 @@ export const FAQ = [
   },
   {
     q: "What does it cost?",
-    a: `Every new store starts with a ${TRIAL_DAYS}-day free trial, no card needed. Founding creators (the first 10) get 6 months free. After that, plans are planned at ${STARTER} a month (Starter) and ${PRO} a month (Pro), with 0% transaction fees. If you don't pick a plan when the free period ends, your store pauses (nothing is deleted) until you do. Final prices are confirmed before anyone is asked to pay.`,
+    a: `Every new store starts with a ${TRIAL_DAYS}-day free trial, no card needed. Founding creators (the first 10) get 6 months free. After that, plans are ${STARTER} a month (Starter) and ${PRO} a month (Pro), with 0% transaction fees. If you don't pick a plan when the free period ends, your store pauses (nothing is deleted) until you do.`,
   },
   {
     q: "How is Pickstall different from Stan Store?",
-    a: `Same kind of creator store, at a lower price. ${STAN.name}'s plans are ${price(STAN.creatorCents)} and ${price(STAN.creatorProCents)} a month; ours are planned at ${STARTER} and ${PRO}, and founding creators pay nothing for 6 months. Storefront, digital products and sales analytics are live today; courses, discount codes, order bumps, email marketing and the rest of the Pro toolkit are on the way and marked Coming soon.`,
+    a: `Same kind of creator store, at a lower price. ${STAN.name}'s plans are ${price(STAN.creatorCents)} and ${price(STAN.creatorProCents)} a month; ours are ${STARTER} and ${PRO}, and founding creators pay nothing for 6 months. Storefront, digital products, courses, coaching calls, discount codes, order bumps, upsells, email marketing and affiliate tracking are live today. Memberships and custom domains are on the way and marked Coming soon.`,
   },
   {
     q: "Do I need to code or design?",
@@ -69,7 +70,7 @@ export const FAQ = [
   },
   {
     q: "What can I sell today?",
-    a: "Digital products: guides, templates, presets, workbooks and more, at a price you set, with an optional discount. Courses, coupons and order bumps are coming soon.",
+    a: "Digital products (guides, templates, presets, workbooks), online courses with video, quizzes and certificates, 1:1 coaching calls with booking, and free downloads that grow your email list. Add coupons, order bumps and upsells to sell more. Memberships are coming soon.",
   },
   {
     q: "How do my buyers get their purchase?",
@@ -87,7 +88,7 @@ export type CompareRow = {
   stan: "Creator" | "Creator Pro";
   /** Live today on Pickstall, or on the roadmap. */
   status: "live" | "soon";
-  /** The planned Pickstall plan that includes it (PRD F9). */
+  /** The Pickstall plan that includes it (PRD F9, PLAN_LIMITS). */
   plan: "starter" | "pro";
 };
 
@@ -95,15 +96,16 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   { feature: "Mobile storefront at your own link", stan: "Creator", status: "live", plan: "starter" },
   { feature: "Sell digital products", stan: "Creator", status: "live", plan: "starter" },
   { feature: "Sales and customer analytics", stan: "Creator", status: "live", plan: "starter" },
-  { feature: "Online courses", stan: "Creator", status: "soon", plan: "starter" },
-  { feature: "Lead magnets and email collection", stan: "Creator", status: "soon", plan: "starter" },
-  { feature: "Discount codes", stan: "Creator Pro", status: "soon", plan: "starter" },
-  { feature: "Order bumps", stan: "Creator Pro", status: "soon", plan: "starter" },
-  { feature: "Ad pixel tracking", stan: "Creator Pro", status: "soon", plan: "starter" },
-  { feature: "Upsells and funnels", stan: "Creator Pro", status: "soon", plan: "pro" },
-  { feature: "Email marketing and automations", stan: "Creator Pro", status: "soon", plan: "pro" },
-  { feature: "Affiliate tracking", stan: "Creator Pro", status: "soon", plan: "pro" },
-  { feature: "Bookings and memberships", stan: "Creator", status: "soon", plan: "pro" },
+  { feature: "Online courses", stan: "Creator", status: "live", plan: "starter" },
+  { feature: "Lead magnets and email collection", stan: "Creator", status: "live", plan: "starter" },
+  { feature: "Discount codes", stan: "Creator Pro", status: "live", plan: "starter" },
+  { feature: "Order bumps", stan: "Creator Pro", status: "live", plan: "starter" },
+  { feature: "Ad pixel tracking", stan: "Creator Pro", status: "live", plan: "starter" },
+  { feature: "Affiliate tracking", stan: "Creator Pro", status: "live", plan: "starter" },
+  { feature: "Upsells and funnels", stan: "Creator Pro", status: "live", plan: "pro" },
+  { feature: "Email marketing and automations", stan: "Creator Pro", status: "live", plan: "pro" },
+  { feature: "Coaching calls with booking", stan: "Creator", status: "live", plan: "pro" },
+  { feature: "Memberships", stan: "Creator", status: "soon", plan: "pro" },
 ];
 
 export type PlanCard = {
@@ -114,7 +116,7 @@ export type PlanCard = {
   items: readonly { text: string; soon?: boolean }[];
 };
 
-/** Planned plans (PRD F9). Prices come from PLANNED_PRICE_CENTS; nothing here is billed yet. */
+/** Paid plans (PRD F9). Prices come from PLANNED_PRICE_CENTS (final, founder confirmed 2026-11-20). */
 export const PLANS: readonly PlanCard[] = [
   {
     id: "starter",
@@ -122,10 +124,11 @@ export const PLANS: readonly PlanCard[] = [
     blurb: "Everything you need to open and sell.",
     items: [
       { text: "Mobile storefront at your own link" },
-      { text: "Unlimited digital products" },
-      { text: "Discounts and custom checkout questions" },
-      { text: "Sales and customer analytics, CSV export" },
-      { text: "Courses, discount codes and order bumps", soon: true },
+      { text: "Unlimited digital products and lead magnets" },
+      { text: `Up to ${PLAN_LIMITS.starter.maxCourses ?? "unlimited"} courses, with quizzes and certificates` },
+      { text: "Coupons, order bumps and checkout questions" },
+      { text: `Email list and broadcasts (${PLAN_LIMITS.starter.emailSubscribers.toLocaleString("en")} subscribers)` },
+      { text: "Pixels, affiliate tracking and CSV exports" },
     ],
   },
   {
@@ -134,9 +137,11 @@ export const PLANS: readonly PlanCard[] = [
     blurb: "The full toolkit to grow what you sell.",
     items: [
       { text: "Everything in Starter" },
-      { text: "Email marketing and automations", soon: true },
-      { text: "Upsells and funnels", soon: true },
-      { text: "Memberships, bookings and affiliates", soon: true },
+      { text: `Unlimited courses, ${PLAN_LIMITS.pro.videoHours} hours of video` },
+      { text: "Coaching calls with booking" },
+      { text: "Upsells, downsells and funnels" },
+      { text: "Welcome, abandoned cart and review emails" },
+      { text: "Memberships", soon: true },
       { text: "Custom domain", soon: true },
     ],
   },

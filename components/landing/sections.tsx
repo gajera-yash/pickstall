@@ -118,7 +118,7 @@ export function LandingFooter() {
         <div className="grid gap-10 md:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
           <div className="flex max-w-sm flex-col gap-3">
             <Wordmark className="h-9" />
-            <p className="text-sm text-mute">A store for creators who sell digital products. 0% transaction fees, no code.</p>
+            <p className="text-sm text-mute">A store for creators who sell digital products, courses and coaching. 0% transaction fees, no code.</p>
             <a href={`mailto:${SUPPORT_EMAIL}`} className="self-start text-sm font-semibold text-blue underline underline-offset-4">
               {SUPPORT_EMAIL}
             </a>
