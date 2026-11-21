@@ -31,7 +31,7 @@ export function ReviewForm({ orderId, initial }: { orderId: string; initial: { r
     });
 
   return (
-    <section aria-labelledby="review-title" className="flex flex-col gap-3 border-t border-line pt-5">
+    <section aria-labelledby="review-title" className="flex flex-col gap-3">
       <h3 id="review-title" className="font-display text-h4">
         {initial ? "Your review" : "Rate this product"}
       </h3>

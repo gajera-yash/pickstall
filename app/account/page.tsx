@@ -4,7 +4,7 @@ import { Suspense } from "react";
 
 import { AccountData } from "@/components/account/account-data";
 import { RecentActivity } from "@/components/account/recent-activity";
-import { Wordmark } from "@/components/brand/wordmark";
+import { BuyerHeader } from "@/components/library/buyer-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/lib/auth/guards";
 import { APP_NAME } from "@/lib/config";
@@ -17,9 +17,7 @@ export const metadata: Metadata = { title: `Your account | ${APP_NAME}`, robots:
 export default function AccountPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-bg-subtle">
-      <header className="flex h-16 items-center border-b border-line bg-surface px-4 md:px-8">
-        <Wordmark className="h-8" />
-      </header>
+      <BuyerHeader />
       <main id="main" className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8 md:px-6">
         <Suspense fallback={<Skeleton className="h-96 w-full rounded-lg" />}>
           <AccountContent />
@@ -35,7 +33,7 @@ async function AccountContent() {
   return (
     <>
       <div className="flex flex-col gap-1">
-        <h1 className="text-h1">Your account</h1>
+        <h1 className="font-display text-h1">Your account</h1>
         <p className="text-sm text-mute">
           Signed in as <strong className="text-ink">{user.email}</strong>.{" "}
           <Link href={store ? "/dashboard" : "/library"} className="font-semibold text-blue underline underline-offset-4">

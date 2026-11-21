@@ -14,6 +14,8 @@ export type Purchase = {
   title: string;
   storeName: string;
   storeSlug: string | null;
+  /** The store's public profile photo, for the creator chip on the purchase card (public data). */
+  storeAvatarUrl: string | null;
   productSlug: string | null;
   coverUrl: string | null;
   paidAt: Date | null;
@@ -41,7 +43,7 @@ async function loadDetails(orders: OrderDoc[], now: Date = new Date()): Promise<
   const storeIds = [...new Set(orders.map((order) => order.storeId))];
   const productIds = [...new Set(orders.map((order) => order.productId))];
   const [storeDocs, productDocs] = await Promise.all([
-    stores.find({ _id: { $in: storeIds } }, { projection: { name: 1, slug: 1 } }).toArray(),
+    stores.find({ _id: { $in: storeIds } }, { projection: { name: 1, slug: 1, avatarUrl: 1 } }).toArray(),
     products.find({ _id: { $in: productIds } }, { projection: { slug: 1, coverUrl: 1, externalUrl: 1, downloadLimit: 1, status: 1, type: 1, deliveryType: 1, fileId: 1, "course.accessDays": 1, "coaching.meetingUrl": 1, "coaching.timeZone": 1 } }).toArray(),
   ]);
   // Bookings of these orders only (orders already matched to this buyer).
@@ -61,6 +63,7 @@ async function loadDetails(orders: OrderDoc[], now: Date = new Date()): Promise<
       title: order.item.title,
       storeName: store?.name ?? "Pickstall store",
       storeSlug: store?.slug ?? null,
+      storeAvatarUrl: store?.avatarUrl ?? null,
       productSlug: product?.slug ?? null,
       coverUrl: product?.coverUrl ?? null,
       paidAt: order.paidAt,

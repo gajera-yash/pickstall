@@ -1,6 +1,6 @@
 // `pnpm dev:sandbox`: the dev server on a throwaway in-memory MongoDB (port 3100), for trying the
-// app or previewing UI without touching the real database. Data is gone when it stops. Stripe,
-// Resend and Google keys are emptied, so payments use the development mock and emails only log.
+// app or previewing UI without touching the real database. Data is gone when it stops. PayPal,
+// Stripe, Resend and Google keys are emptied, so payments use the development mock and emails only log.
 import { spawn, spawnSync } from "node:child_process";
 import path from "node:path";
 
@@ -13,6 +13,10 @@ const replSet = await MongoMemoryReplSet.create({
   replSet: { count: 1, storageEngine: "wiredTiger" },
   instanceOpts: [{ args: ["--wiredTigerCacheSizeGB", "0.25"] }],
 });
+
+// For `node scripts/seed-sandbox.mjs <uri>` (demo buyer data). The in-memory database only.
+process.stdout.write(`[sandbox] MongoDB: ${replSet.getUri()}
+`);
 
 const next = path.join(import.meta.dirname, "..", "node_modules", "next", "dist", "bin", "next");
 const child = spawn(process.execPath, [next, "dev", "--port", String(PORT)], {
@@ -33,6 +37,10 @@ const child = spawn(process.execPath, [next, "dev", "--port", String(PORT)], {
     STRIPE_PLATFORM_WEBHOOK_SECRET: "",
     STRIPE_CONNECT_CLIENT_ID: "",
     STRIPE_PLATFORM_ACCOUNT_ID: "",
+    PAYPAL_CLIENT_ID: "",
+    PAYPAL_CLIENT_SECRET: "",
+    PAYPAL_WEBHOOK_ID: "",
+    PAYMENT_CREDENTIALS_KEY: "",
     GOOGLE_CLIENT_ID: "",
     GOOGLE_CLIENT_SECRET: "",
     NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "false",

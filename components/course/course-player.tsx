@@ -59,13 +59,16 @@ export function CoursePlayer({
       {banner}
       <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside aria-label="Course content" className="order-2 flex flex-col gap-4 lg:order-1 lg:sticky lg:top-22 lg:self-start">
-          <Card className="gap-4 p-4 sm:p-4">
-            <div className="flex flex-col gap-2">
+          <Card className="gap-4 p-4 shadow-sm sm:p-5">
+            <div className="flex flex-col gap-3 rounded-md bg-blue-soft p-4">
               <p className="font-display text-h4 break-words">{title}</p>
+              <div className="flex items-baseline justify-between text-xs">
+                <span className="text-mute">
+                  {done} of {total} {total === 1 ? "lesson" : "lessons"} complete
+                </span>
+                <span className="font-semibold text-ink tabular-nums">{percent}%</span>
+              </div>
               <Progress value={percent} max={100} aria-label="Course progress" aria-valuetext={`${percent}% complete`} />
-              <p className="text-xs text-mute">
-                {done} of {total} {total === 1 ? "lesson" : "lessons"} complete ({percent}%)
-              </p>
             </div>
             <nav aria-label="Lessons" className="flex flex-col gap-4">
               {outline.modules.map((item) => (
@@ -87,10 +90,14 @@ export function CoursePlayer({
                       const current = entry.id === lesson?.id;
                       const isDone = completed.includes(entry.id);
                       const Icon = entry.locked ? Lock : isDone ? CheckCircle2 : entry.hasVideo ? PlayCircle : FileText;
+                      const number = outline.lessonIds.indexOf(entry.id) + 1;
                       const row = (
                         <>
-                          <Icon aria-hidden="true" className={cn("size-4 shrink-0", isDone ? "text-mint" : "text-mute")} />
-                          <span className="min-w-0 flex-1 truncate">{entry.title}</span>
+                          <Icon aria-hidden="true" className={cn("size-4 shrink-0", isDone ? "text-mint" : current ? "text-blue" : "text-mute")} />
+                          <span className="min-w-0 flex-1 truncate">
+                            <span className="mr-1.5 text-xs text-mute tabular-nums">{number}.</span>
+                            {entry.title}
+                          </span>
                           {isDone && <span className="sr-only">(complete)</span>}
                         </>
                       );
@@ -105,7 +112,10 @@ export function CoursePlayer({
                             <Link
                               href={lessonHref(entry.id)}
                               aria-current={current ? "page" : undefined}
-                              className={cn("flex min-h-10 items-center gap-2 rounded-sm px-2 text-sm transition-colors duration-(--dur-fast)", current ? "bg-blue-soft font-semibold text-ink" : "hover:bg-bg-subtle")}
+                              className={cn(
+                                "flex min-h-11 items-center gap-2 rounded-sm border-l-2 px-2 text-sm transition-colors duration-(--dur-fast) focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-glow",
+                                current ? "border-blue bg-blue-soft font-semibold text-ink" : "border-transparent hover:bg-bg-subtle",
+                              )}
                             >
                               {row}
                             </Link>
@@ -136,7 +146,14 @@ export function CoursePlayer({
             <>
               <LessonVideo video={lesson.video} title={lesson.title} />
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <h1 className="font-display text-h2 break-words">{lesson.title}</h1>
+                <div className="flex min-w-0 flex-col gap-1">
+                  {index >= 0 && (
+                    <p className="text-sm font-semibold text-blue">
+                      Lesson {index + 1} of {total}
+                    </p>
+                  )}
+                  <h1 className="font-display text-h2 break-words">{lesson.title}</h1>
+                </div>
                 {completeAction}
               </div>
               {lesson.bodyDoc && lesson.bodyDoc.content.length > 0 && (
@@ -220,7 +237,7 @@ function LessonVideo({ video, title }: { video: PlayerLesson["video"]; title: st
     );
   }
   return (
-    <div className="overflow-hidden rounded-lg border border-line bg-ink">
+    <div className="overflow-hidden rounded-lg border border-line bg-ink shadow-md">
       <iframe
         src={video.url}
         title={`Video: ${title}`}
