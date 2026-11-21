@@ -19,6 +19,8 @@ const queries = vi.hoisted(() => ({
 vi.mock("@/lib/payments/billing", () => billing);
 vi.mock("@/lib/plans/billing-queries", () => queries);
 vi.mock("@/lib/app-origin", () => ({ appOrigin: vi.fn(async () => "https://pickstall.store") }));
+// These tests cover the dormant Stripe Billing path (PAYMENT_PROVIDER=stripe, D-118); PayPal billing has its own tests.
+vi.mock("@/lib/payments/paypal-config", async () => ({ ...(await vi.importActual<typeof import("@/lib/payments/paypal-config")>("@/lib/payments/paypal-config")), activeProvider: () => "stripe" }));
 
 import { openBillingPortal, startSubscription } from "@/lib/plans/actions";
 

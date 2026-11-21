@@ -55,7 +55,7 @@ async function CreatorsContent({ searchParams }: Pick<PageProps<"/admin/creators
                 <TableHead>Owner</TableHead>
                 <TableHead>Plan</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Stripe</TableHead>
+                <TableHead>Payments</TableHead>
                 <TableHead>Joined</TableHead>
               </TableRow>
             </TableHeader>

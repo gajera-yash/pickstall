@@ -118,11 +118,11 @@ export async function adminListStores(options: { q?: string; before?: Date } = {
     ...(options.before ? { createdAt: { $lt: options.before } } : {}),
     ...(ownerFilter ? { ownerId: { $in: ownerFilter } } : q ? { $or: [{ name: { $regex: escapeRegex(q), $options: "i" } }, { slug: { $regex: escapeRegex(q.toLowerCase()) } }] } : {}),
   };
-  const docs = await stores.find(filter, { projection: { name: 1, slug: 1, ownerId: 1, isPublished: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, stripeChargesEnabled: 1, createdAt: 1 } }).sort({ createdAt: -1 }).limit(PAGE + 1).toArray();
+  const docs = await stores.find(filter, { projection: { name: 1, slug: 1, ownerId: 1, isPublished: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, stripeChargesEnabled: 1, "paypal.mode": 1, createdAt: 1 } }).sort({ createdAt: -1 }).limit(PAGE + 1).toArray();
   const page = docs.slice(0, PAGE);
   const emails = await ownerEmails(page.map((doc) => doc.ownerId));
   return {
-    rows: page.map((doc) => ({ id: doc._id, name: doc.name, slug: doc.slug, ownerEmail: emails.get(doc.ownerId) ?? "", isPublished: doc.isPublished, access: accessOf(doc, now), stripeConnected: doc.stripeChargesEnabled, createdAt: doc.createdAt })),
+    rows: page.map((doc) => ({ id: doc._id, name: doc.name, slug: doc.slug, ownerEmail: emails.get(doc.ownerId) ?? "", isPublished: doc.isPublished, access: accessOf(doc, now), stripeConnected: doc.stripeChargesEnabled || Boolean(doc.paypal), createdAt: doc.createdAt })),
     nextBefore: docs.length > PAGE ? (page.at(-1)?.createdAt.toISOString() ?? null) : null,
   };
 }
@@ -169,7 +169,7 @@ export async function adminStoreDetail(storeId: string, now: Date = new Date()):
     ownerEmail: emails.get(doc.ownerId) ?? "",
     isPublished: doc.isPublished,
     access: accessOf(doc, now),
-    stripeConnected: doc.stripeChargesEnabled,
+    stripeConnected: doc.stripeChargesEnabled || Boolean(doc.paypal),
     createdAt: doc.createdAt,
     currency: doc.currency,
     suspendedAt: doc.suspendedAt ?? null,
@@ -307,12 +307,12 @@ export async function adminHealth(now: Date = new Date()): Promise<AdminHealth> 
 export async function adminStoresForExport(now: Date = new Date()): Promise<AdminStoreRow[]> {
   const { stores } = await collections();
   const docs = await stores
-    .find({ deletedAt: { $exists: false } }, { projection: { name: 1, slug: 1, ownerId: 1, isPublished: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, stripeChargesEnabled: 1, createdAt: 1 } })
+    .find({ deletedAt: { $exists: false } }, { projection: { name: 1, slug: 1, ownerId: 1, isPublished: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, stripeChargesEnabled: 1, "paypal.mode": 1, createdAt: 1 } })
     .sort({ createdAt: -1 })
     .limit(5000)
     .toArray();
   const emails = await ownerEmails(docs.map((doc) => doc.ownerId));
-  return docs.map((doc) => ({ id: doc._id, name: doc.name, slug: doc.slug, ownerEmail: emails.get(doc.ownerId) ?? "", isPublished: doc.isPublished, access: accessOf(doc, now), stripeConnected: doc.stripeChargesEnabled, createdAt: doc.createdAt }));
+  return docs.map((doc) => ({ id: doc._id, name: doc.name, slug: doc.slug, ownerEmail: emails.get(doc.ownerId) ?? "", isPublished: doc.isPublished, access: accessOf(doc, now), stripeConnected: doc.stripeChargesEnabled || Boolean(doc.paypal), createdAt: doc.createdAt }));
 }
 
 export type AdminActivity = {

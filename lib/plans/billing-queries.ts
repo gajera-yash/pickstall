@@ -33,7 +33,14 @@ export async function applySubscriptionState(state: SubscriptionState, now = new
   if (!state.storeId) return "ignored";
   const { stores } = await collections();
 
-  const sameCustomer = { $or: [{ "billing.customerId": { $exists: false } }, { "billing.customerId": state.customerId }] };
+  // A PayPal subscription (D-118) may also take over a store whose old Stripe billing no longer gives access.
+  const sameCustomer = {
+    $or: [
+      { "billing.customerId": { $exists: false } },
+      { "billing.customerId": state.customerId },
+      ...(state.customerId.startsWith("paypal:") ? [{ "billing.status": { $nin: GIVES_ACCESS } }] : []),
+    ],
+  };
   const conditions: Record<string, unknown>[] = [sameCustomer];
   if (!GIVES_ACCESS.includes(state.status)) {
     conditions.push({

@@ -11,13 +11,15 @@ import { requireCreator } from "@/lib/auth/guards";
 import { PAID_PLANS, PLANNED_PRICE_CENTS, SUPPORT_EMAIL, TRIAL_DAYS, type PaidPlan } from "@/lib/config";
 import { formatWholeDollars } from "@/lib/landing/demo";
 import { billingConfigured } from "@/lib/payments/billing";
+import { paypalBillingConfigured } from "@/lib/payments/paypal-billing";
+import { activeProvider, paypalMode } from "@/lib/payments/paypal-config";
 import { liveKey } from "@/lib/payments/test-account";
 import { SUSPENDED_MESSAGE, can, planLimits, type StoreAccess } from "@/lib/plans/access";
 import { PLAN_FEATURE_GROUPS } from "@/lib/plans/catalog";
 import { countCourses, videoSecondsUsed } from "@/lib/plans/usage";
 import { countSubscribed } from "@/lib/subscribers/queries";
 import { Progress } from "@/components/ui/progress";
-import { openBillingPortal, startSubscription } from "@/lib/plans/actions";
+import { cancelPlan, openBillingPortal, startSubscription } from "@/lib/plans/actions";
 import { billingOfOwner } from "@/lib/plans/billing-queries";
 
 // Settings > Plan (D-072, D-073): the free period or paid plan, subscribe, switch and manage billing.
@@ -36,17 +38,19 @@ const PLAN_LABELS: Record<PaidPlan, { name: string; blurb: string }> = {
   pro: { name: "Pro", blurb: "For creators who sell calls and want every growth tool." },
 };
 
-/** Messages after a button or the trip to Stripe. Only these keys are shown; anything else is ignored. */
+/** Messages after a button or the trip to PayPal (or Stripe). Only these keys are shown; anything else is ignored. */
 const OUTCOMES: Record<string, { variant: "info" | "success" | "warning" | "error"; text: string }> = {
   success: { variant: "success", text: "Thank you! Your plan is active and your store is open." },
-  pending: { variant: "info", text: "Payment received. Your plan turns on as soon as Stripe confirms it, usually within a minute. Refresh this page." },
+  pending: { variant: "info", text: "Thanks! Your plan turns on as soon as the payment is confirmed, usually within a minute. Refresh this page." },
   cancelled: { variant: "info", text: "No changes made. You can choose a plan any time." },
-  switched: { variant: "success", text: "Plan changed. The difference is added to (or taken off) your next invoice." },
+  switched: { variant: "success", text: "Plan changed. Your next payment is at the new price." },
+  plan_cancelled: { variant: "info", text: "Your plan is cancelled. It stays active until the end of the month you paid for, then your store pauses." },
+  provider_changed: { variant: "warning", text: "Your plan is still billed through Stripe, so it can't be changed here. Email us and we'll move it for you." },
   same_plan: { variant: "info", text: "You are already on that plan." },
   slow: { variant: "warning", text: "Slow down a little, then try again." },
   no_customer: { variant: "info", text: "Choose a plan first; billing settings appear after your first payment." },
   unavailable: { variant: "warning", text: "Paid plans aren't set up on this server yet." },
-  error: { variant: "error", text: "Something went wrong with Stripe. Nothing was charged twice. Please try again." },
+  error: { variant: "error", text: "Something went wrong with the payment service. Nothing was charged twice. Please try again." },
 };
 
 function statusOf(access: StoreAccess): { badge: { label: string; variant: "live" | "testMode" | "draft" }; text: string } {
@@ -58,7 +62,7 @@ function statusOf(access: StoreAccess): { badge: { label: string; variant: "live
         ? { badge: { label: `${planName}, ending`, variant: "testMode" }, text: `You cancelled your plan. It stays active until ${end}, then your store pauses.` }
         : { badge: { label: planName, variant: "live" }, text: end ? `Your ${planName} plan renews on ${end}.` : `You are on the ${planName} plan.` };
     case "past_due":
-      return { badge: { label: "Payment failed", variant: "testMode" }, text: "Your last payment didn't go through. Stripe will try again; update your card under Manage billing so your store stays open." };
+      return { badge: { label: "Payment failed", variant: "testMode" }, text: "Your last payment didn't go through. It will be tried again; update your payment method under Manage billing so your store stays open." };
     case "founding":
       return { badge: { label: "Founding creator", variant: "live" }, text: `Free until ${end}. Pick a plan any time before then to keep your store open afterwards.` };
     case "paused":
@@ -79,7 +83,12 @@ async function PlanContent({ searchParams }: Pick<PageProps<"/dashboard/settings
   const outcomeKey = typeof params.billing === "string" && Object.hasOwn(OUTCOMES, params.billing) ? params.billing : null;
   const outcome = outcomeKey ? OUTCOMES[outcomeKey] : null;
   const current = store.access.plan;
-  const ready = billingConfigured();
+  // PayPal plans by default (D-118); Stripe Billing only when PAYMENT_PROVIDER=stripe.
+  const paypal = activeProvider() === "paypal";
+  const ready = paypal ? paypalBillingConfigured() : billingConfigured();
+  const testMode = paypal ? paypalMode() === "sandbox" : !liveKey();
+  const provider = paypal ? "PayPal" : "Stripe";
+  const canManage = paypal ? Boolean(billing?.subscriptionId?.startsWith("I-")) : Boolean(billing?.customerId);
   // What the store uses of its plan (D-098). Never blocks the page if the database is slow.
   const [courses, videoSeconds, subscribed] = await Promise.all([countCourses(store.id).catch(() => 0), videoSecondsUsed(store.id).catch(() => 0), countSubscribed(store.id).catch(() => 0)]);
   const limits = planLimits(store.access);
@@ -90,7 +99,7 @@ async function PlanContent({ searchParams }: Pick<PageProps<"/dashboard/settings
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-display text-h3">Plan</h2>
           <Badge variant={status.badge.variant}>{status.badge.label}</Badge>
-          {ready && !liveKey() && <Badge variant="testMode">Test mode</Badge>}
+          {ready && testMode && <Badge variant="testMode">Test mode</Badge>}
         </div>
         <p className="text-sm text-mute">{status.text}</p>
       </CardHeader>
@@ -145,17 +154,26 @@ async function PlanContent({ searchParams }: Pick<PageProps<"/dashboard/settings
         })}
       </ul>
 
-      {billing?.customerId && (
-        <form action={openBillingPortal}>
-          <Button type="submit" variant="secondary" disabled={!ready}>
-            Manage billing
-          </Button>
-        </form>
+      {canManage && (
+        <div className="flex flex-wrap gap-2">
+          <form action={openBillingPortal}>
+            <Button type="submit" variant="secondary" disabled={!ready}>
+              Manage billing
+            </Button>
+          </form>
+          {paypal && current && !store.access.cancelsAtPeriodEnd && (
+            <form action={cancelPlan}>
+              <Button type="submit" variant="ghost" className="text-danger" disabled={!ready}>
+                Cancel plan
+              </Button>
+            </form>
+          )}
+        </div>
       )}
 
       <p className="text-sm text-mute">
-        Payment is handled by Stripe; Pickstall never sees your card. Cancel any time in Manage billing: your plan stays active until the end of the paid
-        month. Stripe&apos;s card processing fees on your own sales still apply. Questions:{" "}
+        Payment is handled by {provider}; Pickstall never sees your card. Cancel any time: your plan stays active until the end of the paid month.
+        {provider}&apos;s processing fees on your own sales still apply. Questions:{" "}
         <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-blue underline underline-offset-4">
           {SUPPORT_EMAIL}
         </a>

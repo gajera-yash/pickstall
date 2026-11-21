@@ -15,6 +15,7 @@ import { notifyOrderPaid, notifyRefund } from "@/lib/notifications/queries";
 import { scheduleOrderConfirmation } from "@/lib/orders/confirmation";
 import { scheduleReviewRequest } from "@/lib/review-request/job";
 import { recordPlanInvoice, syncSubscription } from "@/lib/plans/billing-sync";
+import { syncPayPalSubscription } from "@/lib/plans/paypal-billing";
 import type { PaymentEvent, PaymentProvider, WebhookContext, WebhookEndpoint } from "@/lib/payments/types";
 import { applyStripeAccountStatus, detachStripeAccount, stripeAccountOfStore } from "@/lib/stores/queries";
 
@@ -113,6 +114,11 @@ async function applyEvent(providerName: PaymentProvider["name"], event: PaymentE
 
   switch (event.type) {
     case "billing.subscription":
+      // PayPal plans (D-118): fetched from PayPal and saved, with its plan payments.
+      if (providerName === "paypal") {
+        await syncPayPalSubscription(event.subscriptionId);
+        return;
+      }
       // Fetches the subscription from Stripe and saves it: replays and out-of-order events end the same.
       await syncSubscription(event.subscriptionId);
       // A paid plan invoice (D-116): saved once by its id, fetched from Stripe, never from the body.

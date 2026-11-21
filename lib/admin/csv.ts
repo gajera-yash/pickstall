@@ -11,14 +11,14 @@ function planLabel(row: AdminStoreRow): string {
 
 export function creatorsCsv(rows: AdminStoreRow[]): string {
   return buildCsv(
-    ["Store", "Username", "Owner email", "Plan", "Published", "Stripe connected", "Created (UTC)"],
+    ["Store", "Username", "Owner email", "Plan", "Published", "Payments connected", "Created (UTC)"],
     rows.map((row) => [row.name, row.slug, row.ownerEmail, planLabel(row), row.isPublished ? "yes" : "no", row.stripeConnected ? "yes" : "no", row.createdAt.toISOString()]),
   );
 }
 
 export function planPaymentsCsv(rows: { id: string; paidAt: Date; storeName: string; slug: string; plan: string; amountCents: number; currency: string }[]): string {
   return buildCsv(
-    ["Paid (UTC)", "Store", "Username", "Plan", "Amount", "Currency", "Stripe invoice"],
+    ["Paid (UTC)", "Store", "Username", "Plan", "Amount", "Currency", "Invoice"],
     rows.map((row) => [row.paidAt.toISOString(), row.storeName, row.slug, row.plan, centsToInput(row.amountCents, row.currency), row.currency.toUpperCase(), row.id]),
   );
 }

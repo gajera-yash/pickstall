@@ -88,7 +88,7 @@ async function CreatorContent({ params }: Pick<PageProps<"/admin/creators/[id]">
         <Stat label="Paid orders" value={store.orders.paid.toLocaleString("en")} />
         <Stat label="Sales" value={moneyList(store.orders.sales)} />
         <Stat label="Subscribers" value={store.subscribers.subscribed.toLocaleString("en")} hint={`${store.subscribers.unsubscribed} unsubscribed · ${store.subscribers.bounced} bounced · ${store.subscribers.complained} complaints`} />
-        <Stat label="Stripe" value={store.stripeConnected ? "Connected" : "Not connected"} hint={`${store.broadcasts} broadcasts`} />
+        <Stat label="Payments" value={store.stripeConnected ? "Connected" : "Not connected"} hint={`${store.broadcasts} broadcasts`} />
       </section>
 
       <section aria-labelledby="admin-products" className="flex flex-col gap-3">

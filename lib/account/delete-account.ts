@@ -8,6 +8,9 @@ import { collections } from "@/lib/db/collections";
 import { recordAudit } from "@/lib/audit/log";
 import { logger } from "@/lib/logger";
 import { cancelSubscriptionNow } from "@/lib/payments/billing";
+import { deletePayPalWebhook } from "@/lib/payments/paypal";
+import { cancelPayPalSubscription } from "@/lib/payments/paypal-billing";
+import { removePayPalConnection } from "@/lib/stores/paypal";
 import { releaseAccount } from "@/lib/stores/stripe-connect";
 import { setStoreStripeConnection } from "@/lib/stores/queries";
 
@@ -37,13 +40,20 @@ export async function prepareAccountDeletion(user: { id: string; email: string |
   if (store) {
     const subscriptionId = store.billing?.subscriptionId;
     if (subscriptionId && GIVES_ACCESS.includes(store.billing?.status ?? "")) {
+      // PayPal subscriptions (D-118) start with "I-"; older Stripe ones with "sub_".
+      const paypal = subscriptionId.startsWith("I-");
       try {
-        await cancelSubscriptionNow(subscriptionId);
+        if (paypal) await cancelPayPalSubscription(subscriptionId, "Account deleted.");
+        else await cancelSubscriptionNow(subscriptionId);
       } catch (error) {
         logger.error("account.delete_cancel_failed", { name: error instanceof Error ? error.name : undefined });
-        throw new AccountDeletionBlocked("We couldn't cancel your plan with Stripe, so your account was not deleted. Please try again in a few minutes.");
+        throw new AccountDeletionBlocked(`We couldn't cancel your plan with ${paypal ? "PayPal" : "Stripe"}, so your account was not deleted. Please try again in a few minutes.`);
       }
     }
+
+    // The store's own PayPal app (D-118): our webhook comes off it and the encrypted keys are removed.
+    const paypalApp = await removePayPalConnection(user.id).catch(() => null);
+    if (paypalApp?.webhookId) await deletePayPalWebhook(paypalApp.credentials, paypalApp.webhookId).catch(() => undefined);
 
     if (store.stripeAccountId) {
       const disconnected = await setStoreStripeConnection(user.id, null);
