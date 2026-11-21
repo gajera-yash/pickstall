@@ -130,6 +130,15 @@ test("the delivery endpoint and webhooks refuse unauthenticated requests", async
 
   const webhook = await request.post("/api/webhooks/stripe-connect", { data: "{}", headers: { "content-type": "application/json" } });
   expect(webhook.status()).toBe(400);
+
+  // PayPal (D-118): unsigned or badly signed deliveries to the platform and to a store are refused.
+  const paypalPlatform = await request.post("/api/webhooks/paypal", { data: JSON.stringify({ id: "WH-1", event_type: "BILLING.SUBSCRIPTION.ACTIVATED", resource: { id: "I-ABCDEF1234" } }) });
+  expect(paypalPlatform.status()).toBe(400);
+  const paypalStore = await request.post(`/api/webhooks/paypal/${randomUUID()}`, {
+    data: JSON.stringify({ id: "WH-2", event_type: "PAYMENT.CAPTURE.COMPLETED", resource: { id: "CAP1", status: "COMPLETED", custom_id: String(order?._id) } }),
+    headers: { "paypal-transmission-id": "x", "paypal-transmission-sig": "bad", "paypal-transmission-time": "2026-11-21T00:00:00Z", "paypal-cert-url": "https://api.paypal.com/cert", "paypal-auth-algo": "SHA256withRSA" },
+  });
+  expect(paypalStore.status()).toBe(400);
 });
 
 test("store, product and checkout pages fit a 360 px screen", async ({ page }) => {

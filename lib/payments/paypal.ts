@@ -188,6 +188,14 @@ async function verifyDelivery(credentials: PayPalCredentials, webhookId: string,
     webhook_event: event,
   };
   if (Object.values(body).some((value) => value === null)) return false;
+  // PayPal's signing certificates live on paypal.com. Anything else is refused before we spend a call
+  // to PayPal on it (cheap filter against junk posted to a store's webhook URL).
+  try {
+    const cert = new URL(body.cert_url as string);
+    if (cert.protocol !== "https:" || !/(^|\.)paypal\.com$/.test(cert.hostname)) return false;
+  } catch {
+    return false;
+  }
   const result = await paypalCall(credentials, "/v1/notifications/verify-webhook-signature", { method: "POST", body }, verifyResponse);
   return result.verification_status === "SUCCESS";
 }

@@ -45,6 +45,11 @@ export default defineConfig({
       STRIPE_SECRET_KEY: "",
       STRIPE_CONNECT_WEBHOOK_SECRET: "",
       STRIPE_PLATFORM_ACCOUNT_ID: "",
+      // No PayPal keys either (D-118): checkout uses the development mock provider.
+      PAYPAL_CLIENT_ID: "",
+      PAYPAL_CLIENT_SECRET: "",
+      PAYPAL_WEBHOOK_ID: "",
+      PAYMENT_CREDENTIALS_KEY: "",
       GOOGLE_CLIENT_ID: "",
       GOOGLE_CLIENT_SECRET: "",
       NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "false",

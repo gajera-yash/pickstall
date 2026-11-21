@@ -242,6 +242,12 @@ describe("PayPal webhooks through the shared pipeline", () => {
     hoisted.apps.set(STORE_A, { ...hoisted.apps.get(STORE_A)!, webhookId: null });
     expect(await handleWebhookRequest("paypal", capture(ORDER), null, "connect", { headers: signedHeaders, accountId: STORE_A })).toEqual({ status: 400, body: "bad_signature" });
     expect(await handleWebhookRequest("paypal", capture(ORDER), null, "connect", { headers: new Headers(), accountId: STORE_B })).toEqual({ status: 400, body: "bad_signature" });
+    // A certificate URL that is not on paypal.com is refused without asking PayPal.
+    const before = fetchMock.mock.calls.length;
+    const fake = new Headers(signedHeaders);
+    fake.set("paypal-cert-url", "https://evil.test/cert");
+    expect(await handleWebhookRequest("paypal", capture(ORDER), null, "connect", { headers: fake, accountId: STORE_B })).toEqual({ status: 400, body: "bad_signature" });
+    expect(fetchMock.mock.calls.length).toBe(before);
     expect(hoisted.orders.updateOne).not.toHaveBeenCalled();
   });
 
