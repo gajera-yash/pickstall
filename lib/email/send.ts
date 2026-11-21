@@ -28,9 +28,15 @@ export function usesTestSender(from: string | undefined): boolean {
   return !from || /@resend\.dev>?\s*$/i.test(from.trim());
 }
 
-/** A failed send, with Resend's error code (for example "validation_error") as `reason` for the logs. */
+/**
+ * A failed send, with Resend's error code (for example "validation_error") as `reason` and its
+ * message (emails masked) as `detail`, for the logs and Admin > Health.
+ */
 export class EmailSendError extends Error {
-  constructor(readonly reason: string) {
+  constructor(
+    readonly reason: string,
+    readonly detail: string | undefined = undefined,
+  ) {
     super("Could not send the email.");
     this.name = "EmailSendError";
   }
@@ -49,7 +55,7 @@ export function maskedProviderMessage(message: unknown): string | undefined {
 export async function sendEmail(email: OutgoingEmail): Promise<void> {
   const apiKey = serverEnv.RESEND_API_KEY;
   if (!apiKey) {
-    if (process.env.NODE_ENV === "production") throw new Error("RESEND_API_KEY is not set.");
+    if (process.env.NODE_ENV === "production") throw new EmailSendError("missing_api_key", "RESEND_API_KEY is not set on the server.");
     logger.info("email.dev_not_sent", { subject: email.subject });
     return;
   }
@@ -69,7 +75,7 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
     // Resend's error name and message say why (for example "validation_error" for an unverified
     // sender domain, or a rate limit). Addresses in the message are masked.
     logger.error("email.send_failed", { name: error.name, detail: maskedProviderMessage(error.message), testSender: usesTestSender(serverEnv.EMAIL_FROM) });
-    throw new EmailSendError(error.name);
+    throw new EmailSendError(error.name, maskedProviderMessage(error.message));
   }
 }
 

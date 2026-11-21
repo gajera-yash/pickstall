@@ -477,6 +477,8 @@ export type EmailOutboxDoc = {
   attempts: number;
   createdAt: Date;
   sentAt: Date | null;
+  /** Why the last attempt failed (the email service's error code and a short message, emails masked), for Admin > Health. */
+  lastError?: string | null;
 };
 
 /** An uploaded image (D-032). The file itself is in file storage under `key`; images are public. */

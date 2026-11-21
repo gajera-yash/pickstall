@@ -273,14 +273,18 @@ export type AdminHealth = {
   database: { dataMb: number; storageMb: number; collections: number } | null;
   imagesMb: number;
   auditRecent: { action: string; storeId: string | null; storeName: string | null; at: Date }[];
+  /** Order and call emails that failed in the last 24 hours. */
+  emailFailures24h: number;
+  /** The newest failed email and why it failed (from the email service), or null. */
+  lastEmailFailure: { reason: string | null; at: Date; kind: string } | null;
 };
 
 /** Signs that something needs attention, and storage use. */
 export async function adminHealth(now: Date = new Date()): Promise<AdminHealth> {
-  const { webhookEvents, broadcasts, files, orders, mediaBlobs, auditLogs, stores } = await collections();
+  const { webhookEvents, broadcasts, files, orders, mediaBlobs, auditLogs, stores, emailOutbox } = await collections();
   const db = await getDb();
   const since24 = new Date(now.getTime() - DAY_MS);
-  const [hooks, stuck, pending, unpaid, stats, images, audit] = await Promise.all([
+  const [hooks, stuck, pending, unpaid, stats, images, audit, emailFailures, lastEmailFailure] = await Promise.all([
     webhookEvents.aggregate<{ _id: string; count: number }>([{ $match: { processedAt: { $gte: since24 } } }, { $group: { _id: "$source", count: { $sum: 1 } } }]).toArray(),
     broadcasts.countDocuments({ status: "sending", updatedAt: { $lt: new Date(now.getTime() - 60 * 60 * 1000) } }),
     files.countDocuments({ status: "pending" }),
@@ -288,6 +292,9 @@ export async function adminHealth(now: Date = new Date()): Promise<AdminHealth> 
     db.stats().catch(() => null),
     mediaBlobs.aggregate<{ total: number }>([{ $group: { _id: null, total: { $sum: "$size" } } }]).toArray(),
     auditLogs.find({}, { projection: { action: 1, storeId: 1, at: 1 } }).sort({ at: -1 }).limit(15).toArray(),
+    // Order emails that could not be sent (D-037): how many in a day, and why the last one failed.
+    emailOutbox.countDocuments({ status: "failed", createdAt: { $gte: since24 } }),
+    emailOutbox.findOne({ status: "failed" }, { projection: { lastError: 1, createdAt: 1, kind: 1 }, sort: { createdAt: -1 } }),
   ]);
   const mb = (bytes: unknown) => Math.round((Number(bytes) || 0) / 1024 / 1024);
   const storeIds = [...new Set(audit.map((row) => row.storeId).filter((id): id is string => typeof id === "string"))];
@@ -300,6 +307,8 @@ export async function adminHealth(now: Date = new Date()): Promise<AdminHealth> 
     database: stats ? { dataMb: mb(stats.dataSize), storageMb: mb(stats.storageSize), collections: Number(stats.collections) || 0 } : null,
     imagesMb: mb(images[0]?.total),
     auditRecent: audit.map((row) => ({ action: String(row.action), storeId: row.storeId, storeName: row.storeId ? (names.get(row.storeId) ?? null) : null, at: row.at })),
+    emailFailures24h: emailFailures,
+    lastEmailFailure: lastEmailFailure ? { reason: lastEmailFailure.lastError ?? null, at: lastEmailFailure.createdAt, kind: lastEmailFailure.kind } : null,
   };
 }
 

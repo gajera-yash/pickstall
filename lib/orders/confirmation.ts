@@ -94,10 +94,11 @@ export async function sendOrderConfirmation(orderId: string): Promise<"sent" | "
       if (process.env.NODE_ENV !== "production") logger.debug("order_email.dev_link", { link: email.text.match(/https?:\/\/\S+\/welcome\/\S+/)?.[0] });
       stage = "send";
       await sendEmail({ to: order.buyerEmail, ...email, ...(attachments ? { attachments } : {}) });
-      await emailOutbox.updateOne({ _id: key }, { $set: { status: "sent", sentAt: new Date() } });
+      await emailOutbox.updateOne({ _id: key }, { $set: { status: "sent", sentAt: new Date(), lastError: null } });
       return "sent";
     } catch (error) {
-      await emailOutbox.updateOne({ _id: key }, { $set: { status: "failed" } }).catch(() => undefined);
+      const lastError = error instanceof EmailSendError ? `${error.reason}${error.detail ? `: ${error.detail}` : ""}` : `${stage}: ${error instanceof Error ? error.name : "error"}`;
+      await emailOutbox.updateOne({ _id: key }, { $set: { status: "failed", lastError: lastError.slice(0, 300) } }).catch(() => undefined);
       logger.error("order_email.failed", { orderId, stage, name: error instanceof Error ? error.name : undefined, reason: error instanceof EmailSendError ? error.reason : undefined });
       return "failed";
     }

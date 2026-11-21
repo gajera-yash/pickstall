@@ -39,6 +39,7 @@ export const AUDIT_ACTIONS = [
   "admin.signed_out",
   "admin.password_changed",
   "admin.billing_imported",
+  "admin.emails_retried",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
