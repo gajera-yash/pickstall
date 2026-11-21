@@ -33,6 +33,11 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("stores").createIndex({ stripeClaimKey: 1 }, { unique: true, partialFilterExpression: { stripeClaimKey: { $type: "string" } }, name: "stores_stripe_claim_unique" }),
     db.collection("products").createIndex({ storeId: 1, slug: 1 }, { unique: true, name: "products_store_slug_unique" }),
     db.collection("products").createIndex({ storeId: 1, status: 1, sortOrder: 1 }, { name: "products_store_status" }),
+    // Product import: one product per store per source item (Gumroad id or CSV title key). Partial: only imported products.
+    db.collection("products").createIndex(
+      { storeId: 1, "importedFrom.source": 1, "importedFrom.externalId": 1 },
+      { unique: true, partialFilterExpression: { "importedFrom.externalId": { $type: "string" } }, name: "products_store_import_unique" },
+    ),
     db.collection("orders").createIndex({ providerSessionId: 1 }, { unique: true, partialFilterExpression: { providerSessionId: { $type: "string" } }, name: "orders_provider_session_unique" }),
     db.collection("orders").createIndex({ providerPaymentId: 1 }, { unique: true, partialFilterExpression: { providerPaymentId: { $type: "string" } }, name: "orders_provider_payment_unique" }),
     db.collection("orders").createIndex({ buyerEmail: 1, status: 1, paidAt: -1 }, { name: "orders_buyer_email" }),

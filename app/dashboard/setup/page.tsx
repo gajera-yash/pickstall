@@ -159,6 +159,12 @@ function ProductStep({ step, products, currency, error }: { step: ChecklistItem;
         {step.done && <NextLink />}
       </div>
       {!step.done && <p className="text-sm text-mute">After you save your product, the bar at the top of the dashboard takes you back to the next step.</p>}
+      <p className="text-sm text-mute">
+        Moving from Gumroad or Stan Store?{" "}
+        <Link href="/dashboard/products/import" className="font-semibold text-blue underline underline-offset-4">
+          Import your products
+        </Link>
+      </p>
     </Card>
   );
 }

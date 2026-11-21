@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-119: Product import from Gumroad and from a CSV (Stan Store)
+- **Date:** 2026-11-21
+- **Decision (founder asked for "Gumroad/Stan thi product import"):**
+  - **Gumroad:** the creator pastes an access token from their Gumroad application page (gumroad.com/api: "Generate access token"); we call `GET https://api.gumroad.com/v2/products` once for a preview and again on import (ids from the browser only pick). The token is never stored or logged.
+  - **Stan Store:** has no product export or API (help.stan.store checked 2026-11-21), so creators upload a CSV (title, price, description; template on the page). Column mapping with a preview.
+  - Imports are **drafts** of digital products: title, description (Gumroad HTML turned into text), price only when the source currency is the store currency, and for Gumroad the cover copied into our image storage (only from `*.gumroad.com` https hosts). Files can't be copied, so the creator adds the file or link and publishes. Memberships are shown but skipped.
+  - `products.importedFrom` with the unique index `products_store_import_unique` (store, source, external id): importing again adds nothing twice. Up to 100 per import, within the store's product limit, rate limited.
+- **Why:** founder request; PRD section 9 lists import.
+- **Consequences:** a creator moving from Stan types or pastes their products into the CSV; descriptions lose Gumroad formatting (plain paragraphs).
+
 ## D-118: Payments move from Stripe to PayPal (creators' sales and Pickstall plans)
 - **Date:** 2026-11-21
 - **Decision (founder, 2026-11-21: "use PayPal, not Stripe"; plan approved the same day):**

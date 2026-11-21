@@ -235,6 +235,12 @@ export type ProductDoc = {
   _id: string;
   storeId: string;
   /**
+   * Where an imported product came from (PRD 9 import): Gumroad's product id, or a key of the CSV
+   * title. Unique per store and source (index `products_store_import_unique`), so importing again
+   * adds nothing twice. Missing on products made in Pickstall.
+   */
+  importedFrom?: { source: "gumroad" | "csv"; externalId: string; importedAt: Date };
+  /**
    * "digital" (Phase 1), "course" (course flow, D-054), "coaching" (D-081) or "lead_magnet" (D-094):
    * a free digital product that grows the creator's email list. A lead magnet is always free.
    */

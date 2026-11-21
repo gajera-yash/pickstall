@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -22,12 +22,20 @@ export default function ProductsPage({ searchParams }: PageProps<"/dashboard/pro
         title="Products"
         description="Everything you sell: downloads, links and services."
         action={
-          <Button asChild>
-            <Link href="/dashboard/products/new">
-              <Plus aria-hidden="true" className="size-5" />
-              Add product
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="secondary">
+              <Link href="/dashboard/products/import">
+                <Upload aria-hidden="true" className="size-5" />
+                Import
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/dashboard/products/new">
+                <Plus aria-hidden="true" className="size-5" />
+                Add product
+              </Link>
+            </Button>
+          </div>
         }
       />
       <Suspense fallback={<Skeleton className="h-72 w-full rounded-lg" />}>
