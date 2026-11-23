@@ -78,6 +78,8 @@ export const serverEnvSchema = publicEnvSchema.extend({
   // Groq API key and model for DM drafts (D-121). Server only; never logged.
   GROQ_API_KEY: optional(z.string().min(20)),
   GROQ_MODEL: optional(z.string().regex(/^[a-z0-9][a-z0-9._/-]{1,80}$/, { error: "Must be a Groq model id" })),
+  // Where the daily growth report goes at 21:00 IST (D-122). Without it the report is only saved in Admin > Growth > Reports.
+  GROWTH_REPORT_EMAIL: optional(z.email()),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;

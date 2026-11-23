@@ -39,6 +39,9 @@ export type RenderedEmail = { subject: string; text: string; html: string };
 /** Inline colors for list emails (D-095): email HTML cannot use the CSS tokens. */
 export const LIST_EMAIL_COLORS = { text: "#111827", muted: "#6b7280", border: "#e5e7eb", button: "#0056ff", onButton: "#ffffff" } as const;
 
+/** Inline colors of the card-style emails (order emails, and the daily growth report, D-122). */
+export const CARD_EMAIL_COLORS = { page: "#f7f9fc", card: "#ffffff", text: "#0b0d2a", muted: "#555a82", border: "#e5e7eb", button: "#0056ff", onButton: "#ffffff" } as const;
+
 const VARIABLE = /\{\{\s*(customer_name|product_title|download_link)\s*\}\}/g;
 
 /** Fills the three allowed variables. Any other `{{...}}` is left as it is (the creator form rejects them). */

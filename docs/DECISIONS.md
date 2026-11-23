@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-122: Daily growth report at 21:00 IST (marketing block M5)
+- **Date:** 2026-11-23
+- **Decision (founder approved the M5 plan, 2026-11-23):**
+  - **When:** Inngest cron `TZ=Asia/Kolkata 0 21 * * *` (`lib/marketing/report-job.ts`), plus "Send today's report now" on `/admin/growth/reports` (admin, 10 an hour). A report covers 21:00 IST of the day before to the moment it is built; a run within 15 minutes after 21:00 still covers the day that just ended (`reportWindow`). Its `_id` is the India date the window ends on.
+  - **Content** (`buildDailyReport`, numbers from the database only, no AI): outreach (DMs, follow-ups, replies = moves to Replied / Interested / Call booked, closed, drafts by AI vs template, leads imported), creators (signups by source, stores first published, PayPal connected, first real sales and first paid plans in the window, same sale rules as D-119), who moved (up to 20: messaged, follow-up sent, stage moves, signed up through their link), the last 7 days (DMs, replies, signups), needs attention (follow-ups due, Replied for over a day, signed up in the last 14 days without a published store, drafts where the AI was not used) and up to 3 priorities by fixed rules (replies, follow-ups, stuck signups, new DMs or "import more"). Website visits (PostHog, M1b) and content (M7) are marked "not set up yet".
+  - **Delivery:** emailed through `sendEmail` (Resend) to the new optional env `GROWTH_REPORT_EMAIL`; without it the report is only saved. Every run rebuilds and saves the report (collection `mktReports`). The 21:00 job claims the day's email by setting `emailedAt` first, so it goes once; a failed send releases the claim. "Send now" emails a "Preview so far" each time it is pressed and never touches `emailedAt`, so the 21:00 email still goes. Plain text plus inline-styled HTML, every value escaped; lead names or handles and counts only (no notes, no creator or buyer emails).
+  - **Screens:** `/admin/growth/reports` (list, emailed or not) and `/admin/growth/reports/[day]` (same content as the email).
+- **Why:** MARKETING_AGENTS_PLAN.md M5, the founder's end-of-day data.
+- **Consequences:** the report needs Inngest connected in production (launch checklist A) and a verified Resend sender (`EMAIL_FROM`). "Send now" after 21:15 IST builds the next day's report so far; the 21:00 job completes it.
+
 ## D-121: DM drafts with Groq (template fallback), fit score, Today queue and follow-ups (marketing block M3)
 - **Date:** 2026-11-23
 - **Decision (founder approved the M3 plan, 2026-11-23; Groq now because the Claude API felt costly, switch to Claude later):**

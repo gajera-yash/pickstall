@@ -9,6 +9,7 @@ import type { Currency, SocialLinkKind } from "@/lib/config";
 import type { CourseCategory } from "@/lib/courses/settings";
 import type { StoreAcquisition } from "@/lib/marketing/acquisition";
 import type { LeadPlatform, LeadStage, LeadTool } from "@/lib/marketing/leads-rules";
+import type { DailyReportData } from "@/lib/marketing/report-types";
 import type { ThemePresetId } from "@/lib/themes";
 
 // Document shapes of the app's own collections (D-024). Better Auth owns `user`, `session`,
@@ -885,6 +886,19 @@ export type MktSettingsDoc = {
   updatedAt: Date;
 };
 
+/**
+ * One daily growth report (D-122). `_id` is the India date the report's window ends on
+ * ("2026-11-24"), so a day has one report and its email is sent once (`emailedAt`).
+ */
+export type MktReportDoc = {
+  _id: string;
+  windowStart: Date;
+  windowEnd: Date;
+  data: DailyReportData;
+  builtAt: Date;
+  emailedAt?: Date;
+};
+
 export async function collections(): Promise<{
   profiles: Collection<ProfileDoc>;
   stores: Collection<StoreDoc>;
@@ -923,6 +937,7 @@ export async function collections(): Promise<{
   mktSuppressions: Collection<MktSuppressionDoc>;
   mktDrafts: Collection<MktDraftDoc>;
   mktSettings: Collection<MktSettingsDoc>;
+  mktReports: Collection<MktReportDoc>;
 }> {
   const db = await getDb();
   return {
@@ -963,5 +978,6 @@ export async function collections(): Promise<{
     mktSuppressions: db.collection<MktSuppressionDoc>("mktSuppressions"),
     mktDrafts: db.collection<MktDraftDoc>("mktDrafts"),
     mktSettings: db.collection<MktSettingsDoc>("mktSettings"),
+    mktReports: db.collection<MktReportDoc>("mktReports"),
   };
 }
