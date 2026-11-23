@@ -4,6 +4,20 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-121: DM drafts with Groq (template fallback), fit score, Today queue and follow-ups (marketing block M3)
+- **Date:** 2026-11-23
+- **Decision (founder approved the M3 plan, 2026-11-23; Groq now because the Claude API felt costly, switch to Claude later):**
+  - **New external service: Groq** (not in CLAUDE.md's stack; founder's choice). Plain `fetch` to `POST https://api.groq.com/openai/v1/chat/completions` (no new dependency), model `openai/gpt-oss-120b` by default (`GROQ_MODEL`), strict `json_schema` output `{ firstMessage, followUp }`, `reasoning_effort: "low"`, 25 s timeout. Facts checked in Groq's docs on 2026-11-23 (models, API reference, structured outputs, your data). Groq does not keep request data by default; abuse logs up to 30 days unless Zero Data Retention is on (founder to turn it on). Its data page does not say whether it trains on API data.
+  - **Writers** (`lib/marketing/ai/`): `MARKETING_AI_PROVIDER` = `template` (default, no AI) or `groq` (needs `GROQ_API_KEY`). Claude is added later as one more writer in `writer.ts`. Every AI draft goes through `draftProblem` (600 characters, no links, emails, placeholders or markup, no tax, guarantees, testimonials or card checkout, "0%" only with PayPal's fees); a broken or failed draft is tried once more, then the template is used with a note. A 429 or a refused key goes straight to the template. Facts a draft may state live in `lib/marketing/ai/facts.ts` (our prices from `lib/config.ts`; Stan $99 and Gumroad 10% + $0.50 as read on 2026-11-23, to re-check).
+  - **What leaves our database:** first name, topic, store tool, a follower range (`followerBand`) and country. Never the handle, notes or exact follower count. Voice examples (the founder's own DMs) go in the system prompt.
+  - **Fit score** (`leadFit`, no AI, not stored): store tool (Stan/Gumroad highest), 1K-50K followers, US/UK/Canada, a known topic; India gets a PayPal warning.
+  - **Collections:** `mktDrafts` (draft history per lead: both messages, writer, model, note), `mktSettings` (one document: up to 4 voice examples, daily draft limit 30, daily contact target 15). `MktLeadDoc.followUpSentAt` (optional) and event types `followed_up`, `draft_written`. Deleting a lead deletes its drafts.
+  - **Screens:** `/admin/growth/today` (best-fitting New leads up to the daily target minus those contacted today, with drafts, "Open profile", copy and "Mark sent"; follow-ups due 4 days after contact without a reply, one only; leads with no reply 4 days after the follow-up, offered "Mark not interested", nothing automatic), `/admin/growth/settings`, and a draft card with fit on the lead page. "Write drafts for N" writes one lead per request so a slow AI never times out a page.
+  - **First DM carries no link** (cold DMs with links look like spam); the founder sends the lead's link from its page after a reply.
+  - **Privacy Policy:** "Creators we contact" now names the AI service and the fields sent.
+- **Why:** M3 of MARKETING_AGENTS_PLAN.md, at no cost to start.
+- **Consequences:** the daily draft limit is checked before each draft, so two drafts written at the same moment can pass it by one. Groq's free-tier limits are only on the account's limits page; a 429 falls back to the template. Switching to Claude needs `@anthropic-ai/sdk` (founder approval) and one writer file.
+
 ## D-120: Outreach leads in Admin > Growth (marketing block M2)
 - **Date:** 2026-11-23
 - **Decision (founder approved the M2 plan, 2026-11-23; list of 500+ creators the founder built by hand, columns Name, Handle, Platform, Followers, Country, Course topic, Current tool, Contact Method, Status, Notes):**

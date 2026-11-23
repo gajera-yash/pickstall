@@ -161,6 +161,8 @@ NEXT_PUBLIC_GOOGLE_AUTH_ENABLED
 EMAIL_FROM                           # server only
 ADMIN_USERNAME / ADMIN_PASSWORD      # server only (admin sign-in at /admin/login, D-109)
 IP_HASH_SECRET                       # server only
+MARKETING_AI_PROVIDER                # server only: unset/"template" (default) or "groq" (D-121)
+GROQ_API_KEY / GROQ_MODEL            # server only (outreach DM drafts, D-121)
 PAYMENT_PROVIDER                     # server only: unset/"paypal" (default) or "stripe" (D-118)
 PAYPAL_MODE                          # server only: sandbox (default) or live
 PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET   # server only (OUR app: platform plan billing)

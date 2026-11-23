@@ -262,14 +262,15 @@ export async function setLeadNotes(id: string, notes: string, actor: string, now
   return true;
 }
 
-/** Deletes a lead and its events, and blocks the handle from future imports. */
+/** Deletes a lead with its events and drafts (D-121), and blocks the handle from future imports. */
 export async function deleteLead(id: string, now: Date = new Date()): Promise<boolean> {
-  const { mktLeads, mktEvents } = await collections();
+  const { mktLeads, mktEvents, mktDrafts } = await collections();
   const lead = await mktLeads.findOne({ _id: id }, { projection: { handleKey: 1 } });
   if (!lead) return false;
   await suppress(lead.handleKey, "deleted", now);
   await mktLeads.deleteOne({ _id: id });
   await mktEvents.deleteMany({ leadId: id });
+  await mktDrafts.deleteMany({ leadId: id });
   return true;
 }
 

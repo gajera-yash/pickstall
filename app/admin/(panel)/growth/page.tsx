@@ -1,4 +1,4 @@
-import { Megaphone, Upload } from "lucide-react";
+import { CalendarCheck, Megaphone, Upload } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -27,13 +27,22 @@ export default function AdminGrowthPage({ searchParams }: PageProps<"/admin/grow
       <div className="flex flex-wrap items-start justify-between gap-3">
         <AdminPageTitle title="Growth" description="Creators to contact. Copy a lead's own link into your message: their signup shows here by itself." />
         <div className="flex flex-wrap items-center gap-3">
+          <Link href="/admin/growth/settings" className="text-sm font-semibold text-blue underline underline-offset-4">
+            Settings
+          </Link>
           <Link href="/admin/growth/export" prefetch={false} className="text-sm font-semibold text-blue underline underline-offset-4">
             Download CSV
           </Link>
-          <Button asChild size="sm">
+          <Button asChild size="sm" variant="secondary">
             <Link href="/admin/growth/import">
               <Upload aria-hidden="true" className="size-4" />
               Import a list
+            </Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/admin/growth/today">
+              <CalendarCheck aria-hidden="true" className="size-4" />
+              Today
             </Link>
           </Button>
         </div>

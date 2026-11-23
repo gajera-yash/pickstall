@@ -828,6 +828,8 @@ export type MktLeadDoc = {
   refCode: string;
   importedFrom: string | null;
   lastContactedAt: Date | null;
+  /** When the one follow-up DM was sent (D-121). Missing until then; a lead gets one follow-up only. */
+  followUpSentAt?: Date;
   stageChangedAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -837,7 +839,7 @@ export type MktLeadDoc = {
 export type MktEventDoc = {
   _id: string;
   leadId: string;
-  type: "imported" | "stage_changed" | "contacted" | "notes_changed";
+  type: "imported" | "stage_changed" | "contacted" | "notes_changed" | "followed_up" | "draft_written";
   from: string | null;
   to: string | null;
   /** "admin:<username>" or "system". */
@@ -853,6 +855,34 @@ export type MktSuppressionDoc = {
   _id: string;
   reason: "deleted" | "do_not_contact";
   at: Date;
+};
+
+/**
+ * A DM draft for a lead (D-121): the first message and its one follow-up, who wrote it ("template"
+ * or an AI provider, with the model) and when. Kept as history; the newest one is shown.
+ */
+export type MktDraftDoc = {
+  _id: string;
+  leadId: string;
+  firstMessage: string;
+  followUp: string;
+  writer: "template" | "groq";
+  model: string | null;
+  /** Why the template was used instead of the AI, in words safe to show the founder. */
+  note: string | null;
+  createdAt: Date;
+};
+
+/** Growth settings (D-121), one document with `_id` "settings". */
+export type MktSettingsDoc = {
+  _id: "settings";
+  /** The founder's own DMs (up to 4, 600 characters each), so AI drafts sound like them. */
+  voiceExamples: string[];
+  /** Most drafts written per UTC day, across all leads. */
+  dailyDraftLimit: number;
+  /** New leads the Today screen suggests contacting per day. */
+  dailyContactTarget: number;
+  updatedAt: Date;
 };
 
 export async function collections(): Promise<{
@@ -891,6 +921,8 @@ export async function collections(): Promise<{
   mktLeads: Collection<MktLeadDoc>;
   mktEvents: Collection<MktEventDoc>;
   mktSuppressions: Collection<MktSuppressionDoc>;
+  mktDrafts: Collection<MktDraftDoc>;
+  mktSettings: Collection<MktSettingsDoc>;
 }> {
   const db = await getDb();
   return {
@@ -929,5 +961,7 @@ export async function collections(): Promise<{
     mktLeads: db.collection<MktLeadDoc>("mktLeads"),
     mktEvents: db.collection<MktEventDoc>("mktEvents"),
     mktSuppressions: db.collection<MktSuppressionDoc>("mktSuppressions"),
+    mktDrafts: db.collection<MktDraftDoc>("mktDrafts"),
+    mktSettings: db.collection<MktSettingsDoc>("mktSettings"),
   };
 }

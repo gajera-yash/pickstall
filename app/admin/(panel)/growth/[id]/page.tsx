@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { AdminPageTitle } from "@/components/admin/admin-ui";
+import { LeadDraft } from "@/components/admin/growth/draft-ui";
 import { LeadEditor } from "@/components/admin/growth/lead-editor";
 import { ProgressBadge, StageBadge, toolText } from "@/components/admin/growth/lead-ui";
 import { CopyButton } from "@/components/dashboard/details-sheet";
@@ -12,6 +13,8 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireAdmin } from "@/lib/admin/guard";
 import { publicEnv } from "@/lib/env";
+import { latestDrafts } from "@/lib/marketing/drafts";
+import { leadFit } from "@/lib/marketing/fit";
 import { getLead, type LeadDetail } from "@/lib/marketing/leads";
 import { LEAD_PLATFORM_LABELS, LEAD_STAGE_LABELS, formatFollowers, leadLink, leadProfileUrl, type LeadStage } from "@/lib/marketing/leads-rules";
 import { isUuid } from "@/lib/media/media";
@@ -43,6 +46,10 @@ function eventText(event: LeadDetail["events"][number]): string {
       return "Marked as contacted";
     case "notes_changed":
       return "Notes changed";
+    case "followed_up":
+      return "Follow-up sent";
+    case "draft_written":
+      return event.to === "template" ? "Draft written (template)" : `Draft written (${event.to ?? "AI"})`;
   }
 }
 
@@ -52,6 +59,9 @@ async function LeadContent({ params }: Pick<PageProps<"/admin/growth/[id]">, "pa
   const detail = await getLead(id);
   if (!detail) notFound();
   const { lead, store, events } = detail;
+  const latest = (await latestDrafts([lead._id])).get(lead._id) ?? null;
+  const draft = latest ? { firstMessage: latest.firstMessage, followUp: latest.followUp, writer: latest.writer, model: latest.model, note: latest.note } : null;
+  const fit = leadFit(lead);
   const link = leadLink(publicEnv.NEXT_PUBLIC_APP_URL, lead.refCode, lead.platform);
   const profile = leadProfileUrl(lead.platform, lead.handle);
 
@@ -92,6 +102,16 @@ async function LeadContent({ params }: Pick<PageProps<"/admin/growth/[id]">, "pa
                 <span className="sr-only">(opens in a new tab)</span>
               </a>
             )}
+          </Card>
+
+          <Card className="gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-display text-h4">Message draft</h2>
+              <span className="text-sm text-mute">Fit {fit.score} / 100</span>
+            </div>
+            {fit.reasons.length > 0 && <p className="text-xs text-mute">{fit.reasons.join(" · ")}</p>}
+            {fit.warning && <p className="text-xs text-warning">{fit.warning}</p>}
+            {lead.stage === "do_not_contact" ? <p className="text-sm text-mute">This lead is marked do not contact.</p> : <LeadDraft leadId={lead._id} initial={draft} />}
           </Card>
 
           <Card className="gap-4">

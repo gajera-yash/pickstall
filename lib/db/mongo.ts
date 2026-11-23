@@ -125,6 +125,11 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("mktLeads").createIndex({ stage: 1, followers: -1 }, { name: "mkt_leads_stage_followers" }),
     db.collection("mktEvents").createIndex({ leadId: 1, at: -1 }, { name: "mkt_events_lead_at" }),
     db.collection("mktEvents").createIndex({ at: -1, type: 1 }, { name: "mkt_events_at_type" }),
+    // DM drafts (D-121): a lead's newest draft, drafts written per day (the daily limit), and
+    // contacted leads by when they were messaged (follow-ups due).
+    db.collection("mktDrafts").createIndex({ leadId: 1, createdAt: -1 }, { name: "mkt_drafts_lead_created" }),
+    db.collection("mktDrafts").createIndex({ createdAt: -1 }, { name: "mkt_drafts_created" }),
+    db.collection("mktLeads").createIndex({ stage: 1, lastContactedAt: 1 }, { name: "mkt_leads_stage_contacted" }),
     db.collection("stores").createIndex({ "acquisition.ref": 1 }, { partialFilterExpression: { "acquisition.ref": { $type: "string" } }, name: "stores_acquisition_ref" }),
     // Better Auth collections (it does not create indexes for MongoDB itself).
     db.collection("user").createIndex({ email: 1 }, { unique: true, name: "user_email_unique" }),
