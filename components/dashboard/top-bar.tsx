@@ -44,7 +44,7 @@ export function TopBar({ displayName, email, storeUrl, publicPath, locked }: Pro
       <div className="flex items-center gap-1 sm:gap-2">
         {!locked && (
         <Button asChild variant="secondary" size="sm" className="hidden h-10 sm:inline-flex">
-          <Link href={publicPath ?? "/dashboard?tab=design#store-preview"} {...(publicPath ? { target: "_blank", rel: "noopener" } : {})}>
+          <Link href={publicPath ?? "/dashboard/design"} {...(publicPath ? { target: "_blank", rel: "noopener" } : {})}>
             <ExternalLink aria-hidden="true" className="size-4" />
             View my store
           </Link>

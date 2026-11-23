@@ -2,8 +2,8 @@
 
 import { BarChart3, Link2, Package, Palette, Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -13,7 +13,7 @@ import { MY_STORE_TABS, type MyStoreTab } from "@/lib/dashboard/nav";
 
 export type { MyStoreTab };
 
-type Props = { products: ReactNode; design: ReactNode; links: ReactNode; analytics: ReactNode; productCount: number };
+type Props = { products: ReactNode; links: ReactNode; analytics: ReactNode; productCount: number };
 
 /**
  * My Store tabs (reference docs/ui-reference/dashboard.webp): Products, Store design, Links and
@@ -21,9 +21,14 @@ type Props = { products: ReactNode; design: ReactNode; links: ReactNode; analyti
  * link can open a tab directly, also while My Store is already open ("Customize design"); switching
  * does not reload.
  */
-export function MyStoreTabs({ products, design, links, analytics, productCount }: Props) {
+export function MyStoreTabs({ products, links, analytics, productCount }: Props) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const fromUrl = searchParams.get("tab");
+  // Store design moved to its own page (D-125); old links with ?tab=design go there.
+  useEffect(() => {
+    if (fromUrl === "design") router.replace("/dashboard/design");
+  }, [fromUrl, router]);
   // No ?tab= means Products: the URL alone decides.
   const urlTab: MyStoreTab = fromUrl !== null && (MY_STORE_TABS as readonly string[]).includes(fromUrl) ? (fromUrl as MyStoreTab) : "products";
   const [tab, setTab] = useState<MyStoreTab>(urlTab);
@@ -49,10 +54,6 @@ export function MyStoreTabs({ products, design, links, analytics, productCount }
             <Package aria-hidden="true" />
             Products
           </TabsTrigger>
-          <TabsTrigger value="design" className="@3xl:h-full">
-            <Palette aria-hidden="true" />
-            Store design
-          </TabsTrigger>
           <TabsTrigger value="links" className="@3xl:h-full">
             <Link2 aria-hidden="true" />
             Links
@@ -63,6 +64,12 @@ export function MyStoreTabs({ products, design, links, analytics, productCount }
           </TabsTrigger>
         </TabsList>
         <div className="flex items-center gap-2.5 py-3 @3xl:py-0">
+          <Button asChild variant="secondary" size="sm" className="h-9 shrink-0 gap-1.5 px-3.5">
+            <Link href="/dashboard/design">
+              <Palette aria-hidden="true" className="size-4" />
+              Store design
+            </Link>
+          </Button>
           <InputGroup className="h-9 min-w-0 flex-1 sm:w-60 @3xl:w-56 @3xl:flex-none">
             <InputGroupInput
               type="search"
@@ -86,7 +93,6 @@ export function MyStoreTabs({ products, design, links, analytics, productCount }
       </div>
       <div className="p-5 sm:p-6">
         <TabsContent value="products">{products}</TabsContent>
-        <TabsContent value="design">{design}</TabsContent>
         <TabsContent value="links">{links}</TabsContent>
         <TabsContent value="analytics">{analytics}</TabsContent>
       </div>

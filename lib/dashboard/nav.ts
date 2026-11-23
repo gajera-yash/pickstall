@@ -1,8 +1,9 @@
 // Dashboard sections (D-029, reference docs/ui-reference/dashboard.webp). Icons are mapped in the
-// nav component. The first four are the mobile bottom bar; the rest sit under "More" there.
+// nav component. BOTTOM_BAR_IDS are the mobile bottom bar; the rest sit under "More" there.
 
 export const DASHBOARD_SECTIONS = [
   { id: "store", label: "My Store", href: "/dashboard" },
+  { id: "design", label: "Store design", href: "/dashboard/design" },
   { id: "products", label: "Products", href: "/dashboard/products" },
   { id: "orders", label: "Orders", href: "/dashboard/orders" },
   { id: "customers", label: "Customers", href: "/dashboard/customers" },
@@ -14,11 +15,11 @@ export const DASHBOARD_SECTIONS = [
 ] as const;
 
 /** Tabs on the My Store page. Lives here, not in the client tabs file, so the server can read it. */
-export const MY_STORE_TABS = ["products", "design", "links", "analytics"] as const;
+export const MY_STORE_TABS = ["products", "links", "analytics"] as const;
 export type MyStoreTab = (typeof MY_STORE_TABS)[number];
 
-/** How many sections the mobile bottom bar shows before "More". */
-export const BOTTOM_BAR_SECTIONS = 4;
+/** The mobile bottom bar's sections (Store design sits under "More" there). */
+export const BOTTOM_BAR_IDS = ["store", "products", "orders", "customers"] as const;
 
 export type DashboardSectionId = (typeof DASHBOARD_SECTIONS)[number]["id"];
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { ArrowDown, ArrowUp, ImageIcon, LayoutList, Link2, MessageSquareQuote, Plus, ShoppingBag, Trash2, Type, Video, type LucideIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 
+import { useDesignDraft, useSaver } from "@/components/dashboard/design-draft";
 import { Field } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { watchUrlFor } from "@/lib/courses/video-links";
 import { savePageBlocksAction } from "@/lib/page-blocks/actions";
 import { ChoiceSelect } from "@/components/ui/choice-select";
-import { ADDABLE_BLOCKS, BLOCK_LABELS, BLOCK_LIMITS, DEFAULT_SECTION_STYLE, PAGE_BLOCKS_MAX, newBlockId, type PageBlock, type PageBlockType, type SectionStyle } from "@/lib/page-blocks/rules";
+import { ADDABLE_BLOCKS, BLOCK_LABELS, BLOCK_LIMITS, DEFAULT_SECTION_STYLE, PAGE_BLOCKS_MAX, newBlockId, pageBlocksInput, type PageBlock, type PageBlockType, type SectionStyle } from "@/lib/page-blocks/rules";
 
 /** A section while it is being edited: the video is the pasted link, every text a plain string. */
 type Look = { style?: SectionStyle };
@@ -56,19 +56,40 @@ function empty(type: Exclude<PageBlockType, "products">): Draft {
  * The server checks everything again; the live preview updates after saving.
  */
 export function PageSectionsEditor({ initial }: { initial: PageBlock[] }) {
-  const router = useRouter();
+  const designDraft = useDesignDraft();
+  const patchDraft = designDraft?.patch;
   const [drafts, setDrafts] = useState<Draft[]>(() => (initial.length > 0 ? initial.map(toDraft) : [{ id: newBlockId(), type: "products" }]));
+  const [savedJson, setSavedJson] = useState(() => JSON.stringify(drafts));
   const [problem, setProblem] = useState<{ text: string; index: number | null } | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [pending, start] = useTransition();
   const sections = drafts.filter((draft) => draft.type !== "products").length;
+  const dirty = JSON.stringify(drafts) !== savedJson;
+
+  // The live preview shows the sections as they are edited, once they are complete enough to draw.
+  useEffect(() => {
+    const parsed = pageBlocksInput.safeParse(drafts);
+    if (parsed.success) patchDraft?.({ blocks: parsed.data });
+  }, [drafts, patchDraft]);
+
+  // Saved with the Store design page's one Save button (D-125); the server checks everything again.
+  useSaver("sections", dirty, async () => {
+    setProblem(null);
+    const result = await savePageBlocksAction(drafts);
+    if (!result.ok) {
+      const index = result.field?.startsWith("block-") ? Number(result.field.slice(6)) : null;
+      setProblem({ text: result.error, index: Number.isInteger(index) ? index : null });
+      return false;
+    }
+    const next = result.data.blocks.map(toDraft);
+    setDrafts(next);
+    setSavedJson(JSON.stringify(next));
+    designDraft?.markSaved({ blocks: result.data.blocks });
+    return true;
+  });
 
   const update = (index: number, next: Draft) => {
-    setSaved(false);
     setDrafts((current) => current.map((draft, i) => (i === index ? next : draft)));
   };
   const move = (index: number, step: -1 | 1) => {
-    setSaved(false);
     setDrafts((current) => {
       const target = index + step;
       if (target < 0 || target >= current.length) return current;
@@ -78,36 +99,20 @@ export function PageSectionsEditor({ initial }: { initial: PageBlock[] }) {
     });
   };
   const remove = (index: number) => {
-    setSaved(false);
     setDrafts((current) => current.filter((_, i) => i !== index));
   };
   const add = (type: Exclude<PageBlockType, "products">) => {
-    setSaved(false);
     setDrafts((current) => [...current, empty(type)]);
   };
 
-  const save = () =>
-    start(async () => {
-      setProblem(null);
-      const result = await savePageBlocksAction(drafts);
-      if (!result.ok) {
-        const index = result.field?.startsWith("block-") ? Number(result.field.slice(6)) : null;
-        setProblem({ text: result.error, index: Number.isInteger(index) ? index : null });
-        return;
-      }
-      setDrafts(result.data.blocks.map(toDraft));
-      setSaved(true);
-      router.refresh();
-    });
-
   return (
-    <section aria-labelledby="page-sections" className="flex flex-col gap-4 border-t border-line pt-6">
+    <section aria-labelledby="page-sections" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h3 id="page-sections" className="flex items-center gap-2 font-display text-h4">
+          <h2 id="page-sections" className="flex items-center gap-2 font-display text-h3">
             <LayoutList aria-hidden="true" className="size-4 text-blue" />
             Page sections
-          </h3>
+          </h2>
           <p className="text-sm text-mute">Add text, images, a video, links or testimonials around your products. Use the arrows to change the order.</p>
         </div>
         <DropdownMenu>
@@ -169,16 +174,6 @@ export function PageSectionsEditor({ initial }: { initial: PageBlock[] }) {
           <AlertDescription>{problem.text}</AlertDescription>
         </Alert>
       )}
-      <div className="flex items-center justify-end gap-3">
-        {saved && (
-          <span role="status" className="text-sm text-mint">
-            Saved
-          </span>
-        )}
-        <Button type="button" onClick={save} loading={pending}>
-          Save sections
-        </Button>
-      </div>
     </section>
   );
 }

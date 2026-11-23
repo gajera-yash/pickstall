@@ -1,21 +1,20 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState, useTransition, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
-import { useDesignDraft } from "@/components/dashboard/design-draft";
+import { useDesignDraft, useSaver } from "@/components/dashboard/design-draft";
 import { Field } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
 import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { saveStoreDesignAction } from "@/lib/store-design/actions";
 import {
+  EMPTY_DESIGN,
   HEADING_FONTS,
   HEADING_FONT_LABELS,
   LAYOUT_CHOICES,
@@ -65,11 +64,10 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
  * that would be hard to read is flagged here and refused on save.
  */
 export function DesignCustomizer({ initial }: { initial: StoreDesign | null }) {
-  const router = useRouter();
   const draft = useDesignDraft();
   const [form, setForm] = useState<StoreDesignForm>(() => designToForm(initial));
+  const [saved, setSaved] = useState<StoreDesign | null>(initial);
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
-  const [saving, startSave] = useTransition();
 
   const presetId = draft?.design.themePreset ?? "clean";
   const accent = draft?.design.accent ?? THEME_PRESETS[presetId].accent;
@@ -86,34 +84,49 @@ export function DesignCustomizer({ initial }: { initial: StoreDesign | null }) {
     if (result.success) draft?.patch({ custom: result.data });
   };
 
-  const save = (design: StoreDesign | null) =>
-    startSave(async () => {
-      const result = await saveStoreDesignAction(design);
-      if (result.ok) {
-        draft?.markSaved({ custom: design });
-        setMessage({ kind: "success", text: design ? "Design saved. Your store page shows it now." : "Back to the theme's design." });
-        router.refresh();
-      } else {
-        setMessage({ kind: "error", text: result.error });
-      }
-    });
+  // A design that changes nothing is saved as "follow the theme" (null).
+  const current = parsed.success && JSON.stringify(parsed.data) !== JSON.stringify(EMPTY_DESIGN) ? parsed.data : null;
+  const dirty = JSON.stringify(current) !== JSON.stringify(saved) || !parsed.success;
 
+  // Saved with the Store design page's one Save button (D-125).
+  useSaver("custom", dirty, async () => {
+    if (!parsed.success || problem) {
+      setMessage({ kind: "error", text: problem?.message ?? "Check your design." });
+      return false;
+    }
+    const result = await saveStoreDesignAction(current);
+    if (!result.ok) {
+      setMessage({ kind: "error", text: result.error });
+      return false;
+    }
+    setSaved(current);
+    draft?.markSaved({ custom: current });
+    setMessage(null);
+    return true;
+  });
+
+  // Back to the theme: clears every choice; saved with the page's Save button.
   const reset = () => {
-    const empty = designToForm(null);
-    setForm(empty);
+    setMessage(null);
+    setForm(designToForm(null));
     draft?.patch({ custom: null });
-    save(null);
   };
 
   const colors = form.colors;
   const setColor = (key: keyof StoreDesignForm["colors"]) => (value: string) => update((current) => ({ ...current, colors: { ...current.colors, [key]: value } }));
 
   return (
-    <Card>
-      <CardHeader>
-        <h3 className="font-display text-h3">Customize</h3>
-        <p className="text-sm text-mute">Make the theme your own. Anything you leave on &quot;Theme&quot; keeps the theme&apos;s look. The preview shows every change before you save.</p>
-      </CardHeader>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="font-display text-h3">Customize</h2>
+          <p className="text-sm text-mute">Make the theme your own. Anything left on &quot;Theme&quot; keeps the theme&apos;s look.</p>
+        </div>
+        <Button type="button" variant="ghost" size="sm" onClick={reset}>
+          <RotateCcw aria-hidden="true" className="size-4" />
+          Back to theme
+        </Button>
+      </div>
 
       <div className="flex flex-col gap-5">
         <Group title="Colors">
@@ -254,16 +267,7 @@ export function DesignCustomizer({ initial }: { initial: StoreDesign | null }) {
           </Alert>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button type="button" variant="ghost" onClick={reset} disabled={saving}>
-            <RotateCcw aria-hidden="true" className="size-4" />
-            Back to theme
-          </Button>
-          <Button type="button" onClick={() => parsed.success && save(parsed.data)} loading={saving} disabled={!parsed.success || problem !== null}>
-            Save design
-          </Button>
-        </div>
       </div>
-    </Card>
+    </div>
   );
 }

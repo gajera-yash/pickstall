@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-125: Store design gets its own page
+- **Date:** 2026-11-23
+- **Decision (founder: "My Store gets cluttered and confusing", plan approved 2026-11-23):**
+  - **New page** `/dashboard/design` ("Store design", second in the sidebar; under "More" on the phone's bottom bar). The editor on the left in three tabs: **Theme** (themes and accent), **Customize** (D-123) and **Sections** (D-101, with D-123 styles). A large live preview on the right (Phone or Desktop) from 1024px; on smaller screens a "Preview" button opens it full screen.
+  - **One Save button** in a sticky bar at the top saves every part that changed, one after the other, through the same server actions as before (`savePageDesign`, `saveStoreDesignAction`, `savePageBlocksAction`). Each editor registers its saver in the design draft (`useSaver`); an error shows in its own tab. "Unsaved changes" shows until saved, and leaving the page asks first. "Back to theme" in Customize now clears the design without saving; Save saves it.
+  - **Live preview** now also shows page sections while they are edited (once complete enough to draw), not only after saving.
+  - **My Store:** the Store design tab is gone; a "Store design" button sits next to "Add product", and the preview card's "Customize design", the top bar, the welcome card and the command menu link to the new page. An old `?tab=design` link redirects there. The preview data for both pages comes from `lib/dashboard/store-preview.ts`.
+  - No change to validation, data or saving rules.
+- **Not in this block:** drag and drop, undo/redo, new design options.
+
 ## D-124: Email designs and ready-made texts for every creator email (block E1)
 - **Date:** 2026-11-23
 - **Decision (founder approved the E1 plan with D1, 2026-11-23; available on every plan):**
