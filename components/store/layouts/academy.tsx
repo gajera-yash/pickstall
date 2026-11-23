@@ -16,7 +16,7 @@ export function AcademyLayout({ store, products, theme, preview }: StoreLayoutPr
   const others = products.length - courses;
 
   return (
-    <StoreFrame theme={theme} preview={preview} wide>
+    <StoreFrame theme={theme} preview={preview} wide slug={store.slug}>
       <div className="flex w-full flex-col gap-5 p-6 @3xl:flex-row @3xl:items-center @3xl:justify-between @3xl:p-8" style={cardStyle(theme)}>
         <StoreHeader store={store} align="start" />
         <dl className="flex shrink-0 gap-3">

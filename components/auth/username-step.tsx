@@ -7,6 +7,7 @@ import { startTransition, useActionState, useEffect, useState, type FormEvent } 
 import { PhoneField } from "@/components/auth/phone-field";
 import { TermsCheckbox } from "@/components/auth/terms-checkbox";
 import { UsernameField } from "@/components/auth/username-field";
+import { SignupSourceFields } from "@/components/marketing/signup-source";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FormField, describedBy } from "@/components/ui/form-field";
@@ -58,6 +59,8 @@ export function UsernameStep({ needsName, taken }: { needsName: boolean; taken: 
         noValidate
         className="flex flex-col gap-5"
       >
+        {/* Reached back from Google sign-in, so this page's referrer is not a source (D-119). */}
+        <SignupSourceFields pageReferrer={false} />
         <UsernameField value={username} onChange={setUsername} serverError={fieldError("username")} autoFocus />
 
         {needsName && (

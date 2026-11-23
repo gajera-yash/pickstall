@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { Wordmark } from "@/components/brand/wordmark";
 import { storeSerif } from "@/components/store/fonts";
+import { badgeHref } from "@/lib/marketing/acquisition";
 import { THEME_PRESETS, onAccentFor, type ThemePreset } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +68,8 @@ export function frameStyle({ preset }: StoreTheme): { className: string; style: 
  * (narrow, or wide for layouts that use the desktop width), a Pickstall footer. With `preview` it
  * renders as a plain block for the dashboard's live preview (no page height, no second <main>).
  */
-export function StoreFrame({ theme, children, wide = false, preview = false }: { theme: StoreTheme; children: ReactNode; wide?: boolean; preview?: boolean }) {
+/** `slug` tags the "Powered by" link with this store (D-119); the dashboard preview shows no link. */
+export function StoreFrame({ theme, children, wide = false, preview = false, slug }: { theme: StoreTheme; children: ReactNode; wide?: boolean; preview?: boolean; slug?: string }) {
   const frame = frameStyle(theme);
   const Body = preview ? "div" : "main";
   return (
@@ -79,7 +81,8 @@ export function StoreFrame({ theme, children, wide = false, preview = false }: {
       </Body>
       <footer className="flex items-center gap-2 pt-10 text-xs" style={{ color: theme.preset.muted }}>
         Powered by
-        <Wordmark className="h-5" />
+        {/* On live store pages the logo link is tagged with this store (D-119); the preview keeps plain "/". */}
+        <Wordmark className="h-5" href={preview ? "/" : badgeHref(slug)} />
       </footer>
     </div>
   );

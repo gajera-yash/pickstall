@@ -13,6 +13,7 @@ import { TermsCheckbox } from "@/components/auth/terms-checkbox";
 import { useResendCooldown } from "@/components/auth/use-resend-cooldown";
 import { UsernameField } from "@/components/auth/username-field";
 import { WizardProgress } from "@/components/auth/wizard-progress";
+import { SignupSourceFields } from "@/components/marketing/signup-source";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FormField, describedBy } from "@/components/ui/form-field";
@@ -94,6 +95,7 @@ export function SignupFlow({ googleNext, initialUsername = "" }: { googleNext: s
             noValidate
             className="flex flex-col gap-5"
           >
+            <SignupSourceFields />
             <UsernameField
               value={values.username}
               onChange={(username) => set("username", username)}

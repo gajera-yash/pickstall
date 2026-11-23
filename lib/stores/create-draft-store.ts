@@ -8,6 +8,7 @@ import { DEFAULT_CURRENCY } from "@/lib/config";
 import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { logger } from "@/lib/logger";
+import type { StoreAcquisition } from "@/lib/marketing/acquisition";
 import { trialEndFrom } from "@/lib/plans/access";
 import { storeNameFromUsername } from "@/lib/stores/store-name";
 import { DEFAULT_THEME } from "@/lib/themes";
@@ -18,9 +19,10 @@ export type DraftStoreResult = "created" | "taken" | "has_store" | "email_used" 
  * Creates the user's draft (unpublished) store. `ownerId` must come from the verified session.
  * The unique indexes decide taken usernames, one store per user and one store per inbox
  * (lib/db/mongo.ts, D-071). Call checkNewStore first for a clear message. The store name starts as
- * the username the creator picked (D-044).
+ * the username the creator picked (D-044). `acquisition` is where the signup came from (D-119),
+ * already cleaned by `acquisitionFrom`; null for a direct signup.
  */
-export async function createDraftStore(ownerId: string, username: string, ownerEmail: string): Promise<DraftStoreResult> {
+export async function createDraftStore(ownerId: string, username: string, ownerEmail: string, acquisition: StoreAcquisition | null = null): Promise<DraftStoreResult> {
   const now = new Date();
   const ownerEmailKey = canonicalEmail(ownerEmail);
   try {
@@ -44,6 +46,7 @@ export async function createDraftStore(ownerId: string, username: string, ownerE
       stripeAccountId: null,
       stripeChargesEnabled: false,
       isPublished: false,
+      ...(acquisition ? { acquisition } : {}),
       createdAt: now,
       updatedAt: now,
     });

@@ -34,7 +34,7 @@ export function ProductPage({ store, product, buyable, curriculum = null, review
   const hasDetails = Boolean(product.descriptionDoc || product.description || outline);
 
   return (
-    <StoreFrame theme={theme} wide>
+    <StoreFrame theme={theme} wide slug={store.slug}>
       <div className="flex w-full max-w-xl flex-col gap-6 @3xl:max-w-5xl">
         <StoreStrip store={store} theme={theme} />
 

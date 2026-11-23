@@ -199,6 +199,16 @@ describe("startSignup", () => {
     expect(intents.saveSignupIntent.mock.calls[0]?.[0]).toMatchObject({ phone: null });
   });
 
+  it("keeps where the signup came from, cleaned (D-119)", async () => {
+    slugs.isSlugTaken.mockResolvedValue({ ok: true, data: false });
+    intents.saveSignupIntent.mockResolvedValue({ ok: true, data: { cookie } });
+    authApi.sendVerificationOTP.mockResolvedValue({ success: true });
+    await startSignup(null, form({ signupRef: "Lead-9", utmSource: "Outreach", utmMedium: "dm" }));
+    expect(intents.saveSignupIntent.mock.calls[0]?.[0]).toMatchObject({
+      acquisition: { ref: "lead-9", source: "outreach", medium: "dm", campaign: null, referrer: null },
+    });
+  });
+
   it("stops at the signup rate limit without sending a code", async () => {
     slugs.isSlugTaken.mockResolvedValue({ ok: true, data: false });
     intents.saveSignupIntent.mockResolvedValue({

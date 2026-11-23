@@ -16,7 +16,7 @@ export function SplitLayout({ store, products, theme, preview }: StoreLayoutProp
   const { before, after } = splitBlocks(store.pageBlocks);
 
   return (
-    <StoreFrame theme={theme} preview={preview} wide>
+    <StoreFrame theme={theme} preview={preview} wide slug={store.slug}>
       <div className="grid w-full gap-6 @3xl:grid-cols-[300px_minmax(0,1fr)] @3xl:items-start @3xl:gap-10">
         <aside className="flex flex-col gap-5 p-6 @3xl:sticky @3xl:top-8" style={cardStyle(theme)}>
           <StoreHeader store={store} align="start" />

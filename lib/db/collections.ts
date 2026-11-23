@@ -7,6 +7,7 @@ import type { Binary, Collection } from "mongodb";
 import { getDb } from "@/lib/db/mongo";
 import type { Currency, SocialLinkKind } from "@/lib/config";
 import type { CourseCategory } from "@/lib/courses/settings";
+import type { StoreAcquisition } from "@/lib/marketing/acquisition";
 import type { ThemePresetId } from "@/lib/themes";
 
 // Document shapes of the app's own collections (D-024). Better Auth owns `user`, `session`,
@@ -154,6 +155,17 @@ export type StoreDoc = {
   /** Set when the owner deleted their account (D-074): the store is anonymised and unpublished. */
   deletedAt?: Date;
   isPublished: boolean;
+  /**
+   * When the store page was first published (D-119), set once and never cleared, for the creator
+   * funnel. Missing on stores published before D-119 (the funnel then falls back to `isPublished`).
+   */
+  publishedAt?: Date;
+  /**
+   * Where the owner signed up from (D-119): our outreach lead code and the link's UTM tags or
+   * referring site, cleaned. Set once when the store is created; missing means a direct signup.
+   * Admin-only: never sent to buyers or shown on public pages.
+   */
+  acquisition?: StoreAcquisition;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -175,6 +187,8 @@ export type SignupIntentDoc = {
   username: string;
   fullName: string;
   phone: string | null;
+  /** Where this signup came from (D-119), copied to the store once the email code is verified. */
+  acquisition?: StoreAcquisition | null;
   tokenHash: string;
   attempts: number;
   windowStartedAt: Date;

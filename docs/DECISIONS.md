@@ -4,6 +4,17 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-119: Where creators sign up from, and the creator funnel (marketing block M1)
+- **Date:** 2026-11-23
+- **Decision (founder approved the M1 plan, 2026-11-23; see docs/MARKETING_AGENTS_PLAN.md):**
+  - **Capture:** the landing page and `/signup` note the link's personal lead code (`?ref=`, 3-32 letters, digits or dashes; the latest wins) and its first UTM tags or referring site in `sessionStorage` key `ps_signup_source` (this tab only, no cookie, no id), like D-112. The signup form and the username step (after Google sign-in, which ignores its own referrer because it is Google) send them as hidden fields. Store pages keep using `?ref=` for creators' affiliates (D-113) under their own key; the two never mix.
+  - **Server:** `acquisitionFrom` (`lib/marketing/acquisition.ts`) reuses the D-112 cleaning; a lead code alone counts as source `outreach`. Email signups keep it on the signup intent until the code is verified; both paths pass it to `createDraftStore`, which saves the new optional `StoreDoc.acquisition` (`ref`, `source`, `medium`, `campaign`, `referrer`). Admin-only: no public projection includes it.
+  - **First publish:** new optional `StoreDoc.publishedAt`, set by `setStorePublished` on the first publish in the same update (`$ifNull`) and never cleared.
+  - **Badge:** the "Powered by" logo on live store pages links to `/?utm_source=pickstall_store&utm_medium=badge&utm_campaign=<store slug>`; the dashboard preview keeps a plain `/` link. `Wordmark` got an optional `href`.
+  - **Funnel:** `creatorFunnel(days)` (`lib/marketing/funnel.ts`) takes the stores created in the period and counts: published (`publishedAt`, or `isPublished` for older stores), payments connected (PayPal now or ever per the audit log, or Stripe charges on), first real sale (paid or refunded order above 0, not a bump, not the mock), paid plan (a plan payment above 0); totals and up to 20 sources (no source = `direct`). Shown on the admin Overview as "Creator funnel, 30 days".
+- **Why:** the marketing agents (M2-M5) need to follow one outreach link to a signup, a sale and a plan, and the daily report needs the funnel from real data.
+- **Consequences:** no migration; older stores count as `direct`. A creator who opens the link in one tab and signs up later in another is counted as direct (M2 will also match leads by email or username). Privacy Policy gained a "How you found us" line; the legal effective date was not changed (founder to decide). PostHog (website visits) is a separate block, M1b.
+
 ## D-118: Payments move from Stripe to PayPal (creators' sales and Pickstall plans)
 - **Date:** 2026-11-21
 - **Decision (founder, 2026-11-21: "use PayPal, not Stripe"; plan approved the same day):**

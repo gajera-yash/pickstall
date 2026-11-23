@@ -17,9 +17,10 @@ import { loginPath, safeNextPath } from "@/lib/auth/redirect";
 import { passwordLoginInput } from "@/lib/auth/password-schemas";
 import { claimUsernameInput, sendCodeInput, signupInput, verifyCodeInput } from "@/lib/auth/schemas";
 import { saveSignupIntent } from "@/lib/auth/signup-intents";
-import { PASSWORD_RATE_LIMIT, SEND_CODE_RATE_LIMITS, SIGNUP_EMAIL_CHECK_RATE_LIMIT, SIGNUP_INTENT_TTL_MINUTES } from "@/lib/config";
+import { PASSWORD_RATE_LIMIT, ROOT_DOMAIN, SEND_CODE_RATE_LIMITS, SIGNUP_EMAIL_CHECK_RATE_LIMIT, SIGNUP_INTENT_TTL_MINUTES } from "@/lib/config";
 import { LEGAL } from "@/lib/legal";
 import { logger } from "@/lib/logger";
+import { acquisitionFromForm } from "@/lib/marketing/acquisition";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { getClientIpHash } from "@/lib/request-ip";
 import { err, ok, type Result } from "@/lib/result";
@@ -123,7 +124,9 @@ export async function startSignup(_prev: SignupState, formData: FormData): Promi
   if (!taken.ok) return taken;
   if (taken.data) return err(SLUG_TAKEN_MESSAGE, "username");
 
-  const saved = await saveSignupIntent({ email, username, fullName, phone: phone ?? null }, await getClientIpHash());
+  // Where the signup came from (D-119): cleaned labels and a lead code only, saved on the store later.
+  const acquisition = acquisitionFromForm(formData, ROOT_DOMAIN);
+  const saved = await saveSignupIntent({ email, username, fullName, phone: phone ?? null, ...(acquisition ? { acquisition } : {}) }, await getClientIpHash());
   if (!saved.ok) return saved;
 
   const cookieStore = await cookies();
@@ -203,7 +206,7 @@ export async function claimUsername(_prev: ClaimUsernameState, formData: FormDat
   try {
     const allowed = await checkNewStore({ ownerId: user.id, email: user.email, device, ipHash });
     if (!allowed.ok) return err(allowed.message);
-    result = await createDraftStore(user.id, username, user.email);
+    result = await createDraftStore(user.id, username, user.email, acquisitionFromForm(formData, ROOT_DOMAIN));
     if (result === "created") await recordNewStore({ device, ipHash });
   } catch (error) {
     logger.warn("signup.store_create_failed", { name: errorName(error) });

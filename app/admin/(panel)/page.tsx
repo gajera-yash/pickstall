@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { AdminBarChart } from "@/components/admin/admin-chart";
 import { AdminPageTitle, Stat, moneyList } from "@/components/admin/admin-ui";
+import { CreatorFunnelSection } from "@/components/admin/creator-funnel";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireAdmin } from "@/lib/admin/guard";
@@ -17,6 +18,11 @@ export default function AdminOverviewPage() {
       <Suspense fallback={<Skeleton className="h-96 w-full rounded-lg" />}>
         <OverviewContent />
       </Suspense>
+      <div className="mt-8">
+        <Suspense fallback={<Skeleton className="h-64 w-full rounded-lg" />}>
+          <CreatorFunnelSection />
+        </Suspense>
+      </div>
     </>
   );
 }

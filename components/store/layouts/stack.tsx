@@ -19,7 +19,7 @@ export function StackLayout({ store, products, theme, preview }: StoreLayoutProp
   const { before, after } = splitBlocks(store.pageBlocks);
 
   return (
-    <StoreFrame theme={theme} preview={preview} wide>
+    <StoreFrame theme={theme} preview={preview} wide slug={store.slug}>
       <div className="flex w-full max-w-xl flex-col items-center gap-6 @3xl:max-w-5xl @3xl:gap-10">
       <div className="w-full @3xl:border-b @3xl:pb-10" style={{ borderColor: borderColor(preset) }}>
         <StoreHeader store={store} align="banner" />

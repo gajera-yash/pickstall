@@ -212,9 +212,15 @@ export async function stripeAccountOfStore(storeId: string): Promise<string | nu
   return doc?.stripeAccountId ?? null;
 }
 
-/** Publishes or unpublishes the owner's store page. Returns false if they have no store. */
+/**
+ * Publishes or unpublishes the owner's store page. Returns false if they have no store. The first
+ * publish also sets `publishedAt` (D-119), in the same update; later ones keep the first date.
+ */
 export async function setStorePublished(ownerId: string, isPublished: boolean): Promise<boolean> {
   const { stores } = await collections();
-  const result = await stores.updateOne({ ownerId }, { $set: { isPublished, updatedAt: new Date() } });
+  const now = new Date();
+  const result = isPublished
+    ? await stores.updateOne({ ownerId }, [{ $set: { isPublished: true, updatedAt: now, publishedAt: { $ifNull: ["$publishedAt", now] } } }])
+    : await stores.updateOne({ ownerId }, { $set: { isPublished: false, updatedAt: now } });
   return result.matchedCount === 1;
 }
