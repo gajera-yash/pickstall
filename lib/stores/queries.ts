@@ -7,6 +7,7 @@ import { storeAccess, type StoreAccess } from "@/lib/plans/access";
 import type { PageDesignInput, SocialLink, StoreProfileInput } from "@/lib/stores/schemas";
 import { socialLinksOf } from "@/lib/stores/social-links";
 import type { StoreDesign } from "@/lib/store-design/rules";
+import type { EmailLook } from "@/lib/email/looks";
 
 export { socialLinksOf };
 
@@ -231,5 +232,19 @@ export async function setStorePublished(ownerId: string, isPublished: boolean): 
 export async function updateStoreDesign(ownerId: string, design: StoreDesign | null): Promise<boolean> {
   const { stores } = await collections();
   const result = await stores.updateOne({ ownerId }, { $set: { "theme.custom": design, updatedAt: new Date() } });
+  return result.matchedCount === 1;
+}
+
+/** The owner's email look (D-124), or null when none is saved. */
+export async function findEmailLook(ownerId: string): Promise<EmailLook | null> {
+  const { stores } = await collections();
+  const doc = await stores.findOne({ ownerId }, { projection: { emailLook: 1 } });
+  return doc?.emailLook ?? null;
+}
+
+/** Saves the email look (already validated) on the owner's store. */
+export async function updateEmailLook(ownerId: string, look: EmailLook): Promise<boolean> {
+  const { stores } = await collections();
+  const result = await stores.updateOne({ ownerId }, { $set: { emailLook: look, updatedAt: new Date() } });
   return result.matchedCount === 1;
 }

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Field } from "@/components/dashboard/editor-fields";
+import { EmailTemplatePicker } from "@/components/dashboard/email-template-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +73,14 @@ export function ReviewRequestSettings({ storeName, initial, sent, locked = false
         Last 30 days: <span className="font-semibold text-ink tabular-nums">{sent.toLocaleString("en")}</span> {sent === 1 ? "request" : "requests"} sent.
       </p>
 
+      <EmailTemplatePicker
+        kind="review"
+        hasText={subject.trim() !== "" || body.trim() !== ""}
+        onPick={(preset) => {
+          setSubject(preset.subject);
+          setBody(preset.body);
+        }}
+      />
       <Field id="review-subject" label="Subject (optional)" error={fieldError?.field === "subject" ? fieldError.text : null} hint={`Empty uses "${DEFAULT_REVIEW_SUBJECT}".`}>
         <Input id="review-subject" value={subject} maxLength={REVIEW_EMAIL_LIMITS.subject} placeholder={DEFAULT_REVIEW_SUBJECT} onChange={(event) => setSubject(event.target.value)} aria-invalid={fieldError?.field === "subject" ? true : undefined} />
       </Field>

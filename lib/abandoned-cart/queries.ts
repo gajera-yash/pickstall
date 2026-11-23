@@ -3,6 +3,7 @@ import "server-only";
 import { REMINDER_COOLDOWN_MS, renderCartReminder, type CartSettings } from "@/lib/abandoned-cart/rules";
 import { senderName } from "@/lib/broadcasts/rules";
 import { collections } from "@/lib/db/collections";
+import { emailDesignOf } from "@/lib/email/looks";
 import { publicEnv } from "@/lib/env";
 import { sendListEmails } from "@/lib/email/send";
 import { logger } from "@/lib/logger";
@@ -29,7 +30,7 @@ export async function sendCartReminder(orderId: string, now: Date = new Date()):
     );
     if (!order || order.bumpOf) return "skipped";
 
-    const store = await stores.findOne({ _id: order.storeId, isPublished: true }, { projection: { name: 1, slug: 1, abandonedCart: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1 } });
+    const store = await stores.findOne({ _id: order.storeId, isPublished: true }, { projection: { name: 1, slug: 1, abandonedCart: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, emailLook: 1, "theme.accent": 1 } });
     const access = store ? storeAccess(store, now) : null;
     // Reminders need the store to sell and to have automations on its plan (D-098).
     if (!store?.abandonedCart?.enabled || !access || !can(access, "sell") || !can(access, "automations")) return "skipped";
@@ -48,7 +49,7 @@ export async function sendCartReminder(orderId: string, now: Date = new Date()):
     if (claimed.modifiedCount !== 1) return "skipped";
 
     const checkoutUrl = `${publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/+$/, "")}/@${store.slug}/${product.slug}/checkout`;
-    const rendered = renderCartReminder({ storeName: store.name, productTitle: product.title, buyerName: order.buyerName, subject: store.abandonedCart.subject, body: store.abandonedCart.body, checkoutUrl });
+    const rendered = renderCartReminder({ storeName: store.name, productTitle: product.title, buyerName: order.buyerName, subject: store.abandonedCart.subject, body: store.abandonedCart.body, checkoutUrl, design: emailDesignOf(store) });
     await sendListEmails([{ to: order.buyerEmail, ...rendered, fromName: senderName(store.name), replyTo: null, headers: {}, tags: [{ name: "kind", value: "cart" }, { name: "store_id", value: order.storeId }] }], `cart-${orderId}`);
     return "sent";
   } catch (error) {

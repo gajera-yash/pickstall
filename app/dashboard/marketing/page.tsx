@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { CartReminderSettings } from "@/components/dashboard/cart-reminder-settings";
 import { ReviewRequestSettings } from "@/components/dashboard/review-request-settings";
+import { EmailLookSettings } from "@/components/dashboard/email-look-settings";
 import { CouponManager, type ManagedCoupon } from "@/components/dashboard/coupon-manager";
 import { BUMP_HOW_IT_WORKS, HowItWorks, UPSELL_HOW_IT_WORKS, type HowItWorksContent } from "@/components/dashboard/how-it-works";
 import { PixelSettings } from "@/components/dashboard/pixel-settings";
@@ -18,6 +19,7 @@ import { findPixelSettings } from "@/lib/pixels/queries";
 import { can } from "@/lib/plans/access";
 import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { listProducts } from "@/lib/products/queries";
+import { findEmailLook } from "@/lib/stores/queries";
 
 const TOOLS: { title: string; description: string; icon: LucideIcon; live: boolean; href?: string; badge?: string; how?: HowItWorksContent }[] = [
   {
@@ -82,8 +84,8 @@ export default function MarketingPage() {
 }
 
 async function MarketingContent() {
-  const { store } = await requireUnlockedCreator("/dashboard/marketing");
-  const [coupons, products, cart, stats, pixels, review, reviewSent] = await Promise.all([
+  const { user, store } = await requireUnlockedCreator("/dashboard/marketing");
+  const [coupons, products, cart, stats, pixels, review, reviewSent, emailLook] = await Promise.all([
     listCoupons(store.id),
     listProducts(store.id),
     findCartSettings(store.id),
@@ -91,12 +93,14 @@ async function MarketingContent() {
     findPixelSettings(store.id),
     findReviewRequestSettings(store.id),
     reviewRequestsSent(store.id),
+    findEmailLook(user.id).catch(() => null),
   ]);
   const managed: ManagedCoupon[] = couponRows(coupons, products, store.currency);
 
   return (
     <div className="flex flex-col gap-6">
       <CouponManager coupons={managed} products={products.map((product) => ({ id: product._id, title: product.title }))} currency={store.currency} />
+      <EmailLookSettings initial={emailLook} accent={store.theme.accent} storeName={store.name} />
       <CartReminderSettings storeName={store.name} initial={cart} stats={stats} locked={!can(store.access, "automations")} />
       <ReviewRequestSettings storeName={store.name} initial={review} sent={reviewSent} locked={!can(store.access, "automations")} />
       <PixelSettings initial={pixels} />

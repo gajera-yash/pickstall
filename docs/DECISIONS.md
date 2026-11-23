@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-124: Email designs and ready-made texts for every creator email (block E1)
+- **Date:** 2026-11-23
+- **Decision (founder approved the E1 plan with D1, 2026-11-23; available on every plan):**
+  - **Five emails** a creator writes get the same two helpers: the order confirmation (each product), the welcome email, broadcasts, the abandoned cart reminder and the review request.
+  - **Email design (look):** one per store, chosen on Marketing → Email design with a live preview (the real email HTML in a sandboxed frame): Simple (plain, like a note), Card (white card on a soft background), Bold (a strip in the accent color with the store name) and Minimal (small, centered). Buttons and links use the store's accent with a readable button text (`onAccentFor`); a bad accent falls back to the Pickstall blue. `lib/email/looks.ts` (`renderLook`) frames every email; the store name, the button (access, checkout or review link), the boxes for a booked call or a license key, and the footer (sender identity, why they get it, unsubscribe) are always added by the code, never by the creator.
+  - **No look saved:** each email keeps its old look (Card for the order email, Simple for the others) in Pickstall blue.
+  - **Ready-made texts:** "Start from a template" on each of the five editors with 3-4 texts (`lib/email/presets.ts`). Picking one fills the subject and message, which the creator can change; nothing is saved until they save. Each set uses only the variables its email allows, checked by tests against that email's own rules.
+  - **Data:** `stores.emailLook` (optional). Saved by `saveEmailLookAction` (owner from the session, 30 per 10 minutes). Senders read `emailLook` and `theme.accent` with the store. No migration.
+- **Not in this block:** per-email looks, images or logos in emails, and rich text in the message.
+
 ## D-123: Custom store design on top of the theme, and section styles (block D1)
 - **Date:** 2026-11-23
 - **Decision (founder approved the D1 plan, 2026-11-23; available on every plan):**

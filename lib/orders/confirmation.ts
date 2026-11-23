@@ -7,6 +7,7 @@ import { buildIcs, formatCallTime } from "@/lib/coaching/ics";
 import { publicEnv } from "@/lib/env";
 import { collections } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
+import { emailDesignOf } from "@/lib/email/looks";
 import { EmailSendError, sendEmail } from "@/lib/email/send";
 import { renderOrderEmail, type CallDetails } from "@/lib/email/templates";
 import { licenseOfOrder } from "@/lib/licenses/queries";
@@ -46,7 +47,7 @@ export async function sendOrderConfirmation(orderId: string): Promise<"sent" | "
     try {
       const [product, store, booking, license] = await Promise.all([
         products.findOne({ _id: order.productId, storeId: order.storeId }, { projection: { afterPurchase: 1, "coaching.meetingUrl": 1, "coaching.timeZone": 1 } }),
-        stores.findOne({ _id: order.storeId }, { projection: { name: 1 } }),
+        stores.findOne({ _id: order.storeId }, { projection: { name: 1, emailLook: 1, "theme.accent": 1 } }),
         order.booking ? bookings.findOne({ orderId, storeId: order.storeId }, { projection: { status: 1 } }) : null,
         licenseOfOrder(orderId),
       ]);
@@ -70,6 +71,7 @@ export async function sendOrderConfirmation(orderId: string): Promise<"sent" | "
         body: product?.afterPurchase?.emailBody ?? null,
         call,
         licenseKey: license?.status === "active" ? license.key : null,
+        design: emailDesignOf(store),
       });
       const storeName = store?.name ?? "Pickstall store";
       const attachments =

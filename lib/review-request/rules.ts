@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { LIST_EMAIL_COLORS as C, escapeHtml, linkify, type RenderedEmail } from "@/lib/email/templates";
+import { DEFAULT_EMAIL_ACCENT, paragraphsHtml, renderLook, type EmailDesign } from "@/lib/email/looks";
+import { escapeHtml, type RenderedEmail } from "@/lib/email/templates";
 import { cleanText } from "@/lib/products/text";
 
 // "Please review" emails (D-117). Pure, so the settings preview, the job and the tests agree.
@@ -38,13 +39,13 @@ export const reviewRequestSettingsInput = z.object({
 });
 export type ReviewRequestSettings = z.infer<typeof reviewRequestSettingsInput>;
 
-type RenderInput = { storeName: string; productTitle: string; buyerName: string; subject: string; body: string; reviewUrl: string };
+type RenderInput = { storeName: string; productTitle: string; buyerName: string; subject: string; body: string; reviewUrl: string; design?: EmailDesign | null };
 
 /**
  * The email. The creator's text (or the default) comes first; the review button, the store name and
  * the "only one" line are always added and cannot be edited away.
  */
-export function renderReviewRequest({ storeName, productTitle, buyerName, subject, body, reviewUrl }: RenderInput): RenderedEmail {
+export function renderReviewRequest({ storeName, productTitle, buyerName, subject, body, reviewUrl, design }: RenderInput): RenderedEmail {
   const firstName = buyerName.trim().split(/\s+/)[0] || "there";
   const fill = (value: string) => value.replace(VARIABLE, (_match, name: string) => (name === "customer_name" ? firstName : productTitle));
   const filledSubject = fill(subject.trim() || DEFAULT_REVIEW_SUBJECT).replace(/[\r\n]+/g, " ").trim().slice(0, REVIEW_EMAIL_LIMITS.subject);
@@ -52,11 +53,7 @@ export function renderReviewRequest({ storeName, productTitle, buyerName, subjec
   const footer = `You bought this from ${storeName}. This is the only review request you'll get for this order.`;
 
   const text = `${filledBody}\n\nLeave a review: ${reviewUrl}\n\n--\n${footer}`;
-  const paragraphs = filledBody
-    .split(/\n{2,}/)
-    .map((part) => `<p style="margin:0 0 16px">${linkify(escapeHtml(part)).replace(/\n/g, "<br>")}</p>`)
-    .join("");
-  const button = `<p style="margin:24px 0"><a href="${escapeHtml(reviewUrl)}" style="background:${C.button};color:${C.onButton};padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">Leave a review</a></p>`;
-  const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:${C.text};max-width:560px;margin:0 auto;padding:24px">${paragraphs}${button}<hr style="border:none;border-top:1px solid ${C.border};margin:32px 0 16px"><p style="margin:0;font-size:13px;color:${C.muted}">${escapeHtml(footer)}</p></div>`;
+  const look = design ?? { look: "simple" as const, accent: DEFAULT_EMAIL_ACCENT };
+  const html = renderLook({ look: look.look, accent: look.accent, storeName, contentHtml: paragraphsHtml(filledBody, look.accent), button: { label: "Leave a review", url: reviewUrl }, footerHtml: escapeHtml(footer) });
   return { subject: filledSubject, text, html };
 }

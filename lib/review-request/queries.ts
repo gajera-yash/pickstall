@@ -2,6 +2,7 @@ import "server-only";
 
 import { senderName } from "@/lib/broadcasts/rules";
 import { collections } from "@/lib/db/collections";
+import { emailDesignOf } from "@/lib/email/looks";
 import { publicEnv } from "@/lib/env";
 import { sendListEmails } from "@/lib/email/send";
 import { logger } from "@/lib/logger";
@@ -31,7 +32,7 @@ export async function sendReviewRequest(orderId: string, now: Date = new Date())
     );
     if (!order || order.bumpOf) return "skipped";
 
-    const store = await stores.findOne({ _id: order.storeId }, { projection: { name: 1, reviewRequest: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1 } });
+    const store = await stores.findOne({ _id: order.storeId }, { projection: { name: 1, reviewRequest: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, emailLook: 1, "theme.accent": 1 } });
     const access = store ? storeAccess(store, now) : null;
     if (!store?.reviewRequest?.enabled || store.suspendedAt || !access || !can(access, "sell") || !can(access, "automations")) return "skipped";
     const product = await products.findOne({ _id: order.productId, storeId: order.storeId, deletedAt: { $in: [null] } }, { projection: { title: 1 } });
@@ -48,7 +49,7 @@ export async function sendReviewRequest(orderId: string, now: Date = new Date())
     if (claimed.modifiedCount !== 1) return "skipped";
 
     const reviewUrl = `${publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/+$/, "")}/library/${orderId}`;
-    const rendered = renderReviewRequest({ storeName: store.name, productTitle: product.title, buyerName: order.buyerName, subject: store.reviewRequest.subject, body: store.reviewRequest.body, reviewUrl });
+    const rendered = renderReviewRequest({ storeName: store.name, productTitle: product.title, buyerName: order.buyerName, subject: store.reviewRequest.subject, body: store.reviewRequest.body, reviewUrl, design: emailDesignOf(store) });
     await sendListEmails(
       [{ to: order.buyerEmail, ...rendered, fromName: senderName(store.name), replyTo: null, headers: {}, tags: [{ name: "kind", value: "review-request" }, { name: "store_id", value: order.storeId }] }],
       `review-${orderId}`,

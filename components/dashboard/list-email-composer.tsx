@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { saveWelcomeEmailAction, sendBroadcastAction, sendTestListEmail } from "@/lib/broadcasts/actions";
 import { LIST_EMAIL_LIMITS, renderListEmail } from "@/lib/broadcasts/rules";
+import { EmailTemplatePicker } from "@/components/dashboard/email-template-picker";
 
 type Message = { kind: "success" | "error"; text: string } | null;
 
@@ -36,9 +37,18 @@ function EmailFields({
   error: { field?: string; text: string } | null;
 }) {
   const [preview, setPreview] = useState(false);
+  const kind = idPrefix === "welcome" ? "welcome" : "broadcast";
   const rendered = renderListEmail({ storeName, subject: subject || "(no subject)", body: body || "(no message)", name: "Asha", unsubscribeUrl: "#" });
   return (
     <div className="flex flex-col gap-4">
+      <EmailTemplatePicker
+        kind={kind}
+        hasText={subject.trim() !== "" || body.trim() !== ""}
+        onPick={(preset) => {
+          onSubject(preset.subject);
+          onBody(preset.body);
+        }}
+      />
       <Field id={`${idPrefix}-subject`} label="Subject" error={error?.field === "subject" ? error.text : null} hint={`${subject.length}/${LIST_EMAIL_LIMITS.subject}`}>
         <Input id={`${idPrefix}-subject`} value={subject} maxLength={LIST_EMAIL_LIMITS.subject} onChange={(event) => onSubject(event.target.value)} aria-invalid={error?.field === "subject" ? true : undefined} />
       </Field>

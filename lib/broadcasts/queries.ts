@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { BROADCAST_BATCH_SIZE, type ListEmailInput } from "@/lib/broadcasts/rules";
 import { ensureUnsubscribeTokens, listEmailsFor } from "@/lib/broadcasts/delivery";
 import { collections, type BroadcastDoc } from "@/lib/db/collections";
+import { emailDesignOf } from "@/lib/email/looks";
 import { sendListEmails } from "@/lib/email/send";
 
 // Broadcasts (D-095). Creator reads and writes filter by the store id from the verified session
@@ -67,7 +68,7 @@ export async function sendNextBatch(broadcastId: string): Promise<{ done: boolea
   const { broadcasts, stores, subscribers } = await collections();
   const broadcast = await broadcasts.findOne({ _id: broadcastId, status: "sending" });
   if (!broadcast) return { done: true, sent: 0 };
-  const store = await stores.findOne({ _id: broadcast.storeId }, { projection: { name: 1, broadcastsBlocked: 1, suspendedAt: 1 } });
+  const store = await stores.findOne({ _id: broadcast.storeId }, { projection: { name: 1, broadcastsBlocked: 1, suspendedAt: 1, emailLook: 1, "theme.accent": 1 } });
   // Blocked or suspended by a platform admin while sending (D-105): stop here.
   if (!store || store.broadcastsBlocked || store.suspendedAt) {
     await markBroadcastFailed(broadcastId);
@@ -87,7 +88,7 @@ export async function sendNextBatch(broadcastId: string): Promise<{ done: boolea
   }
 
   const tokens = await ensureUnsubscribeTokens(broadcast.storeId, people);
-  const emails = listEmailsFor({ storeId: broadcast.storeId, storeName: store.name, subject: broadcast.subject, body: broadcast.body, replyTo: broadcast.replyTo, kind: "broadcast", people, tokens });
+  const emails = listEmailsFor({ storeId: broadcast.storeId, storeName: store.name, subject: broadcast.subject, body: broadcast.body, replyTo: broadcast.replyTo, kind: "broadcast", people, tokens, design: emailDesignOf(store) });
   await sendListEmails(emails, `broadcast-${broadcastId}-${broadcast.cursor ?? "start"}`);
 
   const last = people.at(-1)!._id;

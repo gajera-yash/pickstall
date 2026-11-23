@@ -3,6 +3,7 @@ import "server-only";
 import { renderListEmail, senderName, unsubscribeHeaders } from "@/lib/broadcasts/rules";
 import { collections, type SubscriberDoc } from "@/lib/db/collections";
 import { publicEnv } from "@/lib/env";
+import type { EmailDesign } from "@/lib/email/looks";
 import type { ListEmail } from "@/lib/email/send";
 import { newUnsubscribeToken } from "@/lib/subscribers/token";
 
@@ -47,12 +48,14 @@ export function listEmailsFor(input: {
   kind: "broadcast" | "welcome";
   people: Pick<SubscriberDoc, "_id" | "email" | "name">[];
   tokens: Map<string, string>;
+  /** The store's email design (D-124); null: the simple look. */
+  design?: EmailDesign | null;
 }): ListEmail[] {
   const emails: ListEmail[] = [];
   for (const person of input.people) {
     const token = input.tokens.get(person._id);
     if (!token) continue; // never send without a working unsubscribe link
-    const rendered = renderListEmail({ storeName: input.storeName, subject: input.subject, body: input.body, name: person.name, unsubscribeUrl: unsubscribePageUrl(token) });
+    const rendered = renderListEmail({ storeName: input.storeName, subject: input.subject, body: input.body, name: person.name, unsubscribeUrl: unsubscribePageUrl(token), design: input.design });
     emails.push({
       to: person.email,
       ...rendered,

@@ -12,6 +12,7 @@ import type { LeadPlatform, LeadStage, LeadTool } from "@/lib/marketing/leads-ru
 import type { DailyReportData } from "@/lib/marketing/report-types";
 import type { ThemePresetId } from "@/lib/themes";
 import type { StoreDesign } from "@/lib/store-design/rules";
+import type { EmailLook } from "@/lib/email/looks";
 
 // Document shapes of the app's own collections (D-024). Better Auth owns `user`, `session`,
 // `account` and `verification`; app code never writes to those directly.
@@ -88,6 +89,11 @@ export type StoreDoc = {
    * body: the default text. The review button and store name are always added.
    */
   reviewRequest?: { enabled: boolean; subject: string; body: string } | null;
+  /**
+   * The look of every email the creator writes (D-124): order confirmation, welcome, broadcasts,
+   * abandoned cart and review request, in the store's accent. Missing: each email's default look.
+   */
+  emailLook?: EmailLook | null;
   /**
    * Ad and analytics pixels on the store's own pages (D-097): IDs only, put into our fixed
    * snippets, loaded only after the visitor accepts. Never creator scripts. Missing: none.
