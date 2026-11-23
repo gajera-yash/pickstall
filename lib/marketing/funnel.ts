@@ -55,16 +55,35 @@ export function summarizeFunnel(rows: FunnelRow[]): Pick<CreatorFunnel, "total" 
  */
 export async function creatorFunnel(days: number, now: Date = new Date()): Promise<CreatorFunnel> {
   const since = new Date(now.getTime() - days * DAY_MS);
-  const { stores, orders, auditLogs, planPayments } = await collections();
-  const cohort = await stores
-    .find(
-      { createdAt: { $gte: since, $lte: now } },
-      { projection: { _id: 1, isPublished: 1, publishedAt: 1, "acquisition.source": 1, "paypal.connectedAt": 1, stripeChargesEnabled: 1 } },
-    )
-    .toArray();
+  const { stores } = await collections();
+  const cohort = await stores.find({ createdAt: { $gte: since, $lte: now } }, { projection: STEP_FIELDS }).toArray();
   if (cohort.length === 0) return { since, days, total: emptyCounts(), bySource: [] };
+  const steps = await storeSteps(cohort);
+  const rows: FunnelRow[] = cohort.map((store) => ({ source: store.acquisition?.source ?? DIRECT_SOURCE, ...(steps.get(store._id) ?? NO_STEPS) }));
+  return { since, days, ...summarizeFunnel(rows) };
+}
 
-  const ids = cohort.map((store) => store._id);
+/** How far one store got after signing up. */
+export type StoreSteps = Omit<FunnelRow, "source">;
+
+const NO_STEPS: StoreSteps = { published: false, paymentConnected: false, firstSale: false, paidPlan: false };
+
+/** Store fields `storeSteps` reads. */
+export const STEP_FIELDS = { _id: 1, isPublished: 1, publishedAt: 1, "acquisition.source": 1, "paypal.connectedAt": 1, stripeChargesEnabled: 1 } as const;
+
+type StepStore = { _id: string; isPublished: boolean; publishedAt?: Date; paypal?: { connectedAt?: Date }; stripeChargesEnabled?: boolean };
+
+/**
+ * The steps each store reached (D-119): published (first publish date, or published now for stores
+ * from before D-119), payments connected (PayPal now or ever, or Stripe charges on), a first real
+ * sale (paid or refunded order above 0, not a bump, not the mock) and a paid plan (a plan payment
+ * above 0). Platform-wide: admin and server jobs only.
+ */
+export async function storeSteps(storesIn: StepStore[]): Promise<Map<string, StoreSteps>> {
+  const result = new Map<string, StoreSteps>();
+  if (storesIn.length === 0) return result;
+  const { orders, auditLogs, planPayments } = await collections();
+  const ids = storesIn.map((store) => store._id);
   const [connectedEver, sold, planned] = await Promise.all([
     auditLogs.distinct("storeId", { action: "paypal.connected", storeId: { $in: ids } }),
     orders.distinct("storeId", { storeId: { $in: ids }, status: { $in: ["paid", "refunded"] }, totalCents: { $gt: 0 }, provider: { $ne: "mock" }, bumpOf: { $in: [null] } }),
@@ -73,13 +92,13 @@ export async function creatorFunnel(days: number, now: Date = new Date()): Promi
   const connectedSet = new Set(connectedEver);
   const soldSet = new Set(sold);
   const plannedSet = new Set(planned);
-
-  const rows: FunnelRow[] = cohort.map((store) => ({
-    source: store.acquisition?.source ?? DIRECT_SOURCE,
-    published: Boolean(store.publishedAt) || store.isPublished,
-    paymentConnected: Boolean(store.paypal?.connectedAt) || store.stripeChargesEnabled === true || connectedSet.has(store._id),
-    firstSale: soldSet.has(store._id),
-    paidPlan: plannedSet.has(store._id),
-  }));
-  return { since, days, ...summarizeFunnel(rows) };
+  for (const store of storesIn) {
+    result.set(store._id, {
+      published: Boolean(store.publishedAt) || store.isPublished,
+      paymentConnected: Boolean(store.paypal?.connectedAt) || store.stripeChargesEnabled === true || connectedSet.has(store._id),
+      firstSale: soldSet.has(store._id),
+      paidPlan: plannedSet.has(store._id),
+    });
+  }
+  return result;
 }

@@ -4,6 +4,17 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-120: Outreach leads in Admin > Growth (marketing block M2)
+- **Date:** 2026-11-23
+- **Decision (founder approved the M2 plan, 2026-11-23; list of 500+ creators the founder built by hand, columns Name, Handle, Platform, Followers, Country, Course topic, Current tool, Contact Method, Status, Notes):**
+  - **Collections:** `mktLeads` (unique `handleKey` = platform + lower-case handle; unique random 8-character `refCode`, never derived from the handle), `mktEvents` (imported, stage changed, contacted, notes changed; actor `admin:<username>`), `mktSuppressions` (`_id` = SHA-256 of `handleKey`, for deleted and "do not contact" leads). Index `stores_acquisition_ref` on `stores.acquisition.ref`. No migration.
+  - **Import** (`/admin/growth/import`): the browser reads the CSV (2 MB, 5,000 rows, the D-100 parser, no new dependency), guesses the columns from the headers, and asks which stage each distinct Status word means (guessed, founder confirms). Parts of 1,000 rows go to `importLeadsAction`; the server cleans every row (`cleanLeadRow`: handle from `@`, a profile link or plain text; followers like "12.5K"; known tools, others kept as their label), counts rows without a valid handle with their file row numbers, skips handles already in the list or suppressed (`$setOnInsert` upserts), and records counts in the audit log.
+  - **Stages** are set by the founder: New, Contacted, Replied, Interested, Call booked, Not interested, Do not contact. "Do not contact" also suppresses the handle; moving away from it lifts that. Signing up and later steps (store live, payments, first sale, paid plan) are never stored on the lead: `linkedStores` reads them from the store found by the lead's `?ref=` code (D-119) or, failing that, a store whose social links hold the same profile URL (exact, lower-case), with the D-119 step rules (`storeSteps`, shared with the funnel).
+  - **Screens:** `/admin/growth` (counts, search, filters by stage incl. "Signed up", tool, topic, country; most followers first; 50 a page), `/admin/growth/[id]` (personal link with copy, profile link, stage, "Mark contacted today", notes, store progress, history, delete with confirmation), `/admin/growth/export` (CSV, formulas neutralized, audit-logged).
+  - **Privacy Policy:** new "Creators we contact" line (public profile data, notes, deletion on "stop", one-way hash kept).
+- **Why:** M3 (DM drafts) and M5 (daily report) need one place that knows every lead, their personal link, and whether they signed up.
+- **Consequences:** the profile match misses a store whose saved profile URL differs in letter case from the lead's handle. The counts read every lead's code on each page load, fine for thousands of leads; revisit beyond that. DMs are still sent by hand from the founder's own account (MARKETING_AGENTS_PLAN.md section 0).
+
 ## D-119: Where creators sign up from, and the creator funnel (marketing block M1)
 - **Date:** 2026-11-23
 - **Decision (founder approved the M1 plan, 2026-11-23; see docs/MARKETING_AGENTS_PLAN.md):**

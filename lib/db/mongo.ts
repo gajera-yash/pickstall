@@ -117,6 +117,15 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("orders").createIndex({ bumpOf: 1 }, { unique: true, partialFilterExpression: { bumpOf: { $type: "string" } }, name: "orders_bump_of_unique" }),
     // Upsell orders of a paid order (D-099). Not unique: a buyer may retry after a failed checkout.
     db.collection("orders").createIndex({ upsellOf: 1 }, { partialFilterExpression: { upsellOf: { $type: "string" } }, name: "orders_upsell_of" }),
+    // Outreach leads (D-120): one lead per platform and username, one lead per `?ref=` code, the
+    // list sorted by followers (optionally per stage), and a lead's signup found by its code (D-119).
+    db.collection("mktLeads").createIndex({ handleKey: 1 }, { unique: true, name: "mkt_leads_handle_unique" }),
+    db.collection("mktLeads").createIndex({ refCode: 1 }, { unique: true, name: "mkt_leads_ref_unique" }),
+    db.collection("mktLeads").createIndex({ followers: -1, _id: 1 }, { name: "mkt_leads_followers" }),
+    db.collection("mktLeads").createIndex({ stage: 1, followers: -1 }, { name: "mkt_leads_stage_followers" }),
+    db.collection("mktEvents").createIndex({ leadId: 1, at: -1 }, { name: "mkt_events_lead_at" }),
+    db.collection("mktEvents").createIndex({ at: -1, type: 1 }, { name: "mkt_events_at_type" }),
+    db.collection("stores").createIndex({ "acquisition.ref": 1 }, { partialFilterExpression: { "acquisition.ref": { $type: "string" } }, name: "stores_acquisition_ref" }),
     // Better Auth collections (it does not create indexes for MongoDB itself).
     db.collection("user").createIndex({ email: 1 }, { unique: true, name: "user_email_unique" }),
     db.collection("session").createIndex({ token: 1 }, { unique: true, name: "session_token_unique" }),

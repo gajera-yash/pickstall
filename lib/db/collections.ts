@@ -8,6 +8,7 @@ import { getDb } from "@/lib/db/mongo";
 import type { Currency, SocialLinkKind } from "@/lib/config";
 import type { CourseCategory } from "@/lib/courses/settings";
 import type { StoreAcquisition } from "@/lib/marketing/acquisition";
+import type { LeadPlatform, LeadStage, LeadTool } from "@/lib/marketing/leads-rules";
 import type { ThemePresetId } from "@/lib/themes";
 
 // Document shapes of the app's own collections (D-024). Better Auth owns `user`, `session`,
@@ -804,6 +805,56 @@ export type AdminSessionDoc = {
   expiresAt: Date;
 };
 
+/**
+ * A creator the founder plans to contact (D-120), imported from the founder's own list. Platform-wide,
+ * admin-only data: never shown to creators or buyers. `handleKey` ("instagram:maya.makes") is unique;
+ * `refCode` is the lead's own `?ref=` code (D-119), unique, random, never derived from the handle.
+ */
+export type MktLeadDoc = {
+  _id: string;
+  platform: LeadPlatform;
+  handle: string;
+  handleKey: string;
+  name: string | null;
+  followers: number | null;
+  country: string | null;
+  topic: string | null;
+  tool: LeadTool;
+  /** The list's own words for the tool, kept for "other". */
+  toolLabel: string | null;
+  contactMethod: string | null;
+  stage: LeadStage;
+  notes: string | null;
+  refCode: string;
+  importedFrom: string | null;
+  lastContactedAt: Date | null;
+  stageChangedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/** One thing that happened to a lead (D-120), for its timeline and the daily report. */
+export type MktEventDoc = {
+  _id: string;
+  leadId: string;
+  type: "imported" | "stage_changed" | "contacted" | "notes_changed";
+  from: string | null;
+  to: string | null;
+  /** "admin:<username>" or "system". */
+  actor: string;
+  at: Date;
+};
+
+/**
+ * A person who must not be imported or contacted again (D-120): a deleted lead or one marked "do not
+ * contact". `_id` is the SHA-256 of the lead's `handleKey`; nothing else about them is kept.
+ */
+export type MktSuppressionDoc = {
+  _id: string;
+  reason: "deleted" | "do_not_contact";
+  at: Date;
+};
+
 export async function collections(): Promise<{
   profiles: Collection<ProfileDoc>;
   stores: Collection<StoreDoc>;
@@ -837,6 +888,9 @@ export async function collections(): Promise<{
   broadcasts: Collection<BroadcastDoc>;
   reviews: Collection<ReviewDoc>;
   adminSessions: Collection<AdminSessionDoc>;
+  mktLeads: Collection<MktLeadDoc>;
+  mktEvents: Collection<MktEventDoc>;
+  mktSuppressions: Collection<MktSuppressionDoc>;
 }> {
   const db = await getDb();
   return {
@@ -872,5 +926,8 @@ export async function collections(): Promise<{
     reviews: db.collection<ReviewDoc>("reviews"),
     adminSessions: db.collection<AdminSessionDoc>("adminSessions"),
     couponRedemptions: db.collection<CouponRedemptionDoc>("couponRedemptions"),
+    mktLeads: db.collection<MktLeadDoc>("mktLeads"),
+    mktEvents: db.collection<MktEventDoc>("mktEvents"),
+    mktSuppressions: db.collection<MktSuppressionDoc>("mktSuppressions"),
   };
 }
