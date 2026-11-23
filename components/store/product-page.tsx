@@ -2,13 +2,12 @@ import { ArrowLeft, CheckCircle2, ChevronDown, Clock, FileText, ListTree, Lock, 
 import { Stars } from "@/components/store/stars";
 import type { PublicReview } from "@/lib/reviews/public";
 import Link from "next/link";
-import type { CSSProperties } from "react";
 
 import { ProductCover, ProductKind } from "@/components/store/layouts/parts";
 import { MobileBuyBar } from "@/components/store/mobile-buy-bar";
 import { PriceTag } from "@/components/store/price-tag";
 import { RichTextView } from "@/components/store/rich-text";
-import { StoreFrame, borderColor, cardStyle, resolveTheme, type StoreTheme } from "@/components/store/store-theme";
+import { StoreFrame, borderColor, buttonStyle, cardStyle, resolveTheme, type StoreTheme } from "@/components/store/store-theme";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { durationLabel } from "@/lib/coaching/settings";
@@ -214,10 +213,6 @@ function checkoutHref(store: PublicStore, product: PublicProduct): string {
 
 function buttonLabel(product: PublicProduct): string {
   return product.buttonText || (product.type === "coaching" ? "Book a call" : product.type === "lead_magnet" ? "Get it free" : "Buy now");
-}
-
-function buttonStyle(theme: StoreTheme): CSSProperties {
-  return { background: theme.accent, color: theme.onAccent, borderRadius: Math.min(theme.preset.radiusPx, 12) };
 }
 
 /** What a course holds (D-056): modules and lesson titles, lesson count and how long access lasts. */

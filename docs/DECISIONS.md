@@ -4,6 +4,23 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-123: Custom store design on top of the theme, and section styles (block D1)
+- **Date:** 2026-11-23
+- **Decision (founder approved the D1 plan, 2026-11-23; available on every plan):**
+  - **Customize panel** on My Store → Page design, under Theme and color. Every choice is optional; "Theme" keeps the theme's own value:
+    - Colors: background, text, secondary text, cards (accent stays in Theme and color).
+    - Page background: theme, one color, a two-color gradient, or an image (dimmed with the background color at 82% so text stays readable).
+    - Headline font from a fixed list (modern sans, classic serif, elegant serif, grotesk, round, mono; self-hosted with next/font, not preloaded) and weight.
+    - Buttons: square, rounded or pill; filled or outline (outline uses the accent as text).
+    - Cards: corners 0-24px, border none/thin/thick, shadow none/soft/hard.
+    - Layout: any of the 7 layouts with any theme; products in a grid or one column (Stack layout).
+    - Header: photo and name centered or on the left, an optional cover image above the page, social icons on or off.
+    - "Back to theme" removes the whole design.
+  - **Data:** `stores.theme.custom` (optional, `StoreDesign` in `lib/store-design/rules.ts`). Saving the theme now sets `theme.preset` and `theme.accent` as dotted fields, so the custom design stays. Page sections gain an optional `style` (`box` card/outline/none, `align` left/center, `spacing` compact/normal/roomy); only a non-default style is saved. No migration.
+  - **Safety:** fixed options and #RRGGBB colors only, no CSS or HTML; images are uploads or https (`safeImageSrc`). The server checks everything again (`saveStoreDesignAction`, owner from the session, 60 per 10 minutes). Text and secondary text need 4.5:1 on the background, every gradient color and the cards; an outline button needs its accent at 4.5:1 on the cards. A saved design is checked again when read; if its colors no longer read well (for example after a theme change), the theme's colors and background are used and the rest stays.
+  - **Preview:** the Store preview shows every valid change before saving (the design draft now carries `custom`).
+- **Not in this block:** drag and drop, columns, separate landing pages, custom CSS, the setup wizard's phone preview (theme and accent only).
+
 ## D-122: Daily growth report at 21:00 IST (marketing block M5)
 - **Date:** 2026-11-23
 - **Decision (founder approved the M5 plan, 2026-11-23):**

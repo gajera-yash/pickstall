@@ -11,13 +11,24 @@ import { httpsUrlSchema, imageField } from "@/lib/stores/schemas";
 export const PAGE_BLOCKS_MAX = 12;
 export const BLOCK_LIMITS = { heading: 80, body: 2000, alt: 120, linkLabel: 40, linksMax: 6, quote: 400, name: 60 } as const;
 
+/**
+ * How one section looks (D-123): its box (the theme's card, an outline, or none), text alignment and
+ * the space around it. Missing: the card, left-aligned, normal spacing (the look before D-123).
+ */
+export const SECTION_BOXES = ["card", "outline", "none"] as const;
+export const SECTION_ALIGNS = ["left", "center"] as const;
+export const SECTION_SPACINGS = ["compact", "normal", "roomy"] as const;
+export type SectionStyle = { box: (typeof SECTION_BOXES)[number]; align: (typeof SECTION_ALIGNS)[number]; spacing: (typeof SECTION_SPACINGS)[number] };
+export const DEFAULT_SECTION_STYLE: SectionStyle = { box: "card", align: "left", spacing: "normal" };
+
+type Styled = { style?: SectionStyle };
 export type PageBlock =
   | { id: string; type: "products" }
-  | { id: string; type: "text"; heading: string | null; body: string }
-  | { id: string; type: "image"; url: string; alt: string }
-  | { id: string; type: "video"; video: LinkedVideo }
-  | { id: string; type: "links"; links: { label: string; url: string }[] }
-  | { id: string; type: "testimonial"; quote: string; name: string | null };
+  | ({ id: string; type: "text"; heading: string | null; body: string } & Styled)
+  | ({ id: string; type: "image"; url: string; alt: string } & Styled)
+  | ({ id: string; type: "video"; video: LinkedVideo } & Styled)
+  | ({ id: string; type: "links"; links: { label: string; url: string }[] } & Styled)
+  | ({ id: string; type: "testimonial"; quote: string; name: string | null } & Styled);
 
 export type PageBlockType = PageBlock["type"];
 export const ADDABLE_BLOCKS: Exclude<PageBlockType, "products">[] = ["text", "image", "video", "links", "testimonial"];
@@ -31,26 +42,30 @@ const text = (max: number, label: string, options: { multiline?: boolean; requir
     .pipe(z.string().max(max, { error: `${label}: use ${max} characters or fewer.` }))
     .refine((value) => !options.required || value !== "", { error: `${label}: write something or remove this section.` });
 
+const style = z.object({ box: z.enum(SECTION_BOXES), align: z.enum(SECTION_ALIGNS), spacing: z.enum(SECTION_SPACINGS) }).optional();
+
 /** One section as the editor sends it. A video arrives as the pasted link and is parsed here. */
 const blockInput = z.discriminatedUnion("type", [
   z.object({ id, type: z.literal("products") }),
-  z.object({ id, type: z.literal("text"), heading: text(BLOCK_LIMITS.heading, "Heading"), body: text(BLOCK_LIMITS.body, "Text", { multiline: true, required: true }) }),
+  z.object({ id, style, type: z.literal("text"), heading: text(BLOCK_LIMITS.heading, "Heading"), body: text(BLOCK_LIMITS.body, "Text", { multiline: true, required: true }) }),
   z.object({
     id,
+    style,
     type: z.literal("image"),
     url: imageField("Image").refine((value) => value !== undefined, { error: "Image: upload an image or remove this section." }),
     alt: text(BLOCK_LIMITS.alt, "Image description"),
   }),
-  z.object({ id, type: z.literal("video"), link: z.string().max(500) }),
+  z.object({ id, style, type: z.literal("video"), link: z.string().max(500) }),
   z.object({
     id,
+    style,
     type: z.literal("links"),
     links: z
       .array(z.object({ label: text(BLOCK_LIMITS.linkLabel, "Button text", { required: true }), url: httpsUrlSchema("link").refine((value) => value !== undefined, { error: "Enter a full link that starts with https://" }) }))
       .min(1, { error: "Add at least one link or remove this section." })
       .max(BLOCK_LIMITS.linksMax, { error: `Use up to ${BLOCK_LIMITS.linksMax} links.` }),
   }),
-  z.object({ id, type: z.literal("testimonial"), quote: text(BLOCK_LIMITS.quote, "Quote", { multiline: true, required: true }), name: text(BLOCK_LIMITS.name, "Name") }),
+  z.object({ id, style, type: z.literal("testimonial"), quote: text(BLOCK_LIMITS.quote, "Quote", { multiline: true, required: true }), name: text(BLOCK_LIMITS.name, "Name") }),
 ]);
 
 /** The whole list from the editor: at most 12 sections, unique ids, exactly one Products section. */
@@ -63,17 +78,19 @@ export const pageBlocksInput = z
     blocks.forEach((block, index) => {
       if (seen.has(block.id)) return;
       seen.add(block.id);
+      // Only a style that differs from the default is saved.
+      const look = block.type !== "products" && block.style && (block.style.box !== "card" || block.style.align !== "left" || block.style.spacing !== "normal") ? { style: block.style } : {};
       if (block.type === "video") {
         const video = parseVideoLink(block.link);
         if (!video) {
           ctx.addIssue({ code: "custom", path: [index, "link"], message: "Video: paste a YouTube or Vimeo link." });
           return;
         }
-        out.push({ id: block.id, type: "video", video });
-      } else if (block.type === "text") out.push({ id: block.id, type: "text", heading: block.heading || null, body: block.body });
-      else if (block.type === "image") out.push({ id: block.id, type: "image", url: block.url as string, alt: block.alt });
-      else if (block.type === "links") out.push({ id: block.id, type: "links", links: block.links.map((link) => ({ label: link.label, url: link.url as string })) });
-      else if (block.type === "testimonial") out.push({ id: block.id, type: "testimonial", quote: block.quote, name: block.name || null });
+        out.push({ id: block.id, type: "video", video, ...look });
+      } else if (block.type === "text") out.push({ id: block.id, type: "text", heading: block.heading || null, body: block.body, ...look });
+      else if (block.type === "image") out.push({ id: block.id, type: "image", url: block.url as string, alt: block.alt, ...look });
+      else if (block.type === "links") out.push({ id: block.id, type: "links", links: block.links.map((link) => ({ label: link.label, url: link.url as string })), ...look });
+      else if (block.type === "testimonial") out.push({ id: block.id, type: "testimonial", quote: block.quote, name: block.name || null, ...look });
       else out.push({ id: block.id, type: "products" });
     });
     const products = out.filter((block) => block.type === "products").length;

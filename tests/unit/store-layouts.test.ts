@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 // D-062: themes carry a layout and a headline font; the store page draws the theme's layout, and
 // its preview version (the dashboard's live preview) has no <main> of its own.
-vi.mock("@/components/store/fonts", () => ({ storeSerif: { variable: "font-store-serif-var" } }));
+vi.mock("@/components/store/fonts", () => { const font = (name: string) => ({ className: `font-${name}-var`, cssVar: `var(--font-store-${name})` }); return { storeSerif: { variable: "font-store-serif-var" }, STORE_FONTS: { sans: { className: "", cssVar: null }, serif: font("serif"), playfair: font("playfair"), grotesk: font("grotesk"), poppins: font("poppins"), mono: font("mono") } }; });
 // next/image static imports need the Next.js build; the footer logo is not what is tested here.
 vi.mock("@/components/brand/wordmark", () => ({ Wordmark: () => null }));
 const db = vi.hoisted(() => ({ lessons: { aggregate: vi.fn() } }));
@@ -30,8 +30,9 @@ describe("store themes and layouts", () => {
   it("switches headlines to the serif only for serif themes", () => {
     const theme = resolveTheme({ preset: "clean", accent: "#0056FF" });
     expect(frameStyle(theme)).toEqual({ className: "", style: { background: "#FFFFFF", color: "#0B0D2A" } });
-    const serif = frameStyle({ ...theme, preset: { ...theme.preset, displayFont: "serif" } });
-    expect(serif.className).toBe("font-store-serif-var");
+    // A serif theme resolves to the serif headline font (the preset's displayFont).
+    const serif = frameStyle(resolveTheme({ preset: "editorial", accent: "#0056FF" }));
+    expect(serif.className).toBe("font-serif-var");
     expect(serif.style).toMatchObject({ "--font-bricolage": "var(--font-store-serif)" });
   });
 

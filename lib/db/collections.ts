@@ -11,6 +11,7 @@ import type { StoreAcquisition } from "@/lib/marketing/acquisition";
 import type { LeadPlatform, LeadStage, LeadTool } from "@/lib/marketing/leads-rules";
 import type { DailyReportData } from "@/lib/marketing/report-types";
 import type { ThemePresetId } from "@/lib/themes";
+import type { StoreDesign } from "@/lib/store-design/rules";
 
 // Document shapes of the app's own collections (D-024). Better Auth owns `user`, `session`,
 // `account` and `verification`; app code never writes to those directly.
@@ -116,7 +117,12 @@ export type StoreDoc = {
   socialLinks?: { kind: SocialLinkKind; url: string }[];
   /** @deprecated Replaced by `socialLinks`. The migration copies it and removes it. Never write it. */
   link?: string | null;
-  theme: { preset: ThemePresetId; accent: string };
+  /**
+   * The theme preset and accent; `custom` holds the creator's own design on top of it (D-123):
+   * colors, background, fonts, buttons, cards, layout and header. Missing or null: the theme as is.
+   * Validated by lib/store-design/rules.ts on save and again when read.
+   */
+  theme: { preset: ThemePresetId; accent: string; custom?: StoreDesign | null };
   currency: Currency;
   /** Written only by the Stripe OAuth callback and the Connect webhook (Block D). */
   stripeAccountId: string | null;

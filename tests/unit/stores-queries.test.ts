@@ -96,7 +96,8 @@ describe("updateStorePageDesign", () => {
     expect(await updateStorePageDesign(creatorA, { themePreset: "soft", accent: "#C2410C" })).toBe(true);
     expect(updateFilter()).toEqual({ ownerId: creatorA });
     const update = stores.updateOne.mock.calls[0]?.[1] as { $set: Record<string, unknown> };
-    expect(Object.keys(update.$set).sort()).toEqual(["theme", "updatedAt"]);
+    // Dotted fields, so the custom design (D-123) is kept.
+    expect(Object.keys(update.$set).sort()).toEqual(["theme.accent", "theme.preset", "updatedAt"]);
   });
 });
 

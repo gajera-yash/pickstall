@@ -22,6 +22,8 @@ import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
 import { incomeStats } from "@/lib/orders/creator-queries";
 import { PageSectionsEditor } from "@/components/dashboard/page-sections-editor";
+import { DesignCustomizer } from "@/components/dashboard/design-customizer";
+import { safeDesign } from "@/lib/store-design/rules";
 import { ProductList } from "@/components/dashboard/product-list";
 import { SOCIAL_LINK_LABELS, storeLink } from "@/lib/config";
 import { loadSetupGate } from "@/lib/dashboard/setup-gate";
@@ -94,7 +96,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
     }));
 
   return (
-    <DesignDraftProvider saved={{ themePreset: store.theme.preset, accent: store.theme.accent }}>
+    <DesignDraftProvider saved={{ themePreset: store.theme.preset, accent: store.theme.accent, custom: safeDesign(store.theme.custom) }}>
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="flex min-w-0 flex-col gap-6">
         <WelcomeHero name={name} storeUrl={`https://${link}`} ready={checklist.complete} publicPath={store.isPublished ? `/@${store.slug}` : null} />
@@ -114,6 +116,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
           design={
             <>
               <PageDesignForm initial={{ themePreset: store.theme.preset, accent: store.theme.accent }} />
+              <DesignCustomizer initial={safeDesign(store.theme.custom)} />
               <PageSectionsEditor initial={pageBlocks} />
             </>
           }

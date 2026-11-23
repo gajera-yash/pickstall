@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/components/store/fonts", () => ({ storeSerif: { variable: "font-store-serif-var" } }));
+vi.mock("@/components/store/fonts", () => { const font = (name: string) => ({ className: `font-${name}-var`, cssVar: `var(--font-store-${name})` }); return { storeSerif: { variable: "font-store-serif-var" }, STORE_FONTS: { sans: { className: "", cssVar: null }, serif: font("serif"), playfair: font("playfair"), grotesk: font("grotesk"), poppins: font("poppins"), mono: font("mono") } }; });
 vi.mock("@/components/brand/wordmark", () => ({ Wordmark: () => null }));
 
 import { OrderSummary } from "@/components/store/order-summary";

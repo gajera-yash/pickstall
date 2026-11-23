@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 // D-068: the product page shows the story and a buy box (side by side on wide pages), a store strip
 // at the top and a phone buy bar only when the product can be bought.
-vi.mock("@/components/store/fonts", () => ({ storeSerif: { variable: "font-store-serif-var" } }));
+vi.mock("@/components/store/fonts", () => { const font = (name: string) => ({ className: `font-${name}-var`, cssVar: `var(--font-store-${name})` }); return { storeSerif: { variable: "font-store-serif-var" }, STORE_FONTS: { sans: { className: "", cssVar: null }, serif: font("serif"), playfair: font("playfair"), grotesk: font("grotesk"), poppins: font("poppins"), mono: font("mono") } }; });
 vi.mock("@/components/brand/wordmark", () => ({ Wordmark: () => null }));
 
 import { ProductPage } from "@/components/store/product-page";

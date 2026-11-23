@@ -13,27 +13,29 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { watchUrlFor } from "@/lib/courses/video-links";
 import { savePageBlocksAction } from "@/lib/page-blocks/actions";
-import { ADDABLE_BLOCKS, BLOCK_LABELS, BLOCK_LIMITS, PAGE_BLOCKS_MAX, newBlockId, type PageBlock, type PageBlockType } from "@/lib/page-blocks/rules";
+import { ChoiceSelect } from "@/components/ui/choice-select";
+import { ADDABLE_BLOCKS, BLOCK_LABELS, BLOCK_LIMITS, DEFAULT_SECTION_STYLE, PAGE_BLOCKS_MAX, newBlockId, type PageBlock, type PageBlockType, type SectionStyle } from "@/lib/page-blocks/rules";
 
 /** A section while it is being edited: the video is the pasted link, every text a plain string. */
+type Look = { style?: SectionStyle };
 type Draft =
   | { id: string; type: "products" }
-  | { id: string; type: "text"; heading: string; body: string }
-  | { id: string; type: "image"; url: string; alt: string }
-  | { id: string; type: "video"; link: string }
-  | { id: string; type: "links"; links: { label: string; url: string }[] }
-  | { id: string; type: "testimonial"; quote: string; name: string };
+  | ({ id: string; type: "text"; heading: string; body: string } & Look)
+  | ({ id: string; type: "image"; url: string; alt: string } & Look)
+  | ({ id: string; type: "video"; link: string } & Look)
+  | ({ id: string; type: "links"; links: { label: string; url: string }[] } & Look)
+  | ({ id: string; type: "testimonial"; quote: string; name: string } & Look);
 
 const ICONS: Record<PageBlockType, LucideIcon> = { products: ShoppingBag, text: Type, image: ImageIcon, video: Video, links: Link2, testimonial: MessageSquareQuote };
 
 function toDraft(block: PageBlock): Draft {
   switch (block.type) {
     case "text":
-      return { id: block.id, type: "text", heading: block.heading ?? "", body: block.body };
+      return { id: block.id, type: "text", heading: block.heading ?? "", body: block.body, style: block.style };
     case "video":
-      return { id: block.id, type: "video", link: watchUrlFor(block.video) };
+      return { id: block.id, type: "video", link: watchUrlFor(block.video), style: block.style };
     case "testimonial":
-      return { id: block.id, type: "testimonial", quote: block.quote, name: block.name ?? "" };
+      return { id: block.id, type: "testimonial", quote: block.quote, name: block.name ?? "", style: block.style };
     default:
       return block;
   }
@@ -151,6 +153,7 @@ export function PageSectionsEditor({ initial }: { initial: PageBlock[] }) {
                 )}
               </div>
               <DraftFields draft={draft} index={index} onChange={(next) => update(index, next)} />
+              {draft.type !== "products" && <SectionLook id={`block-${index}`} value={draft.style ?? DEFAULT_SECTION_STYLE} onChange={(style) => update(index, { ...draft, style })} />}
               {problem?.index === index && (
                 <Alert variant="error">
                   <AlertDescription>{problem.text}</AlertDescription>
@@ -177,6 +180,23 @@ export function PageSectionsEditor({ initial }: { initial: PageBlock[] }) {
         </Button>
       </div>
     </section>
+  );
+}
+
+/** How a section looks (D-123): its box, alignment and the space around it. */
+function SectionLook({ id, value, onChange }: { id: string; value: SectionStyle; onChange: (style: SectionStyle) => void }) {
+  return (
+    <div className="grid gap-3 border-t border-line pt-3 sm:grid-cols-3">
+      <Field id={`${id}-box`} label="Box">
+        <ChoiceSelect id={`${id}-box`} size="sm" value={value.box} onValueChange={(box) => onChange({ ...value, box: box as SectionStyle["box"] })} options={[{ value: "card", label: "Card" }, { value: "outline", label: "Outline" }, { value: "none", label: "None" }]} />
+      </Field>
+      <Field id={`${id}-align`} label="Align">
+        <ChoiceSelect id={`${id}-align`} size="sm" value={value.align} onValueChange={(align) => onChange({ ...value, align: align as SectionStyle["align"] })} options={[{ value: "left", label: "Left" }, { value: "center", label: "Center" }]} />
+      </Field>
+      <Field id={`${id}-spacing`} label="Space around">
+        <ChoiceSelect id={`${id}-spacing`} size="sm" value={value.spacing} onValueChange={(spacing) => onChange({ ...value, spacing: spacing as SectionStyle["spacing"] })} options={[{ value: "compact", label: "Compact" }, { value: "normal", label: "Normal" }, { value: "roomy", label: "Roomy" }]} />
+      </Field>
+    </div>
   );
 }
 

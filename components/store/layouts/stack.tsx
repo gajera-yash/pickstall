@@ -5,7 +5,7 @@ import { splitBlocks } from "@/lib/page-blocks/rules";
 import { PriceTag } from "@/components/store/price-tag";
 import { RatingBadge } from "@/components/store/stars";
 import { StoreHeader } from "@/components/store/store-header";
-import { StoreFrame, borderColor, cardStyle } from "@/components/store/store-theme";
+import { StoreFrame, borderColor, buttonStyle, cardStyle } from "@/components/store/store-theme";
 import type { StoreLayoutProps } from "@/components/store/layouts/types";
 import { safeImageSrc } from "@/lib/media/media";
 
@@ -30,7 +30,7 @@ export function StackLayout({ store, products, theme, preview }: StoreLayoutProp
           Products are coming soon. Check back later.
         </p>
       ) : (
-        <ul className="flex w-full flex-col gap-4 @3xl:grid @3xl:grid-cols-2 @3xl:gap-6 @5xl:grid-cols-3">
+        <ul className={theme.productView === "list" ? "mx-auto flex w-full max-w-2xl flex-col gap-4" : "flex w-full flex-col gap-4 @3xl:grid @3xl:grid-cols-2 @3xl:gap-6 @5xl:grid-cols-3"}>
           {products.map((product) => (
             <li key={product.id}>
               <Link href={`/@${store.slug}/${product.slug}`} className="flex h-full flex-col gap-3 overflow-hidden p-4" style={cardStyle(theme)}>
@@ -50,10 +50,7 @@ export function StackLayout({ store, products, theme, preview }: StoreLayoutProp
                 )}
                 <span className="mt-auto flex items-center justify-between gap-3">
                   <PriceTag product={product} currency={store.currency} className="font-display text-money-m" regularStyle={{ color: preset.muted }} />
-                  <span
-                    className="flex h-11 items-center rounded-md px-5 text-button"
-                    style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}
-                  >
+                  <span className="flex h-11 items-center rounded-md px-5 text-button" style={buttonStyle(theme)}>
                     {product.buttonText || "Buy now"}
                   </span>
                 </span>

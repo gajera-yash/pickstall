@@ -21,7 +21,7 @@ import type { PublicProduct, PublicStore } from "@/lib/stores/public";
 export function StorePreviewCard({ store, products, isPublished }: { store: PublicStore; products: PublicProduct[]; isPublished: boolean }) {
   const draft = useDesignDraft();
   const [expanded, setExpanded] = useState(false);
-  const shown: PublicStore = draft ? { ...store, theme: { preset: draft.design.themePreset, accent: draft.design.accent } } : store;
+  const shown: PublicStore = draft ? { ...store, theme: { preset: draft.design.themePreset, accent: draft.design.accent, custom: draft.design.custom } } : store;
 
   return (
     <Card id="store-preview" className="scroll-mt-24 gap-4">
