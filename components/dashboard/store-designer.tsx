@@ -128,9 +128,10 @@ function Designer({ store, products, isPublished, custom, blocks }: Props) {
           </div>
         </Tabs>
 
-        <aside aria-label="Live preview" className="hidden lg:sticky lg:top-36 lg:block">
-          <div className="rounded-xl border border-line bg-surface p-4">
-            <LiveStorePreview store={shown} products={products} maxHeight={720} />
+        <aside aria-label="Live preview" className="hidden lg:sticky lg:top-[9.5rem] lg:block">
+          <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4">
+            <LiveStorePreview store={shown} products={products} maxHeight="calc(100dvh - 16rem)" scroll />
+            <p className="text-center text-xs text-mute">Scroll inside the preview to see your whole page.</p>
           </div>
         </aside>
       </div>
@@ -141,7 +142,7 @@ function Designer({ store, products, isPublished, custom, blocks }: Props) {
             <DialogTitle>Preview</DialogTitle>
             <DialogDescription>{unsaved ? "Your unsaved design. Save to publish it." : "How your store page looks to visitors."}</DialogDescription>
           </DialogHeader>
-          <LiveStorePreview store={shown} products={products} />
+          <LiveStorePreview store={shown} products={products} maxHeight="70dvh" scroll />
         </DialogContent>
       </Dialog>
     </div>
