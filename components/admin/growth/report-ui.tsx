@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { callAction } from "@/lib/action-call";
 import { sendReportNowAction } from "@/lib/marketing/report-actions";
 
 /** Builds today's report now and emails it if today's email was not sent yet (D-122). */
@@ -22,7 +23,7 @@ export function SendReportNow() {
         onClick={() =>
           start(async () => {
             setMessage(null);
-            const result = await sendReportNowAction();
+            const result = await callAction(() => sendReportNowAction());
             if (!result.ok) return setMessage({ kind: "error", text: result.error });
             setMessage({ kind: "success", text: result.data.message });
             router.refresh();

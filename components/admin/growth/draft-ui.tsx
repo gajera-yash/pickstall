@@ -8,6 +8,7 @@ import { useState, useTransition } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { callAction } from "@/lib/action-call";
 import { markFollowUpSentAction, writeDraftAction, type DraftView } from "@/lib/marketing/draft-actions";
 import { updateLeadAction } from "@/lib/marketing/lead-actions";
 
@@ -68,7 +69,7 @@ export function LeadDraft({ leadId, initial }: { leadId: string; initial: DraftV
   const write = () =>
     start(async () => {
       setMessage(null);
-      const result = await writeDraftAction({ leadId });
+      const result = await callAction(() => writeDraftAction({ leadId }));
       if (!result.ok) return setMessage({ kind: "error", text: result.error });
       setDraft(result.data);
       if (result.data.note) setMessage({ kind: "error", text: result.data.note });
@@ -162,7 +163,7 @@ export function ContactCard({ lead, fit, initial }: { lead: CardLead; fit: { sco
           onClick={() =>
             start(async () => {
               setMessage(null);
-              const result = await writeDraftAction({ leadId: lead.id });
+              const result = await callAction(() => writeDraftAction({ leadId: lead.id }));
               if (!result.ok) return setMessage({ kind: "error", text: result.error });
               setDraft(result.data);
               if (result.data.note) setMessage({ kind: "error", text: result.data.note });
@@ -183,7 +184,7 @@ export function ContactCard({ lead, fit, initial }: { lead: CardLead; fit: { sco
           onClick={() =>
             start(async () => {
               setMessage(null);
-              const result = await updateLeadAction({ action: "contacted", leadId: lead.id });
+              const result = await callAction(() => updateLeadAction({ action: "contacted", leadId: lead.id }));
               if (!result.ok) return setMessage({ kind: "error", text: result.error });
               setDone(true);
               router.refresh();
@@ -228,7 +229,7 @@ export function FollowUpCard({ lead, initial, contactedOn }: { lead: CardLead; i
           loading={pending}
           onClick={() =>
             start(async () => {
-              const result = await writeDraftAction({ leadId: lead.id });
+              const result = await callAction(() => writeDraftAction({ leadId: lead.id }));
               if (!result.ok) return setMessage({ kind: "error", text: result.error });
               setDraft(result.data);
             })
@@ -247,7 +248,7 @@ export function FollowUpCard({ lead, initial, contactedOn }: { lead: CardLead; i
           loading={pending}
           onClick={() =>
             start(async () => {
-              const result = await markFollowUpSentAction({ leadId: lead.id });
+              const result = await callAction(() => markFollowUpSentAction({ leadId: lead.id }));
               if (!result.ok) return setMessage({ kind: "error", text: result.error });
               setDone(true);
               router.refresh();
@@ -283,7 +284,7 @@ export function NoReplyCard({ lead, followedUpOn }: { lead: CardLead; followedUp
         loading={pending}
         onClick={() =>
           start(async () => {
-            const result = await updateLeadAction({ action: "stage", leadId: lead.id, stage: "not_interested" });
+            const result = await callAction(() => updateLeadAction({ action: "stage", leadId: lead.id, stage: "not_interested" }));
             if (!result.ok) return setMessage({ kind: "error", text: result.error });
             setDone(true);
             router.refresh();
@@ -317,7 +318,7 @@ export function WriteAllDrafts({ leadIds }: { leadIds: string[] }) {
             let fallbacks = 0;
             for (const leadId of leadIds) {
               setProgress(`Writing ${written + 1} of ${leadIds.length}...`);
-              const result = await writeDraftAction({ leadId });
+              const result = await callAction(() => writeDraftAction({ leadId }));
               if (!result.ok) {
                 setProgress(null);
                 setMessage({ kind: "error", text: written ? `${written} written, then: ${result.error}` : result.error });

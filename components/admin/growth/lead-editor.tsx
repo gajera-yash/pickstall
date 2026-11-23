@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { callAction } from "@/lib/action-call";
 import { deleteLeadAction, updateLeadAction } from "@/lib/marketing/lead-actions";
 import { LEAD_STAGES, LEAD_STAGE_LABELS, LEAD_TEXT_MAX, type LeadStage } from "@/lib/marketing/leads-rules";
 
@@ -28,7 +29,7 @@ export function LeadEditor({ leadId, stage, notes, handle }: { leadId: string; s
   const run = (work: () => Promise<{ ok: true; data: { message: string } } | { ok: false; error: string }>, after?: () => void, onError?: () => void) =>
     start(async () => {
       setMessage(null);
-      const result = await work();
+      const result = await callAction(work);
       if (!result.ok) {
         setMessage({ kind: "error", text: result.error });
         onError?.();
@@ -109,7 +110,7 @@ export function LeadEditor({ leadId, stage, notes, handle }: { leadId: string; s
               loading={pending}
               onClick={() =>
                 start(async () => {
-                  const result = await deleteLeadAction({ leadId });
+                  const result = await callAction(() => deleteLeadAction({ leadId }));
                   if (!result.ok) {
                     setConfirmDelete(false);
                     setMessage({ kind: "error", text: result.error });

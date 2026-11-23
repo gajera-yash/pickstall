@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { callAction } from "@/lib/action-call";
 import { saveGrowthSettingsAction } from "@/lib/marketing/draft-actions";
 import { VOICE_EXAMPLES_MAX, VOICE_EXAMPLE_MAX, type GrowthSettings } from "@/lib/marketing/growth-settings-rules";
 
@@ -20,11 +21,13 @@ export function GrowthSettingsForm({ initial }: { initial: GrowthSettings }) {
   const save = () =>
     start(async () => {
       setMessage(null);
-      const result = await saveGrowthSettingsAction({
-        voiceExamples: examples.map((text) => text.trim()).filter(Boolean),
-        dailyDraftLimit: Number.parseInt(draftLimit, 10),
-        dailyContactTarget: Number.parseInt(contactTarget, 10),
-      });
+      const result = await callAction(() =>
+        saveGrowthSettingsAction({
+          voiceExamples: examples.map((text) => text.trim()).filter(Boolean),
+          dailyDraftLimit: Number.parseInt(draftLimit, 10),
+          dailyContactTarget: Number.parseInt(contactTarget, 10),
+        }),
+      );
       setMessage(result.ok ? { kind: "success", text: result.data.message } : { kind: "error", text: result.error });
     });
 

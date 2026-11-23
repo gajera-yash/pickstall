@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { callAction } from "@/lib/action-call";
 import { importLeadsAction } from "@/lib/marketing/lead-actions";
 import {
   LEAD_FIELDS,
@@ -110,7 +111,7 @@ export function LeadImport() {
       const total = { added: 0, existing: 0, suppressed: 0, invalid: 0, failed: 0, invalidRows: [] as number[] };
       for (let i = 0; i < rows.length; i += LEAD_IMPORT_CHUNK) {
         setProgress(`Importing rows ${i + 1} to ${Math.min(i + LEAD_IMPORT_CHUNK, rows.length)} of ${rows.length}...`);
-        const result = await importLeadsAction({ fileName: parsed.fileName, firstRow: i + 2, statusMap, rows: rows.slice(i, i + LEAD_IMPORT_CHUNK) });
+        const result = await callAction(() => importLeadsAction({ fileName: parsed.fileName, firstRow: i + 2, statusMap, rows: rows.slice(i, i + LEAD_IMPORT_CHUNK) }));
         if (!result.ok) {
           setProgress(null);
           setMessage({ kind: "error", text: total.added ? `${total.added} added, then: ${result.error}` : result.error });
