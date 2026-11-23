@@ -34,7 +34,7 @@ export async function CreatorFunnelSection() {
         </h2>
         <p className="text-sm text-mute">Creators who signed up in the last {DAYS} days and how far each got. Source is the link they signed up from.</p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         {STEPS.map((step) => (
           <Stat key={step.key} label={step.label} value={total[step.key].toLocaleString("en")} hint={step.key === "signups" ? undefined : `${percent(total[step.key], total.signups)} of signups`} />
         ))}
