@@ -29,18 +29,22 @@ export function ProductThumb({ product, theme, className = "size-16" }: { produc
 
 /**
  * Order summary on the checkout page (D-069): the product, its regular price, the discount and the
- * total. Information only: the server recomputes the amount from the product when the order starts.
+ * total. Shows a full price breakdown: subtotal, discounts, platform fee (free), tax note and total.
+ * Information only: the server recomputes the amount from the product when the order starts.
  */
 export function OrderSummary({ product, storeName, currency, theme, bump = null }: { product: SummaryProduct; storeName: string; currency: string; theme: StoreTheme; bump?: { title: string; priceCents: number } | null }) {
   const { preset } = theme;
-  const total = payableCents(product);
+  const payable = payableCents(product);
   const discount = discountCentsOf(product);
+  const isFree = payable === 0;
 
   return (
     <section aria-labelledby="order-summary" className="flex flex-col gap-4">
       <h2 id="order-summary" className="font-display text-h3" style={{ fontWeight: preset.displayWeight }}>
         Order summary
       </h2>
+
+      {/* Product row */}
       <div className="flex items-center gap-3">
         <ProductThumb product={product} theme={theme} />
         <div className="flex min-w-0 flex-col">
@@ -48,23 +52,36 @@ export function OrderSummary({ product, storeName, currency, theme, bump = null 
           <span className="text-sm break-words" style={{ color: preset.muted }}>
             by {storeName}
           </span>
+          {/* Regular price struck through when on sale */}
+          {discount > 0 && (
+            <span className="text-xs line-through tabular-nums" style={{ color: preset.muted }}>
+              {formatMoney(product.priceCents, currency)}
+            </span>
+          )}
         </div>
       </div>
-      <dl className="flex flex-col gap-2 border-t pt-4 text-sm tabular-nums" style={{ borderColor: borderColor(preset) }}>
-        {discount > 0 && (
-          <>
-            <div className="flex justify-between gap-3">
-              <dt style={{ color: preset.muted }}>Price</dt>
-              <dd>{formatMoney(product.priceCents, currency)}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt style={{ color: preset.muted }}>Discount</dt>
-              <dd>−{formatMoney(discount, currency)}</dd>
-            </div>
-          </>
+
+      {/* Divider */}
+      <div className="border-t" style={{ borderColor: borderColor(preset) }} />
+
+      {/* Price breakdown */}
+      <dl className="flex flex-col gap-2.5 text-sm tabular-nums">
+        {isFree ? (
+          /* Free product: just show total */
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="font-semibold">Total</dt>
+            <dd className="font-display text-money-m">Free</dd>
+          </div>
+        ) : (
+          <SummaryTotal
+            baseTotalCents={payable}
+            subtotalCents={product.priceCents}
+            currency={currency}
+            bump={bump}
+            mutedColor={preset.muted}
+            lineColor={borderColor(preset)}
+          />
         )}
-        {/* The coupon and bump lines and the total follow the checkout form (D-090). */}
-        <SummaryTotal baseTotalCents={total} currency={currency} bump={bump} mutedColor={preset.muted} lineColor={borderColor(preset)} />
       </dl>
     </section>
   );
