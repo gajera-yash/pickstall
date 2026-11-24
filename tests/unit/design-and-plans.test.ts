@@ -17,11 +17,13 @@ const row = (label: string) => PLAN_FEATURE_GROUPS.flatMap((group) => group.rows
 describe("plan feature list (D-103)", () => {
   it("matches the enforced limits and Pro features", () => {
     expect(row("Courses").values).toEqual({ starter: `Up to ${PLAN_LIMITS.starter.maxCourses}`, pro: "Unlimited" });
-    expect(row("Course video hosting").values).toEqual({ starter: "20 hours", pro: "100 hours" });
+    expect(row("Course video hosting").values).toEqual({ starter: `${PLAN_LIMITS.starter.videoHours} hours`, pro: "100 hours" });
     expect(row("Email subscribers").values).toEqual({ starter: "1,000", pro: "10,000" });
-    expect(row("Coaching calls with booking").values).toEqual({ starter: false, pro: true });
+    expect(row("Coaching calls with booking calendar").values).toEqual({ starter: false, pro: true });
     expect(row("Upsell and downsell after purchase").values).toEqual({ starter: false, pro: true });
-    expect(row("Welcome email, abandoned cart and review request").values).toEqual({ starter: false, pro: true });
+    expect(row("Abandoned cart recovery emails").values).toEqual({ starter: true, pro: true });
+    expect(row("Meta, Google and TikTok ad pixels").values).toEqual({ starter: true, pro: true });
+    expect(row("Automated welcome series & review requests").values).toEqual({ starter: false, pro: true });
     expect(row("Order bumps at checkout").values).toEqual({ starter: true, pro: true });
   });
 });

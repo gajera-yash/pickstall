@@ -48,8 +48,8 @@ describe("email list rules (D-094)", () => {
     expect(csv).toContain(`"2026-11-19 10:00:00"`);
   });
 
-  it("uses the plan's subscriber limit, the trial's (Pro, D-098) without a paid plan", () => {
-    expect(subscriberLimit({ plan: null })).toBe(10_000);
+  it("uses the plan's subscriber limit, the trial's without a paid plan", () => {
+    expect(subscriberLimit({ plan: null })).toBe(1_000);
     expect(subscriberLimit({ plan: "starter" })).toBe(1_000);
     expect(subscriberLimit({ plan: "pro" })).toBe(10_000);
   });

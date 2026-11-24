@@ -11,13 +11,13 @@ import { countCourses, countPublishedCourses, videoSecondsUsed } from "@/lib/pla
 const access = (state: StoreAccess["state"], plan: StoreAccess["plan"] = null): StoreAccess => ({ state, endsAt: null, daysLeft: null, plan, cancelsAtPeriodEnd: false });
 
 describe("plan limits (D-098)", () => {
-  it("gives the free trial and founding creators Pro, and Starter its own limits", () => {
+  it("gives the free trial and founding creators its own limits, and Starter its own limits", () => {
     expect(planLimits(access("trial"))).toBe(PLAN_LIMITS.trial);
-    expect(planLimits(access("founding")).maxCourses).toBeNull();
-    expect(PLAN_LIMITS.trial).toMatchObject({ maxCourses: PLAN_LIMITS.pro.maxCourses, videoHours: PLAN_LIMITS.pro.videoHours, emailSubscribers: PLAN_LIMITS.pro.emailSubscribers });
-    expect(planLimits(access("active", "starter"))).toMatchObject({ maxCourses: 5, videoHours: 20, emailSubscribers: 1000 });
+    expect(planLimits(access("founding")).maxCourses).toBe(3);
+    expect(PLAN_LIMITS.trial).toMatchObject({ maxCourses: 3, videoHours: 15, emailSubscribers: 1_000 });
+    expect(planLimits(access("active", "starter"))).toMatchObject({ maxCourses: 2, videoHours: 10, emailSubscribers: 1000 });
     expect(subscriberLimit(access("active", "starter"))).toBe(1000);
-    expect(subscriberLimit(access("trial"))).toBe(10_000);
+    expect(subscriberLimit(access("trial"))).toBe(1_000);
   });
 
   it("keeps coaching and automations to Pro (and the trial), never while paused", () => {
@@ -32,8 +32,8 @@ describe("plan limits (D-098)", () => {
   });
 
   it("explains what stops a course or a call", () => {
-    expect(planProblem(access("active", "starter"), { type: "course", courses: 4 })).toBeNull();
-    expect(planProblem(access("active", "starter"), { type: "course", courses: 5 })).toMatch(/allows 5 courses/);
+    expect(planProblem(access("active", "starter"), { type: "course", courses: 1 })).toBeNull();
+    expect(planProblem(access("active", "starter"), { type: "course", courses: 2 })).toMatch(/allows 2 courses/);
     expect(planProblem(access("active", "pro"), { type: "course", courses: 500 })).toBeNull();
     expect(planProblem(access("active", "starter"), { type: "coaching" })).toMatch(/part of Pro/);
     expect(planProblem(access("trial"), { type: "coaching" })).toBeNull();
@@ -41,9 +41,10 @@ describe("plan limits (D-098)", () => {
   });
 
   it("stops new video at the plan's hours", () => {
-    expect(videoHoursProblem(access("active", "starter"), 20 * 3600 - 1)).toBeNull();
-    expect(videoHoursProblem(access("active", "starter"), 20 * 3600)).toMatch(/20 hours/);
-    expect(videoHoursProblem(access("trial"), 20 * 3600)).toBeNull();
+    expect(videoHoursProblem(access("active", "starter"), 10 * 3600 - 1)).toBeNull();
+    expect(videoHoursProblem(access("active", "starter"), 10 * 3600)).toMatch(/10 hours/);
+    expect(videoHoursProblem(access("trial"), 15 * 3600)).toMatch(/15 hours/);
+    expect(videoHoursProblem(access("active", "pro"), 20 * 3600)).toBeNull();
   });
 });
 

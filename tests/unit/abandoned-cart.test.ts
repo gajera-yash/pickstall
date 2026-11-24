@@ -81,8 +81,13 @@ describe("sending the reminder (D-096)", () => {
     expect(send.sendListEmails).not.toHaveBeenCalled();
   });
 
-  it("skips on a plan without automations (D-098)", async () => {
+  it("sends on an active starter plan (both plans include cart recovery)", async () => {
     db.stores.findOne.mockResolvedValue({ ...store, planTier: "standard", foundingEndsAt: null, billing: { plan: "starter", status: "active", currentPeriodEnd: new Date("2026-12-19"), cancelAtPeriodEnd: false } });
+    expect(await sendCartReminder("order-1", NOW)).toBe("sent");
+  });
+
+  it("skips on a paused store without an active plan", async () => {
+    db.stores.findOne.mockResolvedValue({ ...store, planTier: "standard", foundingEndsAt: null, trialEndsAt: new Date("2026-10-01"), billing: null });
     expect(await sendCartReminder("order-1", NOW)).toBe("skipped");
     expect(send.sendListEmails).not.toHaveBeenCalled();
   });

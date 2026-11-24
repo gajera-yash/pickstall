@@ -243,8 +243,8 @@ type PlanLimits = {
  * Video hours and subscriber counts must be checked against Bunny and Resend costs.
  */
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
-  trial: { maxCourses: null, videoHours: 100, emailSubscribers: 10_000, features: ["coaching", "automations", "upsells"] },
-  starter: { maxCourses: 5, videoHours: 20, emailSubscribers: 1_000, features: [] },
+  trial: { maxCourses: 3, videoHours: 15, emailSubscribers: 1_000, features: ["coaching", "automations", "upsells"] },
+  starter: { maxCourses: 2, videoHours: 10, emailSubscribers: 1_000, features: [] },
   pro: { maxCourses: null, videoHours: 100, emailSubscribers: 10_000, features: ["coaching", "automations", "upsells"] },
   business: { maxCourses: null, videoHours: 300, emailSubscribers: 50_000, features: ["coaching", "automations", "upsells"] },
 };

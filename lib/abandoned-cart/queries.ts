@@ -32,8 +32,8 @@ export async function sendCartReminder(orderId: string, now: Date = new Date()):
 
     const store = await stores.findOne({ _id: order.storeId, isPublished: true }, { projection: { name: 1, slug: 1, abandonedCart: 1, planTier: 1, suspendedAt: 1, trialEndsAt: 1, foundingEndsAt: 1, billing: 1, emailLook: 1, "theme.accent": 1 } });
     const access = store ? storeAccess(store, now) : null;
-    // Reminders need the store to sell and to have automations on its plan (D-098).
-    if (!store?.abandonedCart?.enabled || !access || !can(access, "sell") || !can(access, "automations")) return "skipped";
+    // Reminders need the store to sell and to have cart recovery on its plan.
+    if (!store?.abandonedCart?.enabled || !access || !can(access, "sell") || !can(access, "abandonedCart")) return "skipped";
     const product = await products.findOne({ _id: order.productId, storeId: order.storeId, status: "published", deletedAt: { $in: [null] } }, { projection: { slug: 1, title: 1 } });
     if (!product) return "skipped";
 

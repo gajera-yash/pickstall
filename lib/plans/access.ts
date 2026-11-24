@@ -64,11 +64,12 @@ export function storeAccess(store: StoreAccessFields, now: Date = new Date()): S
 }
 
 /** What a paused store cannot do. Buyers' libraries and the dashboard always keep working. */
-export type Feature = "sell" | "publish" | "pixels" | PlanFeature;
+export type Feature = "sell" | "publish" | "pixels" | "abandonedCart" | PlanFeature;
 
 /**
- * The limits that apply now (D-098): the paid plan's, or the trial's (Pro) for the free trial and
- * founding creators. A paused store keeps its numbers; it cannot sell or publish anyway.
+ * The limits that apply now (D-098): the paid plan's, or the trial's (with its trial limits and
+ * all tools enabled) for the free trial and founding creators. A paused store keeps its numbers;
+ * it cannot sell or publish anyway.
  */
 export function planLimits(access: Pick<StoreAccess, "plan">) {
   return PLAN_LIMITS[access.plan ?? "trial"];
@@ -76,15 +77,16 @@ export function planLimits(access: Pick<StoreAccess, "plan">) {
 
 export function can(access: StoreAccess, feature: Feature): boolean {
   switch (feature) {
-    // Pro features (D-098): coaching calls and automations (welcome email, abandoned cart).
+    // Pro features (D-098): coaching calls, automations (welcome email, review request), and upsells.
     case "coaching":
     case "automations":
     case "upsells":
       return isOpenState(access) && planLimits(access).features.includes(feature);
     case "sell":
     case "publish":
-    // Pixels are in every plan (PRD F9: Starter and up; the trial mirrors Starter), not while paused.
+    // Pixels and cart recovery are in every active plan (Starter, Pro, Trial), not while paused.
     case "pixels":
+    case "abandonedCart":
       return isOpenState(access);
   }
 }
@@ -114,7 +116,7 @@ export function subscriberLimit(access: Pick<StoreAccess, "plan">): number {
   return planLimits(access).emailSubscribers;
 }
 
-export const AUTOMATIONS_PRO = "Automations (welcome email, abandoned cart) are part of Pro. Upgrade your plan to turn this on.";
+export const AUTOMATIONS_PRO = "Automations (welcome email, review request) are part of Pro. Upgrade your plan to turn this on.";
 
 /** Why a plan stops this course or call from being created or published, or null (D-098). */
 export function planProblem(access: StoreAccess, input: { type: string; courses?: number }): string | null {
