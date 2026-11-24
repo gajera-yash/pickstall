@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const db = vi.hoisted(() => ({ stores: { findOne: vi.fn(), updateOne: vi.fn() } }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/components/store/fonts", () => ({ storeSerif: { variable: "font-store-serif-var" } }));
+vi.mock("@/components/store/fonts", () => { const font = (name: string) => ({ className: `font-${name}-var`, cssVar: `var(--font-store-${name})` }); return { storeSerif: { variable: "font-store-serif-var" }, STORE_FONTS: { sans: { className: "", cssVar: null }, serif: font("serif"), playfair: font("playfair"), grotesk: font("grotesk"), poppins: font("poppins"), mono: font("mono") } }; });
 vi.mock("@/components/brand/wordmark", () => ({ Wordmark: () => null }));
 vi.mock("@/lib/db/collections", () => ({ collections: vi.fn(async () => db) }));
 

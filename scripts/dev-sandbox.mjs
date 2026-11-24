@@ -1,7 +1,9 @@
 // `pnpm dev:sandbox`: the dev server on a throwaway in-memory MongoDB (port 3100), for trying the
 // app or previewing UI without touching the real database. Data is gone when it stops. PayPal,
 // Stripe, Resend and Google keys are emptied, so payments use the development mock and emails only log.
+// The admin sign-in is a fresh throwaway one, printed in the log at start.
 import { spawn, spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 
 import { MongoMemoryReplSet } from "mongodb-memory-server";
@@ -18,6 +20,13 @@ const replSet = await MongoMemoryReplSet.create({
 process.stdout.write(`[sandbox] MongoDB: ${replSet.getUri()}
 `);
 
+// A throwaway admin sign-in for /admin/login, new on every start and never the real one (D-109):
+// the real ADMIN_USERNAME / ADMIN_PASSWORD from the environment are replaced here.
+const ADMIN_USERNAME = "sandbox-admin";
+const ADMIN_PASSWORD = randomBytes(18).toString("base64url");
+process.stdout.write(`[sandbox] Admin: /admin/login as ${ADMIN_USERNAME}, password ${ADMIN_PASSWORD}
+`);
+
 const next = path.join(import.meta.dirname, "..", "node_modules", "next", "dist", "bin", "next");
 const child = spawn(process.execPath, [next, "dev", "--port", String(PORT)], {
   stdio: "inherit",
@@ -29,6 +38,8 @@ const child = spawn(process.execPath, [next, "dev", "--port", String(PORT)], {
     NEXT_PUBLIC_ROOT_DOMAIN: `localhost:${PORT}`,
     BETTER_AUTH_SECRET: "sandbox-only-secret-0123456789abcdefghijkl",
     IP_HASH_SECRET: "sandbox-only-ip-hash-secret",
+    ADMIN_USERNAME,
+    ADMIN_PASSWORD,
     // Empty values win over .env.local (Next never overrides a variable that is already set).
     RESEND_API_KEY: "",
     EMAIL_FROM: "",

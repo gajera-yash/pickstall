@@ -12,10 +12,12 @@ import { cn } from "@/lib/utils";
  * `banner` is centered like `center` until the page is wide (@3xl), then the photo sits beside the
  * name and everything lines up on the left (D-066).
  */
-export function StoreHeader({ store, linkToStore, align = "center" }: { store: PublicStore; linkToStore?: boolean; align?: "center" | "start" | "banner" }) {
+export function StoreHeader({ store, linkToStore, align: layoutAlign = "center" }: { store: PublicStore; linkToStore?: boolean; align?: "center" | "start" | "banner" }) {
+  const { preset, accent, onAccent, header } = resolveTheme(store.theme);
+  // The creator's own choice (D-123) wins over the layout's.
+  const align = header.align === "center" ? "center" : header.align === "left" ? "start" : layoutAlign;
   const start = align === "start";
   const banner = align === "banner";
-  const { preset, accent, onAccent } = resolveTheme(store.theme);
   const initial = store.name.trim().charAt(0).toUpperCase() || "?";
   // A soft ring in the creator's accent around the photo.
   const ring = { boxShadow: `0 0 0 4px ${preset.background}, 0 0 0 7px color-mix(in srgb, ${accent} 35%, transparent)` };
@@ -50,7 +52,7 @@ export function StoreHeader({ store, linkToStore, align = "center" }: { store: P
           {store.bio}
         </p>
       )}
-      {store.socialLinks.length > 0 && (
+      {header.showSocial && store.socialLinks.length > 0 && (
         <ul className={cn("flex flex-wrap gap-2", start ? "justify-start" : "justify-center", banner && "@3xl:justify-start")}>
           {/* Saved links are https or mailto only (lib/stores/schemas.ts); anything else is skipped here too. */}
           {store.socialLinks

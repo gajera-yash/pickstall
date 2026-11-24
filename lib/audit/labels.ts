@@ -30,4 +30,7 @@ export const AUDIT_LABELS: Record<AuditAction, string> = {
   "admin.password_changed": "Admin: password changed",
   "admin.billing_imported": "Admin: plan invoices imported",
   "admin.emails_retried": "Admin: failed emails sent again",
+  "admin.leads_imported": "Admin: outreach leads imported",
+  "admin.lead_deleted": "Admin: outreach lead deleted",
+  "admin.leads_exported": "Admin: outreach leads downloaded",
 };

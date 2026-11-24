@@ -70,7 +70,7 @@ export default async function ThankYouPage({ params, searchParams }: PageProps<"
   });
 
   return (
-    <StoreFrame theme={theme}>
+    <StoreFrame theme={theme} slug={store.slug}>
       <div className="flex w-full flex-col gap-6 p-6 @xl:p-8" style={cardStyle(theme)}>
         <div className="flex flex-col items-center gap-3 text-center">
           <span

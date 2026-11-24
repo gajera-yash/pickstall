@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BarChart3, CreditCard, KeyRound, Mail, Menu, Package, ReceiptText, ScrollText, Users } from "lucide-react";
+import { Activity, BarChart3, CreditCard, KeyRound, Mail, Megaphone, Menu, Package, ReceiptText, ScrollText, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/admin", label: "Overview", icon: BarChart3 },
+  { href: "/admin/growth", label: "Growth", icon: Megaphone },
   { href: "/admin/billing", label: "Billing", icon: CreditCard },
   { href: "/admin/creators", label: "Creators", icon: Users },
   { href: "/admin/orders", label: "Orders", icon: ReceiptText },

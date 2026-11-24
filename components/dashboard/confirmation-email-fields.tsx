@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { Field } from "@/components/dashboard/editor-fields";
+import { EmailTemplatePicker } from "@/components/dashboard/email-template-picker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PRODUCT_LIMITS } from "@/lib/products/schemas";
@@ -50,6 +51,14 @@ export function ConfirmationEmailFields({
           ))}
         </ul>
       </div>
+      <EmailTemplatePicker
+        kind="confirmation"
+        hasText={subject.trim() !== "" || body.trim() !== ""}
+        onPick={(preset) => {
+          onSubject(preset.subject);
+          onBody(preset.body);
+        }}
+      />
       <Field id="emailSubject" label="Subject (optional)" error={fieldError("emailSubject")} hint={`${subject.length}/${PRODUCT_LIMITS.emailSubject}`}>
         <Input
           id="emailSubject"

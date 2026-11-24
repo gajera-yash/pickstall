@@ -73,6 +73,13 @@ export const serverEnvSchema = publicEnvSchema.extend({
   PAYMENT_CREDENTIALS_KEY: optional(z.string().refine((value) => Buffer.from(value, "base64").length === 32, { error: "Must be 32 bytes, base64" })),
   // Hashes client IPs for signup rate limits (D-019). Optional: without it the per-IP limit is off.
   IP_HASH_SECRET: optional(z.string().min(16)),
+  // Who writes outreach DM drafts (D-121): "template" (default, no AI) or "groq". Claude comes later.
+  MARKETING_AI_PROVIDER: optional(z.enum(["template", "groq"])),
+  // Groq API key and model for DM drafts (D-121). Server only; never logged.
+  GROQ_API_KEY: optional(z.string().min(20)),
+  GROQ_MODEL: optional(z.string().regex(/^[a-z0-9][a-z0-9._/-]{1,80}$/, { error: "Must be a Groq model id" })),
+  // Where the daily growth report goes at 21:00 IST (D-122). Without it the report is only saved in Admin > Growth > Reports.
+  GROWTH_REPORT_EMAIL: optional(z.email()),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;

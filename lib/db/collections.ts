@@ -7,7 +7,12 @@ import type { Binary, Collection } from "mongodb";
 import { getDb } from "@/lib/db/mongo";
 import type { Currency, SocialLinkKind } from "@/lib/config";
 import type { CourseCategory } from "@/lib/courses/settings";
+import type { StoreAcquisition } from "@/lib/marketing/acquisition";
+import type { LeadPlatform, LeadStage, LeadTool } from "@/lib/marketing/leads-rules";
+import type { DailyReportData } from "@/lib/marketing/report-types";
 import type { ThemePresetId } from "@/lib/themes";
+import type { StoreDesign } from "@/lib/store-design/rules";
+import type { EmailLook } from "@/lib/email/looks";
 
 // Document shapes of the app's own collections (D-024). Better Auth owns `user`, `session`,
 // `account` and `verification`; app code never writes to those directly.
@@ -85,6 +90,11 @@ export type StoreDoc = {
    */
   reviewRequest?: { enabled: boolean; subject: string; body: string } | null;
   /**
+   * The look of every email the creator writes (D-124): order confirmation, welcome, broadcasts,
+   * abandoned cart and review request, in the store's accent. Missing: each email's default look.
+   */
+  emailLook?: EmailLook | null;
+  /**
    * Ad and analytics pixels on the store's own pages (D-097): IDs only, put into our fixed
    * snippets, loaded only after the visitor accepts. Never creator scripts. Missing: none.
    */
@@ -113,7 +123,12 @@ export type StoreDoc = {
   socialLinks?: { kind: SocialLinkKind; url: string }[];
   /** @deprecated Replaced by `socialLinks`. The migration copies it and removes it. Never write it. */
   link?: string | null;
-  theme: { preset: ThemePresetId; accent: string };
+  /**
+   * The theme preset and accent; `custom` holds the creator's own design on top of it (D-123):
+   * colors, background, fonts, buttons, cards, layout and header. Missing or null: the theme as is.
+   * Validated by lib/store-design/rules.ts on save and again when read.
+   */
+  theme: { preset: ThemePresetId; accent: string; custom?: StoreDesign | null };
   currency: Currency;
   /** Written only by the Stripe OAuth callback and the Connect webhook (Block D). */
   stripeAccountId: string | null;
@@ -154,6 +169,17 @@ export type StoreDoc = {
   /** Set when the owner deleted their account (D-074): the store is anonymised and unpublished. */
   deletedAt?: Date;
   isPublished: boolean;
+  /**
+   * When the store page was first published (D-119), set once and never cleared, for the creator
+   * funnel. Missing on stores published before D-119 (the funnel then falls back to `isPublished`).
+   */
+  publishedAt?: Date;
+  /**
+   * Where the owner signed up from (D-119): our outreach lead code and the link's UTM tags or
+   * referring site, cleaned. Set once when the store is created; missing means a direct signup.
+   * Admin-only: never sent to buyers or shown on public pages.
+   */
+  acquisition?: StoreAcquisition;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -175,6 +201,8 @@ export type SignupIntentDoc = {
   username: string;
   fullName: string;
   phone: string | null;
+  /** Where this signup came from (D-119), copied to the store once the email code is verified. */
+  acquisition?: StoreAcquisition | null;
   tokenHash: string;
   attempts: number;
   windowStartedAt: Date;
@@ -798,6 +826,99 @@ export type AdminSessionDoc = {
   expiresAt: Date;
 };
 
+/**
+ * A creator the founder plans to contact (D-120), imported from the founder's own list. Platform-wide,
+ * admin-only data: never shown to creators or buyers. `handleKey` ("instagram:maya.makes") is unique;
+ * `refCode` is the lead's own `?ref=` code (D-119), unique, random, never derived from the handle.
+ */
+export type MktLeadDoc = {
+  _id: string;
+  platform: LeadPlatform;
+  handle: string;
+  handleKey: string;
+  name: string | null;
+  followers: number | null;
+  country: string | null;
+  topic: string | null;
+  tool: LeadTool;
+  /** The list's own words for the tool, kept for "other". */
+  toolLabel: string | null;
+  contactMethod: string | null;
+  stage: LeadStage;
+  notes: string | null;
+  refCode: string;
+  importedFrom: string | null;
+  lastContactedAt: Date | null;
+  /** When the one follow-up DM was sent (D-121). Missing until then; a lead gets one follow-up only. */
+  followUpSentAt?: Date;
+  stageChangedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/** One thing that happened to a lead (D-120), for its timeline and the daily report. */
+export type MktEventDoc = {
+  _id: string;
+  leadId: string;
+  type: "imported" | "stage_changed" | "contacted" | "notes_changed" | "followed_up" | "draft_written";
+  from: string | null;
+  to: string | null;
+  /** "admin:<username>" or "system". */
+  actor: string;
+  at: Date;
+};
+
+/**
+ * A person who must not be imported or contacted again (D-120): a deleted lead or one marked "do not
+ * contact". `_id` is the SHA-256 of the lead's `handleKey`; nothing else about them is kept.
+ */
+export type MktSuppressionDoc = {
+  _id: string;
+  reason: "deleted" | "do_not_contact";
+  at: Date;
+};
+
+/**
+ * A DM draft for a lead (D-121): the first message and its one follow-up, who wrote it ("template"
+ * or an AI provider, with the model) and when. Kept as history; the newest one is shown.
+ */
+export type MktDraftDoc = {
+  _id: string;
+  leadId: string;
+  firstMessage: string;
+  followUp: string;
+  writer: "template" | "groq";
+  model: string | null;
+  /** Why the template was used instead of the AI, in words safe to show the founder. */
+  note: string | null;
+  createdAt: Date;
+};
+
+/** Growth settings (D-121), one document with `_id` "settings". */
+export type MktSettingsDoc = {
+  _id: "settings";
+  /** The founder's own DMs (up to 4, 600 characters each), so AI drafts sound like them. */
+  voiceExamples: string[];
+  /** Most drafts written per UTC day, across all leads. */
+  dailyDraftLimit: number;
+  /** New leads the Today screen suggests contacting per day. */
+  dailyContactTarget: number;
+  updatedAt: Date;
+};
+
+/**
+ * One daily growth report (D-122). `_id` is the India date the report's window ends on
+ * ("2026-11-24"), so a day has one report and its email is sent once (`emailedAt`).
+ */
+export type MktReportDoc = {
+  _id: string;
+  windowStart: Date;
+  windowEnd: Date;
+  data: DailyReportData;
+  builtAt: Date;
+  emailedAt?: Date;
+};
+
 export async function collections(): Promise<{
   profiles: Collection<ProfileDoc>;
   stores: Collection<StoreDoc>;
@@ -831,6 +952,12 @@ export async function collections(): Promise<{
   broadcasts: Collection<BroadcastDoc>;
   reviews: Collection<ReviewDoc>;
   adminSessions: Collection<AdminSessionDoc>;
+  mktLeads: Collection<MktLeadDoc>;
+  mktEvents: Collection<MktEventDoc>;
+  mktSuppressions: Collection<MktSuppressionDoc>;
+  mktDrafts: Collection<MktDraftDoc>;
+  mktSettings: Collection<MktSettingsDoc>;
+  mktReports: Collection<MktReportDoc>;
 }> {
   const db = await getDb();
   return {
@@ -866,5 +993,11 @@ export async function collections(): Promise<{
     reviews: db.collection<ReviewDoc>("reviews"),
     adminSessions: db.collection<AdminSessionDoc>("adminSessions"),
     couponRedemptions: db.collection<CouponRedemptionDoc>("couponRedemptions"),
+    mktLeads: db.collection<MktLeadDoc>("mktLeads"),
+    mktEvents: db.collection<MktEventDoc>("mktEvents"),
+    mktSuppressions: db.collection<MktSuppressionDoc>("mktSuppressions"),
+    mktDrafts: db.collection<MktDraftDoc>("mktDrafts"),
+    mktSettings: db.collection<MktSettingsDoc>("mktSettings"),
+    mktReports: db.collection<MktReportDoc>("mktReports"),
   };
 }

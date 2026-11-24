@@ -6,12 +6,14 @@ import { encodeIntentCookie, hashToken, newIntentToken, nextEmailAttempt, parseI
 import { SIGNUP_INTENT_TTL_MINUTES, SIGNUP_RATE_LIMITS } from "@/lib/config";
 import { collections } from "@/lib/db/collections";
 import { logger } from "@/lib/logger";
+import type { StoreAcquisition } from "@/lib/marketing/acquisition";
 import { err, ok, type Result } from "@/lib/result";
 
 // Signup details wait here (server only) until the email code is verified (D-019).
 // Expired intents are removed by the TTL index on `expiresAt` (lib/db/mongo.ts).
 
-export type SignupIntent = { email: string; username: string; fullName: string; phone: string | null };
+/** `acquisition` (D-119): where the signup came from, cleaned by `acquisitionFrom`; left out when direct. */
+export type SignupIntent = { email: string; username: string; fullName: string; phone: string | null; acquisition?: StoreAcquisition };
 
 export const TOO_MANY_SIGNUPS = "Too many sign-up attempts. Wait 15 minutes, then try again.";
 const GENERIC = "Couldn't start your sign-up. Check your connection and try again.";
@@ -46,6 +48,7 @@ export async function saveSignupIntent(intent: SignupIntent, ipHash: string | nu
           username: intent.username,
           fullName: intent.fullName,
           phone: intent.phone,
+          acquisition: intent.acquisition ?? null,
           tokenHash: hashToken(token),
           attempts: attempt.attempts,
           windowStartedAt: attempt.windowStartedAt,
@@ -83,7 +86,7 @@ export async function takeSignupIntent(email: string, cookieValue: string | unde
     await signupIntents.deleteOne({ _id: doc._id });
     if (doc.expiresAt.getTime() <= Date.now()) return null;
 
-    return { email: doc.email, username: doc.username, fullName: doc.fullName, phone: doc.phone };
+    return { email: doc.email, username: doc.username, fullName: doc.fullName, phone: doc.phone, ...(doc.acquisition ? { acquisition: doc.acquisition } : {}) };
   } catch (error) {
     logger.error("signup_intents.take_failed", { name: error instanceof Error ? error.name : undefined });
     return null;

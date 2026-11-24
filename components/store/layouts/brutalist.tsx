@@ -18,7 +18,7 @@ export function BrutalistLayout({ store, products, theme, preview }: StoreLayout
   const ink = { borderColor: preset.text };
 
   return (
-    <StoreFrame theme={theme} preview={preview} wide>
+    <StoreFrame theme={theme} preview={preview} wide slug={store.slug}>
       <div className="flex w-full flex-col gap-8">
         <div className="flex flex-col gap-4 p-6 @3xl:p-8" style={cardStyle(theme)}>
           <StoreHeader store={store} align="start" />

@@ -2,6 +2,8 @@
 // subject and message; only the three allowed variables are filled in, everything else stays plain
 // text, and the store name (sender identity) and the access link are ALWAYS included.
 
+import { noteBoxHtml, paragraphsHtml, renderLook, type EmailDesign } from "@/lib/email/looks";
+
 export type OrderEmailVars = { customerName: string; productTitle: string; accessLink: string };
 
 /**
@@ -20,6 +22,8 @@ export type OrderEmailInput = {
   call?: CallDetails | null;
   /** The order's license key (D-114), always added whatever the creator wrote. */
   licenseKey?: string | null;
+  /** The store's email design (D-124). Missing: the card look in Pickstall blue. */
+  design?: EmailDesign | null;
 };
 
 /** The booking lines of the email, plain text. */
@@ -38,6 +42,9 @@ export type RenderedEmail = { subject: string; text: string; html: string };
 
 /** Inline colors for list emails (D-095): email HTML cannot use the CSS tokens. */
 export const LIST_EMAIL_COLORS = { text: "#111827", muted: "#6b7280", border: "#e5e7eb", button: "#0056ff", onButton: "#ffffff" } as const;
+
+/** Inline colors of the card-style emails (order emails, and the daily growth report, D-122). */
+export const CARD_EMAIL_COLORS = { page: "#f7f9fc", card: "#ffffff", text: "#0b0d2a", muted: "#555a82", border: "#e5e7eb", button: "#0056ff", onButton: "#ffffff" } as const;
 
 const VARIABLE = /\{\{\s*(customer_name|product_title|download_link)\s*\}\}/g;
 
@@ -78,13 +85,21 @@ export function renderOrderEmail(input: OrderEmailInput): RenderedEmail {
   const license = input.licenseKey ? `Your license key:\n${input.licenseKey}\n\nYou can also find it in your library.` : "";
   const text = [intro, call, license, alreadyHasLink ? "" : action, footer].filter(Boolean).join("\n\n");
 
-  const htmlIntro = escapeHtml(intro).replace(/\n/g, "<br>");
-  const callHtml = call ? `<div style="margin:20px 0 0;padding:14px 16px;border:1px solid #e5e7eb;border-radius:12px;line-height:1.55">${linkify(escapeHtml(call)).replace(/\n/g, "<br>")}</div>` : "";
+  const design = input.design ?? { look: "card" as const, accent: "#0056ff" };
+  const callHtml = call ? noteBoxHtml(linkify(escapeHtml(call)).replace(/\n/g, "<br>")) : "";
   const licenseHtml = input.licenseKey
-    ? `<div style="margin:20px 0 0;padding:14px 16px;border:1px solid #e5e7eb;border-radius:12px;line-height:1.55">Your license key:<br><span style="font-family:Consolas,Menlo,monospace;font-size:16px;font-weight:700;letter-spacing:1px">${escapeHtml(input.licenseKey)}</span><br><span style="color:#555a82;font-size:13px">You can also find it in your library.</span></div>`
+    ? noteBoxHtml(`Your license key:<br><span style="font-family:Consolas,Menlo,monospace;font-size:16px;font-weight:700;letter-spacing:1px">${escapeHtml(input.licenseKey)}</span><br><span style="color:#555a82;font-size:13px">You can also find it in your library.</span>`)
     : "";
-  const button = `<p style="margin:24px 0"><a href="${escapeHtml(vars.accessLink)}" style="background:#0056ff;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">Create your password and open your purchase</a></p>`;
-  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#f7f9fc;font-family:Arial,Helvetica,sans-serif;color:#0b0d2a"><div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px"><p style="margin:0 0 4px;font-weight:700">${escapeHtml(storeName)}</p><div style="line-height:1.55">${htmlIntro}</div>${callHtml}${licenseHtml}${button}<p style="color:#555a82;font-size:13px;line-height:1.5">${escapeHtml(footer)}</p></div></body></html>`;
+  // The look (D-124) frames the message; the store name, the access button and the footer are always in it.
+  const html = renderLook({
+    look: design.look,
+    accent: design.accent,
+    storeName,
+    contentHtml: paragraphsHtml(intro, design.accent),
+    extraHtml: callHtml + licenseHtml,
+    button: { label: "Create your password and open your purchase", url: vars.accessLink },
+    footerHtml: escapeHtml(footer),
+  });
 
   return { subject, text, html };
 }

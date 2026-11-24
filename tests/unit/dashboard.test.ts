@@ -7,9 +7,10 @@ import { DASHBOARD_SECTIONS, SETTINGS_SECTIONS, breadcrumbFor, isSectionActive, 
 const fresh: ChecklistInput = { bio: null, avatarUrl: null, chargesEnabled: false, isPublished: false, productCount: 0, paymentsAvailable: true };
 
 describe("dashboard sections (D-011)", () => {
-  it("has the sections in order (Reviews added in D-106)", () => {
+  it("has the sections in order (Reviews added in D-106, Store design in D-125)", () => {
     expect(DASHBOARD_SECTIONS.map((section) => section.label)).toEqual([
       "My Store",
+      "Store design",
       "Products",
       "Orders",
       "Customers",
@@ -109,6 +110,7 @@ describe("settings sub-nav and breadcrumb (D-028)", () => {
   it.each([
     ["/dashboard", ["My Store"]],
     ["/dashboard/income", ["Income"]],
+    ["/dashboard/design", ["Store design"]],
     ["/dashboard/settings", ["Settings", "Store"]],
     ["/dashboard/settings/account", ["Settings", "Account"]],
     ["/dashboard/unknown", ["My Store"]],

@@ -17,7 +17,7 @@ export function StackLayout({ store, products, theme, preview }: StoreLayoutProp
   const { before, after } = splitBlocks(store.pageBlocks);
 
   return (
-    <StoreFrame theme={theme} preview={preview} wide>
+    <StoreFrame theme={theme} preview={preview} wide slug={store.slug}>
       <div className="flex w-full max-w-xl flex-col items-center gap-6 @3xl:max-w-5xl @3xl:gap-10">
       {/* A soft band in the creator's accent behind the header: their colors, a premium first glance. */}
       <div
@@ -40,7 +40,8 @@ export function StackLayout({ store, products, theme, preview }: StoreLayoutProp
               {products.length} {products.length === 1 ? "product" : "products"}
             </span>
           </h2>
-          <ul className="flex w-full flex-col gap-4 @3xl:grid @3xl:grid-cols-2 @3xl:gap-6 @5xl:grid-cols-3">
+          {/* "List" from Store design (D-123): one column; otherwise the grid. */}
+          <ul className={theme.productView === "list" ? "mx-auto flex w-full max-w-2xl flex-col gap-4" : "flex w-full flex-col gap-4 @3xl:grid @3xl:grid-cols-2 @3xl:gap-6 @5xl:grid-cols-3"}>
             {products.map((product) => (
               <li key={product.id}>
                 <Link

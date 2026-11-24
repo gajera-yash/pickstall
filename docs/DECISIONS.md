@@ -4,7 +4,7 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
-## D-119: Product import from Gumroad and from a CSV (Stan Store)
+## D-126: Product import from Gumroad and from a CSV (Stan Store)
 - **Date:** 2026-11-21
 - **Decision (founder asked for "Gumroad/Stan thi product import"):**
   - **Gumroad:** the creator pastes an access token from their Gumroad application page (gumroad.com/api: "Generate access token"); we call `GET https://api.gumroad.com/v2/products` once for a preview and again on import (ids from the browser only pick). The token is never stored or logged.
@@ -13,6 +13,89 @@ Short records of product and engineering decisions. Newest first. Each entry: da
   - `products.importedFrom` with the unique index `products_store_import_unique` (store, source, external id): importing again adds nothing twice. Up to 100 per import, within the store's product limit, rate limited.
 - **Why:** founder request; PRD section 9 lists import.
 - **Consequences:** a creator moving from Stan types or pastes their products into the CSV; descriptions lose Gumroad formatting (plain paragraphs).
+
+## D-125: Store design gets its own page
+- **Date:** 2026-11-23
+- **Decision (founder: "My Store gets cluttered and confusing", plan approved 2026-11-23):**
+  - **New page** `/dashboard/design` ("Store design", second in the sidebar; under "More" on the phone's bottom bar). The editor on the left in three tabs: **Theme** (themes and accent), **Customize** (D-123) and **Sections** (D-101, with D-123 styles). A large live preview on the right (Phone or Desktop) from 1024px; on smaller screens a "Preview" button opens it full screen.
+  - **One Save button** in a sticky bar at the top saves every part that changed, one after the other, through the same server actions as before (`savePageDesign`, `saveStoreDesignAction`, `savePageBlocksAction`). Each editor registers its saver in the design draft (`useSaver`); an error shows in its own tab. "Unsaved changes" shows until saved, and leaving the page asks first. "Back to theme" in Customize now clears the design without saving; Save saves it.
+  - **Live preview** now also shows page sections while they are edited (once complete enough to draw), not only after saving.
+  - **My Store:** the Store design tab is gone; a "Store design" button sits next to "Add product", and the preview card's "Customize design", the top bar, the welcome card and the command menu link to the new page. An old `?tab=design` link redirects there. The preview data for both pages comes from `lib/dashboard/store-preview.ts`.
+  - No change to validation, data or saving rules.
+- **Not in this block:** drag and drop, undo/redo, new design options.
+
+## D-124: Email designs and ready-made texts for every creator email (block E1)
+- **Date:** 2026-11-23
+- **Decision (founder approved the E1 plan with D1, 2026-11-23; available on every plan):**
+  - **Five emails** a creator writes get the same two helpers: the order confirmation (each product), the welcome email, broadcasts, the abandoned cart reminder and the review request.
+  - **Email design (look):** one per store, chosen on Marketing → Email design with a live preview (the real email HTML in a sandboxed frame): Simple (plain, like a note), Card (white card on a soft background), Bold (a strip in the accent color with the store name) and Minimal (small, centered). Buttons and links use the store's accent with a readable button text (`onAccentFor`); a bad accent falls back to the Pickstall blue. `lib/email/looks.ts` (`renderLook`) frames every email; the store name, the button (access, checkout or review link), the boxes for a booked call or a license key, and the footer (sender identity, why they get it, unsubscribe) are always added by the code, never by the creator.
+  - **No look saved:** each email keeps its old look (Card for the order email, Simple for the others) in Pickstall blue.
+  - **Ready-made texts:** "Start from a template" on each of the five editors with 3-4 texts (`lib/email/presets.ts`). Picking one fills the subject and message, which the creator can change; nothing is saved until they save. Each set uses only the variables its email allows, checked by tests against that email's own rules.
+  - **Data:** `stores.emailLook` (optional). Saved by `saveEmailLookAction` (owner from the session, 30 per 10 minutes). Senders read `emailLook` and `theme.accent` with the store. No migration.
+- **Not in this block:** per-email looks, images or logos in emails, and rich text in the message.
+
+## D-123: Custom store design on top of the theme, and section styles (block D1)
+- **Date:** 2026-11-23
+- **Decision (founder approved the D1 plan, 2026-11-23; available on every plan):**
+  - **Customize panel** on My Store → Page design, under Theme and color. Every choice is optional; "Theme" keeps the theme's own value:
+    - Colors: background, text, secondary text, cards (accent stays in Theme and color).
+    - Page background: theme, one color, a two-color gradient, or an image (dimmed with the background color at 82% so text stays readable).
+    - Headline font from a fixed list (modern sans, classic serif, elegant serif, grotesk, round, mono; self-hosted with next/font, not preloaded) and weight.
+    - Buttons: square, rounded or pill; filled or outline (outline uses the accent as text).
+    - Cards: corners 0-24px, border none/thin/thick, shadow none/soft/hard.
+    - Layout: any of the 7 layouts with any theme; products in a grid or one column (Stack layout).
+    - Header: photo and name centered or on the left, an optional cover image above the page, social icons on or off.
+    - "Back to theme" removes the whole design.
+  - **Data:** `stores.theme.custom` (optional, `StoreDesign` in `lib/store-design/rules.ts`). Saving the theme now sets `theme.preset` and `theme.accent` as dotted fields, so the custom design stays. Page sections gain an optional `style` (`box` card/outline/none, `align` left/center, `spacing` compact/normal/roomy); only a non-default style is saved. No migration.
+  - **Safety:** fixed options and #RRGGBB colors only, no CSS or HTML; images are uploads or https (`safeImageSrc`). The server checks everything again (`saveStoreDesignAction`, owner from the session, 60 per 10 minutes). Text and secondary text need 4.5:1 on the background, every gradient color and the cards; an outline button needs its accent at 4.5:1 on the cards. A saved design is checked again when read; if its colors no longer read well (for example after a theme change), the theme's colors and background are used and the rest stays.
+  - **Preview:** the Store preview shows every valid change before saving (the design draft now carries `custom`).
+- **Not in this block:** drag and drop, columns, separate landing pages, custom CSS, the setup wizard's phone preview (theme and accent only).
+
+## D-122: Daily growth report at 21:00 IST (marketing block M5)
+- **Date:** 2026-11-23
+- **Decision (founder approved the M5 plan, 2026-11-23):**
+  - **When:** Inngest cron `TZ=Asia/Kolkata 0 21 * * *` (`lib/marketing/report-job.ts`), plus "Send today's report now" on `/admin/growth/reports` (admin, 10 an hour). A report covers 21:00 IST of the day before to the moment it is built; a run within 15 minutes after 21:00 still covers the day that just ended (`reportWindow`). Its `_id` is the India date the window ends on.
+  - **Content** (`buildDailyReport`, numbers from the database only, no AI): outreach (DMs, follow-ups, replies = moves to Replied / Interested / Call booked, closed, drafts by AI vs template, leads imported), creators (signups by source, stores first published, PayPal connected, first real sales and first paid plans in the window, same sale rules as D-119), who moved (up to 20: messaged, follow-up sent, stage moves, signed up through their link), the last 7 days (DMs, replies, signups), needs attention (follow-ups due, Replied for over a day, signed up in the last 14 days without a published store, drafts where the AI was not used) and up to 3 priorities by fixed rules (replies, follow-ups, stuck signups, new DMs or "import more"). Website visits (PostHog, M1b) and content (M7) are marked "not set up yet".
+  - **Delivery:** emailed through `sendEmail` (Resend) to the new optional env `GROWTH_REPORT_EMAIL`; without it the report is only saved. Every run rebuilds and saves the report (collection `mktReports`). The 21:00 job claims the day's email by setting `emailedAt` first, so it goes once; a failed send releases the claim. "Send now" emails a "Preview so far" each time it is pressed and never touches `emailedAt`, so the 21:00 email still goes. Plain text plus inline-styled HTML, every value escaped; lead names or handles and counts only (no notes, no creator or buyer emails).
+  - **Screens:** `/admin/growth/reports` (list, emailed or not) and `/admin/growth/reports/[day]` (same content as the email).
+- **Why:** MARKETING_AGENTS_PLAN.md M5, the founder's end-of-day data.
+- **Consequences:** the report needs Inngest connected in production (launch checklist A) and a verified Resend sender (`EMAIL_FROM`). "Send now" after 21:15 IST builds the next day's report so far; the 21:00 job completes it.
+
+## D-121: DM drafts with Groq (template fallback), fit score, Today queue and follow-ups (marketing block M3)
+- **Date:** 2026-11-23
+- **Decision (founder approved the M3 plan, 2026-11-23; Groq now because the Claude API felt costly, switch to Claude later):**
+  - **New external service: Groq** (not in CLAUDE.md's stack; founder's choice). Plain `fetch` to `POST https://api.groq.com/openai/v1/chat/completions` (no new dependency), model `openai/gpt-oss-120b` by default (`GROQ_MODEL`), strict `json_schema` output `{ firstMessage, followUp }`, `reasoning_effort: "low"`, 25 s timeout. Facts checked in Groq's docs on 2026-11-23 (models, API reference, structured outputs, your data). Groq does not keep request data by default; abuse logs up to 30 days unless Zero Data Retention is on (founder to turn it on). Its data page does not say whether it trains on API data.
+  - **Writers** (`lib/marketing/ai/`): `MARKETING_AI_PROVIDER` = `template` (default, no AI) or `groq` (needs `GROQ_API_KEY`). Claude is added later as one more writer in `writer.ts`. Every AI draft goes through `draftProblem` (600 characters, no links, emails, placeholders or markup, no tax, guarantees, testimonials or card checkout, "0%" only with PayPal's fees); a broken or failed draft is tried once more, then the template is used with a note. A 429 or a refused key goes straight to the template. Facts a draft may state live in `lib/marketing/ai/facts.ts` (our prices from `lib/config.ts`; Stan $99 and Gumroad 10% + $0.50 as read on 2026-11-23, to re-check).
+  - **What leaves our database:** first name, topic, store tool, a follower range (`followerBand`) and country. Never the handle, notes or exact follower count. Voice examples (the founder's own DMs) go in the system prompt.
+  - **Fit score** (`leadFit`, no AI, not stored): store tool (Stan/Gumroad highest), 1K-50K followers, US/UK/Canada, a known topic; India gets a PayPal warning.
+  - **Collections:** `mktDrafts` (draft history per lead: both messages, writer, model, note), `mktSettings` (one document: up to 4 voice examples, daily draft limit 30, daily contact target 15). `MktLeadDoc.followUpSentAt` (optional) and event types `followed_up`, `draft_written`. Deleting a lead deletes its drafts.
+  - **Screens:** `/admin/growth/today` (best-fitting New leads up to the daily target minus those contacted today, with drafts, "Open profile", copy and "Mark sent"; follow-ups due 4 days after contact without a reply, one only; leads with no reply 4 days after the follow-up, offered "Mark not interested", nothing automatic), `/admin/growth/settings`, and a draft card with fit on the lead page. "Write drafts for N" writes one lead per request so a slow AI never times out a page.
+  - **First DM carries no link** (cold DMs with links look like spam); the founder sends the lead's link from its page after a reply.
+  - **Privacy Policy:** "Creators we contact" now names the AI service and the fields sent.
+- **Why:** M3 of MARKETING_AGENTS_PLAN.md, at no cost to start.
+- **Consequences:** the daily draft limit is checked before each draft, so two drafts written at the same moment can pass it by one. Groq's free-tier limits are only on the account's limits page; a 429 falls back to the template. Switching to Claude needs `@anthropic-ai/sdk` (founder approval) and one writer file.
+
+## D-120: Outreach leads in Admin > Growth (marketing block M2)
+- **Date:** 2026-11-23
+- **Decision (founder approved the M2 plan, 2026-11-23; list of 500+ creators the founder built by hand, columns Name, Handle, Platform, Followers, Country, Course topic, Current tool, Contact Method, Status, Notes):**
+  - **Collections:** `mktLeads` (unique `handleKey` = platform + lower-case handle; unique random 8-character `refCode`, never derived from the handle), `mktEvents` (imported, stage changed, contacted, notes changed; actor `admin:<username>`), `mktSuppressions` (`_id` = SHA-256 of `handleKey`, for deleted and "do not contact" leads). Index `stores_acquisition_ref` on `stores.acquisition.ref`. No migration.
+  - **Import** (`/admin/growth/import`): the browser reads the CSV (2 MB, 5,000 rows, the D-100 parser, no new dependency), guesses the columns from the headers, and asks which stage each distinct Status word means (guessed, founder confirms). Parts of 1,000 rows go to `importLeadsAction`; the server cleans every row (`cleanLeadRow`: handle from `@`, a profile link or plain text; followers like "12.5K"; known tools, others kept as their label), counts rows without a valid handle with their file row numbers, skips handles already in the list or suppressed (`$setOnInsert` upserts), and records counts in the audit log.
+  - **Stages** are set by the founder: New, Contacted, Replied, Interested, Call booked, Not interested, Do not contact. "Do not contact" also suppresses the handle; moving away from it lifts that. Signing up and later steps (store live, payments, first sale, paid plan) are never stored on the lead: `linkedStores` reads them from the store found by the lead's `?ref=` code (D-119) or, failing that, a store whose social links hold the same profile URL (exact, lower-case), with the D-119 step rules (`storeSteps`, shared with the funnel).
+  - **Screens:** `/admin/growth` (counts, search, filters by stage incl. "Signed up", tool, topic, country; most followers first; 50 a page), `/admin/growth/[id]` (personal link with copy, profile link, stage, "Mark contacted today", notes, store progress, history, delete with confirmation), `/admin/growth/export` (CSV, formulas neutralized, audit-logged).
+  - **Privacy Policy:** new "Creators we contact" line (public profile data, notes, deletion on "stop", one-way hash kept).
+- **Why:** M3 (DM drafts) and M5 (daily report) need one place that knows every lead, their personal link, and whether they signed up.
+- **Consequences:** the profile match misses a store whose saved profile URL differs in letter case from the lead's handle. The counts read every lead's code on each page load, fine for thousands of leads; revisit beyond that. DMs are still sent by hand from the founder's own account (MARKETING_AGENTS_PLAN.md section 0).
+
+## D-119: Where creators sign up from, and the creator funnel (marketing block M1)
+- **Date:** 2026-11-23
+- **Decision (founder approved the M1 plan, 2026-11-23; see docs/MARKETING_AGENTS_PLAN.md):**
+  - **Capture:** the landing page and `/signup` note the link's personal lead code (`?ref=`, 3-32 letters, digits or dashes; the latest wins) and its first UTM tags or referring site in `sessionStorage` key `ps_signup_source` (this tab only, no cookie, no id), like D-112. The signup form and the username step (after Google sign-in, which ignores its own referrer because it is Google) send them as hidden fields. Store pages keep using `?ref=` for creators' affiliates (D-113) under their own key; the two never mix.
+  - **Server:** `acquisitionFrom` (`lib/marketing/acquisition.ts`) reuses the D-112 cleaning; a lead code alone counts as source `outreach`. Email signups keep it on the signup intent until the code is verified; both paths pass it to `createDraftStore`, which saves the new optional `StoreDoc.acquisition` (`ref`, `source`, `medium`, `campaign`, `referrer`). Admin-only: no public projection includes it.
+  - **First publish:** new optional `StoreDoc.publishedAt`, set by `setStorePublished` on the first publish in the same update (`$ifNull`) and never cleared.
+  - **Badge:** the "Powered by" logo on live store pages links to `/?utm_source=pickstall_store&utm_medium=badge&utm_campaign=<store slug>`; the dashboard preview keeps a plain `/` link. `Wordmark` got an optional `href`.
+  - **Funnel:** `creatorFunnel(days)` (`lib/marketing/funnel.ts`) takes the stores created in the period and counts: published (`publishedAt`, or `isPublished` for older stores), payments connected (PayPal now or ever per the audit log, or Stripe charges on), first real sale (paid or refunded order above 0, not a bump, not the mock), paid plan (a plan payment above 0); totals and up to 20 sources (no source = `direct`). Shown on the admin Overview as "Creator funnel, 30 days".
+- **Why:** the marketing agents (M2-M5) need to follow one outreach link to a signup, a sale and a plan, and the daily report needs the funnel from real data.
+- **Consequences:** no migration; older stores count as `direct`. A creator who opens the link in one tab and signs up later in another is counted as direct (M2 will also match leads by email or username). Privacy Policy gained a "How you found us" line; the legal effective date was not changed (founder to decide). PostHog (website visits) is a separate block, M1b.
 
 ## D-118: Payments move from Stripe to PayPal (creators' sales and Pickstall plans)
 - **Date:** 2026-11-21

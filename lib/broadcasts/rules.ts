@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 import { APP_NAME } from "@/lib/config";
-import { LIST_EMAIL_COLORS as C, escapeHtml, linkify, type RenderedEmail } from "@/lib/email/templates";
+import { DEFAULT_EMAIL_ACCENT, paragraphsHtml, renderLook, type EmailDesign } from "@/lib/email/looks";
+import { escapeHtml, type RenderedEmail } from "@/lib/email/templates";
 import { cleanText } from "@/lib/products/text";
 
 // Emails to a creator's list (D-095): broadcasts and the welcome email. Pure, so the editor
@@ -47,25 +48,29 @@ export function unsubscribeHeaders(oneClickUrl: string): Record<string, string> 
   return { "List-Unsubscribe": `<${oneClickUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" };
 }
 
-type RenderInput = { storeName: string; subject: string; body: string; name: string | null; unsubscribeUrl: string };
+/** `design` is the store's email design (D-124); missing: the simple look. */
+type RenderInput = { storeName: string; subject: string; body: string; name: string | null; unsubscribeUrl: string; design?: EmailDesign | null };
 
 /**
  * The email for one subscriber. `{{customer_name}}` becomes their name (or "there"). The footer
  * with the store name, why they get it and the unsubscribe link is always added and cannot be
  * edited by the creator (CLAUDE.md 5).
  */
-export function renderListEmail({ storeName, subject, body, name, unsubscribeUrl }: RenderInput): RenderedEmail {
+export function renderListEmail({ storeName, subject, body, name, unsubscribeUrl, design }: RenderInput): RenderedEmail {
   const fill = (value: string) => value.replace(NAME_VARIABLE, name?.trim() || "there");
   const filledSubject = fill(subject).replace(/[\r\n]+/g, " ").trim().slice(0, LIST_EMAIL_LIMITS.subject);
   const filledBody = fill(body);
   const why = `You get this email because you joined the email list of ${storeName}.`;
 
   const text = `${filledBody}\n\n--\n${why}\nUnsubscribe: ${unsubscribeUrl}`;
-  const paragraphs = filledBody
-    .split(/\n{2,}/)
-    .map((part) => `<p style="margin:0 0 16px">${linkify(escapeHtml(part)).replace(/\n/g, "<br>")}</p>`)
-    .join("");
-  const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:${C.text};max-width:560px;margin:0 auto;padding:24px">${paragraphs}<hr style="border:none;border-top:1px solid ${C.border};margin:32px 0 16px"><p style="margin:0;font-size:13px;color:${C.muted}">${escapeHtml(why)} <a href="${escapeHtml(unsubscribeUrl)}" style="color:${C.muted}">Unsubscribe</a></p></div>`;
+  const look = design ?? { look: "simple" as const, accent: DEFAULT_EMAIL_ACCENT };
+  const html = renderLook({
+    look: look.look,
+    accent: look.accent,
+    storeName,
+    contentHtml: paragraphsHtml(filledBody, look.accent),
+    footerHtml: `${escapeHtml(why)} <a href="${escapeHtml(unsubscribeUrl)}" style="color:inherit">Unsubscribe</a>`,
+  });
   return { subject: filledSubject, text, html };
 }
 

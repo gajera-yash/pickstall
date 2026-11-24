@@ -2,7 +2,7 @@ import { BookOpen, CalendarCheck, Download, Gift, PlayCircle } from "lucide-reac
 
 import { RatingBadge } from "@/components/store/stars";
 import { PriceTag } from "@/components/store/price-tag";
-import type { StoreTheme } from "@/components/store/store-theme";
+import { buttonStyle, type StoreTheme } from "@/components/store/store-theme";
 import { durationLabel } from "@/lib/coaching/settings";
 import { COURSE_CATEGORY_LABELS, accessLabel } from "@/lib/courses/settings";
 import { safeImageSrc } from "@/lib/media/media";
@@ -87,7 +87,7 @@ export function PriceAndButton({ product, theme, currency }: { product: PublicPr
       ) : (
         <PriceTag product={product} currency={currency} className="font-display text-money-m" regularStyle={{ color: preset.muted }} />
       )}
-      <span className="flex h-11 items-center px-5 text-button" style={{ background: theme.accent, color: theme.onAccent, borderRadius: Math.min(preset.radiusPx, 12) }}>
+      <span className="flex h-11 items-center px-5 text-button" style={buttonStyle(theme)}>
         {product.buttonText || (product.type === "course" ? "Enroll now" : product.type === "coaching" ? "Book a call" : product.type === "lead_magnet" ? "Get it free" : "Buy now")}
       </span>
     </span>

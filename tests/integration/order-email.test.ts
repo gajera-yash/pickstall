@@ -9,6 +9,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mail = vi.hoisted(() => ({ emails: [] as { to: string; subject: string; text: string }[], fail: false }));
 
 vi.mock("@/lib/email/send", () => ({
+  // lib/orders/confirmation.ts checks failures with `instanceof EmailSendError`.
+  EmailSendError: class EmailSendError extends Error {
+    reason = "provider";
+    detail: string | undefined = undefined;
+  },
   sendEmail: vi.fn(async (email: { to: string; subject: string; text: string }) => {
     if (mail.fail) throw new Error("Could not send the email.");
     mail.emails.push(email);

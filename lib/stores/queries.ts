@@ -6,6 +6,8 @@ import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { storeAccess, type StoreAccess } from "@/lib/plans/access";
 import type { PageDesignInput, SocialLink, StoreProfileInput } from "@/lib/stores/schemas";
 import { socialLinksOf } from "@/lib/stores/social-links";
+import type { StoreDesign } from "@/lib/store-design/rules";
+import type { EmailLook } from "@/lib/email/looks";
 
 export { socialLinksOf };
 
@@ -21,7 +23,7 @@ export type CreatorStore = {
   avatarUrl: string | null;
   socialLinks: SocialLink[];
   currency: StoreProfileInput["currency"];
-  theme: { preset: PageDesignInput["themePreset"]; accent: string };
+  theme: { preset: PageDesignInput["themePreset"]; accent: string; custom?: StoreDesign | null };
   stripeChargesEnabled: boolean;
   /** Connected Stripe account details (D-053), for Settings > Payments. Never sent to buyers. */
   stripe: { connected: boolean; payoutsEnabled: boolean; detailsSubmitted: boolean };
@@ -99,7 +101,8 @@ export async function updateStorePageDesign(ownerId: string, input: PageDesignIn
   const { stores } = await collections();
   const result = await stores.updateOne(
     { ownerId },
-    { $set: { theme: { preset: input.themePreset, accent: input.accent }, updatedAt: new Date() } },
+    // Dotted fields, so the creator's custom design (D-123) stays when the theme changes.
+    { $set: { "theme.preset": input.themePreset, "theme.accent": input.accent, updatedAt: new Date() } },
   );
   return result.matchedCount === 1;
 }
@@ -212,9 +215,36 @@ export async function stripeAccountOfStore(storeId: string): Promise<string | nu
   return doc?.stripeAccountId ?? null;
 }
 
-/** Publishes or unpublishes the owner's store page. Returns false if they have no store. */
+/**
+ * Publishes or unpublishes the owner's store page. Returns false if they have no store. The first
+ * publish also sets `publishedAt` (D-119), in the same update; later ones keep the first date.
+ */
 export async function setStorePublished(ownerId: string, isPublished: boolean): Promise<boolean> {
   const { stores } = await collections();
-  const result = await stores.updateOne({ ownerId }, { $set: { isPublished, updatedAt: new Date() } });
+  const now = new Date();
+  const result = isPublished
+    ? await stores.updateOne({ ownerId }, [{ $set: { isPublished: true, updatedAt: now, publishedAt: { $ifNull: ["$publishedAt", now] } } }])
+    : await stores.updateOne({ ownerId }, { $set: { isPublished: false, updatedAt: now } });
+  return result.matchedCount === 1;
+}
+
+/** Saves the creator's custom design (D-123, already validated) on the owner's store, or removes it with null. */
+export async function updateStoreDesign(ownerId: string, design: StoreDesign | null): Promise<boolean> {
+  const { stores } = await collections();
+  const result = await stores.updateOne({ ownerId }, { $set: { "theme.custom": design, updatedAt: new Date() } });
+  return result.matchedCount === 1;
+}
+
+/** The owner's email look (D-124), or null when none is saved. */
+export async function findEmailLook(ownerId: string): Promise<EmailLook | null> {
+  const { stores } = await collections();
+  const doc = await stores.findOne({ ownerId }, { projection: { emailLook: 1 } });
+  return doc?.emailLook ?? null;
+}
+
+/** Saves the email look (already validated) on the owner's store. */
+export async function updateEmailLook(ownerId: string, look: EmailLook): Promise<boolean> {
+  const { stores } = await collections();
+  const result = await stores.updateOne({ ownerId }, { $set: { emailLook: look, updatedAt: new Date() } });
   return result.matchedCount === 1;
 }

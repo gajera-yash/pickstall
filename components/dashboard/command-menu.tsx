@@ -73,7 +73,7 @@ export function CommandMenu({ storeUrl }: { storeUrl: string }) {
                   <Copy aria-hidden="true" className="size-5 text-mute" />
                   Copy my store link
                 </CommandItem>
-                <CommandItem onSelect={() => run(() => router.push("/dashboard?tab=design#my-store-tabs"))}>
+                <CommandItem onSelect={() => run(() => router.push("/dashboard/design"))}>
                   <Palette aria-hidden="true" className="size-5 text-mute" />
                   Customize store design
                 </CommandItem>

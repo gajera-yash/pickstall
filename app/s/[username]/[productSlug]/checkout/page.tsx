@@ -50,7 +50,7 @@ export default async function CheckoutPage({ params }: PageProps<"/s/[username]/
   }
 
   return (
-    <StoreFrame theme={theme} wide>
+    <StoreFrame theme={theme} wide slug={store.slug}>
       <div className="flex w-full max-w-xl flex-col gap-6 @3xl:max-w-5xl">
         <Link href={`/@${store.slug}/${product.slug}`} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold" style={{ color: preset.muted }}>
           <ArrowLeft aria-hidden="true" className="size-4" />

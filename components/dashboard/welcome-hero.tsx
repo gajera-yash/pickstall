@@ -53,7 +53,7 @@ export function WelcomeHero({ name, storeUrl, ready, publicPath }: Props) {
         </p>
         <div className="mt-2 flex flex-wrap gap-3">
           <Button asChild size="lg">
-            <Link href={publicPath ?? "/dashboard?tab=design#store-preview"} {...(publicPath ? { target: "_blank", rel: "noopener" } : {})}>
+            <Link href={publicPath ?? "/dashboard/design"} {...(publicPath ? { target: "_blank", rel: "noopener" } : {})}>
               View my store
               <ExternalLink aria-hidden="true" className="size-4" />
             </Link>

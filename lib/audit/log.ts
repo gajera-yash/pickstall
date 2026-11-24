@@ -40,6 +40,9 @@ export const AUDIT_ACTIONS = [
   "admin.password_changed",
   "admin.billing_imported",
   "admin.emails_retried",
+  "admin.leads_imported",
+  "admin.lead_deleted",
+  "admin.leads_exported",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

@@ -21,7 +21,7 @@ import type { PublicProduct, PublicStore } from "@/lib/stores/public";
 export function StorePreviewCard({ store, products, isPublished }: { store: PublicStore; products: PublicProduct[]; isPublished: boolean }) {
   const draft = useDesignDraft();
   const [expanded, setExpanded] = useState(false);
-  const shown: PublicStore = draft ? { ...store, theme: { preset: draft.design.themePreset, accent: draft.design.accent } } : store;
+  const shown: PublicStore = draft ? { ...store, theme: { preset: draft.design.themePreset, accent: draft.design.accent, custom: draft.design.custom } } : store;
 
   return (
     <Card id="store-preview" className="scroll-mt-24 gap-4">
@@ -39,7 +39,7 @@ export function StorePreviewCard({ store, products, isPublished }: { store: Publ
           Expand preview
         </Button>
         <Button asChild variant="secondary" className="border-blue text-blue sm:flex-1 xl:flex-none not-disabled:hover:bg-blue-soft">
-          <Link href="/dashboard?tab=design#my-store-tabs">
+          <Link href="/dashboard/design">
             <Palette aria-hidden="true" className="size-4" />
             Customize design
           </Link>
@@ -50,7 +50,7 @@ export function StorePreviewCard({ store, products, isPublished }: { store: Publ
         <DialogContent className="sm:max-w-[min(1100px,calc(100vw-4rem))]">
           <DialogHeader>
             <DialogTitle>Store preview</DialogTitle>
-            <DialogDescription>{draft?.unsaved ? "Your unsaved design. Save it in Page design to publish it." : "How your store page looks to visitors."}</DialogDescription>
+            <DialogDescription>{draft?.unsaved ? "Your unsaved design. Save it in Store design to publish it." : "How your store page looks to visitors."}</DialogDescription>
           </DialogHeader>
           <LiveStorePreview store={shown} products={products} maxHeight={640} />
         </DialogContent>

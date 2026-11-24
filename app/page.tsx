@@ -10,6 +10,7 @@ import { GuestActions, NavActions } from "@/components/landing/nav-actions";
 import { Pricing } from "@/components/landing/pricing";
 import { AnalyticsSection, CheckoutSection, ProductsSection, StorefrontSection } from "@/components/landing/product";
 import { Faq, FinalCta, Founders, LandingFooter } from "@/components/landing/sections";
+import { SignupSource } from "@/components/marketing/signup-source";
 import { APP_NAME } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default function Home() {
         }
       />
       <main id="main" className="flex-1">
+        <SignupSource />
         <MotionProvider>
           <Hero />
           <ProofStrip />

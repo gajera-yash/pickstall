@@ -18,7 +18,7 @@ export function BentoLayout({ store, products, theme, preview }: StoreLayoutProp
   const { before, after } = splitBlocks(store.pageBlocks);
 
   return (
-    <StoreFrame theme={theme} preview={preview} wide>
+    <StoreFrame theme={theme} preview={preview} wide slug={store.slug}>
       <ul className="grid w-full auto-rows-auto gap-4 @2xl:grid-cols-2 @4xl:grid-cols-4">
         <li className="flex flex-col justify-center p-6 @4xl:col-span-2" style={cardStyle(theme)}>
           <StoreHeader store={store} align="start" />

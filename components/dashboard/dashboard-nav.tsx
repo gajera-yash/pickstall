@@ -8,6 +8,7 @@ import {
   Megaphone,
   MoreHorizontal,
   Package,
+  Palette,
   Settings,
   ShoppingBag,
   Star,
@@ -20,12 +21,13 @@ import type { ReactNode } from "react";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { BOTTOM_BAR_SECTIONS, DASHBOARD_SECTIONS, isSectionActive, type DashboardSectionId } from "@/lib/dashboard/nav";
+import { BOTTOM_BAR_IDS, DASHBOARD_SECTIONS, isSectionActive, type DashboardSectionId } from "@/lib/dashboard/nav";
 import { LOCKED_HINT, isSectionLocked } from "@/lib/dashboard/setup-lock";
 import { cn } from "@/lib/utils";
 
 export const SECTION_ICONS: Record<DashboardSectionId, LucideIcon> = {
   store: House,
+  design: Palette,
   products: Package,
   orders: ShoppingBag,
   customers: Users,
@@ -47,8 +49,9 @@ export function DashboardNav({ variant, unlocked }: { variant: "sidebar" | "bott
   const locked = (id: DashboardSectionId) => isSectionLocked(id, unlocked);
 
   if (variant === "bottom") {
-    const main = DASHBOARD_SECTIONS.slice(0, BOTTOM_BAR_SECTIONS);
-    const more = DASHBOARD_SECTIONS.slice(BOTTOM_BAR_SECTIONS);
+    const onBar = (id: DashboardSectionId) => (BOTTOM_BAR_IDS as readonly string[]).includes(id);
+    const main = DASHBOARD_SECTIONS.filter((section) => onBar(section.id));
+    const more = DASHBOARD_SECTIONS.filter((section) => !onBar(section.id));
     const moreActive = more.some((section) => isSectionActive(pathname, section.href));
     const tabClass = (active: boolean) =>
       cn(

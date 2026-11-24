@@ -20,7 +20,7 @@ export function EditorialLayout({ store, products, theme, preview }: StoreLayout
   const [featured, ...rest] = products;
 
   return (
-    <StoreFrame theme={theme} preview={preview} wide>
+    <StoreFrame theme={theme} preview={preview} wide slug={store.slug}>
       <div className="flex w-full max-w-4xl flex-col gap-10 @3xl:gap-14">
         <div className="border-y py-8 @3xl:py-12" style={rule}>
           <StoreHeader store={store} />

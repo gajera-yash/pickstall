@@ -5,8 +5,6 @@ import { Suspense } from "react";
 import { ChecklistCard } from "@/components/dashboard/checklist-card";
 import { KpiSection, type KpiSeries } from "@/components/dashboard/kpi-section";
 import { MyStoreTabs } from "@/components/dashboard/my-store-tabs";
-import { DesignDraftProvider } from "@/components/dashboard/design-draft";
-import { PageDesignForm } from "@/components/dashboard/page-design-form";
 import { ProductsEmpty } from "@/components/dashboard/products-empty";
 import { SocialLogo } from "@/components/brand/social-logos";
 import { StoreLinkCard } from "@/components/dashboard/store-link-card";
@@ -21,17 +19,16 @@ import { requireCreator } from "@/lib/auth/guards";
 import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
 import { incomeStats } from "@/lib/orders/creator-queries";
-import { PageSectionsEditor } from "@/components/dashboard/page-sections-editor";
 import { ProductList } from "@/components/dashboard/product-list";
 import { SOCIAL_LINK_LABELS, storeLink } from "@/lib/config";
 import { loadSetupGate } from "@/lib/dashboard/setup-gate";
 import { firstName } from "@/lib/dashboard/greeting";
-import { lessonCountsOf, type PublicProduct, type PublicStore } from "@/lib/stores/public";
+import { storePreviewData } from "@/lib/dashboard/store-preview";
 import type { SocialLink } from "@/lib/stores/schemas";
 import { displayValueFor } from "@/lib/stores/social-handles";
 
 // My Store home (D-029, D-076, reference docs/ui-reference/dashboard.webp): welcome card, last-30-days
-// KPIs and the Products / Store design / Links / Analytics tabs, with a live store preview and help on
+// KPIs and the Products / Links / Analytics tabs (Store design has its own page, D-125), with a live store preview and help on
 // the right from 1280px up. Until setup is done it shows the onboarding screen instead (D-079). A store
 // that is unlocked but has an open step again (unpublished, say) gets the "Get started" steps back.
 export default function MyStorePage({ searchParams }: PageProps<"/dashboard">) {
@@ -61,40 +58,9 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
   // Real numbers from paid orders; days without sales (or an unreachable database) are zeros.
   const series: KpiSeries = stats ? stats.series : { revenueCents: zeros(), orders: zeros(), customers: zeros() };
   // The live preview draws the real public page from the same public fields (D-062).
-  const previewStore: PublicStore = {
-    id: store.id,
-    slug: store.slug,
-    name: store.name,
-    bio: store.bio,
-    avatarUrl: store.avatarUrl,
-    socialLinks: store.socialLinks,
-    theme: store.theme,
-    currency: store.currency,
-    // The preview shows the page itself; a paused store gets the banner in the dashboard instead.
-    isOpen: true,
-    // The dashboard preview never loads pixels.
-    pixels: null,
-    pageBlocks,
-  };
-  const published = products.filter((product) => product.status === "published");
-  const lessonCounts = await lessonCountsOf(store.id, published).catch(() => new Map<string, number>());
-  const previewProducts: PublicProduct[] = published.map((product) => ({
-      id: product._id,
-      slug: product.slug,
-      title: product.title,
-      description: product.description,
-      descriptionDoc: product.descriptionDoc ?? null,
-      coverUrl: product.coverUrl,
-      priceCents: product.priceCents,
-      salePriceCents: product.salePriceCents ?? null,
-      buttonText: product.buttonText,
-      type: product.type,
-      course: product.type === "course" ? { category: product.course?.category ?? null, accessDays: product.course?.accessDays ?? null, lessonCount: lessonCounts.get(product._id) ?? 0 } : null,
-      coaching: product.type === "coaching" ? { durationMinutes: product.coaching?.durationMinutes ?? 30 } : null,
-    }));
+  const { previewStore, previewProducts } = await storePreviewData(store, products, pageBlocks);
 
   return (
-    <DesignDraftProvider saved={{ themePreset: store.theme.preset, accent: store.theme.accent }}>
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="flex min-w-0 flex-col gap-6">
         <WelcomeHero name={name} storeUrl={`https://${link}`} ready={checklist.complete} publicPath={store.isPublished ? `/@${store.slug}` : null} />
@@ -111,12 +77,6 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
         <MyStoreTabs
           productCount={productCount}
           products={products.length === 0 ? <ProductsEmpty /> : <ProductList products={products} currency={store.currency} storeSlug={store.slug} sales={sales} />}
-          design={
-            <>
-              <PageDesignForm initial={{ themePreset: store.theme.preset, accent: store.theme.accent }} />
-              <PageSectionsEditor initial={pageBlocks} />
-            </>
-          }
           links={<LinksTab links={store.socialLinks} />}
           analytics={<AnalyticsTab isPublished={store.isPublished} />}
         />
@@ -127,7 +87,6 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
         <HelpCard />
       </aside>
     </div>
-    </DesignDraftProvider>
   );
 }
 

@@ -17,7 +17,7 @@ export function GlassLayout({ store, products, theme, preview }: StoreLayoutProp
   const { before, after } = splitBlocks(store.pageBlocks);
 
   return (
-    <StoreFrame theme={theme} preview={preview} wide>
+    <StoreFrame theme={theme} preview={preview} wide slug={store.slug}>
       <div className="flex w-full max-w-5xl flex-col gap-8">
         <div className="mx-auto w-full max-w-2xl p-8" style={cardStyle(theme)}>
           <StoreHeader store={store} />
