@@ -2,18 +2,17 @@ import "server-only";
 
 import { buildChecklist, type Checklist } from "@/lib/dashboard/checklist";
 import { connectAvailable } from "@/lib/payments/connect";
-import { activeProvider, paypalConnectAvailable } from "@/lib/payments/paypal-config";
+import { paypalConnectAvailable } from "@/lib/payments/paypal-config";
 import { testSellerAccountId } from "@/lib/payments/test-account";
 import { isUnnamedDraft, listProducts, type CreatorProduct } from "@/lib/products/queries";
 import type { CreatorStore } from "@/lib/stores/queries";
 
 /**
- * True when this server can connect a store to its payment provider (D-045): PayPal by default
- * (D-118), or Stripe Connect OAuth (D-053) / the test-mode seller account (D-034) when Stripe is on.
+ * True when this server can connect a store to a payment provider:
+ * PayPal (D-118) or Stripe Connect / test seller account.
  */
 export function paymentsConnectable(): boolean {
-  if (activeProvider() === "paypal") return paypalConnectAvailable();
-  return connectAvailable() || testSellerAccountId() !== null;
+  return paypalConnectAvailable() || connectAvailable() || testSellerAccountId() !== null;
 }
 
 export type SetupState = {

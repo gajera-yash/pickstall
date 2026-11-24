@@ -171,25 +171,24 @@ function ProductStep({ step, products, currency, error }: { step: ChecklistItem;
 
 function PaymentsStep({ step, store, outcome }: { step: ChecklistItem; store: CreatorStore; outcome: StripeOutcome | null }) {
   const connected = store.chargesEnabled;
-  const provider = providerLabel();
-  const testMode = activeProvider() === "stripe" ? !liveKey() : paypalSandbox();
+  const testMode = !liveKey() || paypalSandbox();
   return (
     <Card className="gap-6">
       <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-display text-h3">Connect payments</h2>
-          {/* Test mode (PayPal sandbox) until the founder approves live mode (CLAUDE.md section 9). */}
           {testMode && <Badge variant="testMode">Test mode</Badge>}
         </div>
-        <p className="text-sm text-mute">Buyers pay you directly through your own {provider} account. Pickstall never holds your money and takes 0% of your sales.</p>
+        <p className="text-sm text-mute">
+          Connect Stripe or PayPal so buyers pay you directly into your account. Pickstall never holds your money and takes 0% of your sales.
+        </p>
       </CardHeader>
 
       <PaymentsConnection store={store} returnTo="setup" continueHref={SETUP_PATH} stripeOutcome={outcome} />
 
       {!step.available && (
         <p className="text-sm text-mute">
-          Connecting {provider} is not switched on for this server yet, so this step does not hold up your setup. It turns on by itself once{" "}
-          {provider} is configured.
+          Connecting payments is not switched on for this server yet, so this step does not hold up your setup. It turns on by itself once a payment provider is configured.
         </p>
       )}
       {(connected || !step.available) && (
@@ -197,7 +196,7 @@ function PaymentsStep({ step, store, outcome }: { step: ChecklistItem; store: Cr
           <NextLink />
         </div>
       )}
-      <p className="text-sm text-mute">{provider}&apos;s payment processing fees still apply.</p>
+      <p className="text-sm text-mute">Your payment provider&apos;s processing fees still apply.</p>
     </Card>
   );
 }

@@ -3,19 +3,27 @@ import "server-only";
 import { mockAllowed, mockProvider } from "@/lib/payments/mock";
 import { paypalProvider } from "@/lib/payments/paypal";
 import { activeProvider } from "@/lib/payments/paypal-config";
-import { storeCanTakePayments, type SellerStore } from "@/lib/payments/seller-status";
+import { storeCanTakePayPal, storeCanTakePayments, storeCanTakeStripe, type SellerStore } from "@/lib/payments/seller-status";
 import { stripeProvider } from "@/lib/payments/stripe";
 import type { PaymentProvider } from "@/lib/payments/types";
 
 export type { PaymentProvider } from "@/lib/payments/types";
-export { storeCanTakePayments, type SellerStore } from "@/lib/payments/seller-status";
+export { storeCanTakePayPal, storeCanTakePayments, storeCanTakeStripe, type SellerStore } from "@/lib/payments/seller-status";
 
 /**
  * The provider that takes this store's payments, or null when the store cannot sell paid products:
- * the active provider when the creator connected it, else the mock in development only.
+ * whichever provider the creator connected (PayPal or Stripe), else the mock in development only.
  */
 export function providerForStore(store: SellerStore): PaymentProvider | null {
-  if (storeCanTakePayments(store)) return activeProvider() === "paypal" ? paypalProvider : stripeProvider;
+  const hasPayPal = storeCanTakePayPal(store);
+  const hasStripe = storeCanTakeStripe(store);
+
+  if (hasPayPal && hasStripe) {
+    return activeProvider() === "stripe" ? stripeProvider : paypalProvider;
+  }
+  if (hasPayPal) return paypalProvider;
+  if (hasStripe) return stripeProvider;
+
   if (mockAllowed()) return mockProvider;
   return null;
 }

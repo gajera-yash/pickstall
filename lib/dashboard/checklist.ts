@@ -67,7 +67,7 @@ export function buildChecklist(input: ChecklistInput): Checklist {
     {
       id: "connect-payments",
       label: "Connect payments",
-      description: "Connect Stripe so buyers pay you directly.",
+      description: "Connect Stripe or PayPal so buyers pay you directly.",
       done: input.chargesEnabled,
       available: input.paymentsAvailable || input.chargesEnabled,
       href: stepHref("connect-payments"),
