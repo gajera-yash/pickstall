@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import { MongoClient, MongoServerError, type Db } from "mongodb";
 
 import { serverEnv } from "@/lib/env.server";
@@ -155,10 +157,34 @@ export async function ensureConnected(): Promise<void> {
   await mongoClient.connect();
 }
 
+/**
+ * The version of the index list: a hash of `ensureIndexes` itself, so adding or changing an index
+ * gives a new version without anyone having to remember to bump a number.
+ */
+export const INDEX_VERSION = createHash("sha256").update(ensureIndexes.toString()).digest("hex").slice(0, 16);
+
+type AppMetaDoc = { _id: string; version: string; at: Date };
+
+/**
+ * Builds the indexes only when this version has not built them yet (D-127). Before, every new
+ * server instance sent all ~80 createIndex commands and its first request waited for them (7-10 s
+ * cold starts). Now a cold start costs one read of `appMeta`; the full list runs once per new index
+ * version (in practice once per deploy that changes indexes). createIndex stays idempotent, so two
+ * instances building at once is harmless.
+ */
+export async function ensureIndexesOnce(db: Db, build: (db: Db) => Promise<void> = ensureIndexes): Promise<"built" | "current"> {
+  const meta = db.collection<AppMetaDoc>("appMeta");
+  const saved = await meta.findOne({ _id: "indexes" }, { projection: { version: 1 } });
+  if (saved?.version === INDEX_VERSION) return "current";
+  await build(db);
+  await meta.updateOne({ _id: "indexes" }, { $set: { version: INDEX_VERSION, at: new Date() } }, { upsert: true });
+  return "built";
+}
+
 /** The app database with its indexes in place. Use this from data-access code. */
 export async function getDb(): Promise<Db> {
   await ensureConnected();
-  globalForMongo.pickstallIndexes ??= ensureIndexes(mongoDb).catch((error: unknown) => {
+  globalForMongo.pickstallIndexes ??= ensureIndexesOnce(mongoDb).then(() => undefined).catch((error: unknown) => {
     globalForMongo.pickstallIndexes = undefined; // retry on the next call
     logger.error("db.ensure_indexes_failed", { code: error instanceof MongoServerError ? error.code : undefined });
     throw error;

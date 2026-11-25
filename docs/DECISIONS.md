@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-127: Faster pages: indexes once per version, and functions in Mumbai (speed block S1-S2)
+- **Date:** 2026-11-25
+- **Measured on the live site:** cold pages took 7-10 s (Store design 10.2 s, Products 7.2 s), warm ones about 0.9 s. Vercel served from Mumbai but ran the functions in Washington (`bom1::iad1`), while MongoDB Atlas is in AWS Mumbai (ap-south-1), so every query crossed the world.
+- **Decision (founder approved the speed plan; Atlas region given 2026-11-25):**
+  - **Indexes:** `getDb` no longer sends all ~80 `createIndex` commands on every new server instance. `ensureIndexesOnce` reads one `appMeta` document (`_id: "indexes"`); when its `version` matches `INDEX_VERSION` (a hash of `ensureIndexes`, so changing the index list changes it), nothing is built. Otherwise the indexes are built and the version is saved. A failed build saves nothing, so the next start tries again.
+  - **Region:** `vercel.json` sets `"regions": ["bom1"]` (Mumbai), next to the database.
+  - **Data:** new small collection `appMeta` (one document). No migration.
+- **Consequence:** an index dropped by hand is not recreated until the index list changes; change the list (or delete the `appMeta` document) to rebuild.
+- **Next:** S3 fewer queries per page, S4 stale screens after a click, S5 instant loading skeletons.
+
 ## D-126: Product import from Gumroad and from a CSV (Stan Store)
 - **Date:** 2026-11-21
 - **Decision (founder asked for "Gumroad/Stan thi product import"):**
