@@ -25,7 +25,7 @@ export async function savePixelsAction(raw: unknown): Promise<Result<StorePixels
     logger.error("pixels.save_failed", { name: error instanceof Error ? error.name : undefined });
     return err("Couldn't save. Try again.");
   }
-  revalidatePath("/dashboard/marketing");
+  revalidatePath("/dashboard/marketing", "layout");
   revalidatePath(`/@${store.slug}`);
   return ok(parsed.data);
 }

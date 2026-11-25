@@ -30,6 +30,6 @@ export async function saveReviewRequestSettingsAction(raw: unknown): Promise<Res
     logger.error("review_request.save_failed", { name: error instanceof Error ? error.name : undefined });
     return err("Couldn't save. Try again.");
   }
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
   return ok({ enabled: parsed.data.enabled });
 }

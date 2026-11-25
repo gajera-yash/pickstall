@@ -30,6 +30,6 @@ export async function saveCartSettingsAction(raw: unknown): Promise<Result<{ ena
     logger.error("abandoned_cart.save_failed", { name: error instanceof Error ? error.name : undefined });
     return err("Couldn't save. Try again.");
   }
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
   return ok({ enabled: parsed.data.enabled });
 }

@@ -84,7 +84,7 @@ export async function createCouponAction(_prev: CreateCouponState, formData: For
     if (result === "taken") return err("You already have a code with this name.", "code");
     if (result === "limit") return err("You have reached the coupon limit for your store.");
     if (result === "bad_products") return err("Pick products from your own store.", "productIds");
-    revalidatePath(MARKETING_PATH);
+    revalidatePath(MARKETING_PATH, "layout");
     return ok({ id: result.id });
   } catch (error) {
     logger.error("coupons.create_failed", { name: error instanceof Error ? error.name : undefined });
@@ -102,6 +102,6 @@ export async function setCouponActiveAction(couponId: string, active: boolean): 
     logger.error("coupons.toggle_failed", { name: error instanceof Error ? error.name : undefined });
     return err("Couldn't save. Try again.");
   }
-  revalidatePath(MARKETING_PATH);
+  revalidatePath(MARKETING_PATH, "layout");
   return ok({ active });
 }

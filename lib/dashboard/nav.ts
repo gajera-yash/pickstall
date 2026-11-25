@@ -34,6 +34,28 @@ export const SETTINGS_SECTIONS = [
 
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]["id"];
 
+/** Marketing sub-nav (D-129): the overview, then one page per tool. */
+export const MARKETING_SECTIONS = [
+  { id: "overview", label: "Overview", href: "/dashboard/marketing" },
+  { id: "coupons", label: "Coupons", href: "/dashboard/marketing/coupons" },
+  { id: "offers", label: "Offers", href: "/dashboard/marketing/offers" },
+  { id: "emails", label: "Email design", href: "/dashboard/marketing/emails" },
+  { id: "automations", label: "Automations", href: "/dashboard/marketing/automations" },
+  { id: "subscribers", label: "Email list", href: "/dashboard/marketing/subscribers" },
+  { id: "broadcasts", label: "Broadcasts", href: "/dashboard/marketing/broadcasts" },
+  { id: "affiliates", label: "Affiliates", href: "/dashboard/marketing/affiliates" },
+  { id: "funnels", label: "Funnels", href: "/dashboard/marketing/funnels" },
+  { id: "pixels", label: "Pixels", href: "/dashboard/marketing/pixels" },
+] as const;
+
+export type MarketingSectionId = (typeof MARKETING_SECTIONS)[number]["id"];
+
+/** The overview matches /dashboard/marketing only; each tool also matches its sub-pages. */
+export function isMarketingSectionActive(pathname: string, href: string): boolean {
+  if (href === "/dashboard/marketing") return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 /** My Store matches /dashboard only; the other sections also match their sub-pages. */
 export function isSectionActive(pathname: string, href: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
@@ -54,6 +76,10 @@ export type Crumb = { label: string; href: string };
 export function breadcrumbFor(pathname: string): Crumb[] {
   const section = DASHBOARD_SECTIONS.find((item) => isSectionActive(pathname, item.href)) ?? DASHBOARD_SECTIONS[0];
   const crumbs: Crumb[] = [{ label: section.label, href: section.href }];
+  if (section.id === "marketing") {
+    const page = MARKETING_SECTIONS.find((item) => item.id !== "overview" && isMarketingSectionActive(pathname, item.href));
+    if (page) crumbs.push({ label: page.label, href: page.href });
+  }
   if (section.id === "settings") {
     const page = SETTINGS_SECTIONS.find((item) => isSettingsSectionActive(pathname, item.href));
     if (page) crumbs.push({ label: page.label, href: page.href });

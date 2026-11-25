@@ -1,4 +1,4 @@
-import { ArrowLeft, Filter } from "lucide-react";
+import { Filter } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -22,10 +22,6 @@ const PERIODS = [30, 90] as const;
 export default function FunnelsPage({ searchParams }: PageProps<"/dashboard/marketing/funnels">) {
   return (
     <>
-      <Link href="/dashboard/marketing" className="inline-flex items-center gap-1 self-start text-sm font-semibold text-mute hover:text-ink">
-        <ArrowLeft aria-hidden="true" className="size-4" />
-        Marketing
-      </Link>
       <PageHeader title="Funnels" description="Sale, then upsell, then downsell: how many buyers take each offer." />
       <Suspense fallback={<Skeleton className="h-72 w-full rounded-lg" />}>
         <FunnelsContent searchParams={searchParams} />

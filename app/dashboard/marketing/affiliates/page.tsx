@@ -1,5 +1,3 @@
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { Suspense } from "react";
 
 import { AffiliateManager, type ManagedAffiliate } from "@/components/dashboard/affiliate-manager";
@@ -17,10 +15,6 @@ const PATH = "/dashboard/marketing/affiliates";
 export default function AffiliatesPage() {
   return (
     <>
-      <Link href="/dashboard/marketing" className="inline-flex items-center gap-1 self-start text-sm font-semibold text-mute hover:text-ink">
-        <ArrowLeft aria-hidden="true" className="size-4" />
-        Marketing
-      </Link>
       <PageHeader title="Affiliates" description="People who share your store for a commission. You pay them; Pickstall keeps count." />
       <Suspense fallback={<Skeleton className="h-96 w-full rounded-lg" />}>
         <AffiliatesContent />

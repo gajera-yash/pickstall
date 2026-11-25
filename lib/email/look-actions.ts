@@ -24,6 +24,6 @@ export async function saveEmailLookAction(raw: unknown): Promise<Result<{ saved:
     logger.error("email_look.save_failed", { name: error instanceof Error ? error.name : undefined });
     return err("Couldn't save. Try again.");
   }
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
   return ok({ saved: true });
 }

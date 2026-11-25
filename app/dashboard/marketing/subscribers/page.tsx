@@ -1,10 +1,9 @@
-import { ArrowLeft, Download, Mail, Search } from "lucide-react";
+import { Download, Mail, Search } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { formatDay, Initial, ListCard } from "@/components/dashboard/orders-ui";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { WelcomeEmailForm } from "@/components/dashboard/list-email-composer";
 import { SubscriberImport } from "@/components/dashboard/subscriber-import";
 import { SubscriberRowActions } from "@/components/dashboard/subscriber-row-actions";
 import { Badge } from "@/components/ui/badge";
@@ -17,22 +16,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { findWelcomeEmail } from "@/lib/broadcasts/queries";
 import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
 import { withQuery } from "@/lib/orders/params";
-import { can, subscriberLimit } from "@/lib/plans/access";
+import { subscriberLimit } from "@/lib/plans/access";
 import { countSubscribed, listSubscribers, type SubscriberListItem } from "@/lib/subscribers/queries";
 
 // The creator's email list (D-094): everyone who signed up for a lead magnet or ticked "Email me
 // updates" at checkout. Search, "Load more", CSV export, and per row Unsubscribe or Delete. Only
-// the signed-in creator's store. The welcome email (D-095) is set here too.
+// the signed-in creator's store. The welcome email lives in Automations (D-129).
 const PATH = "/dashboard/marketing/subscribers";
-const WELCOME_DRAFT = "Hi {{customer_name}},\n\nThanks for joining my list! I'll share new guides and offers here from time to time.";
 
 export default function SubscribersPage({ searchParams }: PageProps<"/dashboard/marketing/subscribers">) {
   return (
     <>
-      <Link href="/dashboard/marketing" className="inline-flex items-center gap-1 self-start text-sm font-semibold text-mute hover:text-ink">
-        <ArrowLeft aria-hidden="true" className="size-4" />
-        Marketing
-      </Link>
       <PageHeader
         title="Subscribers"
         description="People who joined your email list from a free download or at checkout."
@@ -94,7 +88,14 @@ async function SubscribersContent({ searchParams }: Pick<PageProps<"/dashboard/m
 
       <SubscriberImport />
 
-      <WelcomeEmailForm storeName={store.name} initial={welcome ?? { enabled: false, subject: `Welcome to ${store.name}`, body: WELCOME_DRAFT }} locked={!can(store.access, "automations")} />
+      {/* The welcome email moved to Automations (D-129). */}
+      <p className="text-sm text-mute">
+        Welcome email for new subscribers:{" "}
+        <Link href="/dashboard/marketing/automations" className="font-semibold text-blue underline underline-offset-4">
+          {welcome?.enabled ? "on" : "off"}, set it in Automations
+        </Link>
+        .
+      </p>
 
       <form action={PATH} className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <InputGroup className="h-10 sm:w-72">

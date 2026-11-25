@@ -65,7 +65,7 @@ export async function sendBroadcastAction(raw: unknown): Promise<Result<{ id: st
       await markBroadcastFailed(id);
       return err("Sending isn't set up yet. Try again later.");
     }
-    revalidatePath(BROADCASTS_PATH);
+    revalidatePath("/dashboard/marketing", "layout");
     return ok({ id, recipients: subscribed });
   } catch (error) {
     logger.error("broadcasts.send_failed", { name: error instanceof Error ? error.name : undefined });
@@ -88,6 +88,6 @@ export async function saveWelcomeEmailAction(raw: unknown): Promise<Result<{ ena
     logger.error("subscribers.welcome_save_failed", { name: error instanceof Error ? error.name : undefined });
     return err("Couldn't save. Try again.");
   }
-  revalidatePath(SUBSCRIBERS_PATH);
+  revalidatePath("/dashboard/marketing", "layout");
   return ok({ enabled });
 }

@@ -36,7 +36,7 @@ export async function createAffiliateAction(input: unknown): Promise<Result<{ id
     const result = await createAffiliate(store.id, parsed.data);
     if (result === "taken") return err("You already have an affiliate with this code.", "code");
     if (result === "limit") return err("You have reached the limit of 50 affiliates.");
-    revalidatePath(PATH);
+    revalidatePath("/dashboard/marketing", "layout");
     return ok(result);
   } catch (error) {
     logger.error("affiliates.create_failed", { name: error instanceof Error ? error.name : undefined });
@@ -54,7 +54,7 @@ export async function setAffiliateActiveAction(affiliateId: unknown, active: unk
     logger.error("affiliates.toggle_failed", { name: error instanceof Error ? error.name : undefined });
     return err("Couldn't save. Try again.");
   }
-  revalidatePath(PATH);
+  revalidatePath("/dashboard/marketing", "layout");
   return ok({ active });
 }
 
@@ -72,6 +72,6 @@ export async function recordAffiliatePayoutAction(affiliateId: unknown, input: u
     logger.error("affiliates.payout_failed", { name: error instanceof Error ? error.name : undefined });
     return err("Couldn't save the payment. Try again.");
   }
-  revalidatePath(PATH);
+  revalidatePath("/dashboard/marketing", "layout");
   return ok({ amountCents: parsed.data.amount });
 }

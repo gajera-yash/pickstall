@@ -1,85 +1,72 @@
-import { Filter, HandCoins, Mail, Megaphone, ShoppingCart, Sparkles, type LucideIcon } from "lucide-react";
+import { BarChart3, Filter, HandCoins, Mail, MailCheck, Megaphone, Palette, ShoppingBag, ShoppingCart, Star, Ticket, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { CartReminderSettings } from "@/components/dashboard/cart-reminder-settings";
-import { ReviewRequestSettings } from "@/components/dashboard/review-request-settings";
-import { EmailLookSettings } from "@/components/dashboard/email-look-settings";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { Hotspot } from "@/components/tours/hotspot";
 import { PageTour } from "@/components/tours/tour-provider";
-import type { HotspotId } from "@/lib/tours/catalog";
-import { CouponManager, type ManagedCoupon } from "@/components/dashboard/coupon-manager";
-import { BUMP_HOW_IT_WORKS, HowItWorks, UPSELL_HOW_IT_WORKS, type HowItWorksContent } from "@/components/dashboard/how-it-works";
-import { PixelSettings } from "@/components/dashboard/pixel-settings";
-import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cartStats, findCartSettings } from "@/lib/abandoned-cart/queries";
-import { findReviewRequestSettings, reviewRequestsSent } from "@/lib/review-request/queries";
-import { couponRows, listCoupons } from "@/lib/coupons/queries";
-import { findPixelSettings } from "@/lib/pixels/queries";
-import { can } from "@/lib/plans/access";
 import { requireUnlockedCreator } from "@/lib/dashboard/setup-gate";
+import { EMAIL_LOOK_LABELS } from "@/lib/email/looks";
+import { marketingOverview, type MarketingOverview } from "@/lib/marketing/overview";
+import { can } from "@/lib/plans/access";
 import { listProducts } from "@/lib/products/queries";
-import { findEmailLook } from "@/lib/stores/queries";
+import type { HotspotId } from "@/lib/tours/catalog";
 
-const TOOLS: { title: string; description: string; icon: LucideIcon; live: boolean; href?: string; badge?: string; how?: HowItWorksContent }[] = [
-  {
-    title: "Order bumps",
-    description: "Offer one more product at checkout with a single tick. Set it on each product: in the Checkout form step of a digital product, or the Publish step of a course or coaching call.",
-    icon: ShoppingCart,
-    live: true,
-    how: BUMP_HOW_IT_WORKS,
-  },
-  {
-    title: "Upsell after purchase",
-    description: "Offer another product on the thank-you page, right after someone buys. Set it on each product, next to the order bump.",
-    icon: Sparkles,
-    live: true,
-    how: UPSELL_HOW_IT_WORKS,
-  },
-  {
-    title: "Funnels",
-    description: "Sale, then upsell, then downsell: see how many buyers take each offer. Add a downsell under the upsell of a product.",
-    icon: Filter,
-    live: true,
-    href: "/dashboard/marketing/funnels",
-    badge: "View",
-  },
-  {
-    title: "Email list",
-    description: "People who joined from a Collect emails product or ticked “Email me updates” at checkout. Search, export or remove them.",
-    icon: Mail,
-    live: true,
-    href: "/dashboard/marketing/subscribers",
-    badge: "Open list",
-  },
-  {
-    title: "Broadcasts",
-    description: "Email everyone on your list at once: news, a new product or an offer. Send yourself a test first.",
-    icon: Megaphone,
-    live: true,
-    href: "/dashboard/marketing/broadcasts",
-    badge: "Write one",
-  },
-  {
-    title: "Affiliates",
-    description: "Give people their own link and a commission on the sales they bring. You pay them yourself; Pickstall keeps count.",
-    icon: HandCoins,
-    live: true,
-    href: "/dashboard/marketing/affiliates",
-    badge: "Open",
-  },
-];
+// Marketing overview (D-129): no forms here. Every tool is a card with one line on what it does, its
+// status right now and a link to its own page. Grouped so a new creator knows where to start.
 
-// Marketing (D-029). Coupons (D-088) are managed here; order bumps (D-089) are set on each product;
-// the email list (D-094) has its own page.
+type Tool = { title: string; description: string; icon: LucideIcon; href: string; status: string; on?: boolean; pro?: boolean; hotspot?: HotspotId; tour?: string };
+type Group = { title: string; tools: Tool[] };
+
+const n = (value: number, one: string, many: string) => `${value.toLocaleString("en")} ${value === 1 ? one : many}`;
+const unknown = "Open to see";
+
+function groups(data: MarketingOverview, locked: boolean): Group[] {
+  const { offers } = data;
+  return [
+    {
+      title: "Discounts and offers",
+      tools: [
+        { title: "Coupons", description: "Discount codes buyers enter at checkout.", icon: Ticket, href: "/dashboard/marketing/coupons", status: data.coupons ? n(data.coupons.active, "active code", "active codes") : unknown, on: (data.coupons?.active ?? 0) > 0, tour: "marketing-coupons" },
+        { title: "Order bumps", description: "One more product at checkout with a single tick.", icon: ShoppingCart, href: "/dashboard/marketing/offers", status: offers.bumps ? `On ${n(offers.bumps, "product", "products")}` : "Not set yet", on: offers.bumps > 0 },
+        { title: "Upsell and downsell", description: "A special offer right after someone buys.", icon: ShoppingBag, href: "/dashboard/marketing/offers", status: offers.upsells ? `On ${n(offers.upsells, "product", "products")}` : "Not set yet", on: offers.upsells > 0, pro: locked },
+        { title: "Funnels", description: "How many buyers take each offer.", icon: Filter, href: "/dashboard/marketing/funnels", status: offers.upsells || offers.downsells ? "See the numbers" : "Add an upsell first", hotspot: "new-funnels" },
+      ],
+    },
+    {
+      title: "Email marketing",
+      tools: [
+        { title: "Email list", description: "Everyone who joined from a free download or at checkout.", icon: Mail, href: "/dashboard/marketing/subscribers", status: data.subscribers === null ? unknown : n(data.subscribers, "subscriber", "subscribers"), on: (data.subscribers ?? 0) > 0 },
+        { title: "Broadcasts", description: "Email your whole list at once.", icon: Megaphone, href: "/dashboard/marketing/broadcasts", status: data.lastBroadcastAt ? `Last sent ${data.lastBroadcastAt.toLocaleDateString("en", { month: "short", day: "numeric" })}` : "None sent yet" },
+        { title: "Email design", description: "One look for every email you send.", icon: Palette, href: "/dashboard/marketing/emails", status: data.emailLook ? `${EMAIL_LOOK_LABELS[data.emailLook].name} design` : "Default design", hotspot: "new-email-design", tour: "marketing-email-design" },
+      ],
+    },
+    {
+      title: "Automations",
+      tools: [
+        { title: "Welcome email", description: "Sent once to every new subscriber.", icon: MailCheck, href: "/dashboard/marketing/automations", status: data.welcomeOn ? "On" : "Off", on: data.welcomeOn, pro: locked },
+        { title: "Abandoned cart", description: "One reminder to buyers who didn't finish checkout.", icon: ShoppingCart, href: "/dashboard/marketing/automations", status: data.cart ? (data.cart.on ? `On · ${n(data.cart.sent, "sent", "sent")}, ${data.cart.recovered} bought` : "Off") : unknown, on: data.cart?.on, pro: locked },
+        { title: "Review request", description: "Asks buyers for a rating a week after they buy.", icon: Star, href: "/dashboard/marketing/automations", status: data.reviewOn === null ? unknown : data.reviewOn ? "On" : "Off", on: data.reviewOn ?? false, pro: locked, hotspot: "new-review-request" },
+      ],
+    },
+    {
+      title: "Grow and track",
+      tools: [
+        { title: "Affiliates", description: "People who share your store for a commission.", icon: HandCoins, href: "/dashboard/marketing/affiliates", status: data.affiliates ? n(data.affiliates.active, "affiliate", "affiliates") : unknown, on: (data.affiliates?.active ?? 0) > 0, hotspot: "new-affiliates" },
+        { title: "Pixels", description: "Measure your Meta and Google ads.", icon: BarChart3, href: "/dashboard/marketing/pixels", status: data.pixels ? [data.pixels.meta && "Meta", data.pixels.google && "Google"].filter(Boolean).join(" and ") || "Not connected" : unknown, on: Boolean(data.pixels?.meta || data.pixels?.google) },
+      ],
+    },
+  ];
+}
+
 export default function MarketingPage() {
   return (
     <>
-      <PageHeader title="Marketing" description="Tools to sell more to the audience you already have." />
-      <Suspense fallback={<Skeleton className="h-48 w-full rounded-lg" />}>
+      <PageHeader title="Marketing" description="Tools to sell more to the audience you already have. New here? Start with a coupon, then turn on the abandoned cart email." />
+      <Suspense fallback={<Skeleton className="h-96 w-full rounded-lg" />}>
         <MarketingContent />
       </Suspense>
     </>
@@ -88,68 +75,47 @@ export default function MarketingPage() {
 
 async function MarketingContent() {
   const { user, store } = await requireUnlockedCreator("/dashboard/marketing");
-  const [coupons, products, cart, stats, pixels, review, reviewSent, emailLook] = await Promise.all([
-    listCoupons(store.id),
-    listProducts(store.id),
-    findCartSettings(store.id),
-    cartStats(store.id),
-    findPixelSettings(store.id),
-    findReviewRequestSettings(store.id),
-    reviewRequestsSent(store.id),
-    findEmailLook(user.id).catch(() => null),
-  ]);
-  const managed: ManagedCoupon[] = couponRows(coupons, products, store.currency);
+  const products = await listProducts(store.id).catch(() => []);
+  const data = await marketingOverview(store.id, user.id, products);
+  const locked = !can(store.access, "automations");
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8" data-tour="marketing-tools">
       <PageTour id="marketing" />
-      <div data-tour="marketing-coupons">
-      <CouponManager coupons={managed} products={products.map((product) => ({ id: product._id, title: product.title }))} currency={store.currency} />
-      </div>
-      <div data-tour="marketing-email-design">
-        <EmailLookSettings initial={emailLook} accent={store.theme.accent} storeName={store.name} />
-      </div>
-      <CartReminderSettings storeName={store.name} initial={cart} stats={stats} locked={!can(store.access, "automations")} />
-      <ReviewRequestSettings storeName={store.name} initial={review} sent={reviewSent} locked={!can(store.access, "automations")} />
-      <PixelSettings initial={pixels} />
-      <MoreTools />
-    </div>
-  );
-}
-
-/** "New" dots on the newest tools (D-128). */
-const TOOL_HOTSPOTS: Record<string, HotspotId | undefined> = { Affiliates: "new-affiliates", Funnels: "new-funnels" };
-
-function MoreTools() {
-  return (
-    <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-tour="marketing-tools">
-      {TOOLS.map(({ title, description, icon: Icon, live, href, badge, how }) => (
-        <li key={title} className="relative">
-          <Card className="h-full gap-3">
-            <div className="flex items-center justify-between gap-2">
-              <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-full bg-blue-soft text-blue">
-                <Icon className="size-5" />
-              </span>
-              <span className="flex items-center gap-1">
-                {/* Above the card's stretched link, so the dot can be clicked on its own. */}
-                {TOOL_HOTSPOTS[title] && <Hotspot id={TOOL_HOTSPOTS[title]} className="relative z-10" />}
-                {live ? <Badge variant="live">{badge ?? "On each product"}</Badge> : <Badge variant="soon">Coming soon</Badge>}
-              </span>
-            </div>
-            <h2 className="font-display text-h3">
-              {href ? (
-                <Link href={href} className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:rounded-lg focus-visible:after:ring-2 focus-visible:after:ring-blue">
-                  {title}
-                </Link>
-              ) : (
-                title
-              )}
-            </h2>
-            <p className="text-sm text-mute">{description}</p>
-            {how && <HowItWorks content={how} />}
-          </Card>
-        </li>
+      {groups(data, locked).map((group) => (
+        <section key={group.title} aria-labelledby={`group-${group.title}`} className="flex flex-col gap-3">
+          <h2 id={`group-${group.title}`} className="font-display text-h3">
+            {group.title}
+          </h2>
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {group.tools.map((tool) => (
+              <li key={tool.title} className="relative" {...(tool.tour ? { "data-tour": tool.tour } : {})}>
+                <Card className="h-full gap-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-full bg-blue-soft text-blue">
+                      <tool.icon className="size-5" />
+                    </span>
+                    <span className="flex items-center gap-1">
+                      {/* Above the card's stretched link, so the dot can be clicked on its own. */}
+                      {tool.hotspot && <Hotspot id={tool.hotspot} className="relative z-10" />}
+                      {tool.pro && <Badge variant="soon">Pro</Badge>}
+                    </span>
+                  </div>
+                  <h3 className="font-display text-h4">
+                    <Link href={tool.href} className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:rounded-lg focus-visible:after:ring-2 focus-visible:after:ring-blue">
+                      {tool.title}
+                    </Link>
+                  </h3>
+                  <p className="text-sm text-mute">{tool.description}</p>
+                  <Badge variant={tool.on ? "live" : "draft"} className="mt-auto self-start">
+                    {tool.status}
+                  </Badge>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </section>
       ))}
-    </ul>
+    </div>
   );
 }

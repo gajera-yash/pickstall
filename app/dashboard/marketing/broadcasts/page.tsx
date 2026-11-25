@@ -1,5 +1,4 @@
-import { ArrowLeft, Megaphone } from "lucide-react";
-import Link from "next/link";
+import { Megaphone } from "lucide-react";
 import { Suspense } from "react";
 
 import { BroadcastComposer } from "@/components/dashboard/list-email-composer";
@@ -21,10 +20,6 @@ const PATH = "/dashboard/marketing/broadcasts";
 export default function BroadcastsPage() {
   return (
     <>
-      <Link href="/dashboard/marketing" className="inline-flex items-center gap-1 self-start text-sm font-semibold text-mute hover:text-ink">
-        <ArrowLeft aria-hidden="true" className="size-4" />
-        Marketing
-      </Link>
       <PageHeader title="Broadcasts" description="Email everyone on your list: news, a new product, an offer." />
       <Suspense fallback={<Skeleton className="h-96 w-full rounded-lg" />}>
         <BroadcastsContent />

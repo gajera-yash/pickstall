@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-129: Marketing redesign: an overview of cards, and one page per tool
+- **Date:** 2026-11-25
+- **Decision (founder: "everything on one page will confuse creators", plan approved 2026-11-25):**
+  - **Overview** (`/dashboard/marketing`): no forms. Four groups of cards (Discounts and offers, Email marketing, Automations, Grow and track); each card says what the tool does, shows its status now (for example "3 active codes", "On · 4 sent, 1 bought", "Meta and Google") and opens the tool's own page. Pro tools show a Pro badge. Status comes from `marketingOverview` (`lib/marketing/overview.ts`), read for the session's store; a part that cannot be read shows "Open to see".
+  - **Own pages:** Coupons (`/coupons`), Offers (`/offers`: what bumps, upsells and downsells are, and which products have one, with links to each editor), Email design (`/emails`), Automations (`/automations`: welcome email, abandoned cart and review request in three tabs; the welcome email moved here from Email list), Pixels (`/pixels`). Email list, Broadcasts, Affiliates and Funnels stay where they were.
+  - **Sub-nav** on every marketing page (`MarketingNav`, `MARKETING_SECTIONS`), scrolling sideways on phones; it replaces the "← Marketing" links. The breadcrumb shows "Marketing / <tool>".
+  - **Saving** any marketing tool now refreshes every marketing page (`revalidatePath("/dashboard/marketing", "layout")`), so the overview's status is never stale.
+  - **Tour and dots:** the Marketing tour now walks the overview cards; the "New" dots sit on the cards.
+  - No change to data, validation or save actions.
+
 ## D-128: Click feedback, guided tours, "New" dots and help tips (speed S4-S5, tour T1-T3)
 - **Date:** 2026-11-25
 - **Decision (founder approved the plan; tours remembered per user in the database, 2026-11-25):**

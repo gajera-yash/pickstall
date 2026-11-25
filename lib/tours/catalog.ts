@@ -34,9 +34,9 @@ export const TOURS: Record<TourId, TourStep[]> = {
     { target: "product-save", title: "Save as you go", body: "Your product stays a draft, hidden from your store, until you publish it." },
   ],
   marketing: [
-    { target: "marketing-coupons", title: "Discount codes", body: "Create a code like SAVE20 and share it. Buyers enter it at checkout." },
+    { target: "marketing-tools", title: "Every tool, one card", body: "Each card shows what a tool does and whether it is on. Click a card to open its own page." },
+    { target: "marketing-coupons", title: "Start with a coupon", body: "Create a code like SAVE20 and share it. Buyers enter it at checkout." },
     { target: "marketing-email-design", title: "Your emails, your look", body: "Pick one design for every email you send, in your store's colors." },
-    { target: "marketing-tools", title: "More ways to grow", body: "Broadcasts, affiliates, funnels and your email list each have their own page." },
   ],
   orders: [
     { target: "orders-filters", title: "Find any order", body: "Filter by status or product, or search by name and email." },

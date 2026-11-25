@@ -38,7 +38,9 @@ describe("tour catalog", () => {
     for (const id of TOUR_IDS) {
       for (const step of TOURS[id]) {
         if (navTargets.has(step.target)) continue; // the nav renders data-tour={`nav-${section.id}`}
-        expect(code, `data-tour="${step.target}" for tour ${id}`).toContain(`data-tour="${step.target}"`);
+        // Marked directly, or through a card list's `tour: "..."` field (the Marketing overview).
+        const marked = code.includes(`data-tour="${step.target}"`) || code.includes(`tour: "${step.target}"`);
+        expect(marked, `data-tour="${step.target}" for tour ${id}`).toBe(true);
       }
       expect(code, `<PageTour id="${id}" /> placed`).toContain(`<PageTour id="${id}"`);
     }
