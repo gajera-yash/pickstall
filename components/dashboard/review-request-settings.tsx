@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 
 import { Field } from "@/components/dashboard/editor-fields";
 import { EmailTemplatePicker } from "@/components/dashboard/email-template-picker";
+import { Hotspot } from "@/components/tours/hotspot";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,8 +52,9 @@ export function ReviewRequestSettings({ storeName, initial, sent, locked = false
             <Star className="size-5" />
           </span>
           <span className="flex flex-col gap-0.5">
-            <span id="review-request" className="font-display text-h3">
+            <span id="review-request" className="flex items-center gap-1.5 font-display text-h3">
               Review request
+              <Hotspot id="new-review-request" />
             </span>
             <span className="text-sm text-mute">One email, a week after each purchase, asking the buyer to rate the product. Not sent if they already reviewed it, were refunded or unsubscribed.</span>
           </span>

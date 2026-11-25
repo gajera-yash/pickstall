@@ -4,6 +4,7 @@ import { Check, Palette } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { Hotspot } from "@/components/tours/hotspot";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { saveEmailLookAction } from "@/lib/email/look-actions";
@@ -41,8 +42,9 @@ export function EmailLookSettings({ initial, accent, storeName }: { initial: Ema
           <Palette className="size-5" />
         </span>
         <span className="flex flex-col gap-0.5">
-          <h2 id="email-look" className="font-display text-h3">
+          <h2 id="email-look" className="flex items-center gap-1.5 font-display text-h3">
             Email design
+            <Hotspot id="new-email-design" />
           </h2>
           <span className="text-sm text-mute">One look for all your emails: order confirmation, welcome, broadcasts, abandoned cart and review request. Buttons use your accent color.</span>
         </span>

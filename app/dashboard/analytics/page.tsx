@@ -2,6 +2,7 @@ import { Trophy } from "lucide-react";
 import { Suspense } from "react";
 
 import { KpiSection } from "@/components/dashboard/kpi-section";
+import { PageTour } from "@/components/tours/tour-provider";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SOURCE_PERIODS, SourcesCard, type SourcePeriod } from "@/components/dashboard/sources-card";
 import { Card } from "@/components/ui/card";
@@ -34,6 +35,7 @@ async function AnalyticsContent({ searchParams }: Pick<PageProps<"/dashboard/ana
   const [stats, sources] = await Promise.all([incomeStats(store.id, store.currency, 90).catch(() => null), salesBySource(store.id, store.currency, period).catch(() => null)]);
   return (
     <>
+      <PageTour id="analytics" />
       <KpiSection currency={store.currency} series={stats ? stats.series : { revenueCents: zeros(), orders: zeros(), customers: zeros() }} />
       <SourcesCard rows={sources ?? []} error={sources === null} currency={store.currency} period={period} storeUrl={`https://${storeLink(store.slug)}`} />
       {stats && stats.topProducts.length > 0 ? (

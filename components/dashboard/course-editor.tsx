@@ -17,6 +17,7 @@ import { PriceTag } from "@/components/store/price-tag";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { HelpTip } from "@/components/ui/help-tip";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -680,8 +681,9 @@ function ReleaseSection({ courseId, drip: savedDrip, modules, onSaved }: { cours
 
   return (
     <section aria-labelledby="release-title" className="flex flex-col gap-3 rounded-md border border-line p-4">
-      <h3 id="release-title" className="font-display text-h4">
+      <h3 id="release-title" className="flex items-center gap-1 font-display text-h4">
         How lessons open
+        <HelpTip label="How lessons open">All at once gives every lesson right after purchase. Drip opens lessons over time, for example one a week, counted from the day each student bought.</HelpTip>
       </h3>
       <ToggleGroup type="single" variant="segment" aria-label="How lessons open" value={drip ? "drip" : "all"} onValueChange={(value) => value && setDrip(value === "drip")} className="grid w-full grid-cols-2">
         <ToggleGroupItem value="all">

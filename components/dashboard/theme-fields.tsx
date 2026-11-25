@@ -3,6 +3,7 @@ import { CheckCircle2 } from "lucide-react";
 
 import { FieldError, FieldHint } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { HelpTip } from "@/components/ui/help-tip";
 import { Label } from "@/components/ui/label";
 import { LayoutThumb } from "@/components/store/layout-thumb";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -73,7 +74,10 @@ export function ThemeFields({ themePreset, accent, onThemePreset, onAccent, fiel
       </fieldset>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="accent">Accent color</Label>
+        <span className="flex items-center gap-1">
+          <Label htmlFor="accent">Accent color</Label>
+          <HelpTip label="Accent color">Your buttons use this color. We only allow colors where the button text stays easy to read (WCAG 4.5:1 contrast).</HelpTip>
+        </span>
         <p className="-mt-1 text-sm text-mute">Used for your buttons. We check that the button text stays easy to read.</p>
         <div className="flex items-center gap-3">
           <Input

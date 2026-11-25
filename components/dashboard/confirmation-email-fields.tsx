@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { Field } from "@/components/dashboard/editor-fields";
+import { HelpTip } from "@/components/ui/help-tip";
 import { EmailTemplatePicker } from "@/components/dashboard/email-template-picker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,8 +37,9 @@ export function ConfirmationEmailFields({
   return (
     <section aria-labelledby="confirmation-email-title" className="flex flex-col gap-4 rounded-md border border-line p-4">
       <div className="flex flex-col gap-1">
-        <h3 id="confirmation-email-title" className="font-semibold">
+        <h3 id="confirmation-email-title" className="flex items-center gap-1 font-semibold">
           Confirmation email
+          <HelpTip label="Email variables">{"Variables are filled in for each buyer: {{customer_name}} is their name, {{product_title}} the product, {{download_link}} their personal access link."}</HelpTip>
         </h3>
         <p className="text-sm text-mute">
           Sent to every buyer after they pay. You can use these variables; {"{{download_link}}"} is the link where they {linkLabel}. The access link and your

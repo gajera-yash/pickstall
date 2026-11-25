@@ -8,6 +8,8 @@ import { SidebarFooter } from "@/components/dashboard/sidebar-footer";
 import { TopBar } from "@/components/dashboard/top-bar";
 import { TrialBanner } from "@/components/dashboard/trial-banner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TourProvider, TourSeed } from "@/components/tours/tour-provider";
+import { seenTours } from "@/lib/tours/queries";
 import { requireCreator } from "@/lib/auth/guards";
 import { DASHBOARD_PATH } from "@/lib/auth/post-login";
 import { getProfile } from "@/lib/auth/profiles";
@@ -21,6 +23,7 @@ export const metadata: Metadata = { title: `Dashboard | ${APP_NAME}`, robots: { 
 // width on the --bg-subtle page (founder request, 2026-11-03). Mobile: bottom bar with "More" (D-023, D-028).
 export default function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
   return (
+    <TourProvider>
     <div className="flex min-h-dvh flex-1 bg-bg-subtle">
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-line bg-surface px-3 py-5 md:flex">
         <Wordmark className="h-10 self-start px-3" priority />
@@ -52,8 +55,21 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
       <Suspense fallback={null}>
         <NavWithData variant="bottom" />
       </Suspense>
+      <Suspense fallback={null}>
+        <TourData />
+      </Suspense>
     </div>
+    </TourProvider>
   );
+}
+
+// Tours and "New" dots (D-128): what this creator has seen, and whether setup is done (no tours before).
+async function TourData() {
+  const { user, store } = await requireCreator(DASHBOARD_PATH);
+  const [{ unlocked }, seen] = await Promise.all([loadSetupGate(store), seenTours(user.id).catch(() => null)]);
+  // If the list can't be read, nothing is shown rather than every tour again.
+  if (!seen) return null;
+  return <TourSeed seen={seen} enabled={unlocked} />;
 }
 
 async function displayNameFor() {

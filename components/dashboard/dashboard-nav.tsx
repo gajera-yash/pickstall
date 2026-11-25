@@ -22,6 +22,8 @@ import type { ReactNode } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { BOTTOM_BAR_IDS, DASHBOARD_SECTIONS, isSectionActive, type DashboardSectionId } from "@/lib/dashboard/nav";
+import { LinkPending, PendingIcon } from "@/components/dashboard/link-pending";
+import { Hotspot } from "@/components/tours/hotspot";
 import { LOCKED_HINT, isSectionLocked } from "@/lib/dashboard/setup-lock";
 import { cn } from "@/lib/utils";
 
@@ -83,8 +85,8 @@ export function DashboardNav({ variant, unlocked }: { variant: "sidebar" | "bott
             }
             return (
               <li key={section.id}>
-                <Link href={section.href} aria-current={active ? "page" : undefined} className={tabClass(active)}>
-                  <Icon aria-hidden="true" className="size-6" />
+                <Link href={section.href} aria-current={active ? "page" : undefined} className={tabClass(active)} data-tour={`nav-${section.id}`}>
+                  <PendingIcon icon={Icon} className="size-6" />
                   {section.label}
                 </Link>
               </li>
@@ -153,6 +155,7 @@ export function DashboardNav({ variant, unlocked }: { variant: "sidebar" | "bott
               <Link
                 href={section.href}
                 aria-current={active ? "page" : undefined}
+                data-tour={`nav-${section.id}`}
                 className={cn(
                   "flex h-11 items-center gap-3 rounded-md px-3 text-base font-medium transition-colors duration-(--dur-fast)",
                   active ? "bg-blue-soft font-semibold text-blue" : "text-ink/80 hover:bg-bg-subtle hover:text-ink",
@@ -160,7 +163,9 @@ export function DashboardNav({ variant, unlocked }: { variant: "sidebar" | "bott
               >
                 <Icon aria-hidden="true" className={cn("size-5", active ? "text-blue" : "text-mute")} />
                 {section.label}
+                <LinkPending />
               </Link>
+              {section.id === "design" && <Hotspot id="new-store-design" className="absolute top-2.5 right-8" />}
             </li>
           );
         })}

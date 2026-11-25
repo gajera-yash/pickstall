@@ -34,7 +34,7 @@ const GIVES_ACCESS = ["active", "trialing", "past_due"];
  * - a one-way hash of the email is kept so a new store does not get another free trial.
  */
 export async function prepareAccountDeletion(user: { id: string; email: string | null }, now = new Date()): Promise<void> {
-  const { stores, products, profiles, deletedAccounts } = await collections();
+  const { stores, products, profiles, deletedAccounts, tourProgress } = await collections();
   const store = await stores.findOne({ ownerId: user.id }, { projection: { _id: 1, billing: 1, stripeAccountId: 1 } });
 
   if (store) {
@@ -81,6 +81,7 @@ export async function prepareAccountDeletion(user: { id: string; email: string |
   }
 
   await profiles.deleteOne({ _id: user.id });
+  await tourProgress.deleteOne({ _id: user.id });
 
   const key = user.email ? canonicalEmail(user.email) : null;
   if (key) await deletedAccounts.updateOne({ _id: deletedAccountKey(key) }, { $set: { deletedAt: now } }, { upsert: true });

@@ -9,6 +9,7 @@ import { BumpSection, type BumpCandidate, type BumpSettings } from "@/components
 import { LicenseSection } from "@/components/dashboard/license-section";
 import { AfterPurchaseOffers, type AfterPurchaseSettings } from "@/components/dashboard/upsell-section";
 import { ConfirmationEmailFields } from "@/components/dashboard/confirmation-email-fields";
+import { PageTour } from "@/components/tours/tour-provider";
 import { Field, MoneyInput, StepHeading } from "@/components/dashboard/editor-fields";
 import { ImageUploader } from "@/components/dashboard/image-uploader";
 import { ProductFileField } from "@/components/dashboard/product-file-field";
@@ -305,12 +306,13 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
             <h1 className="min-w-0 truncate font-display text-h1">{values.title.trim() || "Untitled product"}</h1>
             <Badge variant={badge.variant}>{badge.label}</Badge>
           </div>
-          <Button type="submit" variant="secondary" loading={pending && !goAfterSave} disabled={statusPending} onClick={() => setGoAfterSave(null)}>
+          <Button type="submit" variant="secondary" loading={pending && !goAfterSave} disabled={statusPending} onClick={() => setGoAfterSave(null)} data-tour="product-save">
             Save
           </Button>
         </div>
 
-        <nav aria-label="Product steps">
+        <PageTour id="product-editor" />
+        <nav aria-label="Product steps" data-tour="product-steps">
           <ol className="grid grid-cols-3 gap-2">
             {PRODUCT_STEPS.map((id, index) => {
               const Icon = STEP_ICONS[id];

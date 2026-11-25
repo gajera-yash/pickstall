@@ -11,6 +11,7 @@ import { StoreLinkCard } from "@/components/dashboard/store-link-card";
 import { HelpCard, StorePreviewCard } from "@/components/dashboard/store-preview-card";
 import { SetupOnboarding } from "@/components/dashboard/setup-onboarding";
 import { WelcomeHero } from "@/components/dashboard/welcome-hero";
+import { PageTour } from "@/components/tours/tour-provider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { findPageBlocks } from "@/lib/page-blocks/queries";
@@ -62,6 +63,7 @@ async function MyStoreContent({ searchParams }: { searchParams: PageProps<"/dash
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <PageTour id="welcome" />
       <div className="flex min-w-0 flex-col gap-6">
         <WelcomeHero name={name} storeUrl={`https://${link}`} ready={checklist.complete} publicPath={store.isPublished ? `/@${store.slug}` : null} />
 

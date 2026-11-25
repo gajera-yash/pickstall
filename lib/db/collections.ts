@@ -63,6 +63,9 @@ export type ProfileDoc = {
   updatedAt: Date;
 };
 
+/** Tours and "New" hotspots a creator has seen (D-128). `_id` is the user id. Deleted with the account. */
+export type TourProgressDoc = { _id: string; seen: string[]; updatedAt: Date };
+
 export type StoreDoc = {
   _id: string;
   ownerId: string;
@@ -921,6 +924,7 @@ export type MktReportDoc = {
 
 export async function collections(): Promise<{
   profiles: Collection<ProfileDoc>;
+  tourProgress: Collection<TourProgressDoc>;
   stores: Collection<StoreDoc>;
   products: Collection<ProductDoc>;
   uploads: Collection<UploadDoc>;
@@ -962,6 +966,7 @@ export async function collections(): Promise<{
   const db = await getDb();
   return {
     profiles: db.collection<ProfileDoc>("profiles"),
+    tourProgress: db.collection<TourProgressDoc>("tourProgress"),
     stores: db.collection<StoreDoc>("stores"),
     products: db.collection<ProductDoc>("products"),
     uploads: db.collection<UploadDoc>("uploads"),

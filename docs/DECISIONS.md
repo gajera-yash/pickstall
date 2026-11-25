@@ -4,6 +4,18 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-128: Click feedback, guided tours, "New" dots and help tips (speed S4-S5, tour T1-T3)
+- **Date:** 2026-11-25
+- **Decision (founder approved the plan; tours remembered per user in the database, 2026-11-25):**
+  - **Click feedback:** sidebar links show a small spinner, and bottom-bar icons turn into one, while the page they open is loading (`LinkPending`, `PendingIcon`, built on `useLinkStatus`). A slow page no longer looks like a click that did nothing.
+  - **Tour engine** (`components/tours/tour-provider.tsx`, no new dependency): coach marks that point at elements with `data-tour`, a spotlight on the element, a small card next to it (docked at the bottom on phones), Next/Back/Skip, Esc and arrow keys, focus on the main button, reduced motion respected. A step whose element is not on screen is skipped.
+  - **Tours** (`lib/tours/catalog.ts`): welcome (6 steps over the sidebar, on My Store), Store design, product editor, Marketing, Orders and Analytics. Each starts once, the first time the page opens, and only after setup is done (the checklist guides before that).
+  - **"New" dots:** Store design (sidebar), Email design, Review request, Affiliates and Funnels. Click explains the feature; "Got it" hides it for good.
+  - **Help tips:** a "?" with a short explanation on the accent color, the email variables and how lessons open (drip).
+  - **"Take the tour again"** on My Store's help card forgets the tours (not the dots) and starts the welcome tour.
+  - **Data:** new collection `tourProgress` (`_id` = user id, `seen` ids), read and written only for the session's user, only known ids; removed with the account. No migration.
+- **Not in this block:** S3 (fewer queries per page) beyond D-127's region move; tour analytics (PostHog is not wired in yet).
+
 ## D-127: Faster pages: indexes once per version, and functions in Mumbai (speed block S1-S2)
 - **Date:** 2026-11-25
 - **Measured on the live site:** cold pages took 7-10 s (Store design 10.2 s, Products 7.2 s), warm ones about 0.9 s. Vercel served from Mumbai but ran the functions in Washington (`bom1::iad1`), while MongoDB Atlas is in AWS Mumbai (ap-south-1), so every query crossed the world.

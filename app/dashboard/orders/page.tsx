@@ -10,6 +10,7 @@ import { LicenseRevokeButton } from "@/components/dashboard/license-revoke-butto
 import { RefundButton } from "@/components/dashboard/refund-button";
 import { UpcomingCalls } from "@/components/dashboard/upcoming-calls";
 import { ResendEmailButton } from "@/components/dashboard/resend-email-button";
+import { PageTour } from "@/components/tours/tour-provider";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -101,9 +102,10 @@ async function OrdersContent({ searchParams }: Pick<PageProps<"/dashboard/orders
         })}
       </nav>
 
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+      <PageTour id="orders" />
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between" data-tour="orders-filters">
         <ListToolbar action={PATH} q={params.q} product={params.product} products={products.map((item) => ({ id: item._id, title: item.title }))} keep={{ status: params.status }} searchLabel="Search orders" />
-        <Button asChild variant="secondary" className="self-start lg:self-auto">
+        <Button asChild variant="secondary" className="self-start lg:self-auto" data-tour="orders-export">
           <a href={withQuery(`${PATH}/export`, filtersOnly)} download>
             <Download aria-hidden="true" className="size-4" />
             Export CSV

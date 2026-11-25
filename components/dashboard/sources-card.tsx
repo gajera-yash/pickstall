@@ -18,7 +18,7 @@ const sourceLabel = (source: string) => (source === DIRECT_SOURCE ? "Direct or u
 export function SourcesCard({ rows, currency, period, storeUrl, error = false }: { rows: SourceRow[]; currency: string; period: SourcePeriod; storeUrl: string; error?: boolean }) {
   const total = rows.reduce((sum, row) => sum + row.orders, 0);
   return (
-    <Card className="gap-4">
+    <Card className="gap-4" data-tour="analytics-sources">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h2 className="font-display text-h4">Where sales come from</h2>

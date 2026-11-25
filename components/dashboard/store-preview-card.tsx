@@ -1,10 +1,11 @@
 "use client";
 
-import { Expand, LifeBuoy, Mail, Palette } from "lucide-react";
+import { Compass, Expand, LifeBuoy, Mail, Palette } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import { useDesignDraft } from "@/components/dashboard/design-draft";
+import { useTours } from "@/components/tours/tour-provider";
 import { LiveStorePreview } from "@/components/dashboard/live-store-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ export function StorePreviewCard({ store, products, isPublished }: { store: Publ
 }
 
 export function HelpCard() {
+  const tours = useTours();
   return (
     <Card className="gap-4">
       <div className="flex items-start gap-3">
@@ -77,6 +79,12 @@ export function HelpCard() {
           Contact support
         </a>
       </Button>
+      {tours?.enabled && (
+        <Button type="button" variant="ghost" onClick={() => void tours.restart()}>
+          <Compass aria-hidden="true" className="size-4" />
+          Take the tour again
+        </Button>
+      )}
     </Card>
   );
 }

@@ -5,6 +5,9 @@ import { Suspense } from "react";
 import { CartReminderSettings } from "@/components/dashboard/cart-reminder-settings";
 import { ReviewRequestSettings } from "@/components/dashboard/review-request-settings";
 import { EmailLookSettings } from "@/components/dashboard/email-look-settings";
+import { Hotspot } from "@/components/tours/hotspot";
+import { PageTour } from "@/components/tours/tour-provider";
+import type { HotspotId } from "@/lib/tours/catalog";
 import { CouponManager, type ManagedCoupon } from "@/components/dashboard/coupon-manager";
 import { BUMP_HOW_IT_WORKS, HowItWorks, UPSELL_HOW_IT_WORKS, type HowItWorksContent } from "@/components/dashboard/how-it-works";
 import { PixelSettings } from "@/components/dashboard/pixel-settings";
@@ -99,8 +102,13 @@ async function MarketingContent() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageTour id="marketing" />
+      <div data-tour="marketing-coupons">
       <CouponManager coupons={managed} products={products.map((product) => ({ id: product._id, title: product.title }))} currency={store.currency} />
-      <EmailLookSettings initial={emailLook} accent={store.theme.accent} storeName={store.name} />
+      </div>
+      <div data-tour="marketing-email-design">
+        <EmailLookSettings initial={emailLook} accent={store.theme.accent} storeName={store.name} />
+      </div>
       <CartReminderSettings storeName={store.name} initial={cart} stats={stats} locked={!can(store.access, "automations")} />
       <ReviewRequestSettings storeName={store.name} initial={review} sent={reviewSent} locked={!can(store.access, "automations")} />
       <PixelSettings initial={pixels} />
@@ -109,9 +117,12 @@ async function MarketingContent() {
   );
 }
 
+/** "New" dots on the newest tools (D-128). */
+const TOOL_HOTSPOTS: Record<string, HotspotId | undefined> = { Affiliates: "new-affiliates", Funnels: "new-funnels" };
+
 function MoreTools() {
   return (
-    <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-tour="marketing-tools">
       {TOOLS.map(({ title, description, icon: Icon, live, href, badge, how }) => (
         <li key={title} className="relative">
           <Card className="h-full gap-3">
@@ -119,7 +130,11 @@ function MoreTools() {
               <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-full bg-blue-soft text-blue">
                 <Icon className="size-5" />
               </span>
-              {live ? <Badge variant="live">{badge ?? "On each product"}</Badge> : <Badge variant="soon">Coming soon</Badge>}
+              <span className="flex items-center gap-1">
+                {/* Above the card's stretched link, so the dot can be clicked on its own. */}
+                {TOOL_HOTSPOTS[title] && <Hotspot id={TOOL_HOTSPOTS[title]} className="relative z-10" />}
+                {live ? <Badge variant="live">{badge ?? "On each product"}</Badge> : <Badge variant="soon">Coming soon</Badge>}
+              </span>
             </div>
             <h2 className="font-display text-h3">
               {href ? (

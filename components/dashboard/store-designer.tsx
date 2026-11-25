@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 
 import { DesignCustomizer } from "@/components/dashboard/design-customizer";
 import { DesignDraftProvider, useDesignDraft } from "@/components/dashboard/design-draft";
+import { PageTour } from "@/components/tours/tour-provider";
 import { LiveStorePreview } from "@/components/dashboard/live-store-preview";
 import { PageDesignForm } from "@/components/dashboard/page-design-form";
 import { PageSectionsEditor } from "@/components/dashboard/page-sections-editor";
@@ -75,6 +76,7 @@ function Designer({ store, products, isPublished, custom, blocks }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
+      <PageTour id="store-design" />
       <div className="sticky top-16 z-10 -mx-4 -mt-6 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-bg/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
         <div className="flex min-w-0 flex-col">
           <h1 className="font-display text-h2">Store design</h1>
@@ -86,7 +88,7 @@ function Designer({ store, products, isPublished, custom, blocks }: Props) {
             <Eye aria-hidden="true" className="size-4" />
             Preview
           </Button>
-          <Button type="button" onClick={save} loading={saving} disabled={!unsaved}>
+          <Button type="button" onClick={save} loading={saving} disabled={!unsaved} data-tour="design-save">
             Save
           </Button>
         </div>
@@ -100,7 +102,7 @@ function Designer({ store, products, isPublished, custom, blocks }: Props) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start">
         <Tabs value={tab} onValueChange={setTab} className="min-w-0 gap-0 overflow-hidden rounded-xl border border-line bg-surface">
-          <TabsList aria-label="Store design" className="px-4 sm:px-6">
+          <TabsList aria-label="Store design" className="px-4 sm:px-6" data-tour="design-tabs">
             <TabsTrigger value="theme">
               <Palette aria-hidden="true" />
               Theme
@@ -128,7 +130,7 @@ function Designer({ store, products, isPublished, custom, blocks }: Props) {
           </div>
         </Tabs>
 
-        <aside aria-label="Live preview" className="hidden lg:sticky lg:top-[9.5rem] lg:block">
+        <aside aria-label="Live preview" data-tour="design-preview" className="hidden lg:sticky lg:top-[9.5rem] lg:block">
           <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4">
             <LiveStorePreview store={shown} products={products} maxHeight="calc(100dvh - 16rem)" scroll />
             <p className="text-center text-xs text-mute">Scroll inside the preview to see your whole page.</p>
