@@ -15,6 +15,8 @@ export const publicEnvSchema = z.object({
   NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: optional(z.enum(["true", "false"])),
   // Browser push (D-132): the VAPID public key the browser subscribes with. Without it the "Turn on
   // browser notifications" button is hidden.
+  // Google Analytics 4 on Pickstall's own pages, only after consent (D-133). Without it nothing loads.
+  NEXT_PUBLIC_GA_MEASUREMENT_ID: optional(z.string().regex(/^G-[A-Z0-9]{6,12}$/, { error: "Must be a GA4 measurement id like G-ABC123XYZ" })),
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: optional(z.string().regex(/^[A-Za-z0-9_-]{80,100}$/, { error: "Must be a URL-safe base64 VAPID public key" })),
 });
 

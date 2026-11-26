@@ -24,8 +24,18 @@ const PIXEL_HOSTS = {
   frame: ["https://www.googletagmanager.com"],
 } as const;
 
+/**
+ * Google Analytics 4 on Pickstall's own pages (D-133), from Google's CSP guide for GA4 without Ads.
+ * The tag itself loads only on the marketing pages and only after the visitor accepts.
+ */
+const PLATFORM_ANALYTICS_HOSTS = {
+  script: ["https://www.googletagmanager.com"],
+  connect: ["https://*.google-analytics.com", "https://*.analytics.google.com", "https://www.googletagmanager.com"],
+} as const;
+
 export function contentSecurityPolicy(isDev: boolean, options: { pixels?: boolean } = {}): string {
-  const pixels = options.pixels ? PIXEL_HOSTS : { script: [], connect: [], frame: [] };
+  // Store pages get the creators' pixel hosts (which include Google's); other pages get GA4's.
+  const pixels = options.pixels ? PIXEL_HOSTS : { ...PLATFORM_ANALYTICS_HOSTS, frame: [] };
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
     "script-src": ["'self'", "'unsafe-inline'", ...(isDev ? ["'unsafe-eval'"] : []), ...pixels.script],

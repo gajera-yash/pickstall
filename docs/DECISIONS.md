@@ -4,6 +4,19 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-133: Google Search Console and Google Analytics 4 (with consent) for pickstall.store
+- **Date:** 2026-11-26
+- **Done in Google (founder's Chrome, founder's request):**
+  - Search Console: the `pickstall.store` domain property was already verified and `https://www.pickstall.store/sitemap.xml` already read (23 pages). The home page is on Google; a fresh crawl was requested.
+  - Google Analytics 4: account "Pickstall", property "pickstall.store" (India time, US dollar), web stream "Pickstall website", measurement id `G-FGVW6Y34SQ`. Optional data sharing (modelling, technical support, recommendations) and marketing emails turned off. The founder approved accepting the Analytics Terms; the Data Processing Terms (GDPR) were accepted too.
+  - GA4 is linked to the Search Console property, so search queries show in Analytics.
+- **Decision (founder chose GA4 with consent, 2026-11-26):**
+  - **Where:** only Pickstall's own home, sign-up, sign-in and legal pages (`TRACKED_PATHS`). Never dashboards, the admin, buyers' libraries, checkouts or creators' stores (creators have their own pixels, D-097).
+  - **When:** only after the visitor clicks "Accept". The cookie notice is now a choice with equal "Decline" and "Accept" buttons (when `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set; otherwise it stays the plain notice). The choice is kept in local storage; the Cookie Policy shows it and lets the visitor change it; declining later stops GA storage on the page.
+  - **How:** `PlatformAnalytics` loads gtag.js with Consent Mode (analytics allowed; ad storage, ad user data and ad personalisation denied; Google signals off). The page CSP allows `www.googletagmanager.com`, `*.google-analytics.com` and `*.analytics.google.com`.
+  - **Policies:** the Cookie Policy gains an "Analytics" section (`_ga`, `_ga_<id>`, up to 2 years) and the Privacy Policy lists Google Analytics.
+  - **Setup:** new public env `NEXT_PUBLIC_GA_MEASUREMENT_ID` (set it to `G-FGVW6Y34SQ` in Vercel).
+
 ## D-132: Browser push notifications for creators
 - **Date:** 2026-11-26
 - **Why:** notifications only showed in the bell (and as a pop-up while a dashboard tab was open), so creators missed sales.

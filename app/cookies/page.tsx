@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 
+import { CookieChoiceButton } from "@/components/legal/cookie-choice-button";
 import { LegalPage, type LegalSection } from "@/components/legal/legal-page";
 import { APP_NAME } from "@/lib/config";
 
 export const metadata: Metadata = { title: `Cookie Policy | ${APP_NAME}`, description: `The cookies ${APP_NAME} uses, and why.` };
 
-// Cookie Policy (D-074). Lists every cookie the code sets today. All are strictly necessary, so no
-// consent is asked for; adding analytics or ads means adding a consent choice first.
+// Cookie Policy (D-074). Lists every cookie the code sets today: the necessary ones, and Google
+// Analytics on Pickstall's own pages, which is set only after the visitor accepts (D-133).
 const COOKIES = [
   { name: "better-auth.session_token", purpose: "Keeps you signed in.", lasts: "7 days, renewed while you use the site" },
   { name: "better-auth.session_data", purpose: "A short signed copy of your session so pages load faster.", lasts: "5 minutes" },
@@ -21,9 +22,9 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          {APP_NAME} itself only uses cookies that are strictly necessary for the site to work and stay secure. We do not use advertising or
-          tracking cookies of our own. Creators can add ad pixels to their own store pages; see &quot;Creators&apos; pixels&quot; below. On the
-          secure site the names may start with &quot;__Secure-&quot;.
+          {APP_NAME} uses cookies that are strictly necessary for the site to work and stay secure, listed below. With your permission we also use
+          Google Analytics on our own pages (see &quot;Analytics&quot; below). We do not use advertising cookies of our own. Creators can add ad pixels
+          to their own store pages; see &quot;Creators&apos; pixels&quot; below. On the secure site the names may start with &quot;__Secure-&quot;.
         </p>
         <div className="overflow-x-auto rounded-lg border border-line">
           <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
@@ -45,7 +46,25 @@ const sections: LegalSection[] = [
             </tbody>
           </table>
         </div>
-        <p>We also remember in your browser (local storage, not a cookie) that you have closed the cookie notice, so it does not show again.</p>
+        <p>We also remember in your browser (local storage, not a cookie) your cookie choice, so the notice does not show again.</p>
+      </>
+    ),
+  },
+  {
+    id: "analytics",
+    title: "Analytics",
+    body: (
+      <>
+        <p>
+          To learn how visitors find and use {APP_NAME}, we use Google Analytics on our own pages only: the home page, sign-up and sign-in, and these
+          legal pages. It never runs on your dashboard, your library, checkout or creators&apos; stores. It loads only after you choose
+          &quot;Accept&quot;, with advertising and ad personalisation turned off.
+        </p>
+        <p>
+          Google Analytics sets the cookies <code className="font-mono text-xs">_ga</code> and <code className="font-mono text-xs">_ga_&lt;id&gt;</code> to
+          tell visits apart, for up to 2 years, under Google&apos;s policies. You can change your choice here at any time:
+        </p>
+        <CookieChoiceButton />
       </>
     ),
   },
@@ -81,13 +100,14 @@ const sections: LegalSection[] = [
     title: "Your choices",
     body: (
       <p>
-        Because these cookies are necessary, the site cannot work without them; you can still block or delete cookies in your browser settings, but
-        you will not be able to stay signed in. Optional cookies, like a creator&apos;s pixels, are only set after you allow them.
+        The necessary cookies are needed for the site to work; you can still block or delete cookies in your browser settings, but you will not be
+        able to stay signed in. Optional cookies, like Google Analytics or a creator&apos;s pixels, are only set after you allow them, and you can
+        change your mind at any time.
       </p>
     ),
   },
 ];
 
 export default function CookiesPage() {
-  return <LegalPage title="Cookie Policy" intro={<p>Short version: only the cookies needed to sign you in and keep the site safe.</p>} sections={sections} />;
+  return <LegalPage title="Cookie Policy" intro={<p>Short version: the cookies needed to sign you in and keep the site safe, and Google Analytics on our own pages only if you accept.</p>} sections={sections} />;
 }

@@ -66,6 +66,7 @@ const sections: LegalSection[] = [
           <li>Cloudflare R2 (storing product and lesson files)</li>
           <li>MongoDB Atlas (database) and our hosting provider (running the website)</li>
           <li>Sentry (error reports, with tokens, cookies, form contents and user details removed first)</li>
+          <li>Google Analytics (visits to our own home, sign-up, sign-in and legal pages, only if you accept; never your dashboard, library or creators&apos; stores)</li>
           <li>Google, only if you choose to sign in with Google</li>
         </ul>
         <p>A creator sees the data of their own buyers. We may also disclose data when the law requires it, or to protect people from harm or fraud.</p>

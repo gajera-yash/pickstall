@@ -32,11 +32,11 @@ describe("contentSecurityPolicy", () => {
     expect(prod).toContain("upgrade-insecure-requests");
   });
 
-  it("loads scripts and data only from our own origin", () => {
-    expect(prod).toContain("script-src 'self' 'unsafe-inline';");
-    expect(prod).toContain("connect-src 'self' https://video.bunnycdn.com https://*.r2.cloudflarestorage.com;");
+  it("loads scripts only from our own origin and Google Analytics' tag host (D-133)", () => {
+    expect(prod).toContain("script-src 'self' 'unsafe-inline' https://www.googletagmanager.com;");
+    expect(prod).toContain("connect-src 'self' https://video.bunnycdn.com https://*.r2.cloudflarestorage.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com;");
     expect(prod).not.toContain("unsafe-eval");
-    expect(prod).not.toMatch(/script-src[^;]*https:/);
+    expect(prod).not.toMatch(/script-src[^;]*https:(?!\/\/www\.googletagmanager\.com)/);
   });
 
   it("allows eval and the hot-reload socket in development only", () => {
@@ -68,7 +68,7 @@ describe("contentSecurityPolicy", () => {
     const store = contentSecurityPolicy(false, { pixels: true });
     expect(store).toContain("https://connect.facebook.net");
     expect(store).toContain("https://www.googletagmanager.com");
+    // Pickstall's own pages never get the creators' Meta pixel host.
     expect(prod).not.toContain("facebook");
-    expect(prod).not.toContain("googletagmanager");
   });
 });

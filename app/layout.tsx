@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Instrument_Sans } from "next/font/google";
 
 import { CookieNotice } from "@/components/legal/cookie-notice";
+import { PlatformAnalytics } from "@/components/analytics/platform-analytics";
 import { APP_NAME } from "@/lib/config";
 
 import "./globals.css";
@@ -41,6 +43,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         {children}
         <CookieNotice />
+        {/* usePathname() is request data on dynamic routes, so the tag loader sits behind a boundary. */}
+        <Suspense fallback={null}>
+          <PlatformAnalytics />
+        </Suspense>
       </body>
     </html>
   );
