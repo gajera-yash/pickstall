@@ -3,10 +3,26 @@ import { connection } from "next/server";
 
 import { publicEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { COMPARE_PAGES, USE_CASE_PAGES } from "@/lib/seo/pages";
 import { sitemapStores } from "@/lib/stores/sitemap";
 
-// The sitemap: marketing and legal pages, then every live store and its published products.
-const MARKETING = ["", "/signup", "/terms", "/privacy", "/refunds", "/cookies", "/acceptable-use", "/copyright"];
+// The sitemap: marketing, content (D-134) and legal pages, then every live store and its published products.
+const MARKETING = [
+  "",
+  "/pricing",
+  "/features",
+  "/faq",
+  "/about",
+  ...COMPARE_PAGES.map((page) => `/compare/${page.slug}`),
+  ...USE_CASE_PAGES.map((page) => `/for/${page.slug}`),
+  "/signup",
+  "/terms",
+  "/privacy",
+  "/refunds",
+  "/cookies",
+  "/acceptable-use",
+  "/copyright",
+];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connection();

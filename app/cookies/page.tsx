@@ -56,8 +56,8 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          To learn how visitors find and use {APP_NAME}, we use Google Analytics on our own pages only: the home page, sign-up and sign-in, and these
-          legal pages. It never runs on your dashboard, your library, checkout or creators&apos; stores. It loads only after you choose
+          To learn how visitors find and use {APP_NAME}, we use Google Analytics on our own public pages only: the home, pricing, features, FAQ, about and
+          comparison pages, sign-up and sign-in, and these legal pages. It never runs on your dashboard, your library, checkout or creators&apos; stores. It loads only after you choose
           &quot;Accept&quot;, with advertising and ad personalisation turned off.
         </p>
         <p>

@@ -11,6 +11,10 @@ import { Pricing } from "@/components/landing/pricing";
 import { AnalyticsSection, CheckoutSection, ProductsSection, StorefrontSection } from "@/components/landing/product";
 import { Faq, FinalCta, Founders, LandingFooter } from "@/components/landing/sections";
 import { SignupSource } from "@/components/marketing/signup-source";
+import { JsonLd } from "@/components/seo/json-ld";
+import { FAQ } from "@/components/landing/content";
+import { faqSchema, organizationSchema, softwareApplicationSchema } from "@/lib/seo/schema";
+import { SITE_URL } from "@/lib/seo/site-facts";
 import { APP_NAME } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -22,6 +26,7 @@ export const metadata: Metadata = {
     description: "Sell digital products, courses and coaching from one tap-to-buy page. 0% transaction fees.",
     type: "website",
   },
+  alternates: { canonical: SITE_URL },
 };
 
 // Marketing landing (D-039, redesign D-043). Static except the nav's session check, which streams in.
@@ -31,6 +36,8 @@ export default function Home() {
       <a href="#main" className="sr-only z-50 rounded-md bg-surface px-4 py-2 font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
         Skip to content
       </a>
+      {/* Structured data for search and answer engines (D-134). */}
+      <JsonLd data={[organizationSchema(), softwareApplicationSchema(), faqSchema(FAQ)]} />
       <AnnouncementBar />
       <LandingNav
         actions={

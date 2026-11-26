@@ -5,12 +5,13 @@
 import { PLAN_LIMITS, PLANNED_PRICE_CENTS, TRIAL_DAYS } from "@/lib/config";
 import { formatWholeDollars } from "@/lib/landing/demo";
 
+/** Real pages (D-134), so search and answer engines find a page per topic; the home page keeps its sections. */
 export const LANDING_NAV = [
-  { href: "#features", label: "Features" },
-  { href: "#product", label: "Product" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "#compare", label: "Vs Stan Store" },
-  { href: "#faq", label: "FAQ" },
+  { href: "/features", label: "Features" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/compare/stan-store", label: "Vs Stan Store" },
+  { href: "/faq", label: "FAQ" },
+  { href: "/about", label: "About" },
 ] as const;
 
 export const CARD_FEES_NOTE = "PayPal's processing fees still apply.";
@@ -23,7 +24,7 @@ export const STEPS = [
 ] as const;
 
 /** Not built yet (everything else on the page is live). */
-export const COMING_SOON = ["Custom domain", "Memberships", "Payment plans", "Team accounts", "Store templates", "Public API"] as const;
+export const COMING_SOON = ["Custom domain", "Memberships", "Payment plans", "Team accounts", "Public API"] as const;
 
 /**
  * Stan Store's public plans, from Stan's own help center (help.stan.store, "Creator vs Creator Pro"
@@ -44,6 +45,10 @@ const STARTER = price(PLANNED_PRICE_CENTS.starter);
 const PRO = price(PLANNED_PRICE_CENTS.pro);
 
 export const FAQ = [
+  {
+    q: "What is Pickstall?",
+    a: "Pickstall is a link-in-bio store where creators sell digital products, online courses and coaching calls from one mobile page, with 0% transaction fees. You put one link in your Instagram, TikTok or YouTube bio, and followers buy in a few taps.",
+  },
   {
     q: "What does 0% transaction fees mean?",
     a: "We never take a percentage of your sales. Buyers pay into your own PayPal account. PayPal's processing fees still apply, as they do everywhere.",

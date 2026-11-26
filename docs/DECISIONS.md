@@ -4,6 +4,21 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-134: AEO: pages, structured data and files that AI answer engines can read and quote (blocks 1-2)
+- **Date:** 2026-11-26
+- **Why:** more visitors now come from ChatGPT, Perplexity, Gemini and Google AI Overviews. These suggest sites whose facts are clear, consistent and backed by good pages. No one can guarantee a top spot; this makes Pickstall as easy as possible to understand, quote and recommend.
+- **Decision (founder approved the AEO plan, 2026-11-26):**
+  - **One set of facts** (`lib/seo/site-facts.ts`): a one-line definition repeated across the site ("Pickstall is a link-in-bio store where creators sell digital products, online courses and coaching calls from one mobile page, with 0% transaction fees"), key facts and prices from `PLANNED_PRICE_CENTS`.
+  - **New pages** (in the sitemap, the nav and the footer): `/pricing`, `/features`, `/faq`, `/about`, `/compare/stan-store`, `/compare/gumroad`, `/compare/linktree`, `/for/coaches`, `/for/fitness`, `/for/course-creators`. Each has a clear H1, a short answer right under it, a breadcrumb and its own title, description and canonical URL. The landing nav now links to these pages.
+  - **Honest comparisons** (`lib/seo/pages.ts`): other platforms' facts only from their own public pages, with the source and the date checked shown on the page (Stan Store help center, Nov 1 2026; Gumroad pricing, Nov 26 2026: 10% + $0.50 direct, 30% via Discover, no monthly fee, merchant of record; Linktree pricing, Nov 26 2026: Free, Starter, Pro, Premium, prices by region, commerce on Premium). Each page also says when the other option may suit a creator better. "Not stated on the pages we checked" where they say nothing.
+  - **Structured data** (JSON-LD, `lib/seo/schema.ts`): Organization, SoftwareApplication (Starter and Pro offers in USD), FAQPage (home, FAQ, pricing) and BreadcrumbList (every content page). Escaped so it can never close the script tag.
+  - **`/llms.txt`**: a Markdown summary with the key facts and links to every content page, built from the same facts.
+  - **robots.txt** names AI crawlers (GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User, Google-Extended, Applebot-Extended, Bingbot) as welcome on public pages, with the same private paths blocked as for everyone.
+  - **IndexNow:** `/indexnow.txt` serves `INDEXNOW_KEY`, and `pnpm indexnow` asks Bing and other IndexNow engines to recrawl every sitemap URL (Bing feeds ChatGPT search and Copilot).
+  - **Metadata:** `metadataBase` and the one-line definition as the default description; "Store templates" removed from Coming soon (built in D-130); a "What is Pickstall?" FAQ added.
+  - The new content pages are measured by Google Analytics after consent (D-133); the policies list them.
+- **Not in this block (founder's accounts):** Bing Webmaster Tools, Product Hunt, G2, Capterra, AlternativeTo, SaaSHub, Crunchbase, Wikidata, Reddit and Quora answers, a YouTube demo, and the monthly AI-answer check (blocks 3 and 4).
+
 ## D-133: Google Search Console and Google Analytics 4 (with consent) for pickstall.store
 - **Date:** 2026-11-26
 - **Done in Google (founder's Chrome, founder's request):**

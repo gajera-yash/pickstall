@@ -5,6 +5,7 @@ import { Bricolage_Grotesque, Instrument_Sans } from "next/font/google";
 import { CookieNotice } from "@/components/legal/cookie-notice";
 import { PlatformAnalytics } from "@/components/analytics/platform-analytics";
 import { APP_NAME } from "@/lib/config";
+import { ONE_LINER, SITE_URL } from "@/lib/seo/site-facts";
 
 import "./globals.css";
 
@@ -24,8 +25,9 @@ const body = Instrument_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: APP_NAME,
-  description: "Storefront, digital products and courses for creators.",
+  description: ONE_LINER,
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },

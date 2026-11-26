@@ -27,6 +27,8 @@ export const serverEnvSchema = publicEnvSchema.extend({
   BETTER_AUTH_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: optional(z.string().min(1)),
   GOOGLE_CLIENT_SECRET: optional(z.string().min(1)),
+  // IndexNow key (D-134): served at /indexnow.txt and sent with `pnpm indexnow`. Not a secret.
+  INDEXNOW_KEY: optional(z.string().regex(/^[a-zA-Z0-9-]{8,128}$/, { error: "Use 8-128 letters, digits or dashes" })),
   // Signs browser push messages (D-132); pairs with NEXT_PUBLIC_VAPID_PUBLIC_KEY. Make both with `pnpm push:keys`.
   VAPID_PRIVATE_KEY: optional(z.string().regex(/^[A-Za-z0-9_-]{40,50}$/, { error: "Must be a URL-safe base64 VAPID private key" })),
   // Sends the sign-in code. Optional in development: the code is then written to the server log.
