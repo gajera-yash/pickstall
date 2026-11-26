@@ -4,9 +4,8 @@ import { KEY_FACTS, ONE_LINER, SHORT_PITCH, SITE_URL } from "@/lib/seo/site-fact
 
 // /llms.txt (D-134): a short Markdown summary of Pickstall for AI assistants and answer engines, in
 // the llms.txt format (a title, a one-line summary, then sections of links). Built from the same
-// site facts as the pages, so they never disagree. Static: rebuilt on each deploy.
-
-export const dynamic = "force-static";
+// site facts as the pages, so they never disagree. It reads no request data, so with Cache
+// Components it is prerendered at build time (no route segment config allowed there).
 
 export function GET() {
   const link = (title: string, path: string, note: string) => `- [${title}](${SITE_URL}${path}): ${note}`;
