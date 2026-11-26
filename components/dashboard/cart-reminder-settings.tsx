@@ -77,6 +77,7 @@ export function CartReminderSettings({ storeName, initial, stats, locked = false
 
       <EmailTemplatePicker
         kind="cart"
+        ai={{ title: storeName, subject, body }}
         hasText={subject.trim() !== "" || body.trim() !== ""}
         onPick={(preset) => {
           setSubject(preset.subject);

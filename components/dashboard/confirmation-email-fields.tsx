@@ -23,6 +23,7 @@ export function ConfirmationEmailFields({
   fieldError,
   linkLabel = "open their purchase",
   footer,
+  productTitle,
 }: {
   subject: string;
   body: string;
@@ -33,6 +34,8 @@ export function ConfirmationEmailFields({
   linkLabel?: string;
   /** Optional actions under the fields (for example a Save button). */
   footer?: ReactNode;
+  /** The product's title, as context for "Write with AI" (D-131). */
+  productTitle?: string;
 }) {
   return (
     <section aria-labelledby="confirmation-email-title" className="flex flex-col gap-4 rounded-md border border-line p-4">
@@ -55,6 +58,7 @@ export function ConfirmationEmailFields({
       </div>
       <EmailTemplatePicker
         kind="confirmation"
+        ai={{ title: productTitle ?? "", subject, body }}
         hasText={subject.trim() !== "" || body.trim() !== ""}
         onPick={(preset) => {
           onSubject(preset.subject);

@@ -380,7 +380,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
               <Field id="title" label="Title" error={fieldError("title")} hint={`${values.title.length}/${PRODUCT_LIMITS.title}`}>
                 <Input id="title" value={values.title} maxLength={PRODUCT_LIMITS.title} onChange={(event) => set("title", event.target.value)} aria-invalid={!!fieldError("title")} placeholder="Instagram growth playbook" />
               </Field>
-              <RichTextEditor id="descriptionDoc" label="Description (optional)" value={values.descriptionDoc} onChange={(doc) => set("descriptionDoc", doc)} error={fieldError("descriptionDoc")} />
+              <RichTextEditor id="descriptionDoc" label="Description (optional)" value={values.descriptionDoc} onChange={(doc) => set("descriptionDoc", doc)} error={fieldError("descriptionDoc")} aiTitle={values.title} />
               <ImageUploader id="coverUrl" label="Cover image (optional)" kind="cover" shape="wide" value={values.coverUrl} onChange={(value) => set("coverUrl", value)} error={fieldError("coverUrl")} hint="Shown on your store and product page. JPG, PNG, WebP or GIF, up to 4 MB." />
               <fieldset className="flex flex-col gap-3">
                 <legend className="mb-2 text-sm font-semibold">How buyers get it</legend>
@@ -529,6 +529,7 @@ export function ProductEditor({ initial, currency, storeLink, paymentsOk, isNew,
                 <Input id="redirectUrl" type="url" inputMode="url" value={values.redirectUrl} onChange={(event) => set("redirectUrl", event.target.value)} onBlur={() => touch("redirectUrl")} placeholder="https://" aria-invalid={!!fieldError("redirectUrl")} />
               </Field>
               <ConfirmationEmailFields
+                productTitle={values.title}
                 subject={values.emailSubject}
                 body={values.emailBody}
                 onSubject={(value) => set("emailSubject", value)}

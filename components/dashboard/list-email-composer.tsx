@@ -43,6 +43,7 @@ function EmailFields({
     <div className="flex flex-col gap-4">
       <EmailTemplatePicker
         kind={kind}
+        ai={{ title: storeName, subject, body }}
         hasText={subject.trim() !== "" || body.trim() !== ""}
         onPick={(preset) => {
           onSubject(preset.subject);

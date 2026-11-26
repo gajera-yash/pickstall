@@ -5,12 +5,13 @@ import StarterKit from "@tiptap/starter-kit";
 import { Bold, Heading2, Heading3, Italic, Link2, List, ListOrdered, Redo2, Underline, Undo2, type LucideIcon } from "lucide-react";
 import { useId, useState } from "react";
 
+import { AiWriter } from "@/components/dashboard/ai-writer";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { RICH_TEXT_MAX_CHARS, plainTextOf, safeHref, type RichDoc } from "@/lib/products/rich-text";
+import { docFromPlainText, RICH_TEXT_MAX_CHARS, plainTextOf, safeHref, type RichDoc } from "@/lib/products/rich-text";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,6 +26,7 @@ export function RichTextEditor({
   onChange,
   error,
   maxChars = RICH_TEXT_MAX_CHARS,
+  aiTitle,
 }: {
   id: string;
   label: string;
@@ -33,6 +35,8 @@ export function RichTextEditor({
   error?: string | null;
   /** The server's limit for this field (descriptions 2000, lesson notes more). */
   maxChars?: number;
+  /** Shows "Write with AI" for a product description (D-131), with this product title as context. */
+  aiTitle?: string;
 }) {
   const labelId = useId();
   const hintId = `${id}-hint`;
@@ -104,6 +108,20 @@ export function RichTextEditor({
           )}
         />
       </div>
+      {aiTitle !== undefined && (
+        <AiWriter
+          kind="description"
+          title={aiTitle}
+          current={plainTextOf(editor ? (editor.getJSON() as RichDoc) : value)}
+          onResult={(result) => {
+            // The AI writes plain text: one paragraph per line, which the creator can then format.
+            const doc = docFromPlainText(result.body);
+            editor?.commands.setContent(doc);
+            setChars(plainTextOf(doc).length);
+            onChange(doc);
+          }}
+        />
+      )}
       {error ? (
         <FieldError id={errorId}>{error}</FieldError>
       ) : (

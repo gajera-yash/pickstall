@@ -348,7 +348,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
               <Field id="title" label="Course title" error={fieldError("title")} hint={`${values.title.length}/${PRODUCT_LIMITS.title}`}>
                 <Input id="title" value={values.title} maxLength={PRODUCT_LIMITS.title} onChange={(event) => set("title", event.target.value)} aria-invalid={!!fieldError("title")} placeholder="Advanced UI/UX Design Masterclass" />
               </Field>
-              <RichTextEditor id="descriptionDoc" label="Description (optional)" value={values.descriptionDoc} onChange={(doc) => set("descriptionDoc", doc)} error={fieldError("descriptionDoc")} />
+              <RichTextEditor id="descriptionDoc" label="Description (optional)" value={values.descriptionDoc} onChange={(doc) => set("descriptionDoc", doc)} error={fieldError("descriptionDoc")} aiTitle={values.title} />
               <ImageUploader id="coverUrl" label="Cover image (optional)" kind="cover" shape="wide" value={values.coverUrl} onChange={(value) => set("coverUrl", value)} error={fieldError("coverUrl")} hint="The banner on your store and course page. JPG, PNG, WebP or GIF, up to 4 MB." />
               <Field id="category" label="Category" error={fieldError("category")} hint="Helps students understand what the course is about.">
                 <ChoiceSelect id="category" value={values.category} onValueChange={(value) => set("category", value as EditorCourse["category"])} invalid={!!fieldError("category")} placeholder="Pick a category" options={COURSE_CATEGORIES.map((category) => ({ value: category, label: COURSE_CATEGORY_LABELS[category] }))} />
@@ -459,6 +459,7 @@ export function CourseEditor({ initial, currency, paymentsOk, isNew, curriculum:
               <ReleaseSection courseId={values.id} drip={values.drip} modules={curriculum.modules} onSaved={(drip, modules) => (set("drip", drip), setCurriculum({ modules }))} />
               <CertificateSection courseId={values.id} initial={values.certificate} />
               <ConfirmationEmailFields
+                productTitle={values.title}
                 subject={values.emailSubject}
                 body={values.emailBody}
                 onSubject={(value) => set("emailSubject", value)}

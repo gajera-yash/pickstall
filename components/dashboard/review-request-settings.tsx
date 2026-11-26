@@ -77,6 +77,7 @@ export function ReviewRequestSettings({ storeName, initial, sent, locked = false
 
       <EmailTemplatePicker
         kind="review"
+        ai={{ title: storeName, subject, body }}
         hasText={subject.trim() !== "" || body.trim() !== ""}
         onPick={(preset) => {
           setSubject(preset.subject);
