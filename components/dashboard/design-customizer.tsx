@@ -63,10 +63,11 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
  * font, buttons, cards, layout and header. Every change shows in the Store preview at once; text
  * that would be hard to read is flagged here and refused on save.
  */
-export function DesignCustomizer({ initial }: { initial: StoreDesign | null }) {
+/** `saved` is what is saved now when it differs from `initial` (a template was applied, D-130). */
+export function DesignCustomizer({ initial, saved: savedNow }: { initial: StoreDesign | null; saved?: StoreDesign | null }) {
   const draft = useDesignDraft();
   const [form, setForm] = useState<StoreDesignForm>(() => designToForm(initial));
-  const [saved, setSaved] = useState<StoreDesign | null>(initial);
+  const [saved, setSaved] = useState<StoreDesign | null>(savedNow === undefined ? initial : savedNow);
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
 
   const presetId = draft?.design.themePreset ?? "clean";

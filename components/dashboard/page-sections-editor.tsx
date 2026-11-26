@@ -55,11 +55,12 @@ function empty(type: Exclude<PageBlockType, "products">): Draft {
  * testimonials, move them above or below the Products section with the arrow buttons, and save.
  * The server checks everything again; the live preview updates after saving.
  */
-export function PageSectionsEditor({ initial }: { initial: PageBlock[] }) {
+/** `saved` is what is saved now when it differs from `initial` (a template was applied, D-130). */
+export function PageSectionsEditor({ initial, saved }: { initial: PageBlock[]; saved?: PageBlock[] }) {
   const designDraft = useDesignDraft();
   const patchDraft = designDraft?.patch;
   const [drafts, setDrafts] = useState<Draft[]>(() => (initial.length > 0 ? initial.map(toDraft) : [{ id: newBlockId(), type: "products" }]));
-  const [savedJson, setSavedJson] = useState(() => JSON.stringify(drafts));
+  const [savedJson, setSavedJson] = useState(() => JSON.stringify(saved === undefined ? drafts : saved.map(toDraft)));
   const [problem, setProblem] = useState<{ text: string; index: number | null } | null>(null);
   const sections = drafts.filter((draft) => draft.type !== "products").length;
   const dirty = JSON.stringify(drafts) !== savedJson;

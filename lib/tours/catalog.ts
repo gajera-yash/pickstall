@@ -25,7 +25,7 @@ export const TOURS: Record<TourId, TourStep[]> = {
     { target: "nav-settings", title: "Get paid", body: "Connect payments in Settings so buyers can pay you directly. Pickstall takes 0% of your sales." },
   ],
   "store-design": [
-    { target: "design-tabs", title: "Three steps to your look", body: "Theme picks a starting point, Customize changes colors, fonts and buttons, Sections adds content around your products." },
+    { target: "design-tabs", title: "Four steps to your look", body: "Templates give you a ready-made look, Theme picks colors, Customize changes fonts and buttons, Sections adds content around your products." },
     { target: "design-preview", title: "See it live", body: "Every change shows here first. Switch between Phone and Desktop, and scroll inside to see the whole page." },
     { target: "design-save", title: "Save when you're happy", body: "One Save button publishes all your changes. Until then, only you see them." },
   ],

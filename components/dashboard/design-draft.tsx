@@ -19,6 +19,8 @@ type Saver = { dirty: boolean; save: () => Promise<boolean> };
 type DraftState = {
   /** The design to show: the edited one, or the saved one when nothing is being edited. */
   design: DesignDraft;
+  /** What is saved now (each part updated when it is saved). */
+  saved: DesignDraft;
   /** True when any editor has unsaved changes. */
   unsaved: boolean;
   /** Changes part of the edited design (one click can change the theme and then its accent). */
@@ -35,6 +37,7 @@ const DraftContext = createContext<DraftState | null>(null);
 
 export function DesignDraftProvider({ saved: initialSaved, children }: { saved: DesignDraft; children: ReactNode }) {
   const [design, setDesign] = useState(initialSaved);
+  const [saved, setSaved] = useState(initialSaved);
   const savers = useRef(new Map<string, Saver>());
   const [dirtyIds, setDirtyIds] = useState<string[]>([]);
 
@@ -42,6 +45,7 @@ export function DesignDraftProvider({ saved: initialSaved, children }: { saved: 
   const markSaved = useCallback((next: Partial<DesignDraft>) => {
     // Other unsaved edits stay; the saved part now matches what the editor holds.
     setDesign((current) => ({ ...current, ...next }));
+    setSaved((current) => ({ ...current, ...next }));
   }, []);
   const setSaver = useCallback((id: string, saver: Saver | null) => {
     if (saver) savers.current.set(id, saver);
@@ -57,7 +61,7 @@ export function DesignDraftProvider({ saved: initialSaved, children }: { saved: 
     return ok;
   }, []);
 
-  const value = useMemo(() => ({ design, unsaved: dirtyIds.length > 0, patch, markSaved, setSaver, saveAll }), [design, dirtyIds, patch, markSaved, setSaver, saveAll]);
+  const value = useMemo(() => ({ design, saved, unsaved: dirtyIds.length > 0, patch, markSaved, setSaver, saveAll }), [design, saved, dirtyIds, patch, markSaved, setSaver, saveAll]);
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>;
 }
 

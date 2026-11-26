@@ -4,6 +4,16 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-130: Store templates (Phase 5, template library)
+- **Date:** 2026-11-26
+- **Decision (founder picked the template library, 2026-11-26):**
+  - **8 templates** (`lib/store-templates/catalog.ts`): Coach, Fitness, Course creator, Artist, Minimal, Creator, Wellness and Writer. Each is a theme, an accent, a custom design (D-123) and optional sample sections (D-101: an intro, a quote, links) with text the creator edits. Products always come from the store.
+  - **Templates tab** first on Store design (`TemplatePicker`); a store with no design of its own opens on it. "Use this template" restarts the Theme, Customize and Sections tabs from the template (remounted with the template as their start and the real saved design as their baseline), so the preview shows it at once and Save lights up. Nothing is saved until Save; "Undo" puts the previous design back.
+  - **Sample sections** are used only when ticked. Ticked by default for a store without sections; a store that has its own sections keeps them unless the creator ticks it (it says it replaces them).
+  - **Safety:** templates go through the same save actions and checks as a hand-made design. Tests run every template through `accentSchema`, `storeDesignInput`, `designContrastProblem` and `pageBlocksInput`.
+  - No data change: a template only fills fields that already exist.
+- **Not in this block:** creator-made templates, sharing templates, template previews with real products before applying (the live preview shows them after applying).
+
 ## D-129: Marketing redesign: an overview of cards, and one page per tool
 - **Date:** 2026-11-25
 - **Decision (founder: "everything on one page will confuse creators", plan approved 2026-11-25):**

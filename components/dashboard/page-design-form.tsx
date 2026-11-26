@@ -10,6 +10,8 @@ import type { ThemePresetId } from "@/lib/themes";
 
 type Props = {
   initial: { themePreset: ThemePresetId; accent: string };
+  /** What is saved now, when it differs from `initial` (a template was applied, D-130). Default: `initial`. */
+  saved?: { themePreset: ThemePresetId; accent: string };
 };
 
 /**
@@ -17,11 +19,11 @@ type Props = {
  * contrast check (DESIGN.md 11: never allow low-contrast buttons). The preview next to it shows
  * every pick before it is saved; the page's one Save button saves it.
  */
-export function PageDesignForm({ initial }: Props) {
+export function PageDesignForm({ initial, saved: savedNow }: Props) {
   const draft = useDesignDraft();
   const [themePreset, setThemePreset] = useState<ThemePresetId>(initial.themePreset);
   const [accent, setAccent] = useState(initial.accent);
-  const [saved, setSaved] = useState(initial);
+  const [saved, setSaved] = useState(savedNow ?? initial);
   const [error, setError] = useState<{ field?: string; text: string } | null>(null);
 
   const dirty = themePreset !== saved.themePreset || accent.toUpperCase() !== saved.accent.toUpperCase();
