@@ -63,6 +63,12 @@ export type ProfileDoc = {
   updatedAt: Date;
 };
 
+/**
+ * One browser that gets push notifications for a store (D-132). `_id` is the SHA-256 of the
+ * endpoint, so the same browser is saved once. Removed when the push service says it is gone.
+ */
+export type PushSubscriptionDoc = { _id: string; userId: string; storeId: string; endpoint: string; keys: { p256dh: string; auth: string }; createdAt: Date; lastSentAt: Date | null };
+
 /** Tours and "New" hotspots a creator has seen (D-128). `_id` is the user id. Deleted with the account. */
 export type TourProgressDoc = { _id: string; seen: string[]; updatedAt: Date };
 
@@ -925,6 +931,7 @@ export type MktReportDoc = {
 export async function collections(): Promise<{
   profiles: Collection<ProfileDoc>;
   tourProgress: Collection<TourProgressDoc>;
+  pushSubscriptions: Collection<PushSubscriptionDoc>;
   stores: Collection<StoreDoc>;
   products: Collection<ProductDoc>;
   uploads: Collection<UploadDoc>;
@@ -967,6 +974,7 @@ export async function collections(): Promise<{
   return {
     profiles: db.collection<ProfileDoc>("profiles"),
     tourProgress: db.collection<TourProgressDoc>("tourProgress"),
+    pushSubscriptions: db.collection<PushSubscriptionDoc>("pushSubscriptions"),
     stores: db.collection<StoreDoc>("stores"),
     products: db.collection<ProductDoc>("products"),
     uploads: db.collection<UploadDoc>("uploads"),

@@ -13,6 +13,9 @@ export const publicEnvSchema = z.object({
   NEXT_PUBLIC_ROOT_DOMAIN: z.string().min(1),
   // Shows the Google button. Set to "true" only when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set.
   NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: optional(z.enum(["true", "false"])),
+  // Browser push (D-132): the VAPID public key the browser subscribes with. Without it the "Turn on
+  // browser notifications" button is hidden.
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: optional(z.string().regex(/^[A-Za-z0-9_-]{80,100}$/, { error: "Must be a URL-safe base64 VAPID public key" })),
 });
 
 export const serverEnvSchema = publicEnvSchema.extend({
@@ -22,6 +25,8 @@ export const serverEnvSchema = publicEnvSchema.extend({
   BETTER_AUTH_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: optional(z.string().min(1)),
   GOOGLE_CLIENT_SECRET: optional(z.string().min(1)),
+  // Signs browser push messages (D-132); pairs with NEXT_PUBLIC_VAPID_PUBLIC_KEY. Make both with `pnpm push:keys`.
+  VAPID_PRIVATE_KEY: optional(z.string().regex(/^[A-Za-z0-9_-]{40,50}$/, { error: "Must be a URL-safe base64 VAPID private key" })),
   // Sends the sign-in code. Optional in development: the code is then written to the server log.
   RESEND_API_KEY: optional(z.string().min(1)),
   EMAIL_FROM: optional(z.string().min(3)),

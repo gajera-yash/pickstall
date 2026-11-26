@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { collections, type NotificationDoc } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { logger } from "@/lib/logger";
+import { sendPushToStore } from "@/lib/push/send";
 import { formatMoney } from "@/lib/products/money";
 
 // Dashboard notifications (D-061). Written by the payment flow and the video status updates, read
@@ -24,9 +25,14 @@ export async function notify(input: NewNotification): Promise<void> {
     const { notifications } = await collections();
     await notifications.insertOne({ amountCents: null, currency: null, test: false, ...input, _id: randomUUID(), createdAt: new Date(), readAt: null });
   } catch (error) {
-    if (isDuplicateKeyError(error)) return;
+    if (isDuplicateKeyError(error)) return; // already notified (a replayed event): no second push either
     logger.warn("notifications.write_failed", { name: error instanceof Error ? error.name : undefined });
+    return;
   }
+  // The same notification in the creator's browsers (D-132). A push problem never breaks the sale.
+  await sendPushToStore(input.storeId, { title: input.title, body: input.body, href: input.href }).catch((error: unknown) =>
+    logger.warn("push.store_send_failed", { name: error instanceof Error ? error.name : undefined }),
+  );
 }
 
 /** "New sale" for an order that just became paid (free orders: "New sign-up"). */

@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { getNotifications, markNotificationsRead } from "@/lib/notifications/actions";
 import type { NotificationItem } from "@/lib/notifications/queries";
 import { timeAgo } from "@/lib/notifications/time";
+import { currentSubscription, pushSupported, turnOffPush, turnOnPush } from "@/lib/push/client";
 import { cn } from "@/lib/utils";
 
 /** How often the bell checks: often while you look at the dashboard, less when the tab is hidden. */
@@ -22,11 +23,15 @@ const HIDDEN_MS = 60_000;
 const ICONS: Record<NotificationItem["kind"], typeof Bell> = { sale: ReceiptText, refund: RotateCcw, video_ready: Video, video_failed: CircleAlert };
 
 type DesktopAlerts = "unsupported" | NotificationPermission;
+/** Browser push (D-132): "on" for this browser, or "off". "unavailable" when push is not set up here. */
+type PushState = "unavailable" | "off" | "on";
 
 /**
  * The live notification bell (D-061): new sales, refunds and lesson videos that finished or failed.
  * It checks every 20 seconds (every minute in a hidden tab), shows an unread count, and with the
- * creator's permission shows a desktop pop-up for news that arrives while the tab is hidden.
+ * creator's permission shows a desktop pop-up for news that arrives while the tab is hidden. With
+ * browser push turned on (D-132) the notifications come from the server instead, even when
+ * Pickstall is closed, so the tab's own pop-ups are skipped.
  * Opening it marks everything read.
  */
 export function NotificationBell() {
@@ -36,6 +41,10 @@ export function NotificationBell() {
   const [now, setNow] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [alerts, setAlerts] = useState<DesktopAlerts>("unsupported");
+  const [push, setPush] = useState<PushState>("unavailable");
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushProblem, setPushProblem] = useState<string | null>(null);
+  const pushOn = useRef(false);
   // Ids already seen, so only news that arrives after the page opened makes a pop-up.
   const seen = useRef<Set<string> | null>(null);
 
@@ -48,7 +57,8 @@ export function NotificationBell() {
     setUnread(result.data.unread);
     setNow(Date.now());
     setLoaded(true);
-    if (fresh.length > 0 && document.hidden && "Notification" in window && Notification.permission === "granted") {
+    // With push on, the server already sent these to the browser: no second pop-up from the tab.
+    if (!pushOn.current && fresh.length > 0 && document.hidden && "Notification" in window && Notification.permission === "granted") {
       for (const item of fresh.slice(0, 3)) {
         const popup = new Notification(item.title, { body: item.body, tag: item.id });
         popup.onclick = () => {
@@ -85,8 +95,35 @@ export function NotificationBell() {
   useEffect(() => {
     // Read once on the client: the Notification API does not exist on the server.
     const timer = setTimeout(() => setAlerts("Notification" in window ? Notification.permission : "unsupported"), 0);
+    // Is this browser already subscribed to push?
+    if (pushSupported()) {
+      void currentSubscription()
+        .then((subscription) => {
+          pushOn.current = subscription !== null;
+          setPush(subscription ? "on" : "off");
+        })
+        .catch(() => setPush("off"));
+    }
     return () => clearTimeout(timer);
   }, []);
+
+  const togglePush = async () => {
+    setPushBusy(true);
+    setPushProblem(null);
+    if (push === "on") {
+      await turnOffPush().catch(() => undefined);
+      pushOn.current = false;
+      setPush("off");
+    } else {
+      const result = await turnOnPush();
+      if (result.ok) {
+        pushOn.current = true;
+        setPush("on");
+        setAlerts("granted");
+      } else setPushProblem(result.error);
+    }
+    setPushBusy(false);
+  };
 
   const onOpenChange = (open: boolean) => {
     if (!open || unread === 0) return;
@@ -157,7 +194,22 @@ export function NotificationBell() {
             </ul>
           )}
         </div>
-        {alerts !== "unsupported" && alerts !== "granted" && (
+        {push !== "unavailable" ? (
+          <div className="flex flex-col gap-2 border-t border-line px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs text-mute">{push === "on" ? "Browser notifications are on for this device." : "Get a notification on this device for every sale, even when Pickstall is closed."}</span>
+              <Button type="button" variant="secondary" size="sm" onClick={() => void togglePush()} loading={pushBusy} className="shrink-0">
+                {push === "on" ? <BellOff aria-hidden="true" className="size-4" /> : <BellRing aria-hidden="true" className="size-4" />}
+                {push === "on" ? "Turn off" : "Turn on"}
+              </Button>
+            </div>
+            {pushProblem && (
+              <p role="alert" className="text-xs text-danger">
+                {pushProblem}
+              </p>
+            )}
+          </div>
+        ) : alerts !== "unsupported" && alerts !== "granted" && (
           <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3">
             {alerts === "default" ? (
               <>

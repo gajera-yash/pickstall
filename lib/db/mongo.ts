@@ -138,6 +138,9 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("mktDrafts").createIndex({ createdAt: -1 }, { name: "mkt_drafts_created" }),
     db.collection("mktLeads").createIndex({ stage: 1, lastContactedAt: 1 }, { name: "mkt_leads_stage_contacted" }),
     db.collection("stores").createIndex({ "acquisition.ref": 1 }, { partialFilterExpression: { "acquisition.ref": { $type: "string" } }, name: "stores_acquisition_ref" }),
+    // Browser push (D-132): a store's browsers, and a user's (removed with the account).
+    db.collection("pushSubscriptions").createIndex({ storeId: 1 }, { name: "push_subscriptions_store" }),
+    db.collection("pushSubscriptions").createIndex({ userId: 1 }, { name: "push_subscriptions_user" }),
     // Better Auth collections (it does not create indexes for MongoDB itself).
     db.collection("user").createIndex({ email: 1 }, { unique: true, name: "user_email_unique" }),
     db.collection("session").createIndex({ token: 1 }, { unique: true, name: "session_token_unique" }),

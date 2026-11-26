@@ -4,6 +4,25 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-132: Browser push notifications for creators
+- **Date:** 2026-11-26
+- **Why:** notifications only showed in the bell (and as a pop-up while a dashboard tab was open), so creators missed sales.
+- **Decision (founder chose real push with the `web-push` package, VAPID keys and a new collection, 2026-11-26):**
+  - **Turn on** from the bell: "Get a notification on this device for every sale, even when Pickstall is closed". The browser asks for permission, registers `/push-sw.js` (shows notifications and opens the dashboard page they point to; caches nothing), subscribes with `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, and the subscription is saved for the session's user and store (`savePushSubscriptionAction`, rate limited). "Turn off" unsubscribes and deletes it.
+  - **Sending:** every new in-app notification (`notify`: sales, refunds, lesson videos) is also pushed to the store's browsers (`sendPushToStore`, `web-push` with VAPID details per call, 4 s timeout, at most 10 browsers per store). A replayed event (duplicate notification) sends no second push. A browser the push service reports gone (404/410) is removed. A push problem never breaks a sale.
+  - **Privacy:** the payload is only the notification's title, body and a dashboard path (checked to start with `/dashboard`); never buyer emails. With push on, the tab's own pop-ups are skipped so nothing shows twice.
+  - **Data and setup:** new collection `pushSubscriptions` (`_id` = SHA-256 of the endpoint; indexes on store and user; deleted with the account). New env `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`, made with `pnpm push:keys`. Without them the switch stays hidden and nothing is sent. New dependency `web-push` (and `@types/web-push`).
+- **Limits:** iPhone and iPad get web push only for a site added to the Home Screen (needs the PWA manifest, a later block). Desktop Chrome, Edge, Firefox and Android work in the browser.
+
+## D-131: AI writing helper for creators
+- **Date:** 2026-11-26
+- **Decision (founder picked the AI writer, 2026-11-26):**
+  - **"Write with AI"** under product and course descriptions, and next to the email templates of all five creator emails (confirmation, welcome, broadcast, abandoned cart, review request). The creator may add what it should say and pick a tone (friendly, professional, short, excited); the draft replaces the text in the field for them to read and edit. Nothing is saved until they save.
+  - **Model:** Groq with the existing `GROQ_API_KEY` (`GROQ_MODEL` optional), strict JSON output, plain fetch (`lib/ai/groq-text.ts`). Without a key the button answers "The AI writer isn't turned on yet."
+  - **Rules** (`lib/ai/creator-writer.ts`): only the creator's own words are sent (title, notes, current text), never buyer data. The prompt forbids invented facts, prices, discounts, guarantees, testimonials and deadlines, and asking readers for passwords or card numbers. The answer is cleaned of HTML, cut to each field's limit, and any placeholder the email cannot use is removed.
+  - **Limits:** 20 per creator per hour and 60 per store per day (`writeWithAiAction`).
+  - No data change.
+
 ## D-130: Store templates (Phase 5, template library)
 - **Date:** 2026-11-26
 - **Decision (founder picked the template library, 2026-11-26):**
