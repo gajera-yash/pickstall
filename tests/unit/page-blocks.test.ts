@@ -72,6 +72,22 @@ describe("page section rules (D-101)", () => {
     for (const block of bad) expect(pageBlocksInput.safeParse([products, block]).success).toBe(false);
   });
 
+  it("keeps a cleaned section title, drops an empty one and refuses a long one", () => {
+    const parsed = pageBlocksInput.parse([
+      products,
+      { id: "video001", type: "video", title: " <b>Watch</b> ", links: ["https://youtu.be/dQw4w9WgXcQ"] },
+      { id: "quote001", type: "testimonial", title: "", quote: "Loved it", name: "" },
+    ]);
+    expect(parsed.slice(1)).toEqual([
+      { id: "video001", type: "video", title: "Watch", videos: [{ kind: "youtube", id: "dQw4w9WgXcQ" }] },
+      { id: "quote001", type: "testimonial", quote: "Loved it", name: null },
+    ]);
+    const long = { id: "quote001", type: "testimonial", title: "x".repeat(BLOCK_LIMITS.title + 1), quote: "Loved it", name: "" };
+    expect(pageBlocksInput.safeParse([products, long]).success).toBe(false);
+    const html = renderToStaticMarkup(createElement(StoreBlocks, { theme: resolveTheme({ preset: "clean", accent: "#0056FF" }), blocks: [{ id: "quote001", type: "testimonial", title: "<i>Students</i>", quote: "Loved it", name: null }] }));
+    expect(html).toContain("&lt;i&gt;Students&lt;/i&gt;</h2>");
+  });
+
   it("reads sections saved before multi-image and multi-video sections", () => {
     expect(imagesOf({ id: "image001", type: "image", url: "/media/x", alt: "a" })).toEqual([{ url: "/media/x", alt: "a" }]);
     expect(videosOf({ id: "video001", type: "video", video: { kind: "youtube", id: "dQw4w9WgXcQ" } })).toEqual([{ kind: "youtube", id: "dQw4w9WgXcQ" }]);

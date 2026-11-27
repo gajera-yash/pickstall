@@ -14,10 +14,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { watchUrlFor } from "@/lib/courses/video-links";
 import { savePageBlocksAction } from "@/lib/page-blocks/actions";
 import { ChoiceSelect } from "@/components/ui/choice-select";
-import { ADDABLE_BLOCKS, BLOCK_LABELS, BLOCK_LIMITS, DEFAULT_IMAGE_GRID, DEFAULT_SECTION_STYLE, PAGE_BLOCKS_MAX, imagesOf, newBlockId, pageBlocksInput, videosOf, type BlockImage, type ImageGrid, type PageBlock, type PageBlockType, type SectionStyle, type VideoColumns } from "@/lib/page-blocks/rules";
+import { ADDABLE_BLOCKS, BLOCK_LABELS, BLOCK_LIMITS, DEFAULT_IMAGE_GRID, DEFAULT_SECTION_STYLE, PAGE_BLOCKS_MAX, TITLED_BLOCKS, imagesOf, newBlockId, pageBlocksInput, videosOf, type BlockImage, type ImageGrid, type PageBlock, type PageBlockType, type SectionStyle, type VideoColumns } from "@/lib/page-blocks/rules";
 
 /** A section while it is being edited: videos are the pasted links, every text a plain string. */
-type Look = { style?: SectionStyle };
+type Look = { style?: SectionStyle; title?: string };
 type Draft =
   | { id: string; type: "products" }
   | ({ id: string; type: "text"; heading: string; body: string } & Look)
@@ -33,11 +33,11 @@ function toDraft(block: PageBlock): Draft {
     case "text":
       return { id: block.id, type: "text", heading: block.heading ?? "", body: block.body, style: block.style };
     case "image":
-      return { id: block.id, type: "image", images: imagesOf(block), grid: block.grid, style: block.style };
+      return { id: block.id, type: "image", title: block.title, images: imagesOf(block), grid: block.grid, style: block.style };
     case "video":
-      return { id: block.id, type: "video", links: videosOf(block).map(watchUrlFor), columns: block.columns, style: block.style };
+      return { id: block.id, type: "video", title: block.title, links: videosOf(block).map(watchUrlFor), columns: block.columns, style: block.style };
     case "testimonial":
-      return { id: block.id, type: "testimonial", quote: block.quote, name: block.name ?? "", style: block.style };
+      return { id: block.id, type: "testimonial", title: block.title, quote: block.quote, name: block.name ?? "", style: block.style };
     default:
       return block;
   }
@@ -160,6 +160,11 @@ export function PageSectionsEditor({ initial, saved }: { initial: PageBlock[]; s
                   </Button>
                 )}
               </div>
+              {draft.type !== "products" && TITLED_BLOCKS.includes(draft.type) && (
+                <Field id={`block-${index}-title`} label="Section title (optional)" hint="Shows above this section, like the Shop heading.">
+                  <Input id={`block-${index}-title`} value={draft.title ?? ""} maxLength={BLOCK_LIMITS.title} placeholder={draft.type === "video" ? "Watch" : draft.type === "image" ? "Gallery" : draft.type === "testimonial" ? "What students say" : "Links"} onChange={(event) => update(index, { ...draft, title: event.target.value })} />
+                </Field>
+              )}
               <DraftFields draft={draft} index={index} onChange={(next) => update(index, next)} />
               {draft.type !== "products" && <SectionLook id={`block-${index}`} value={draft.style ?? DEFAULT_SECTION_STYLE} onChange={(style) => update(index, { ...draft, style })} />}
               {problem?.index === index && (

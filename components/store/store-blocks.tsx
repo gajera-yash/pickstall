@@ -165,7 +165,12 @@ export function StoreBlocks({ blocks, theme, className = "" }: { blocks: PageBlo
       {blocks.map((block) => {
         const spacing = ("style" in block && block.style?.spacing) || "normal";
         return (
-          <div key={block.id} className={spacing === "roomy" ? "py-6" : spacing === "compact" ? "-my-1" : undefined}>
+          <div key={block.id} className={cn("flex flex-col gap-4", spacing === "roomy" ? "py-6" : spacing === "compact" ? "-my-1" : undefined)}>
+            {"title" in block && block.title && (
+              <h2 className={cn("font-display text-h3 break-words @3xl:text-h2", block.style?.align === "center" && "text-center")} style={{ fontWeight: theme.preset.displayWeight }}>
+                {block.title}
+              </h2>
+            )}
             <Block block={block} theme={theme} />
           </div>
         );

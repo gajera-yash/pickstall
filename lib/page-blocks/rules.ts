@@ -9,7 +9,7 @@ import { httpsUrlSchema, imageField } from "@/lib/stores/schemas";
 // kept only as a checked YouTube or Vimeo id; an image is an upload (/media/...) or https.
 
 export const PAGE_BLOCKS_MAX = 12;
-export const BLOCK_LIMITS = { heading: 80, body: 2000, alt: 120, linkLabel: 40, linksMax: 6, quote: 400, name: 60, imagesMax: 12, videosMax: 6 } as const;
+export const BLOCK_LIMITS = { heading: 80, body: 2000, alt: 120, linkLabel: 40, linksMax: 6, quote: 400, name: 60, title: 60, imagesMax: 12, videosMax: 6 } as const;
 
 /**
  * How an Image section lays out its pictures (several images per section): columns on wide screens
@@ -36,7 +36,10 @@ export const SECTION_SPACINGS = ["compact", "normal", "roomy"] as const;
 export type SectionStyle = { box: (typeof SECTION_BOXES)[number]; align: (typeof SECTION_ALIGNS)[number]; spacing: (typeof SECTION_SPACINGS)[number] };
 export const DEFAULT_SECTION_STYLE: SectionStyle = { box: "card", align: "left", spacing: "normal" };
 
-type Styled = { style?: SectionStyle };
+/** `title`: the heading above a section, drawn like the store's "Shop" heading. */
+type Styled = { style?: SectionStyle; title?: string };
+/** Sections that take a title (Text has its own Heading). */
+export const TITLED_BLOCKS: PageBlockType[] = ["image", "video", "links", "testimonial"];
 export type PageBlock =
   | { id: string; type: "products" }
   | ({ id: string; type: "text"; heading: string | null; body: string } & Styled)
@@ -65,6 +68,8 @@ const imageItem = z.object({
 });
 const imageGrid = z.object({ columns: z.literal(IMAGE_COLUMNS), ratio: z.enum(IMAGE_RATIOS), gap: z.enum(IMAGE_GAPS) }).optional();
 
+const title = text(BLOCK_LIMITS.title, "Section title").optional();
+
 const style = z.object({ box: z.enum(SECTION_BOXES), align: z.enum(SECTION_ALIGNS), spacing: z.enum(SECTION_SPACINGS) }).optional();
 
 /** One section as the editor sends it. A video arrives as the pasted link and is parsed here. */
@@ -74,6 +79,7 @@ const blockInput = z.discriminatedUnion("type", [
   z.object({
     id,
     style,
+    title,
     grid: imageGrid,
     type: z.literal("image"),
     images: z.array(imageItem).min(1, { error: "Image: upload an image or remove this section." }).max(BLOCK_LIMITS.imagesMax, { error: `Use up to ${BLOCK_LIMITS.imagesMax} images in one section.` }),
@@ -81,6 +87,7 @@ const blockInput = z.discriminatedUnion("type", [
   z.object({
     id,
     style,
+    title,
     columns: z.literal(VIDEO_COLUMNS).optional(),
     type: z.literal("video"),
     links: z.array(z.string().max(500)).min(1, { error: "Video: paste a YouTube or Vimeo link." }).max(BLOCK_LIMITS.videosMax, { error: `Use up to ${BLOCK_LIMITS.videosMax} videos in one section.` }),
@@ -88,13 +95,14 @@ const blockInput = z.discriminatedUnion("type", [
   z.object({
     id,
     style,
+    title,
     type: z.literal("links"),
     links: z
       .array(z.object({ label: text(BLOCK_LIMITS.linkLabel, "Button text", { required: true }), url: httpsUrlSchema("link").refine((value) => value !== undefined, { error: "Enter a full link that starts with https://" }) }))
       .min(1, { error: "Add at least one link or remove this section." })
       .max(BLOCK_LIMITS.linksMax, { error: `Use up to ${BLOCK_LIMITS.linksMax} links.` }),
   }),
-  z.object({ id, style, type: z.literal("testimonial"), quote: text(BLOCK_LIMITS.quote, "Quote", { multiline: true, required: true }), name: text(BLOCK_LIMITS.name, "Name") }),
+  z.object({ id, style, title, type: z.literal("testimonial"), quote: text(BLOCK_LIMITS.quote, "Quote", { multiline: true, required: true }), name: text(BLOCK_LIMITS.name, "Name") }),
 ]);
 
 /** A one-image (`url`/`alt`) or one-video (`link`) section from older editors, as the list shapes. */
@@ -123,7 +131,9 @@ export const pageBlocksInput = z
       if (seen.has(block.id)) return;
       seen.add(block.id);
       // Only a style that differs from the default is saved.
-      const look = block.type !== "products" && block.style && (block.style.box !== "card" || block.style.align !== "left" || block.style.spacing !== "normal") ? { style: block.style } : {};
+      const styled = block.type !== "products" && block.style && (block.style.box !== "card" || block.style.align !== "left" || block.style.spacing !== "normal") ? { style: block.style } : {};
+      // An empty title is not saved.
+      const look = "title" in block && block.title ? { ...styled, title: block.title } : styled;
       if (block.type === "video") {
         const videos: LinkedVideo[] = [];
         for (const [i, link] of block.links.entries()) {
