@@ -14,15 +14,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { watchUrlFor } from "@/lib/courses/video-links";
 import { savePageBlocksAction } from "@/lib/page-blocks/actions";
 import { ChoiceSelect } from "@/components/ui/choice-select";
-import { ADDABLE_BLOCKS, BLOCK_LABELS, BLOCK_LIMITS, DEFAULT_SECTION_STYLE, PAGE_BLOCKS_MAX, newBlockId, pageBlocksInput, type PageBlock, type PageBlockType, type SectionStyle } from "@/lib/page-blocks/rules";
+import { ADDABLE_BLOCKS, BLOCK_LABELS, BLOCK_LIMITS, DEFAULT_IMAGE_GRID, DEFAULT_SECTION_STYLE, PAGE_BLOCKS_MAX, imagesOf, newBlockId, pageBlocksInput, videosOf, type BlockImage, type ImageGrid, type PageBlock, type PageBlockType, type SectionStyle, type VideoColumns } from "@/lib/page-blocks/rules";
 
-/** A section while it is being edited: the video is the pasted link, every text a plain string. */
+/** A section while it is being edited: videos are the pasted links, every text a plain string. */
 type Look = { style?: SectionStyle };
 type Draft =
   | { id: string; type: "products" }
   | ({ id: string; type: "text"; heading: string; body: string } & Look)
-  | ({ id: string; type: "image"; url: string; alt: string } & Look)
-  | ({ id: string; type: "video"; link: string } & Look)
+  | ({ id: string; type: "image"; images: BlockImage[]; grid?: ImageGrid } & Look)
+  | ({ id: string; type: "video"; links: string[]; columns?: VideoColumns } & Look)
   | ({ id: string; type: "links"; links: { label: string; url: string }[] } & Look)
   | ({ id: string; type: "testimonial"; quote: string; name: string } & Look);
 
@@ -32,8 +32,10 @@ function toDraft(block: PageBlock): Draft {
   switch (block.type) {
     case "text":
       return { id: block.id, type: "text", heading: block.heading ?? "", body: block.body, style: block.style };
+    case "image":
+      return { id: block.id, type: "image", images: imagesOf(block), grid: block.grid, style: block.style };
     case "video":
-      return { id: block.id, type: "video", link: watchUrlFor(block.video), style: block.style };
+      return { id: block.id, type: "video", links: videosOf(block).map(watchUrlFor), columns: block.columns, style: block.style };
     case "testimonial":
       return { id: block.id, type: "testimonial", quote: block.quote, name: block.name ?? "", style: block.style };
     default:
@@ -44,8 +46,8 @@ function toDraft(block: PageBlock): Draft {
 function empty(type: Exclude<PageBlockType, "products">): Draft {
   const id = newBlockId();
   if (type === "text") return { id, type, heading: "", body: "" };
-  if (type === "image") return { id, type, url: "", alt: "" };
-  if (type === "video") return { id, type, link: "" };
+  if (type === "image") return { id, type, images: [{ url: "", alt: "" }] };
+  if (type === "video") return { id, type, links: [""] };
   if (type === "links") return { id, type, links: [{ label: "", url: "" }] };
   return { id, type, quote: "", name: "" };
 }
@@ -114,7 +116,7 @@ export function PageSectionsEditor({ initial, saved }: { initial: PageBlock[]; s
             <LayoutList aria-hidden="true" className="size-4 text-blue" />
             Page sections
           </h2>
-          <p className="text-sm text-mute">Add text, images, a video, links or testimonials around your products. Use the arrows to change the order.</p>
+          <p className="text-sm text-mute">Add text, images, videos, links or testimonials around your products. Use the arrows to change the order.</p>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -213,19 +215,36 @@ function DraftFields({ draft, index, onChange }: { draft: Draft; index: number; 
         </>
       );
     case "image":
-      return (
-        <>
-          <ImageUploader id={`${key}-image`} label="Image" kind="cover" shape="wide" value={draft.url} onChange={(url) => onChange({ ...draft, url })} hint="JPG, PNG, WebP or GIF, up to 4 MB." />
-          <Field id={`${key}-alt`} label="Description for screen readers (optional)">
-            <Input id={`${key}-alt`} value={draft.alt} maxLength={BLOCK_LIMITS.alt} onChange={(event) => onChange({ ...draft, alt: event.target.value })} />
-          </Field>
-        </>
-      );
+      return <ImageFields draft={draft} id={key} onChange={onChange} />;
     case "video":
       return (
-        <Field id={`${key}-link`} label="YouTube or Vimeo link" hint="Paste the link of the video page.">
-          <Input id={`${key}-link`} value={draft.link} inputMode="url" placeholder="https://www.youtube.com/watch?v=..." onChange={(event) => onChange({ ...draft, link: event.target.value })} />
-        </Field>
+        <div className="flex flex-col gap-3">
+          {draft.links.map((link, i) => (
+            <div key={i} className="flex items-end gap-2">
+              <div className="min-w-0 flex-1">
+                <Field id={`${key}-link-${i}`} label={draft.links.length > 1 ? `Video ${i + 1}: YouTube or Vimeo link` : "YouTube or Vimeo link"} hint={i === 0 ? "Paste the link of the video page." : undefined}>
+                  <Input id={`${key}-link-${i}`} value={link} inputMode="url" placeholder="https://www.youtube.com/watch?v=..." onChange={(event) => onChange({ ...draft, links: draft.links.map((item, j) => (j === i ? event.target.value : item)) })} />
+                </Field>
+              </div>
+              <Button type="button" variant="ghost" size="icon" aria-label={`Remove video ${i + 1}`} disabled={draft.links.length === 1} onClick={() => onChange({ ...draft, links: draft.links.filter((_, j) => j !== i) })}>
+                <Trash2 aria-hidden="true" className="size-4" />
+              </Button>
+            </div>
+          ))}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <Button type="button" variant="ghost" size="sm" disabled={draft.links.length >= BLOCK_LIMITS.videosMax} onClick={() => onChange({ ...draft, links: [...draft.links, ""] })}>
+              <Plus aria-hidden="true" className="size-4" />
+              Add a video
+            </Button>
+            {draft.links.length > 1 && (
+              <div className="w-44">
+                <Field id={`${key}-columns`} label="Layout">
+                  <ChoiceSelect id={`${key}-columns`} size="sm" value={String(draft.columns ?? 1)} onValueChange={(value) => onChange({ ...draft, columns: value === "2" ? 2 : 1 })} options={[{ value: "1", label: "One per row" }, { value: "2", label: "Two per row" }]} />
+                </Field>
+              </div>
+            )}
+          </div>
+        </div>
       );
     case "links":
       return (
@@ -261,4 +280,48 @@ function DraftFields({ draft, index, onChange }: { draft: Draft; index: number; 
         </>
       );
   }
+}
+
+/** Several pictures in one Image section, and the grid they sit in (columns, shape, gap). */
+function ImageFields({ draft, id, onChange }: { draft: Extract<Draft, { type: "image" }>; id: string; onChange: (next: Draft) => void }) {
+  const grid = draft.grid ?? DEFAULT_IMAGE_GRID;
+  const setImage = (i: number, patch: Partial<BlockImage>) => onChange({ ...draft, images: draft.images.map((image, j) => (j === i ? { ...image, ...patch } : image)) });
+  const setGrid = (patch: Partial<ImageGrid>) => onChange({ ...draft, grid: { ...grid, ...patch } });
+  return (
+    <div className="flex flex-col gap-4">
+      <ol className="grid gap-4 sm:grid-cols-2">
+        {draft.images.map((image, i) => (
+          <li key={i} className="flex flex-col gap-2 rounded-md border border-line p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold">Image {i + 1}</span>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={`Remove image ${i + 1}`} disabled={draft.images.length === 1} onClick={() => onChange({ ...draft, images: draft.images.filter((_, j) => j !== i) })}>
+                <Trash2 aria-hidden="true" className="size-4" />
+              </Button>
+            </div>
+            <ImageUploader id={`${id}-image-${i}`} label={`Image ${i + 1}`} kind="cover" shape="wide" value={image.url} onChange={(url) => setImage(i, { url })} hint="JPG, PNG, WebP or GIF, up to 4 MB." />
+            <Field id={`${id}-alt-${i}`} label="Description for screen readers (optional)">
+              <Input id={`${id}-alt-${i}`} value={image.alt} maxLength={BLOCK_LIMITS.alt} onChange={(event) => setImage(i, { alt: event.target.value })} />
+            </Field>
+          </li>
+        ))}
+      </ol>
+      <Button type="button" variant="ghost" size="sm" className="self-start" disabled={draft.images.length >= BLOCK_LIMITS.imagesMax} onClick={() => onChange({ ...draft, images: [...draft.images, { url: "", alt: "" }] })}>
+        <Plus aria-hidden="true" className="size-4" />
+        Add an image
+      </Button>
+      {draft.images.length > 1 && (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field id={`${id}-columns`} label="Columns" hint="Phones show up to 2.">
+            <ChoiceSelect id={`${id}-columns`} size="sm" value={String(grid.columns)} onValueChange={(value) => setGrid({ columns: Number(value) as ImageGrid["columns"] })} options={[{ value: "1", label: "1 column" }, { value: "2", label: "2 columns" }, { value: "3", label: "3 columns" }, { value: "4", label: "4 columns" }]} />
+          </Field>
+          <Field id={`${id}-ratio`} label="Image shape">
+            <ChoiceSelect id={`${id}-ratio`} size="sm" value={grid.ratio} onValueChange={(ratio) => setGrid({ ratio: ratio as ImageGrid["ratio"] })} options={[{ value: "original", label: "Original" }, { value: "square", label: "Square" }, { value: "landscape", label: "Wide (16:9)" }, { value: "portrait", label: "Tall (4:5)" }]} />
+          </Field>
+          <Field id={`${id}-gap`} label="Gap">
+            <ChoiceSelect id={`${id}-gap`} size="sm" value={grid.gap} onValueChange={(gap) => setGrid({ gap: gap as ImageGrid["gap"] })} options={[{ value: "small", label: "Small" }, { value: "normal", label: "Normal" }, { value: "large", label: "Large" }]} />
+          </Field>
+        </div>
+      )}
+    </div>
+  );
 }

@@ -9,7 +9,22 @@ import { httpsUrlSchema, imageField } from "@/lib/stores/schemas";
 // kept only as a checked YouTube or Vimeo id; an image is an upload (/media/...) or https.
 
 export const PAGE_BLOCKS_MAX = 12;
-export const BLOCK_LIMITS = { heading: 80, body: 2000, alt: 120, linkLabel: 40, linksMax: 6, quote: 400, name: 60 } as const;
+export const BLOCK_LIMITS = { heading: 80, body: 2000, alt: 120, linkLabel: 40, linksMax: 6, quote: 400, name: 60, imagesMax: 12, videosMax: 6 } as const;
+
+/**
+ * How an Image section lays out its pictures (several images per section): columns on wide screens
+ * (phones show at most two), the picture shape and the gap. Missing: one column, original shape,
+ * normal gap (a single image as before).
+ */
+export const IMAGE_COLUMNS = [1, 2, 3, 4] as const;
+export const IMAGE_RATIOS = ["original", "square", "landscape", "portrait"] as const;
+export const IMAGE_GAPS = ["small", "normal", "large"] as const;
+export type ImageGrid = { columns: (typeof IMAGE_COLUMNS)[number]; ratio: (typeof IMAGE_RATIOS)[number]; gap: (typeof IMAGE_GAPS)[number] };
+export const DEFAULT_IMAGE_GRID: ImageGrid = { columns: 1, ratio: "original", gap: "normal" };
+/** Videos in one section: one per row or two side by side on wide screens. */
+export const VIDEO_COLUMNS = [1, 2] as const;
+export type VideoColumns = (typeof VIDEO_COLUMNS)[number];
+export type BlockImage = { url: string; alt: string };
 
 /**
  * How one section looks (D-123): its box (the theme's card, an outline, or none), text alignment and
@@ -25,8 +40,10 @@ type Styled = { style?: SectionStyle };
 export type PageBlock =
   | { id: string; type: "products" }
   | ({ id: string; type: "text"; heading: string | null; body: string } & Styled)
-  | ({ id: string; type: "image"; url: string; alt: string } & Styled)
-  | ({ id: string; type: "video"; video: LinkedVideo } & Styled)
+  // `url`/`alt` and `video` are the one-item shapes saved before multi-image and multi-video
+  // sections; read them through imagesOf() and videosOf(). New saves write `images` / `videos`.
+  | ({ id: string; type: "image"; images?: BlockImage[]; grid?: ImageGrid; url?: string; alt?: string } & Styled)
+  | ({ id: string; type: "video"; videos?: LinkedVideo[]; columns?: VideoColumns; video?: LinkedVideo } & Styled)
   | ({ id: string; type: "links"; links: { label: string; url: string }[] } & Styled)
   | ({ id: string; type: "testimonial"; quote: string; name: string | null } & Styled);
 
@@ -42,6 +59,12 @@ const text = (max: number, label: string, options: { multiline?: boolean; requir
     .pipe(z.string().max(max, { error: `${label}: use ${max} characters or fewer.` }))
     .refine((value) => !options.required || value !== "", { error: `${label}: write something or remove this section.` });
 
+const imageItem = z.object({
+  url: imageField("Image").refine((value) => value !== undefined, { error: "Image: upload an image or remove it." }),
+  alt: text(BLOCK_LIMITS.alt, "Image description"),
+});
+const imageGrid = z.object({ columns: z.literal(IMAGE_COLUMNS), ratio: z.enum(IMAGE_RATIOS), gap: z.enum(IMAGE_GAPS) }).optional();
+
 const style = z.object({ box: z.enum(SECTION_BOXES), align: z.enum(SECTION_ALIGNS), spacing: z.enum(SECTION_SPACINGS) }).optional();
 
 /** One section as the editor sends it. A video arrives as the pasted link and is parsed here. */
@@ -51,11 +74,17 @@ const blockInput = z.discriminatedUnion("type", [
   z.object({
     id,
     style,
+    grid: imageGrid,
     type: z.literal("image"),
-    url: imageField("Image").refine((value) => value !== undefined, { error: "Image: upload an image or remove this section." }),
-    alt: text(BLOCK_LIMITS.alt, "Image description"),
+    images: z.array(imageItem).min(1, { error: "Image: upload an image or remove this section." }).max(BLOCK_LIMITS.imagesMax, { error: `Use up to ${BLOCK_LIMITS.imagesMax} images in one section.` }),
   }),
-  z.object({ id, style, type: z.literal("video"), link: z.string().max(500) }),
+  z.object({
+    id,
+    style,
+    columns: z.literal(VIDEO_COLUMNS).optional(),
+    type: z.literal("video"),
+    links: z.array(z.string().max(500)).min(1, { error: "Video: paste a YouTube or Vimeo link." }).max(BLOCK_LIMITS.videosMax, { error: `Use up to ${BLOCK_LIMITS.videosMax} videos in one section.` }),
+  }),
   z.object({
     id,
     style,
@@ -68,9 +97,24 @@ const blockInput = z.discriminatedUnion("type", [
   z.object({ id, style, type: z.literal("testimonial"), quote: text(BLOCK_LIMITS.quote, "Quote", { multiline: true, required: true }), name: text(BLOCK_LIMITS.name, "Name") }),
 ]);
 
+/** A one-image (`url`/`alt`) or one-video (`link`) section from older editors, as the list shapes. */
+function upgradeOldShape(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const block = value as Record<string, unknown>;
+  if (block.type === "image" && !("images" in block) && "url" in block) {
+    const { url, alt, ...rest } = block;
+    return { ...rest, images: [{ url, alt: alt ?? "" }] };
+  }
+  if (block.type === "video" && !("links" in block) && "link" in block) {
+    const { link, ...rest } = block;
+    return { ...rest, links: [link] };
+  }
+  return value;
+}
+
 /** The whole list from the editor: at most 12 sections, unique ids, exactly one Products section. */
 export const pageBlocksInput = z
-  .array(blockInput)
+  .array(z.preprocess(upgradeOldShape, blockInput))
   .max(PAGE_BLOCKS_MAX + 1, { error: `Use up to ${PAGE_BLOCKS_MAX} sections.` })
   .transform((blocks, ctx): PageBlock[] => {
     const out: PageBlock[] = [];
@@ -81,14 +125,22 @@ export const pageBlocksInput = z
       // Only a style that differs from the default is saved.
       const look = block.type !== "products" && block.style && (block.style.box !== "card" || block.style.align !== "left" || block.style.spacing !== "normal") ? { style: block.style } : {};
       if (block.type === "video") {
-        const video = parseVideoLink(block.link);
-        if (!video) {
-          ctx.addIssue({ code: "custom", path: [index, "link"], message: "Video: paste a YouTube or Vimeo link." });
-          return;
+        const videos: LinkedVideo[] = [];
+        for (const [i, link] of block.links.entries()) {
+          const video = parseVideoLink(link);
+          if (!video) {
+            ctx.addIssue({ code: "custom", path: [index, "links", i], message: block.links.length > 1 ? `Video ${i + 1}: paste a YouTube or Vimeo link.` : "Video: paste a YouTube or Vimeo link." });
+            return;
+          }
+          videos.push(video);
         }
-        out.push({ id: block.id, type: "video", video, ...look });
+        const columns = block.columns === 2 && videos.length > 1 ? { columns: 2 as const } : {};
+        out.push({ id: block.id, type: "video", videos, ...columns, ...look });
       } else if (block.type === "text") out.push({ id: block.id, type: "text", heading: block.heading || null, body: block.body, ...look });
-      else if (block.type === "image") out.push({ id: block.id, type: "image", url: block.url as string, alt: block.alt, ...look });
+      else if (block.type === "image") {
+        const grid = block.grid && (block.grid.columns !== 1 || block.grid.ratio !== "original" || block.grid.gap !== "normal") ? { grid: block.grid } : {};
+        out.push({ id: block.id, type: "image", images: block.images.map((image) => ({ url: image.url as string, alt: image.alt })), ...grid, ...look });
+      }
       else if (block.type === "links") out.push({ id: block.id, type: "links", links: block.links.map((link) => ({ label: link.label, url: link.url as string })), ...look });
       else if (block.type === "testimonial") out.push({ id: block.id, type: "testimonial", quote: block.quote, name: block.name || null, ...look });
       else out.push({ id: block.id, type: "products" });
@@ -110,4 +162,19 @@ export function splitBlocks(blocks: PageBlock[] | null | undefined): { before: P
 /** A fresh id for a new section (browser or server). */
 export function newBlockId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+}
+
+type ImageBlock = Extract<PageBlock, { type: "image" }>;
+type VideoBlock = Extract<PageBlock, { type: "video" }>;
+
+/** The pictures of an Image section, new or saved before multi-image sections. */
+export function imagesOf(block: ImageBlock): BlockImage[] {
+  if (block.images && block.images.length > 0) return block.images;
+  return block.url ? [{ url: block.url, alt: block.alt ?? "" }] : [];
+}
+
+/** The videos of a Video section, new or saved before multi-video sections. */
+export function videosOf(block: VideoBlock): LinkedVideo[] {
+  if (block.videos && block.videos.length > 0) return block.videos;
+  return block.video ? [block.video] : [];
 }

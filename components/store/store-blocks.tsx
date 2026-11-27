@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import { borderColor, buttonStyle, cardStyle, type StoreTheme } from "@/components/store/store-theme";
 import { embedUrlFor } from "@/lib/courses/video-links";
 import { safeImageSrc } from "@/lib/media/media";
-import { DEFAULT_SECTION_STYLE, type PageBlock, type SectionStyle } from "@/lib/page-blocks/rules";
+import { DEFAULT_IMAGE_GRID, DEFAULT_SECTION_STYLE, imagesOf, videosOf, type ImageGrid, type PageBlock, type SectionStyle } from "@/lib/page-blocks/rules";
 import { cn } from "@/lib/utils";
 
 // Store page sections (D-101), drawn in the store's theme: its card style, colors, display font and
@@ -38,6 +38,11 @@ function boxStyle(theme: StoreTheme, box: SectionStyle["box"]): CSSProperties {
   return box === "outline" ? { borderRadius: radius, border: `1px solid ${borderColor(theme.preset)}` } : { borderRadius: radius };
 }
 
+// Fixed class strings so Tailwind keeps them. Phones show at most two columns.
+const IMAGE_COLUMN_CLASS: Record<ImageGrid["columns"], string> = { 1: "grid-cols-1", 2: "grid-cols-2", 3: "grid-cols-2 sm:grid-cols-3", 4: "grid-cols-2 sm:grid-cols-4" };
+const IMAGE_GAP_CLASS: Record<ImageGrid["gap"], string> = { small: "gap-1", normal: "gap-3", large: "gap-5" };
+const IMAGE_RATIO_CLASS: Record<ImageGrid["ratio"], string> = { original: "", square: "aspect-square", landscape: "aspect-video", portrait: "aspect-[4/5]" };
+
 function Block({ block, theme }: { block: PageBlock; theme: StoreTheme }) {
   const { preset } = theme;
   const look = ("style" in block && block.style) || DEFAULT_SECTION_STYLE;
@@ -60,29 +65,63 @@ function Block({ block, theme }: { block: PageBlock; theme: StoreTheme }) {
         </section>
       );
     case "image": {
-      const src = safeImageSrc(block.url);
-      if (!src) return null;
+      const images = imagesOf(block).flatMap((image) => {
+        const src = safeImageSrc(image.url);
+        return src ? [{ src, alt: image.alt }] : [];
+      });
+      if (images.length === 0) return null;
+      const grid = block.grid ?? DEFAULT_IMAGE_GRID;
+      // One picture fills the section; several sit in the creator's grid, each rounded like the theme.
+      const columns = images.length === 1 ? "grid-cols-1" : IMAGE_COLUMN_CLASS[grid.columns];
+      const inner = look.box === "none" ? "" : images.length > 1 ? "p-3" : "";
+      const itemRadius = images.length > 1 || look.box === "none" ? Math.max(0, preset.radiusPx - (inner ? 6 : 0)) : 0;
       return (
-        <figure className="overflow-hidden" style={surface}>
-          {/* An upload or the creator's https link on any host, so next/image (fixed hosts) cannot load it. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt={block.alt} referrerPolicy="no-referrer" loading="lazy" className="w-full object-cover" />
+        <figure className={cn("grid overflow-hidden", columns, IMAGE_GAP_CLASS[grid.gap], inner)} style={surface}>
+          {images.map((image, index) => (
+            // An upload or the creator's https link on any host, so next/image (fixed hosts) cannot load it.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={index}
+              src={image.src}
+              alt={image.alt}
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              className={cn("w-full object-cover", IMAGE_RATIO_CLASS[grid.ratio], grid.ratio === "original" && images.length > 1 && "h-full")}
+              style={{ borderRadius: itemRadius }}
+            />
+          ))}
         </figure>
       );
     }
-    case "video":
+    case "video": {
+      const videos = videosOf(block);
+      if (videos.length === 0) return null;
+      const two = videos.length > 1 && block.columns === 2;
+      const frame = (video: (typeof videos)[number], index: number) => (
+        <iframe
+          key={index}
+          src={embedUrlFor(video)}
+          title={videos.length > 1 ? `Video ${index + 1}` : "Video"}
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+          referrerPolicy="strict-origin-when-cross-origin"
+          className="aspect-video w-full border-0"
+          style={videos.length > 1 ? { borderRadius: Math.max(0, preset.radiusPx - 6) } : undefined}
+        />
+      );
+      if (videos.length === 1) {
+        return (
+          <div className="overflow-hidden" style={surface}>
+            {frame(videos[0]!, 0)}
+          </div>
+        );
+      }
       return (
-        <div className="overflow-hidden" style={surface}>
-          <iframe
-            src={embedUrlFor(block.video)}
-            title="Video"
-            loading="lazy"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-            referrerPolicy="strict-origin-when-cross-origin"
-            className="aspect-video w-full border-0"
-          />
+        <div className={cn("grid gap-3 overflow-hidden", two && "sm:grid-cols-2", look.box !== "none" && "p-3")} style={surface}>
+          {videos.map(frame)}
         </div>
       );
+    }
     case "links":
       return (
         <nav aria-label="Links" className={cn("flex flex-col gap-3", center && "items-center")}>

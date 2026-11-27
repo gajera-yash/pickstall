@@ -11,7 +11,7 @@ vi.mock("@/lib/db/collections", () => ({ collections: vi.fn(async () => db) }));
 import { StoreBlocks } from "@/components/store/store-blocks";
 import { resolveTheme } from "@/components/store/store-theme";
 import { findPageBlocks, savePageBlocks } from "@/lib/page-blocks/queries";
-import { PAGE_BLOCKS_MAX, pageBlocksInput, splitBlocks, type PageBlock } from "@/lib/page-blocks/rules";
+import { BLOCK_LIMITS, PAGE_BLOCKS_MAX, imagesOf, pageBlocksInput, splitBlocks, videosOf, type PageBlock } from "@/lib/page-blocks/rules";
 
 const products = { id: "products1", type: "products" as const };
 
@@ -27,7 +27,7 @@ describe("page section rules (D-101)", () => {
     expect(parsed).toEqual([
       { id: "text0001", type: "text", heading: "Hi", body: "Welcome x\nhttps://example.com" },
       products,
-      { id: "video001", type: "video", video: { kind: "youtube", id: "dQw4w9WgXcQ" } },
+      { id: "video001", type: "video", videos: [{ kind: "youtube", id: "dQw4w9WgXcQ" }] },
       { id: "links001", type: "links", links: [{ label: "Join", url: "https://chat.whatsapp.com/abc" }] },
       { id: "quote001", type: "testimonial", quote: "Loved it", name: null },
     ]);
@@ -42,6 +42,39 @@ describe("page section rules (D-101)", () => {
       { id: "text0001", type: "text", heading: "", body: "   " },
     ];
     for (const block of bad) expect(pageBlocksInput.safeParse([products, block]).success).toBe(false);
+  });
+
+  it("keeps several images with their grid and several videos with their layout", () => {
+    const image = "/media/0b8f4b52-8d6c-4f6d-9d0e-3c3d6f1b2a10";
+    const parsed = pageBlocksInput.parse([
+      products,
+      { id: "image001", type: "image", images: [{ url: image, alt: "<b>One</b>" }, { url: image, alt: "" }], grid: { columns: 3, ratio: "square", gap: "small" } },
+      { id: "image002", type: "image", url: image, alt: "Old shape" },
+      { id: "video001", type: "video", links: ["https://youtu.be/dQw4w9WgXcQ", "https://vimeo.com/76979871"], columns: 2 },
+    ]);
+    expect(parsed.slice(1)).toEqual([
+      { id: "image001", type: "image", images: [{ url: image, alt: "One" }, { url: image, alt: "" }], grid: { columns: 3, ratio: "square", gap: "small" } },
+      { id: "image002", type: "image", images: [{ url: image, alt: "Old shape" }] },
+      { id: "video001", type: "video", videos: [{ kind: "youtube", id: "dQw4w9WgXcQ" }, { kind: "vimeo", id: "76979871", hash: null }], columns: 2 },
+    ]);
+  });
+
+  it("refuses a bad image or video among many, too many items and unknown grid options", () => {
+    const image = "/media/0b8f4b52-8d6c-4f6d-9d0e-3c3d6f1b2a10";
+    const bad = [
+      { id: "image001", type: "image", images: [{ url: image, alt: "" }, { url: "javascript:alert(1)", alt: "" }] },
+      { id: "image002", type: "image", images: [] },
+      { id: "image003", type: "image", images: Array.from({ length: BLOCK_LIMITS.imagesMax + 1 }, () => ({ url: image, alt: "" })) },
+      { id: "image004", type: "image", images: [{ url: image, alt: "" }], grid: { columns: 7, ratio: "square", gap: "small" } },
+      { id: "video001", type: "video", links: ["https://youtu.be/dQw4w9WgXcQ", "https://evil.example/x"] },
+      { id: "video002", type: "video", links: Array.from({ length: BLOCK_LIMITS.videosMax + 1 }, () => "https://youtu.be/dQw4w9WgXcQ") },
+    ];
+    for (const block of bad) expect(pageBlocksInput.safeParse([products, block]).success).toBe(false);
+  });
+
+  it("reads sections saved before multi-image and multi-video sections", () => {
+    expect(imagesOf({ id: "image001", type: "image", url: "/media/x", alt: "a" })).toEqual([{ url: "/media/x", alt: "a" }]);
+    expect(videosOf({ id: "video001", type: "video", video: { kind: "youtube", id: "dQw4w9WgXcQ" } })).toEqual([{ kind: "youtube", id: "dQw4w9WgXcQ" }]);
   });
 
   it("always keeps exactly one Products section and at most 12 others", () => {

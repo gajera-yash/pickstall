@@ -4,7 +4,7 @@ vi.mock("@/components/store/fonts", () => ({ storeSerif: { variable: "" }, STORE
 
 // D-130: every store template passes the same rules as a design made by hand.
 
-import { pageBlocksInput } from "@/lib/page-blocks/rules";
+import { pageBlocksInput, videosOf } from "@/lib/page-blocks/rules";
 import { designContrastProblem, designToForm, storeDesignInput } from "@/lib/store-design/rules";
 import { STORE_TEMPLATES, findTemplate } from "@/lib/store-templates/catalog";
 import { accentSchema } from "@/lib/stores/schemas";
@@ -28,7 +28,7 @@ describe("store templates", () => {
       expect(designContrastProblem(THEME_PRESETS[template.preset], template.accent, parsed.data)).toBeNull();
     }
     // Sections go through the editor's own rules (videos as links, as the editor sends them).
-    const asSent = template.blocks.map((block) => (block.type === "video" ? { id: block.id, type: "video", link: watchUrlFor(block.video) } : block));
+    const asSent = template.blocks.map((block) => (block.type === "video" ? { id: block.id, type: "video", links: videosOf(block).map(watchUrlFor) } : block));
     const blocks = pageBlocksInput.safeParse(asSent);
     expect(blocks.success).toBe(true);
   });
