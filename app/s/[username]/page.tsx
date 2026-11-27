@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { JsonLd } from "@/components/seo/json-ld";
 import { StorePage } from "@/components/store/store-page";
 import { StorePaused } from "@/components/store/store-paused";
 import { APP_NAME } from "@/lib/config";
@@ -8,6 +9,7 @@ import { publicEnv } from "@/lib/env";
 import { absoluteImageUrl } from "@/lib/media/media";
 import { StorePixels } from "@/components/store/store-pixels";
 import { VisitSource } from "@/components/store/visit-source";
+import { storePageSchema, storePath } from "@/lib/seo/store-schema";
 import { findPublicStore, listPublicProducts } from "@/lib/stores/public";
 
 // Public store page, served at /@username by a rewrite in next.config.ts (D-010). A draft or unknown
@@ -25,6 +27,7 @@ export async function generateMetadata({ params }: PageProps<"/s/[username]">): 
   return {
     title: `${store.name} | ${APP_NAME}`,
     description,
+    alternates: { canonical: storePath(store.slug) },
     openGraph: { title: store.name, description, type: "website", ...(image ? { images: [image] } : {}) },
     twitter: { card: "summary", title: store.name, description },
   };
@@ -39,6 +42,7 @@ export default async function PublicStorePage({ params }: PageProps<"/s/[usernam
   return (
     <>
       <StorePage store={store} products={products} />
+      <JsonLd data={storePageSchema(store, products)} />
       <VisitSource />
       {store.pixels && <StorePixels storeId={store.id} storeName={store.name} pixels={store.pixels} />}
     </>

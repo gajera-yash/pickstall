@@ -1,5 +1,5 @@
 import { APP_NAME } from "@/lib/config";
-import { CONTACT_EMAIL, ONE_LINER, PRICES, SITE_URL } from "@/lib/seo/site-facts";
+import { CONTACT_EMAIL, CONTENT_UPDATED, ONE_LINER, PRICES, SITE_URL, SOCIAL_PROFILES } from "@/lib/seo/site-facts";
 
 // schema.org structured data (JSON-LD) for Pickstall's public pages (D-134). Pure: built from the
 // site facts, so it always matches the visible text. Types and fields follow schema.org and Google's
@@ -16,6 +16,21 @@ export function organizationSchema(): Json {
     logo: `${SITE_URL}/brand/pickstall-logo.webp`,
     description: ONE_LINER,
     email: CONTACT_EMAIL,
+    ...(SOCIAL_PROFILES.length ? { sameAs: [...SOCIAL_PROFILES] } : {}),
+  };
+}
+
+/** A content page (D-135): its name, address and when its facts were last checked. */
+export function webPageSchema(name: string, path: string): Json {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name,
+    url: `${SITE_URL}${path === "/" ? "" : path}`,
+    dateModified: CONTENT_UPDATED,
+    inLanguage: "en",
+    isPartOf: { "@type": "WebSite", name: APP_NAME, url: SITE_URL },
+    publisher: { "@type": "Organization", name: APP_NAME, url: SITE_URL },
   };
 }
 

@@ -15,6 +15,8 @@ import { providerCurrencies } from "@/lib/payments/paypal-config";
 import { testSellerAccountId } from "@/lib/payments/test-account";
 import { connectAuthorizeUrl, connectAvailable } from "@/lib/payments/connect";
 import { changeStoreSlug, setStorePublished, setStoreStripeConnection, updateStorePageDesign, updateStoreProfile } from "@/lib/stores/queries";
+import { requestRecrawl } from "@/lib/seo/indexnow";
+import { storePath } from "@/lib/seo/store-schema";
 import { CONNECT_RETURN_PATHS, connectRedirectUri, createConnectState, releaseAccount } from "@/lib/stores/stripe-connect";
 import { pageDesignInput, storeNameSchema, storeProfileInput } from "@/lib/stores/schemas";
 import { isCurrencyLocked } from "@/lib/stores/currency-lock";
@@ -248,6 +250,8 @@ export async function setStorePublishedAction(isPublished: boolean, from?: "setu
   }
 
   await recordAudit({ actorId: user.id, storeId: store.id, action: isPublished ? "store.published" : "store.unpublished" });
+  // GEO (D-135): search and AI engines recrawl the store page (a new page, or one now gone).
+  requestRecrawl([storePath(store.slug)]);
   revalidatePath("/dashboard", "layout");
   return ok({ isPublished });
 }

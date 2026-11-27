@@ -36,6 +36,10 @@ export function GET() {
     "",
     ...USE_CASE_PAGES.map((page) => link(page.title, `/for/${page.slug}`, page.description)),
     "",
+    "## Optional",
+    "",
+    link("Full text", "/llms-full.txt", "every FAQ answer, comparison table and use case in one Markdown file"),
+    "",
   ].join("\n");
   return new Response(body, { headers: { "Content-Type": "text/markdown; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
 }

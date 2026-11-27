@@ -17,6 +17,8 @@ import { productIdInput, productInputFor, productStatusInput } from "@/lib/produ
 import { countPublishedCourses } from "@/lib/plans/usage";
 import { rateLimitKey, takeRateLimit } from "@/lib/rate-limit";
 import { err, fieldErrors, ok, type Result } from "@/lib/result";
+import { requestRecrawl } from "@/lib/seo/indexnow";
+import { storePath } from "@/lib/seo/store-schema";
 
 /** `published` is true when the save also published the product (intent=publish, D-048). */
 export type SaveProductState = Result<{ savedAt: number; published: boolean }> | null;
@@ -116,6 +118,8 @@ export async function saveProduct(productId: string, _prev: SaveProductState, fo
         return err(`Saved, but not published yet: ${check.problems.join(" ")}`);
       }
       if (!(await setProductStatus(store.id, productId, "published"))) return err(NOT_FOUND);
+      // GEO (D-135): search and AI engines recrawl the product page.
+      requestRecrawl([storePath(store.slug, saved.slug)]);
     }
   } catch (error) {
     logger.error("products.save_failed", { name: errorName(error) });
@@ -153,6 +157,8 @@ export async function changeProductStatus(productId: string, status: string): Pr
       if (!check.ok) return err(check.problems.join(" "));
     }
     if (!(await setProductStatus(store.id, id.data, next.data))) return err(NOT_FOUND);
+    // GEO (D-135): a page that went live or was taken down is recrawled soon.
+    if (next.data === "published" || product.status === "published") requestRecrawl([storePath(store.slug, product.slug)]);
   } catch (error) {
     logger.error("products.status_failed", { name: errorName(error) });
     return err(SAVE_FAILED);

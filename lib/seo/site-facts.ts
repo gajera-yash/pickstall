@@ -29,7 +29,39 @@ export const KEY_FACTS = [
 export const CONTACT_EMAIL = SUPPORT_EMAIL;
 
 /**
+ * When the content pages' facts were last checked (GEO, D-135): shown as "Last updated" and as
+ * `dateModified` in their structured data. Bump it (YYYY-MM-DD) whenever a fact or price changes.
+ */
+export const CONTENT_UPDATED = "2026-11-27";
+
+/**
+ * Pickstall's own official profiles (https links only), used as `sameAs` in the Organization data so
+ * answer engines can connect the brand across sites. Empty until the founder adds the real links.
+ */
+export const SOCIAL_PROFILES: readonly string[] = [];
+
+/**
  * AI search and answer engine crawlers (D-134), named in robots.txt so they are clearly welcome on the
  * public pages. A named group replaces the "*" group for that bot, so robots.ts repeats the private paths.
  */
-export const AI_CRAWLERS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-SearchBot", "Claude-User", "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot-Extended", "Bingbot"];
+export const AI_CRAWLERS = [
+  "GPTBot",
+  "OAI-SearchBot",
+  "ChatGPT-User",
+  "ClaudeBot",
+  "Claude-SearchBot",
+  "Claude-User",
+  "PerplexityBot",
+  "Perplexity-User",
+  "Google-Extended",
+  "Applebot",
+  "Applebot-Extended",
+  "Bingbot",
+  // Added in D-135; tokens checked on each operator's own crawler page (Nov 27 2026).
+  "DuckAssistBot",
+  "meta-externalagent",
+  "MistralAI-User",
+  "Amazonbot",
+  "Amzn-SearchBot",
+  "Amzn-User",
+];

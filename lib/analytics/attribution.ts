@@ -20,8 +20,28 @@ const label = z
   .transform((value) => cleanText(value).replace(/\s+/g, " ").trim().toLowerCase().slice(0, ATTRIBUTION_MAX))
   .catch("");
 
+/**
+ * AI assistants and answer engines (GEO, D-135), so sales they send show by name. Listed before the
+ * search engines because gemini.google.com would otherwise count as "google".
+ */
+const AI_SOURCES: [RegExp, string][] = [
+  [/(^|\.)(chatgpt\.com|openai\.com)$/, "chatgpt"],
+  [/(^|\.)perplexity\.ai$/, "perplexity"],
+  [/(^|\.)(gemini\.google\.com|bard\.google\.com)$/, "gemini"],
+  [/(^|\.)claude\.ai$/, "claude"],
+  [/(^|\.)copilot\.microsoft\.com$/, "copilot"],
+  [/(^|\.)meta\.ai$/, "meta ai"],
+  [/(^|\.)grok\.com$/, "grok"],
+  [/(^|\.)deepseek\.com$/, "deepseek"],
+  [/(^|\.)you\.com$/, "you.com"],
+];
+
+/** The source names of AI assistants, for reports that group them. */
+export const AI_SOURCE_NAMES: readonly string[] = AI_SOURCES.map(([, name]) => name);
+
 /** Known sites, so "l.instagram.com" and "instagram.com" count as one source. */
 const KNOWN_SOURCES: [RegExp, string][] = [
+  ...AI_SOURCES,
   [/(^|\.)instagram\.com$/, "instagram"],
   [/(^|\.)(facebook\.com|fb\.com|fb\.me)$/, "facebook"],
   [/(^|\.)(youtube\.com|youtu\.be)$/, "youtube"],
@@ -65,7 +85,10 @@ export function attributionFrom(raw: { source?: unknown; medium?: unknown; campa
   const host = referrerHostOf(typeof raw.referrer === "string" ? raw.referrer : null);
   const referrer = host && host !== own && !(own && host.endsWith(`.${own}`)) ? host : null;
   const utmSource = text(raw.source);
-  const source = utmSource ?? (referrer ? sourceOfHost(referrer) : null);
+  // Some sites tag their links with their own host (ChatGPT adds utm_source=chatgpt.com): use the known name.
+  const utmHost = utmSource ? referrerHostOf(utmSource) : null;
+  const utmKnown = utmHost ? KNOWN_SOURCES.find(([pattern]) => pattern.test(utmHost))?.[1] : undefined;
+  const source = utmKnown ?? utmSource ?? (referrer ? sourceOfHost(referrer) : null);
   if (!source) return null;
   return { source, medium: text(raw.medium), campaign: text(raw.campaign), referrer };
 }

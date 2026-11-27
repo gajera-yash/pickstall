@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { JsonLd } from "@/components/seo/json-ld";
 import { ProductPage } from "@/components/store/product-page";
 import { StorePaused } from "@/components/store/store-paused";
 import { APP_NAME } from "@/lib/config";
@@ -13,6 +14,7 @@ import { pixelValue } from "@/lib/pixels/rules";
 import { priceDecimals } from "@/lib/products/money";
 import { payableCents } from "@/lib/products/pricing";
 import { listProductReviews } from "@/lib/reviews/public";
+import { productPageSchema, storePath } from "@/lib/seo/store-schema";
 import { findPublicCurriculum, findPublicProduct, findPublicStore } from "@/lib/stores/public";
 
 // Public product page at /@username/product-slug (rewrite in next.config.ts). Only a published
@@ -31,6 +33,7 @@ export async function generateMetadata({ params }: PageProps<"/s/[username]/[pro
   return {
     title: `${product.title} by ${store.name} | ${APP_NAME}`,
     description,
+    alternates: { canonical: storePath(store.slug, product.slug) },
     openGraph: { title: product.title, description, type: "website", ...(image ? { images: [image] } : {}) },
     twitter: { card: image ? "summary_large_image" : "summary", title: product.title, description },
   };
@@ -48,9 +51,11 @@ export default async function PublicProductPage({ params }: PageProps<"/s/[usern
     product.type === "course" ? findPublicCurriculum(store.id, product.id) : null,
     listProductReviews(store.id, product.id).catch(() => []),
   ]);
+  const buyable = context ? canBuy(context) : false;
   return (
     <>
-      <ProductPage store={store} product={product} buyable={context ? canBuy(context) : false} curriculum={curriculum} reviews={reviews} />
+      <ProductPage store={store} product={product} buyable={buyable} curriculum={curriculum} reviews={reviews} />
+      <JsonLd data={productPageSchema(store, product, { buyable, rating: product.rating })} />
       <VisitSource />
       {store.pixels && (
         <StorePixels

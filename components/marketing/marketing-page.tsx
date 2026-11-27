@@ -7,12 +7,16 @@ import { GuestActions, NavActions } from "@/components/landing/nav-actions";
 import { FinalCta, LandingFooter } from "@/components/landing/sections";
 import { Container } from "@/components/landing/ui";
 import { JsonLd } from "@/components/seo/json-ld";
-import { breadcrumbSchema } from "@/lib/seo/schema";
+import { breadcrumbSchema, webPageSchema } from "@/lib/seo/schema";
+import { CONTENT_UPDATED } from "@/lib/seo/site-facts";
 
 /**
  * The frame of Pickstall's public content pages (D-134): the landing nav and footer, a breadcrumb
  * (visible and as structured data), a clear H1 with a one-paragraph answer under it, then the page.
+ * The "Last updated" date (D-135) helps answer engines judge how fresh the facts are.
  */
+const updatedLabel = new Date(`${CONTENT_UPDATED}T00:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+
 export function MarketingPage({
   title,
   lead,
@@ -30,12 +34,13 @@ export function MarketingPage({
   cta?: boolean;
 }) {
   const trail = [{ name: "Home", path: "/" }, ...crumbs];
+  const path = trail[trail.length - 1]?.path ?? "/";
   return (
     <>
       <a href="#main" className="sr-only z-50 rounded-md bg-surface px-4 py-2 font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
         Skip to content
       </a>
-      <JsonLd data={[breadcrumbSchema(trail), ...schema]} />
+      <JsonLd data={[breadcrumbSchema(trail), webPageSchema(title, path), ...schema]} />
       <LandingNav
         actions={
           <Suspense fallback={<GuestActions />}>
@@ -65,6 +70,9 @@ export function MarketingPage({
           </nav>
           <h1 className="max-w-3xl text-display-l text-balance">{title}</h1>
           <div className="max-w-2xl text-body-l text-mute text-pretty">{lead}</div>
+          <p className="text-sm text-mute">
+            Last updated <time dateTime={CONTENT_UPDATED}>{updatedLabel}</time>
+          </p>
         </Container>
         {/* The landing sections reused here animate with the motion bundle. */}
         <MotionProvider>
