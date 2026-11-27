@@ -5,7 +5,7 @@ import { Bricolage_Grotesque, Instrument_Sans } from "next/font/google";
 import { CookieNotice } from "@/components/legal/cookie-notice";
 import { PlatformAnalytics } from "@/components/analytics/platform-analytics";
 import { APP_NAME } from "@/lib/config";
-import { ONE_LINER, SITE_URL } from "@/lib/seo/site-facts";
+import { ONE_LINER, SHARE_IMAGE, SITE_URL } from "@/lib/seo/site-facts";
 
 import "./globals.css";
 
@@ -28,6 +28,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: APP_NAME,
   description: ONE_LINER,
+  // The share image for Pickstall's own pages. Pages with their own `openGraph` add it themselves;
+  // creators' stores replace it with their own images.
+  openGraph: { siteName: APP_NAME, type: "website", images: [SHARE_IMAGE] },
+  twitter: { card: "summary_large_image", images: [SHARE_IMAGE.url] },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },

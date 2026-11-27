@@ -11,3 +11,9 @@ export const SOCIAL_BRAND_COLORS: Partial<Record<SocialLinkKind, string>> = {
   youtube: "#FF0000",
   linkedin: "#0A66C2",
 };
+
+/**
+ * Colors of Pickstall's own share image (/og.png). The image is drawn as a picture, where CSS
+ * variables do not exist, so these repeat the light-theme values of styles/tokens.css.
+ */
+export const SHARE_IMAGE_COLORS = { background: "#ffffff", ink: "#0b0d2a", mute: "#5b6078", blue: "#0056ff", yellow: "#ffc400" } as const;

@@ -14,7 +14,7 @@ import { SignupSource } from "@/components/marketing/signup-source";
 import { JsonLd } from "@/components/seo/json-ld";
 import { FAQ } from "@/components/landing/content";
 import { faqSchema, organizationSchema, softwareApplicationSchema } from "@/lib/seo/schema";
-import { SITE_URL } from "@/lib/seo/site-facts";
+import { SHARE_IMAGE, SITE_URL } from "@/lib/seo/site-facts";
 import { APP_NAME } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -23,8 +23,9 @@ export const metadata: Metadata = {
     "A lower-cost Stan Store alternative: sell digital products, courses and coaching calls from one tap-to-buy page made for phones. No code, no cut of your sales. PayPal's processing fees still apply.",
   openGraph: {
     title: `${APP_NAME}: open your own stall`,
-    description: "Sell digital products, courses and coaching from one tap-to-buy page. 0% transaction fees.",
+    description: "Sell digital products, courses and coaching from one tap-to-buy page. 0% transaction fees; PayPal's processing fees still apply.",
     type: "website",
+    images: [SHARE_IMAGE],
   },
   alternates: { canonical: SITE_URL },
 };

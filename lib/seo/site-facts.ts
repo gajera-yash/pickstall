@@ -11,6 +11,17 @@ export const ONE_LINER = `${APP_NAME} is a link-in-bio store where creators sell
 
 export const SHORT_PITCH = "A lower-cost Stan Store alternative with 0% transaction fees. No code needed; buyers pay into the creator's own PayPal account.";
 
+/**
+ * Pickstall's share image (app/og.png/route.tsx) for its own marketing pages. Not used on creators'
+ * stores, which share their own product images.
+ */
+export const SHARE_IMAGE = {
+  url: "/og.png",
+  width: 1200,
+  height: 630,
+  alt: `${APP_NAME}: a link-in-bio store for digital products, courses and coaching, with 0% transaction fees`,
+} as const;
+
 export const PRICES = {
   starter: PLANNED_PRICE_CENTS.starter / 100,
   pro: PLANNED_PRICE_CENTS.pro / 100,
