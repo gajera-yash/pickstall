@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { collections, type MktPostDoc } from "@/lib/db/collections";
 import { isDuplicateKeyError } from "@/lib/db/mongo";
 import { getGrowthSettings } from "@/lib/marketing/drafts";
-import { configuredContentWriter, writeContent, type ContentWriter } from "@/lib/marketing/content/writer";
+import { configuredContentWriter, templateContentWriter, writeContent, type ContentWriter } from "@/lib/marketing/content/writer";
 import {
   DEFAULT_CONTENT_SETTINGS,
   postTextFor,
@@ -115,7 +115,9 @@ export async function writeDayPosts(day: string, options: { replace: boolean }, 
 
   const [stats, growth] = await Promise.all([contentStats(now), getGrowthSettings()]);
   const brief = briefFor(day, settings, stats, growth.voiceExamples);
-  const written = await writeContent(brief, writer);
+  // Real numbers are posted in the template's exact wording: in testing the AI kept adding meaning the
+  // numbers do not have ("for the founding program", "processing orders").
+  const written = await writeContent(brief, brief.numbers.length > 0 ? templateContentWriter : writer);
 
   let count = 0;
   for (const platform of targets) {
