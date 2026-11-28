@@ -211,6 +211,8 @@ const BANNED: [RegExp, string][] = [
   [/\btax(es)?\b|\bvat\b|\bgst\b/i, "mentions tax"],
   [/guarantee|risk[- ]free|100% (free|safe)|testimonial|trusted by|thousands of creators|best in the world|#1 /i, "makes a claim we cannot back"],
   [/apple pay|google pay|credit card checkout|card checkout|stripe/i, "promises a checkout we do not offer"],
+  // Plans cost money and PayPal charges its fee: only "0% transaction fees" (with PayPal) is true.
+  [/\bno[-‐-―\s]fees?\b|\bfee[-‐-―\s]free\b|\bzero[-‐-―\s](transaction[-‐-―\s])?fees?\b|\bwithout (any )?fees\b|\bfree forever\b/i, "makes a fee claim we cannot back"],
 ];
 
 const DOMAIN = /\b(?:https?:\/\/)?(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|store|io|ai|co|net|org|app|link|me|ly|gg|in))\b/gi;

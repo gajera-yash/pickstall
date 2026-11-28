@@ -4,6 +4,20 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-136: Daily social posts: content agent, Growth > Content and report section (marketing block M7a)
+- **Date:** 2026-11-28
+- **Decision (founder approved M7a, 2026-11-28: founder voice, real numbers yes; handles: X @pickstallstore, YouTube @PickstallStore, LinkedIn profile "pickstall-store", Instagram @pickstallstore; no Facebook Page yet):**
+  - **When:** Inngest cron `TZ=Asia/Kolkata 0 8 * * *` (`lib/marketing/content/job.ts`) writes the India day's posts, plus "Write today's posts" / "Rewrite today's drafts" on `/admin/growth/content` (admin, 10 an hour). Without `replace` only platforms with no post get one; `replace` rewrites drafts and keeps posted or skipped ones.
+  - **What:** one post per chosen platform (default Instagram, LinkedIn, X, YouTube Shorts; Facebook off until there is a Page), from one brief a day. Weekly rotation (`scheduleForDay`): Mon/Wed/Sat creator tips, Tue feature demo, Thu building in public, Fri honest fee math, Sun founder story; topics in `lib/marketing/content/topics.ts` (facts from site-facts, config prices and `ai/facts.ts` only). Thursday uses real database counts (stores not deleted, live stores, signups in 7 days, published products; zeros left out) when "Share real numbers" is on, plus the founder's optional "This week's update" (600 characters, the only source for "what shipped"); with nothing to show it falls back to a founder story. YouTube gets a title, description and a 30-second script to record; Instagram gets hashtags.
+  - **Writer:** the same switch as DM drafts (D-121): Groq with a strict JSON schema (shared `groqJson` helper), else the template. Every set is checked (`contentSetProblem`): per-field limits (X 270), only numbers from the facts or the brief (plus 0-10 and years), links only to pickstall.store, no email, placeholders, tax, card checkout, unbackable claims, "no fees / fee-free / zero fees / free forever", and "0%" only next to PayPal's processing fees. A failing AI set is retried once, then the template is used with a note. Every template topic passes the same checks (unit test).
+  - **Data:** new collection `mktPosts` (unique `day` + `platform`; `postedAt` index), statuses draft / posted / skipped; the founder's edits are cleaned and cut to the platform limit; a posted link must be https on that platform's own site. Content settings live as optional fields on the Growth settings document. No migration.
+  - **Images:** `/admin/growth/content/[id]/image?slide=n` with next/og (no new dependency), admin only (404 otherwise): 1080 x 1350 carousel (cover, one per point, closing card with "0% transaction fees. PayPal's processing fees still apply.") for Instagram, Facebook and LinkedIn; one 1280 x 720 cover for X and the YouTube thumbnail.
+  - **Posting:** by hand in M7a: copy, download images, open the platform, then "Mark posted" (optional link) or "Skip today". Nothing is published automatically.
+  - **Report:** the daily report gets a Content section (published of written and where, not posted yet, skipped); older reports without it still render.
+  - `SOCIAL_PROFILES` now lists the Instagram, X, YouTube and LinkedIn links (Organization `sameAs`).
+- **Why:** MARKETING_AGENTS_PLAN.md M7 (A8 Content Agent); the founder wants daily posting to build the brand.
+- **Consequences:** M7b (auto-posting through the official APIs) needs the founder's Meta app (Instagram + Facebook Page), LinkedIn app, a paid or limited X API tier and a Google project (YouTube uploads from an unaudited app stay private). Add the Facebook Page to `SOCIAL_PROFILES` when it exists.
+
 ## D-135: GEO: creator stores and products that AI answer engines can read, AI sources in sales, and faster recrawls (blocks G1-G4)
 - **Date:** 2026-11-27
 - **Why:** D-134 made Pickstall's own pages clear to AI answer engines. Creators' stores and products had no structured data or canonical URL, so ChatGPT, Perplexity, Gemini and Google AI Overviews could not easily recommend a creator's actual products, and sales from those tools were not named.

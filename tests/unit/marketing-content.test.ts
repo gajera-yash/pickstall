@@ -78,6 +78,8 @@ describe("honesty checks", () => {
     expect(contentTextProblem("Trusted by creators everywhere, a store that simply works for you.", 500, allowed)).toMatch(/claim/);
     expect(contentTextProblem("Checkout with Apple Pay in one tap, right from your link in bio.", 500, allowed)).toMatch(/checkout/);
     expect(contentTextProblem("Hi [name], here is a post with a placeholder left inside it.", 500, allowed)).toMatch(/placeholder/);
+    expect(contentTextProblem("If you want a no‑fee platform to test this, try pickstall.store.", 500, allowed)).toMatch(/fee claim/);
+    expect(contentTextProblem("Sell from one link with zero transaction fees, every single day.", 500, allowed)).toMatch(/fee claim/);
     expect(contentTextProblem("x".repeat(300), 270, allowed)).toMatch(/over 270/);
   });
 
