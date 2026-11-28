@@ -82,7 +82,7 @@ describe("report email", () => {
     expect(email.html).toContain("border-bottom:1px solid #e5e7eb");
     expect(email.text).toContain("outreach 1, direct 1");
     expect(email.text).toContain("1. Answer 1 creator who replied");
-    expect(email.text).toContain("not set up yet");
+    expect(email.text).toContain("not in this report yet");
   });
 });
 

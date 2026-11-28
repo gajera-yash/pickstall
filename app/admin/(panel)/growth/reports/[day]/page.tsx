@@ -105,7 +105,7 @@ async function ReportContent({ params }: Pick<PageProps<"/admin/growth/reports/[
           </Table>
         </Card>
       </div>
-      <p className="text-sm text-mute">Website visits and content are not set up yet (PostHog and the content agent come later).</p>
+      <p className="text-sm text-mute">Website visits are not in this report yet (PostHog comes later).</p>
     </div>
   );
 }

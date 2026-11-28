@@ -26,6 +26,9 @@ export type ReportTrendDay = { day: string; dms: number; replies: number; signup
 
 export type ReportAttention = { followUpsDue: number; repliesWaiting: number; stuckSignups: number; aiFallbacks: number };
 
+/** Daily social posts of the report day (D-136): one per chosen platform. */
+export type ReportContent = { written: number; posted: number; skipped: number; notPosted: number; postedOn: string[] };
+
 export type DailyReportData = {
   outreach: ReportOutreach;
   funnel: ReportFunnel;
@@ -33,4 +36,6 @@ export type DailyReportData = {
   trend: ReportTrendDay[];
   attention: ReportAttention;
   priorities: string[];
+  /** Missing on reports saved before D-136. */
+  content?: ReportContent;
 };

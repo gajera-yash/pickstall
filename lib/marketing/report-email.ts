@@ -16,7 +16,19 @@ const n = (value: number, one: string, many: string) => `${value} ${value === 1 
 
 /** The report's sections as label/value rows, shared by text and HTML. */
 export function reportRows(data: DailyReportData): { title: string; rows: [string, string][] }[] {
-  const { outreach, funnel, attention } = data;
+  const { outreach, funnel, attention, content } = data;
+  const contentSection: { title: string; rows: [string, string][] }[] = content
+    ? [
+        {
+          title: "Content",
+          rows: [
+            ["Posts published", `${content.posted} of ${content.written}${content.postedOn.length ? ` (${content.postedOn.join(", ")})` : ""}`],
+            ["Not posted yet", String(content.notPosted)],
+            ["Skipped", String(content.skipped)],
+          ],
+        },
+      ]
+    : [];
   return [
     {
       title: "Outreach",
@@ -39,6 +51,7 @@ export function reportRows(data: DailyReportData): { title: string; rows: [strin
         ["Paid plans started", String(funnel.paidPlans)],
       ],
     },
+    ...contentSection,
     {
       title: "Needs attention",
       rows: [
@@ -56,7 +69,7 @@ export function reportSubject(day: string, data: DailyReportData): string {
   return `Pickstall daily report, ${shortDay(day)}: ${n(outreach.dmsSent, "DM", "DMs")}, ${n(outreach.replies, "reply", "replies")}, ${n(funnel.signups, "signup", "signups")}`;
 }
 
-const NOT_YET = "Website visits and content are not set up yet (PostHog and the content agent come later).";
+const NOT_YET = "Website visits are not in this report yet (PostHog comes later).";
 
 export function renderReportEmail(day: string, data: DailyReportData, reportUrl: string): RenderedEmail {
   const sections = reportRows(data);

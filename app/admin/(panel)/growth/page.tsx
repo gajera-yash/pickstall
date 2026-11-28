@@ -27,6 +27,9 @@ export default function AdminGrowthPage({ searchParams }: PageProps<"/admin/grow
       <div className="flex flex-wrap items-start justify-between gap-3">
         <AdminPageTitle title="Growth" description="Creators to contact. Copy a lead's own link into your message: their signup shows here by itself." />
         <div className="flex flex-wrap items-center gap-3">
+          <Link href="/admin/growth/content" className="text-sm font-semibold text-blue underline underline-offset-4">
+            Content
+          </Link>
           <Link href="/admin/growth/reports" className="text-sm font-semibold text-blue underline underline-offset-4">
             Reports
           </Link>

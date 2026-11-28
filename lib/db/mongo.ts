@@ -137,7 +137,11 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("mktDrafts").createIndex({ leadId: 1, createdAt: -1 }, { name: "mkt_drafts_lead_created" }),
     db.collection("mktDrafts").createIndex({ createdAt: -1 }, { name: "mkt_drafts_created" }),
     db.collection("mktLeads").createIndex({ stage: 1, lastContactedAt: 1 }, { name: "mkt_leads_stage_contacted" }),
-    db.collection("stores").createIndex({ "acquisition.ref": 1 }, { partialFilterExpression: { "acquisition.ref": { $type: "string" } }, name: "stores_acquisition_ref" }),
+    // Daily social posts (D-136): one post per India day and platform (the job and the button never
+    // make two), and posts by when they went out (the daily report).
+    db.collection("mktPosts").createIndex({ day: 1, platform: 1 }, { unique: true, name: "mkt_posts_day_platform_unique" }),
+    db.collection("mktPosts").createIndex({ postedAt: -1 }, { partialFilterExpression: { postedAt: { $type: "date" } }, name: "mkt_posts_posted" }),
+    db.collection("stores").createIndex({ "acquisition.ref": 1 },{ partialFilterExpression: { "acquisition.ref": { $type: "string" } }, name: "stores_acquisition_ref" }),
     // Browser push (D-132): a store's browsers, and a user's (removed with the account).
     db.collection("pushSubscriptions").createIndex({ storeId: 1 }, { name: "push_subscriptions_store" }),
     db.collection("pushSubscriptions").createIndex({ userId: 1 }, { name: "push_subscriptions_user" }),

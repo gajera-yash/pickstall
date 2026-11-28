@@ -2,11 +2,12 @@ import "server-only";
 
 import { DIRECT_SOURCE } from "@/lib/analytics/attribution";
 import { collections } from "@/lib/db/collections";
+import { CONTENT_PLATFORMS, CONTENT_PLATFORM_LABELS } from "@/lib/marketing/content/rules";
 import { getGrowthSettings } from "@/lib/marketing/drafts";
 import { FOLLOW_UP_AFTER_DAYS } from "@/lib/marketing/growth-settings-rules";
 import { LEAD_STAGE_LABELS, type LeadStage } from "@/lib/marketing/leads-rules";
 import { DAY_MS, istDate, tomorrowPriorities, type ReportWindow } from "@/lib/marketing/report-rules";
-import type { DailyReportData, ReportMovement, ReportTrendDay } from "@/lib/marketing/report-types";
+import type { DailyReportData, ReportContent, ReportMovement, ReportTrendDay } from "@/lib/marketing/report-types";
 
 // The daily growth report's numbers (D-122), all read from the database for one window
 // (21:00 IST to 21:00 IST). Platform-wide data: used only by the report job and admin pages.
@@ -52,6 +53,20 @@ async function weekTrend(window: ReportWindow): Promise<ReportTrendDay[]> {
     days.push({ day: istDate(new Date(start.getTime() + DAY_MS)), dms, replies, signups });
   }
   return days;
+}
+
+/** The report day's social posts (D-136): written, posted (and where), skipped, still not posted. */
+async function contentOfDay(day: string): Promise<ReportContent> {
+  const { mktPosts } = await collections();
+  const posts = await mktPosts.find({ day }, { projection: { platform: 1, status: 1 } }).toArray();
+  const posted = posts.filter((post) => post.status === "posted");
+  return {
+    written: posts.length,
+    posted: posted.length,
+    skipped: posts.filter((post) => post.status === "skipped").length,
+    notPosted: posts.filter((post) => post.status === "draft").length,
+    postedOn: CONTENT_PLATFORMS.filter((platform) => posted.some((post) => post.platform === platform)).map((platform) => CONTENT_PLATFORM_LABELS[platform]),
+  };
 }
 
 /** Builds the report for a window. */
@@ -126,6 +141,7 @@ export async function buildDailyReport(window: ReportWindow): Promise<DailyRepor
 
   const attention = { followUpsDue, repliesWaiting, stuckSignups, aiFallbacks };
   return {
+    content: await contentOfDay(window.day),
     outreach,
     funnel,
     movements: movements.slice(0, MAX_MOVEMENTS),

@@ -47,9 +47,14 @@ export const CONTENT_UPDATED = "2026-11-27";
 
 /**
  * Pickstall's own official profiles (https links only), used as `sameAs` in the Organization data so
- * answer engines can connect the brand across sites. Empty until the founder adds the real links.
+ * answer engines can connect the brand across sites. Links from the founder (2026-11-28); add
+ * Instagram and Facebook once those profiles exist.
  */
-export const SOCIAL_PROFILES: readonly string[] = [];
+export const SOCIAL_PROFILES: readonly string[] = [
+  "https://x.com/pickstallstore",
+  "https://www.youtube.com/@PickstallStore",
+  "https://www.linkedin.com/in/pickstall-store-825600447/",
+];
 
 /**
  * AI search and answer engine crawlers (D-134), named in robots.txt so they are clearly welcome on the

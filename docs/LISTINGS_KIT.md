@@ -110,6 +110,69 @@ Ready-to-paste text for Pickstall's profiles on other sites, so every listing sa
 
 ---
 
+## 2b. Status (2026-11-28)
+
+| Site | Status | Link / what is left |
+|---|---|---|
+| Product Hunt | Account made (Google, pickstallstore@gmail.com), newsletters off | https://www.producthunt.com/@pickstall_store. Product page and launch after PayPal live. |
+| AlternativeTo | Submitted 2026-11-28 | In the free review queue (can take a long time); linked as an alternative to Stan Store, Beacons, Gumroad, Linktree and Payhip. Paid priority review ($19) not bought. |
+| SaaSHub | Website URL filled | SaaSHub asks a person, not an AI agent, to submit: finish the form yourself. |
+| G2 / Capterra / GetApp / Software Advice | Blocked | One portal (my.G2); it refuses Gmail. Needs LinkedIn sign-in or a pickstall.store email inbox. |
+| Crunchbase | Account made, company profile submitted | Appears after Crunchbase's check, likely https://www.crunchbase.com/organization/pickstall. Add logo, headquarters, founder later. |
+| Reddit | Not started | Claude in Chrome cannot open Reddit (safety rule): make the account yourself. |
+| Quora | Account made, 6 topics followed | Answer questions as in section 2. |
+| YouTube | Channel made | https://www.youtube.com/@PickstallStore. Upload the demo (section 2). |
+| Wikidata | Waiting | After independent press coverage. |
+
+When a profile is public, add its URL to `SOCIAL_PROFILES` in `lib/seo/site-facts.ts`.
+
+## 2c. More free directories (from beyondfolder.com and welaunch.sh lists, checked Sep-Oct 2026; re-check each site's terms before submitting)
+
+Use the short or long description from section 1. Skip any that turned paid. "Badge" means the free tier asks for a badge or link on our site: decide per site (it adds a third-party link to pickstall.store).
+
+| # | Directory | Submit URL | Note | Status |
+|---|---|---|---|---|
+| 1 | SourceForge | https://sourceforge.net/software/vendors/new | slow review | Your turn: form needs your name, phone, title, founding year and location |
+| 2 | FinancesOnline | https://financesonline.com/add-product/ | upsells paid placement | |
+| 3 | Fazier | https://fazier.com/submit | free tier needs a badge | Skipped (free tier needs a backlink; founder said skip) |
+| 4 | Indie Hackers | https://www.indiehackers.com/products/new | | |
+| 5 | BetaList | https://betalist.com/submissions/new | early-stage, long queue | Paid only now (Nov 2026): skip |
+| 6 | Uneed | https://www.uneed.best/submit-a-tool | free daily launch slot | Listed in the waiting line 2026-11-28 (uneed.best/tool/pickstall); free launch date July 24, 2027 not booked |
+| 7 | SaaSworthy | https://www.saasworthy.com/offerings | | |
+| 8 | Getlatka | https://getlatka.com/saas-companies | | |
+| 9 | Sidebar | https://sidebar.io/submit | curated | |
+| 10 | Tiny Startups | https://www.tinystartups.com/ | | Paid only now (Nov 2026): skip |
+| 11 | SideProjectors | https://www.sideprojectors.com | | Submitted 2026-11-28 as showcase (not for sale), plus ComingUp; review 2-3 business days |
+| 12 | Startup Ranking | https://www.startupranking.com/startup/create/url-validation | | |
+| 13 | 12Tools | https://twelve.tools/submit | | Skipped (free tier needs a backlink; founder said skip) |
+| 14 | Startup Stash | https://startupstash.com/add-listing/ | | Paid only now (Nov 2026): skip |
+| 15 | PitchWall | https://pitchwall.co/product/submit | | Submitted 2026-11-28 (free queue, 30+ days; pitchwall.co/product/pickstall) |
+| 16 | Sprout24 | https://sprout24.com/submit/ | | |
+| 17 | Afford Hunt | https://www.affordhunt.com/submit | | Domain for sale: dead |
+| 18 | WebCatalog | https://webcatalog.io/en/apps/submit | web app catalog | |
+| 19 | FiveTaco | https://fivetaco.com/submit | curated | |
+| 20 | ListMySaaS | https://listmysaas.xyz/submit | free queue | Skipped (free tier needs a badge; founder said skip) |
+| 21 | TinyLaunch | https://www.tinylaun.ch/dashboard/startups/new | account likely needed | |
+| 22 | Launching Next | https://www.launchingnext.com/submit/ | | Submitted 2026-11-28 (free queue) |
+| 23 | 10015 Tools | https://10015.io/product-finder/submit | | Submitted 2026-11-28 (free queue, #7,700) |
+| 24 | StartupBase | https://startupbase.io/submit | | Paid prices only shown: skip |
+| 25 | ProductBurst | https://productburst.com | | |
+| 26 | TechPluto | https://www.techpluto.com/submit-startup | | |
+| 27 | Startups.fm | https://startups.fm/ | | |
+| 28 | StartupTracker | https://startuptracker.io/crowdsourcing/ | crowdsourced | |
+| 29 | SoloPush | https://solopush.com/dashboard | account likely needed | |
+| 30 | Scout Forge | https://scoutforge.net/app-registration/ | | |
+| 31 | Resource.fyi | https://resource.fyi/account/submit/ | account likely needed | |
+| 32 | Ctrl Alt CC | https://ctrlalt.cc/ | | |
+| 33 | Microlaunch | https://tally.so/r/mYaR6N | Tally form | Free submit disabled, paid launch only: skip |
+| 34 | Toolfolio | https://toolfolio.io/ | sources conflict (badge or email): check first | |
+| 35 | Alternative.me | https://alternative.me/ | | |
+| 36 | Crozdesk | https://vendor.softwareselect.com/ | partner lead-gen funnel | |
+| 37 | Startup Spotlight | https://startupspotlight.co/ | | Paid only now ($29): skip |
+| 38 | Peerlist | https://peerlist.io | weekly launch window; profile first | |
+
+Left out: EU-Startups (EU-based startups only), Killer Startups (no form), AI-only and developer-tool-only directories.
+
 ## 3. Monthly AI-answer check (15 minutes, first Monday of the month)
 
 Ask each of ChatGPT, Perplexity, Gemini and Copilot these questions in a fresh chat, and note whether Pickstall is mentioned and whether the facts are right:

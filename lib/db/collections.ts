@@ -8,6 +8,7 @@ import { getDb } from "@/lib/db/mongo";
 import type { Currency, SocialLinkKind } from "@/lib/config";
 import type { CourseCategory } from "@/lib/courses/settings";
 import type { StoreAcquisition } from "@/lib/marketing/acquisition";
+import type { ContentPillar, ContentPlatform, PostStatus } from "@/lib/marketing/content/rules";
 import type { LeadPlatform, LeadStage, LeadTool } from "@/lib/marketing/leads-rules";
 import type { DailyReportData } from "@/lib/marketing/report-types";
 import type { ThemePresetId } from "@/lib/themes";
@@ -912,6 +913,40 @@ export type MktSettingsDoc = {
   dailyDraftLimit: number;
   /** New leads the Today screen suggests contacting per day. */
   dailyContactTarget: number;
+  /** Content agent (D-136): platforms that get a daily post. Missing means the defaults. */
+  contentPlatforms?: ContentPlatform[];
+  /** Content agent (D-136): real database counts in "building in public" posts. */
+  contentShareNumbers?: boolean;
+  /** Content agent (D-136): the founder's note on this week (600 characters), the only source for "what shipped". */
+  contentUpdate?: string;
+  updatedAt: Date;
+};
+
+/**
+ * One daily social post for one platform (D-136). Unique per India `day` and `platform`, so the 08:00
+ * job and the "Write today's posts" button never make two. The founder posts it by hand and marks it
+ * posted (with the link) or skipped; `headline` and `slides` feed the images.
+ */
+export type MktPostDoc = {
+  _id: string;
+  day: string;
+  platform: ContentPlatform;
+  pillar: ContentPillar;
+  topic: string;
+  headline: string;
+  slides: string[];
+  /** What the founder copies: the post, caption (with hashtags) or YouTube description. */
+  text: string;
+  /** YouTube only: the Shorts title and the script to record. */
+  title: string | null;
+  script: string | null;
+  writer: "template" | "groq";
+  model: string | null;
+  note: string | null;
+  status: PostStatus;
+  postedUrl: string | null;
+  postedAt?: Date;
+  createdAt: Date;
   updatedAt: Date;
 };
 
@@ -969,6 +1004,7 @@ export async function collections(): Promise<{
   mktDrafts: Collection<MktDraftDoc>;
   mktSettings: Collection<MktSettingsDoc>;
   mktReports: Collection<MktReportDoc>;
+  mktPosts: Collection<MktPostDoc>;
 }> {
   const db = await getDb();
   return {
@@ -1012,5 +1048,6 @@ export async function collections(): Promise<{
     mktDrafts: db.collection<MktDraftDoc>("mktDrafts"),
     mktSettings: db.collection<MktSettingsDoc>("mktSettings"),
     mktReports: db.collection<MktReportDoc>("mktReports"),
+    mktPosts: db.collection<MktPostDoc>("mktPosts"),
   };
 }
