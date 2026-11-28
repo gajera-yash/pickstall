@@ -4,6 +4,12 @@ Short records of product and engineering decisions. Newest first. Each entry: da
 
 ---
 
+## D-137: Designed post images: white and blue looks on alternating days, with graphics
+- **Date:** 2026-11-28
+- **Decision (founder asked for alternating white/blue themes and designer-style graphics, 2026-11-28):** the daily post images (D-136) now alternate by India day between a white look (blue accents) and a brand-blue look (yellow accents) (`postThemeForDay`, colors in `POST_IMAGE_THEMES` in `lib/brand-colors.ts`). Every image has drawn graphics instead of text only: a phone showing a small link-in-bio store, a pillar chip with its icon (tips, feature, build, fees, story), soft circles and dot patterns, numbered point badges with a check mark, a large background number and progress bars on point slides, and check-marked lines on the closing card. Drawings are in `app/admin/(panel)/growth/content/[id]/image/post-image.tsx` (next/og, inline SVG, no new dependency). `?theme=white|blue` previews the other look (admin only).
+- **Why:** more attractive, varied posts on the founder's profiles.
+- **Consequences:** text uses next/og's built-in regular font; a bold brand font file would need the founder's OK to add.
+
 ## D-136: Daily social posts: content agent, Growth > Content and report section (marketing block M7a)
 - **Date:** 2026-11-28
 - **Decision (founder approved M7a, 2026-11-28: founder voice, real numbers yes; handles: X @pickstallstore, YouTube @PickstallStore, LinkedIn profile "pickstall-store", Instagram @pickstallstore; no Facebook Page yet):**

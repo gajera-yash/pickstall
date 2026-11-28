@@ -30,6 +30,7 @@ import {
   contentTextProblem,
   postedUrlOk,
   postTextFor,
+  postThemeForDay,
   scheduleForDay,
   slideCount,
   tidySet,
@@ -53,6 +54,13 @@ describe("weekly rotation", () => {
     // 23 Nov 2026 is a Monday.
     const week = ["2026-11-23", "2026-11-24", "2026-11-25", "2026-11-26", "2026-11-27", "2026-11-28", "2026-11-29"].map((day) => scheduleForDay(day).pillar);
     expect(week).toEqual(["tips", "feature", "tips", "build", "fees", "tips", "story"]);
+  });
+
+  it("alternates the white and blue image looks day by day", () => {
+    const looks = ["2026-11-28", "2026-11-29", "2026-11-30", "2026-12-01"].map(postThemeForDay);
+    expect(new Set(looks)).toEqual(new Set(["white", "blue"]));
+    expect(looks[0]).not.toBe(looks[1]);
+    expect(looks[0]).toBe(looks[2]);
   });
 
   it("uses a different tips topic on each tips day and moves on the next week", () => {

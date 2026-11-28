@@ -99,6 +99,12 @@ export function scheduleForDay(day: string): { pillar: ContentPillar; index: num
   return { pillar, index };
 }
 
+/** The look of a day's images: white and brand blue on alternating days, so the grid stays varied. */
+export function postThemeForDay(day: string): "white" | "blue" {
+  const dayNumber = Math.floor(new Date(`${day}T00:00:00Z`).getTime() / DAY_MS);
+  return dayNumber % 2 === 0 ? "white" : "blue";
+}
+
 // ---------------------------------------------------------------------------------------------
 // Settings for the content agent, stored with the Growth settings.
 
