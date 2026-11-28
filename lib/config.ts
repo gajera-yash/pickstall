@@ -2,8 +2,8 @@
 
 export const APP_NAME = "Pickstall";
 
-/** Where creators reach a person for help. Founder: confirm this mailbox exists before launch. */
-export const SUPPORT_EMAIL = "support@pickstall.store";
+/** Where creators reach a person for help. */
+export const SUPPORT_EMAIL = "pickstallstore@gmail.com";
 
 /** Shown under the logo on auth pages. */
 export const APP_TAGLINE = "Creator Store Platform";

@@ -59,7 +59,7 @@ export const FAQ = [
   },
   {
     q: "How is Pickstall different from Stan Store?",
-    a: `Same kind of creator store, at a lower price. ${STAN.name}'s plans are ${price(STAN.creatorCents)} and ${price(STAN.creatorProCents)} a month; ours are ${STARTER} and ${PRO}, and founding creators pay nothing for 6 months. Storefront, digital products, courses, coaching calls, discount codes, order bumps, upsells, email marketing and affiliate tracking are live today. Memberships and custom domains are on the way and marked Coming soon.`,
+    a: `Same kind of creator store, at a lower price. ${STAN.name}'s plans are ${price(STAN.creatorCents)} and ${price(STAN.creatorProCents)} a month; ours are ${STARTER} and ${PRO}, and founding creators pay nothing for 6 months. Storefront, digital products, courses, coaching calls, discount codes, order bumps, abandoned cart recovery, upsells, email marketing and affiliate tracking are live today. Memberships and custom domains are on the way and marked Coming soon.`,
   },
   {
     q: "Do I need to code or design?",
@@ -105,10 +105,12 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
   { feature: "Lead magnets and email collection", stan: "Creator", status: "live", plan: "starter" },
   { feature: "Discount codes", stan: "Creator Pro", status: "live", plan: "starter" },
   { feature: "Order bumps", stan: "Creator Pro", status: "live", plan: "starter" },
+  { feature: "Abandoned cart recovery", stan: "Creator Pro", status: "live", plan: "starter" },
   { feature: "Ad pixel tracking", stan: "Creator Pro", status: "live", plan: "starter" },
-  { feature: "Affiliate tracking", stan: "Creator Pro", status: "live", plan: "starter" },
+  { feature: "Email broadcasts", stan: "Creator Pro", status: "live", plan: "starter" },
   { feature: "Upsells and funnels", stan: "Creator Pro", status: "live", plan: "pro" },
-  { feature: "Email marketing and automations", stan: "Creator Pro", status: "live", plan: "pro" },
+  { feature: "Automated welcome & review emails", stan: "Creator Pro", status: "live", plan: "pro" },
+  { feature: "Affiliate tracking", stan: "Creator Pro", status: "live", plan: "pro" },
   { feature: "Coaching calls with booking", stan: "Creator", status: "live", plan: "pro" },
   { feature: "Memberships", stan: "Creator", status: "soon", plan: "pro" },
 ];
@@ -130,10 +132,11 @@ export const PLANS: readonly PlanCard[] = [
     items: [
       { text: "Mobile storefront at your own link" },
       { text: "Unlimited digital products and lead magnets" },
-      { text: `Up to ${PLAN_LIMITS.starter.maxCourses ?? "unlimited"} courses, with quizzes and certificates` },
+      { text: `Up to ${PLAN_LIMITS.starter.maxCourses} courses (${PLAN_LIMITS.starter.videoHours} hours of video)` },
       { text: "Coupons, order bumps and checkout questions" },
+      { text: "Abandoned cart recovery and ad pixels" },
       { text: `Email list and broadcasts (${PLAN_LIMITS.starter.emailSubscribers.toLocaleString("en")} subscribers)` },
-      { text: "Pixels, affiliate tracking and CSV exports" },
+      { text: "All 9 themes and CSV exports" },
     ],
   },
   {
@@ -142,10 +145,11 @@ export const PLANS: readonly PlanCard[] = [
     blurb: "The full toolkit to grow what you sell.",
     items: [
       { text: "Everything in Starter" },
-      { text: `Unlimited courses, ${PLAN_LIMITS.pro.videoHours} hours of video` },
-      { text: "Coaching calls with booking" },
+      { text: `Unlimited courses (${PLAN_LIMITS.pro.videoHours} hours video), quizzes & certificates` },
+      { text: "Coaching calls with booking calendar" },
       { text: "Upsells, downsells and funnels" },
-      { text: "Welcome, abandoned cart and review emails" },
+      { text: "Welcome series, review requests & affiliate tracking" },
+      { text: `License keys and ${PLAN_LIMITS.pro.emailSubscribers.toLocaleString("en")} email subscribers` },
       { text: "Memberships", soon: true },
       { text: "Custom domain", soon: true },
     ],
@@ -155,7 +159,7 @@ export const PLANS: readonly PlanCard[] = [
     name: "Founding creator",
     blurb: "For the first 10 creators who join.",
     items: [
-      { text: "6 months free, Pro features included" },
+      { text: "6 months free, all Pro tools included" },
       { text: "We set up your store with you" },
       { text: "A direct line to the people building it" },
       { text: "Your feedback shapes what we build next" },

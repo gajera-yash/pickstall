@@ -30,7 +30,7 @@ export const PRICES = {
 export const KEY_FACTS = [
   `${APP_NAME} takes 0% of a creator's sales. PayPal's processing fees still apply.`,
   `Plans: Starter $${PRICES.starter} a month and Pro $${PRICES.pro} a month, billed in US dollars.`,
-  `Every new store gets a ${TRIAL_DAYS}-day free trial with Pro features, no card needed. The first ${FOUNDING_SPOTS} founding creators get ${FOUNDING_MONTHS} months free.`,
+  `Every new store gets a ${TRIAL_DAYS}-day free trial with all tools included, no card needed. The first ${FOUNDING_SPOTS} founding creators get ${FOUNDING_MONTHS} months free.`,
   "Creators can sell digital downloads, online courses with video, quizzes and certificates, 1:1 coaching calls with booking, and free lead magnets.",
   "Growth tools: coupons, order bumps, upsells and downsells, email list and broadcasts, abandoned cart and review emails, affiliate tracking, Meta and Google pixels.",
   "Store design: 9 themes, 8 ready-made templates, custom colors, fonts and buttons, and page sections, with a live preview.",
@@ -43,17 +43,17 @@ export const CONTACT_EMAIL = SUPPORT_EMAIL;
  * When the content pages' facts were last checked (GEO, D-135): shown as "Last updated" and as
  * `dateModified` in their structured data. Bump it (YYYY-MM-DD) whenever a fact or price changes.
  */
-export const CONTENT_UPDATED = "2026-11-27";
+export const CONTENT_UPDATED = "2026-11-28";
 
 /**
  * Pickstall's own official profiles (https links only), used as `sameAs` in the Organization data so
- * answer engines can connect the brand across sites. Links from the founder (2026-11-28); add
- * Instagram and Facebook once those profiles exist.
+ * answer engines can connect the brand across sites. Add Facebook once that profile exists.
  */
 export const SOCIAL_PROFILES: readonly string[] = [
   "https://x.com/pickstallstore",
   "https://www.youtube.com/@PickstallStore",
   "https://www.linkedin.com/in/pickstall-store-825600447/",
+  "https://www.instagram.com/pickstallstore/",
 ];
 
 /**

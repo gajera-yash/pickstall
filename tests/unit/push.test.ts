@@ -26,6 +26,7 @@ vi.mock("@/lib/env", () => ({ publicEnv: env.publicEnv }));
 vi.mock("@/lib/env.server", () => ({ serverEnv: env.serverEnv }));
 vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
+import { SUPPORT_EMAIL } from "@/lib/config";
 import { notify } from "@/lib/notifications/queries";
 import { deletePushSubscription, endpointId, pushSubscriptionInput, savePushSubscription } from "@/lib/push/queries";
 import { safePushHref, sendPushToStore } from "@/lib/push/send";
@@ -66,7 +67,7 @@ describe("sending", () => {
     expect(db.pushSubscriptions.find).toHaveBeenCalledWith({ storeId: "store-a" });
     const [, payload, options] = webPush.sendNotification.mock.calls[0] ?? [];
     expect(JSON.parse(payload as string)).toEqual({ title: "New sale", body: "$19 Workbook", href: "/dashboard/orders" });
-    expect(options).toMatchObject({ vapidDetails: { subject: "mailto:support@pickstall.store" } });
+    expect(options).toMatchObject({ vapidDetails: { subject: `mailto:${SUPPORT_EMAIL}` } });
     expect(db.pushSubscriptions.deleteOne).toHaveBeenCalledWith({ _id: "s2", storeId: "store-a" });
   });
 

@@ -7,13 +7,13 @@ import { APP_NAME, SUPPORT_EMAIL } from "@/lib/config";
 
 export const LEGAL = {
   /** The person or registered business that runs Pickstall. Stripe India needs a registered business for live payments. */
-  operatorName: "[YOUR FULL LEGAL NAME OR REGISTERED BUSINESS NAME]",
+  operatorName: "Pickstall Store",
   /** City and state for the courts clause and the contact block. */
-  city: "[CITY]",
-  state: "[STATE]",
+  city: "Surat",
+  state: "Gujarat",
   country: "India",
   /** A postal address for legal notices and email footers. */
-  postalAddress: "[POSTAL ADDRESS]",
+  postalAddress: "Yoginagar Society, Yogichowk, Near Tirupati Society, Puna Simada Road, Surat - 395010",
   contactEmail: SUPPORT_EMAIL,
   /** Grievance Officer (IT Rules 2021, Rule 3(2)) and contact for data requests (DPDP Act 2023). */
   grievanceOfficer: { name: "[GRIEVANCE OFFICER NAME]", email: SUPPORT_EMAIL },
